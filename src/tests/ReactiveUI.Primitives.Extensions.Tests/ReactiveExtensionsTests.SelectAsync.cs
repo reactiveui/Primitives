@@ -2,6 +2,9 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Reactive;
+using ReactiveUI.Primitives.Extensions.Operators;
+
 namespace ReactiveUI.Primitives.Extensions.Tests;
 
 /// <summary>Tests for ReactiveExtensionsTests.</summary>
@@ -21,7 +24,7 @@ public partial class ReactiveExtensionsTests
                 results.Add,
                 () => tcs.TrySetResult(true));
 
-        await tcs.Task.WaitAsync(WaitTimeout);
+        await tcs.Task;
 
         await Assert.That(results).IsCollectionEqualTo([SampleValue2, SampleValue4, SampleValue6]);
     }
@@ -40,7 +43,7 @@ public partial class ReactiveExtensionsTests
                 results.Add,
                 () => tcs.TrySetResult(true));
 
-        await tcs.Task.WaitAsync(WaitTimeout);
+        await tcs.Task;
 
         await Assert.That(results).IsCollectionEqualTo([SampleValue2, SampleValue4, SampleValue6]);
     }
@@ -59,7 +62,7 @@ public partial class ReactiveExtensionsTests
                 results.Add,
                 () => tcs.TrySetResult(true));
 
-        await tcs.Task.WaitAsync(WaitTimeout);
+        await tcs.Task;
 
         await Assert.That(results).IsCollectionEqualTo([SampleValue2, SampleValue4, SampleValue6]);
     }
@@ -69,23 +72,25 @@ public partial class ReactiveExtensionsTests
     [Test]
     public async Task WhenSelectLatestAsync_ThenEmitsLatestResult()
     {
-        const int AsyncDelayMs = 10;
-        var source = ExpectedSequence123.ToObservable();
         List<int> results = [];
-        TaskCompletionSource<bool> tcs = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        TaskCompletionSource<int> first = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        TaskCompletionSource<int> second = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        TaskCompletionSource<int> latest = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        Task<int>[] projections = [first.Task, second.Task, latest.Task];
+        using SelectLatestAsyncObservable<int, int>.SelectLatestAsyncSink sink = new(
+            Observer.Create<int>(results.Add),
+            value => projections[value - 1]);
 
-        _ = source.SelectLatestAsync(static async x =>
-        {
-            await Task.Delay(AsyncDelayMs);
-            return x * SampleValue2;
-        }).Subscribe(
-            results.Add,
-            () => tcs.TrySetResult(true));
+        var firstOperation = sink.OnNextAsync(1);
+        var secondOperation = sink.OnNextAsync(SampleValue2);
+        var latestOperation = sink.OnNextAsync(SampleValue3);
+        latest.SetResult(SampleValue6);
+        await latestOperation;
+        first.SetResult(SampleValue2);
+        second.SetResult(SampleValue4);
+        await Task.WhenAll(firstOperation, secondOperation);
 
-        await tcs.Task.WaitAsync(WaitTimeout);
-
-        // Switch means only the latest survives; with sources 1,2,3 and selector x*2, expect [6].
-        await Assert.That(results).IsNotEmpty();
+        await Assert.That(results).IsCollectionEqualTo([SampleValue6]);
     }
 
     /// <summary>Tests SelectAsyncConcurrent processes tasks concurrently up to max concurrency.</summary>
@@ -101,12 +106,12 @@ public partial class ReactiveExtensionsTests
         _ = source.SelectAsyncConcurrent(
             static async x =>
             {
-                await Task.Delay(1);
+                await Task.Yield();
                 return x * SampleValue2;
             },
             MaxConcurrency).Subscribe(results.Add, () => tcs.TrySetResult(true));
 
-        await tcs.Task.WaitAsync(WaitTimeout);
+        await tcs.Task;
 
         results.Sort();
         await Assert.That(results).IsCollectionEqualTo([SampleValue2, SampleValue4, SampleValue6]);

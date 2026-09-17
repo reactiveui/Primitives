@@ -4,11 +4,7 @@
 
 namespace ReactiveUI.Primitives.Concurrency;
 
-/// <summary>
-/// Thread-safe wrapper around <see cref="SequencerQueue{TAbsolute}"/> used by the virtual-time sequencers. Bundling
-/// the queue with its lock lets the self-removal callback synchronize through a reference without capturing the
-/// owning struct's <c>this</c>.
-/// </summary>
+/// <summary>Pairs a <see cref="SequencerQueue{TAbsolute}"/> with the gate guarding it, so a callback synchronizes through one reference rather than capturing the owning struct.</summary>
 /// <typeparam name="TAbsolute">Absolute time representation type.</typeparam>
 internal sealed class SynchronizedSequencerQueue<TAbsolute>
     where TAbsolute : IComparable<TAbsolute>

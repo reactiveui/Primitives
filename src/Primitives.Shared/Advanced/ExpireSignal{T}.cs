@@ -8,7 +8,7 @@ namespace ReactiveUI.Primitives.Reactive.Advanced;
 namespace ReactiveUI.Primitives.Advanced;
 #endif
 
-/// <summary>Timeout signal with a direct subscription path.</summary>
+/// <summary>Terminates with a <see cref="TimeoutException"/> when the source stays quiet longer than the timeout period.</summary>
 /// <typeparam name="T">The source value type.</typeparam>
 [System.Diagnostics.DebuggerDisplay("ExpireSignal: DueTime = {_dueTime}, Source = {_source}")]
 public sealed class ExpireSignal<T> : IRequireCurrentThread<T>
@@ -19,14 +19,27 @@ public sealed class ExpireSignal<T> : IRequireCurrentThread<T>
     /// <summary>The timeout period.</summary>
     private readonly TimeSpan _dueTime;
 
-    /// <summary>The sequencer used to schedule the timeout.</summary>
+    /// <summary>The sequencer that schedules the timeout.</summary>
     private readonly ISequencer _sequencer;
+
+    /// <summary>Whether a value restarts the timeout window.</summary>
+    private readonly bool _restartOnValue;
 
     /// <summary>Initializes a new instance of the <see cref="ExpireSignal{T}"/> class.</summary>
     /// <param name="source">The source observable.</param>
     /// <param name="dueTime">The timeout period.</param>
-    /// <param name="sequencer">The sequencer used to schedule the timeout.</param>
+    /// <param name="sequencer">The sequencer that schedules the timeout.</param>
     public ExpireSignal(IObservable<T> source, TimeSpan dueTime, ISequencer sequencer)
+        : this(source, dueTime, sequencer, restartOnValue: true)
+    {
+    }
+
+    /// <summary>Initializes a new instance of the <see cref="ExpireSignal{T}"/> class.</summary>
+    /// <param name="source">The source observable.</param>
+    /// <param name="dueTime">The timeout period.</param>
+    /// <param name="sequencer">The sequencer that schedules the timeout.</param>
+    /// <param name="restartOnValue">When <see langword="true"/> each value restarts the window; when <see langword="false"/> the window runs once from subscription.</param>
+    internal ExpireSignal(IObservable<T> source, TimeSpan dueTime, ISequencer sequencer, bool restartOnValue)
     {
         ArgumentExceptionHelper.ThrowIfNull(source);
 
@@ -35,6 +48,7 @@ public sealed class ExpireSignal<T> : IRequireCurrentThread<T>
         _source = source;
         _dueTime = dueTime;
         _sequencer = sequencer;
+        _restartOnValue = restartOnValue;
     }
 
     /// <inheritdoc/>
@@ -47,7 +61,7 @@ public sealed class ExpireSignal<T> : IRequireCurrentThread<T>
     {
         ArgumentExceptionHelper.ThrowIfNull(observer);
 
-        ExpireCoordinator<T> coordinator = new(_source, _dueTime, _sequencer, observer);
+        ExpireCoordinator<T> coordinator = new(_source, _dueTime, _sequencer, observer, _restartOnValue);
         if (!IsRequiredSubscribeOnCurrentThread() || !CurrentThreadSequencer.IsScheduleRequired)
         {
             return coordinator.Run();

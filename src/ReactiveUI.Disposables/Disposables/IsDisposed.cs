@@ -4,13 +4,10 @@
 
 namespace ReactiveUI.Primitives.Disposables;
 
-/// <summary>Is Disposed.</summary>
+/// <summary>An <see cref="IDisposable"/> that reports whether it has been disposed.</summary>
 /// <seealso cref="IDisposable" />
 public interface IsDisposed : IDisposable
 {
     /// <summary>Gets a value indicating whether this instance is disposed.</summary>
-    /// <value>
-    ///   <c>true</c> if this instance is disposed; otherwise, <c>false</c>.
-    /// </value>
     bool IsDisposed { get; }
 }

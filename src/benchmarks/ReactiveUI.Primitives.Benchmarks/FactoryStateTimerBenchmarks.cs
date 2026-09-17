@@ -15,11 +15,7 @@ using RxObservable = System.Reactive.Linq.Observable;
 
 namespace ReactiveUI.Primitives.Benchmarks;
 
-/// <summary>
-/// Benchmarks the previously-uncovered factories: the closure-free <c>CreateWithState</c> against
-/// closure-based <c>Create</c>, the <c>Iterate</c> generator, the <c>Every</c>/<c>After</c> timer
-/// factories under virtual time, and the <c>FromEventPattern</c> event bridge.
-/// </summary>
+/// <summary>Benchmarks stateful factories, generators, virtual timers, and event subscriptions.</summary>
 [MemoryDiagnoser]
 [System.Diagnostics.DebuggerDisplay("FactoryStateTimerBenchmarks: Limit = {_limit}")]
 public class FactoryStateTimerBenchmarks

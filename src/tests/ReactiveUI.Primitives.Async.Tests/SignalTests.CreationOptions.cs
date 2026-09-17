@@ -7,8 +7,8 @@ using ReactiveUI.Primitives.Async.Signals;
 namespace ReactiveUI.Primitives.Async.Tests;
 
 /// <summary>
-/// Tests for the option-driven <see cref="Signal"/> factories on their serial, stateful setting — the
-/// default combination each factory maps to its serial signal type — plus the disposal contract of the
+/// Tests for the option-driven <see cref="Signal"/> factories on their serial, stateful setting - the
+/// default combination each factory maps to its serial signal type - plus the disposal contract of the
 /// concurrent replay-latest signal those options can select.
 /// </summary>
 public partial class SignalTests
@@ -36,7 +36,7 @@ public partial class SignalTests
 
         await signal.OnNextAsync(OptionsStartValue, CancellationToken.None);
 
-        var value = await received.Task.WaitAsync(WaitTimeout);
+        var value = await received.Task;
         await Assert.That(value).IsEqualTo(OptionsStartValue);
     }
 
@@ -55,7 +55,7 @@ public partial class SignalTests
             return default;
         });
 
-        var value = await received.Task.WaitAsync(WaitTimeout);
+        var value = await received.Task;
         await Assert.That(value).IsEqualTo(OptionsStartValue);
     }
 
@@ -76,7 +76,7 @@ public partial class SignalTests
             return default;
         });
 
-        var value = await received.Task.WaitAsync(WaitTimeout);
+        var value = await received.Task;
         await Assert.That(value).IsEqualTo(OptionsLatestValue);
     }
 
@@ -104,7 +104,7 @@ public partial class SignalTests
         await Assert.That(caught).IsNotNull();
     }
 
-    /// <summary>Verifies the shared signal-state helper's <c>Values</c> projection hands back the signal itself —
+    /// <summary>Verifies the shared signal-state helper's <c>Values</c> projection hands back the signal itself -
     /// a signal is its own observable sequence, so no wrapper is allocated for the <c>Values</c> view.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]

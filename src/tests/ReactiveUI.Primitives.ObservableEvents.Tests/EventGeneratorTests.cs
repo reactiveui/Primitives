@@ -39,7 +39,7 @@ public sealed partial class EventGeneratorTests
     /// <summary>The number of deliberately unsupported events in the combined signature test.</summary>
     private const int UnsupportedEventCount = 4;
 
-    /// <summary>The number of distinct wrappers expected from the sanitization-collision regression.</summary>
+    /// <summary>The distinct wrappers required when sanitized identifiers collide.</summary>
     private const int SanitizationCollisionWrapperCount = 2;
 
     /// <summary>Source that exercises a conventional instance event.</summary>
@@ -892,7 +892,7 @@ public sealed partial class EventGeneratorTests
         return references;
     }
 
-    /// <summary>Adds a metadata reference unless the same assembly path is already present.</summary>
+    /// <summary>Adds a metadata reference unless the same assembly path is present.</summary>
     /// <param name="references">The destination references.</param>
     /// <param name="path">The assembly path to add.</param>
     private static void AddReference(List<MetadataReference> references, string path)

@@ -6,12 +6,7 @@ using System.Runtime.CompilerServices;
 
 namespace ReactiveUI.Primitives.Extensions.Operators;
 
-/// <summary>
-/// Filtering operator that forwards only <c>true</c> values from a boolean source.
-/// Replaces the <c>source.Where(b =&gt; b)</c> pattern with a dedicated forwarding
-/// observer, avoiding the per-subscription closure allocation that the predicate
-/// lambda would otherwise capture.
-/// </summary>
+/// <summary>Forwards only the <c>true</c> values of a boolean source, passing errors and completion through unchanged.</summary>
 /// <param name="source">The boolean source observable.</param>
 public sealed class WhereTrueObservable(IObservable<bool> source) : IObservable<bool>
 {

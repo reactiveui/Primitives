@@ -6,12 +6,7 @@ using System.Runtime.CompilerServices;
 
 namespace ReactiveUI.Primitives.Advanced;
 
-/// <summary>
-/// Single-source sink that folds every observed value through an immutable value-type <typeparamref name="TAggregator"/>
-/// and emits the aggregate result once the source completes. The accumulator is advanced functionally through a
-/// constrained (devirtualized, allocation-free) call, so each concrete aggregate operator shares this one
-/// implementation without a base class or per-value indirection.
-/// </summary>
+/// <summary>Folds source values through an immutable accumulator and emits the result when the source completes.</summary>
 /// <typeparam name="T">The observed value type.</typeparam>
 /// <typeparam name="TResult">The terminal result type.</typeparam>
 /// <typeparam name="TAggregator">The value-type accumulator that folds values and yields the result.</typeparam>
@@ -52,7 +47,7 @@ public sealed class AggregateWitness<T, TResult, TAggregator>(IObserver<TResult>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void OnCompleted() => SinkTerminal.Complete(_observer, _aggregator.Result, this, ref _done);
 
-    /// <summary>Assigns the upstream subscription, disposing it if one is already held.</summary>
+    /// <summary>Assigns the upstream subscription, disposing the incoming one when this sink holds a subscription or has been disposed.</summary>
     /// <param name="subscription">The upstream subscription.</param>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void SetSubscription(IDisposable subscription) => SinkSubscription.Set(ref _subscription, subscription);

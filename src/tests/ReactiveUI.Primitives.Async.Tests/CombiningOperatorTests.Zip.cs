@@ -21,6 +21,37 @@ public partial class CombiningOperatorTests
         await Assert.That(result).IsCollectionEqualTo(["1a", "2b", "3c"]);
     }
 
+    /// <summary>Tests Pair keeps waiting when the second source completes while its value still waits for a partner.</summary>
+    /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
+    [Test]
+    public async Task WhenPairSecondCompletesWithQueuedValue_ThenWaitsForFirst()
+    {
+        var first = Signal.Create<int>();
+        var second = Signal.Create<int>();
+        List<int> values = [];
+        List<Result> completions = [];
+        await using var subscription = await first.Values.Pair(second.Values, static (left, right) => left + right).SubscribeAsync(
+            (value, _) =>
+            {
+                values.Add(value);
+                return default;
+            },
+            null,
+            result =>
+            {
+                completions.Add(result);
+                return default;
+            },
+            CancellationToken.None);
+
+        await second.OnNextAsync(SampleValue2, CancellationToken.None);
+        await second.OnCompletedAsync(Result.Success);
+        await Assert.That(completions).IsEmpty();
+
+        await first.OnNextAsync(1, CancellationToken.None);
+        await Assert.That(values).IsCollectionEqualTo([1 + SampleValue2]);
+    }
+
     /// <summary>Tests Zip tuple overload creates tuples.</summary>
     /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
@@ -186,7 +217,7 @@ public partial class CombiningOperatorTests
                 return default;
             });
         await first.OnErrorResumeAsync(new InvalidOperationException("first error"), CancellationToken.None);
-        await AsyncTestHelpers.WaitForConditionAsync(() => received is not null, CombiningWaitTimeout);
+        await Assert.That(received is not null).IsTrue();
         await Assert.That(received).IsNotNull();
         await Assert.That(received!.Message).IsEqualTo("first error");
     }
@@ -207,7 +238,7 @@ public partial class CombiningOperatorTests
                 return default;
             });
         await second.OnErrorResumeAsync(new InvalidOperationException("second error"), CancellationToken.None);
-        await AsyncTestHelpers.WaitForConditionAsync(() => received is not null, CombiningWaitTimeout);
+        await Assert.That(received is not null).IsTrue();
         await Assert.That(received).IsNotNull();
         await Assert.That(received!.Message).IsEqualTo("second error");
     }
@@ -236,7 +267,7 @@ public partial class CombiningOperatorTests
 
         // Complete first with failure, setting done=true
         await first.OnCompletedAsync(Result.Failure(new InvalidOperationException("fail")));
-        await AsyncTestHelpers.WaitForConditionAsync(() => completionResult is not null, CombiningWaitTimeout);
+        await Assert.That(completionResult is not null).IsTrue();
 
         // Items emitted after done should be ignored
         await first.OnNextAsync(Sentinel99, CancellationToken.None);
@@ -268,7 +299,7 @@ public partial class CombiningOperatorTests
         await first.OnNextAsync(1, CancellationToken.None);
         await first.OnNextAsync(SampleValue2, CancellationToken.None);
         await first.OnCompletedAsync(Result.Success);
-        await AsyncTestHelpers.WaitForConditionAsync(() => items.Count >= 2, CombiningWaitTimeout);
+        await Assert.That(items.Count >= 2).IsTrue();
         await Assert.That(items).IsCollectionEqualTo(["1-a", "2-b"]);
     }
 
@@ -290,7 +321,7 @@ public partial class CombiningOperatorTests
             });
         await first.OnCompletedAsync(Result.Success);
         await second.OnCompletedAsync(Result.Success);
-        await AsyncTestHelpers.WaitForConditionAsync(() => completionCount >= 1, CombiningWaitTimeout);
+        await Assert.That(completionCount >= 1).IsTrue();
 
         // Only one completion should have been forwarded
         await Assert.That(completionCount).IsEqualTo(1);
@@ -345,7 +376,7 @@ public partial class CombiningOperatorTests
                 return default;
             });
         await first.OnCompletedAsync(Result.Failure(new InvalidOperationException(FirstFailMessage)));
-        await AsyncTestHelpers.WaitForConditionAsync(() => completionResult.HasValue, CombiningWaitTimeout);
+        await Assert.That(completionResult.HasValue).IsTrue();
         await Assert.That(completionResult).IsNotNull();
         await Assert.That(completionResult!.Value.IsFailure).IsTrue();
         await first.DisposeAsync();
@@ -419,7 +450,7 @@ public partial class CombiningOperatorTests
 
         // Complete source1 with failure (sets _done = true)
         await source1.OnCompletedAsync(Result.Failure(new InvalidOperationException("done")));
-        await AsyncTestHelpers.WaitForConditionAsync(() => completionResult.HasValue, CombiningWaitTimeout);
+        await Assert.That(completionResult.HasValue).IsTrue();
 
         // Now emit on source2 - should be ignored because _done = true
         await source2.OnNextAsync("after", CancellationToken.None);
@@ -450,7 +481,7 @@ public partial class CombiningOperatorTests
 
         // Complete source2 with failure (sets _done = true)
         await source2.OnCompletedAsync(Result.Failure(new InvalidOperationException("done")));
-        await AsyncTestHelpers.WaitForConditionAsync(() => completionResult.HasValue, CombiningWaitTimeout);
+        await Assert.That(completionResult.HasValue).IsTrue();
 
         // Now emit on source1 - should be ignored because _done = true
         await source1.OnNextAsync(Sentinel42, CancellationToken.None);
@@ -474,7 +505,7 @@ public partial class CombiningOperatorTests
             null,
             static result => default);
 
-        // Complete source2 with failure → sets _done = true
+        // Complete source2 with failure -> sets _done = true
         await src2.Complete(Result.Failure(new InvalidOperationException("done")));
 
         // Now complete source1 - OnCompleted1Async checks _done and returns early
@@ -528,7 +559,7 @@ public partial class CombiningOperatorTests
         await Assert.That(sub).IsNotNull();
     }
 
-    /// <summary>Exercises the <c>Zip</c> subscription's idempotent <c>DisposeAsync</c> path —
+    /// <summary>Exercises the <c>Zip</c> subscription's idempotent <c>DisposeAsync</c> path -
     /// a second dispose hits the <c>DisposalHelper.TrySetDisposed</c> already-set short-circuit.</summary>
     /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]

@@ -24,7 +24,7 @@ public class SignalRecoverTests
     /// <summary>Expected values produced by the catch params overload.</summary>
     private static readonly int[] CatchRecoveryExpected = [First, Second];
 
-    /// <summary>Covers catch sequence recovery, final error, empty completion, null source, and enumerator failure branches.</summary>
+    /// <summary>A recover sequence falls through to the first source that succeeds, and reports a null or failing source.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
     public async Task CatchParamsFactoryCoversRecoveryAndFailureBranches()
@@ -77,7 +77,7 @@ public class SignalRecoverTests
         await Assert.That(((IRequireCurrentThread<int>)cleanup).IsRequiredSubscribeOnCurrentThread()).IsTrue();
     }
 
-    /// <summary>A cleanup action runs even when subscribing to the source throws, and the failure still surfaces.</summary>
+    /// <summary>A cleanup action runs when subscribing to the source throws, and the failure surfaces.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
     public async Task OnCleanupRunsTheActionWhenSubscribingToTheSourceThrows()
@@ -123,7 +123,6 @@ public class SignalRecoverTests
 
         upstream!.OnError(new InvalidOperationException(FirstMessage));
 
-        // The sequence was torn down, so the fallback source must never be subscribed and nothing may reach downstream.
         await Assert.That(witness.Values.Count).IsEqualTo(0);
         await Assert.That(witness.Errors.Count).IsEqualTo(0);
         await Assert.That(witness.Completed).IsEqualTo(0);

@@ -22,20 +22,14 @@ internal static class ActivationExtensionsEmitter
     /// <summary>The indentation the generated overloads' bodies and constraints sit at.</summary>
     private const int BodyIndent = MethodIndent + SourceFileWriter.IndentWidth;
 
-    /// <summary>Emits every generated activation overload into one partial-class file.</summary>
+    /// <summary>Emits concrete activation overloads that take precedence over the generic placeholder.</summary>
     /// <param name="models">The overloads to emit, in request order.</param>
     /// <returns>The generated source.</returns>
-    /// <remarks>
-    /// The overloads join the same partial class as the placeholder they displace, so a call site resolves to the
-    /// concrete overload without the consumer importing anything new: a non-generic candidate beats the generic
-    /// placeholder outright.
-    /// </remarks>
     internal static string Emit(ImmutableArray<ActivationModel> models)
     {
         var builder = new PooledStringBuilder(ScaffoldCapacity + (models.Length * OverloadCapacity));
         _ = builder.Append(Constants.GeneratedFileHeader);
 
-        // Every overload was extracted from the same compilation, so they agree on what its language allows.
         if (models[0].SupportsNullableAnnotations)
         {
             _ = builder.Append(Constants.NullableEnableDirective);

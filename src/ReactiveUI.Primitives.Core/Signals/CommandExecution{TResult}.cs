@@ -3,7 +3,6 @@
 // See the LICENSE file in the project root for full license information.
 
 using System.Runtime.CompilerServices;
-using System.Runtime.ExceptionServices;
 
 namespace ReactiveUI.Primitives.Signals;
 
@@ -116,8 +115,7 @@ public readonly record struct CommandExecution<TResult>
         [System.Diagnostics.CodeAnalysis.SuppressMessage(
             "Concurrency",
             "PSH1315:A blocking wait on an awaitable that may not be done",
-            Justification =
-                "Awaiter GetResult must be synchronous; it runs only after completion and unwraps exceptions without AggregateException wrapping.")]
+            Justification = "An awaiter's GetResult is synchronous by contract and runs only once the task is complete.")]
         public TResult GetResult()
         {
             if (_task is not null)
@@ -125,12 +123,7 @@ public readonly record struct CommandExecution<TResult>
                 return _task.GetAwaiter().GetResult();
             }
 
-            if (_exception is not null)
-            {
-                ExceptionDispatchInfo.Capture(_exception).Throw();
-            }
-
-            return _result!;
+            return _exception is null ? _result! : CapturedFailure.Rethrow(_exception, _result!);
         }
 
         /// <inheritdoc/>

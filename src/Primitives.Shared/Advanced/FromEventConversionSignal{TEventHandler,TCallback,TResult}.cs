@@ -8,11 +8,7 @@ namespace ReactiveUI.Primitives.Reactive.Advanced;
 namespace ReactiveUI.Primitives.Advanced;
 #endif
 
-/// <summary>
-/// Bridges an event whose handler is built by a caller-supplied conversion, so the handler can do
-/// synchronous work inside the event before the notification is published downstream. Supplying the
-/// conversion removes the need to derive a delegate reflectively, keeping the bridge trim- and AOT-safe.
-/// </summary>
+/// <summary>Bridges an event through a caller-supplied conversion that runs before publishing each notification.</summary>
 /// <typeparam name="TEventHandler">The delegate type used by the event.</typeparam>
 /// <typeparam name="TCallback">The notification callback type handed to the conversion.</typeparam>
 /// <typeparam name="TResult">The element type published downstream.</typeparam>

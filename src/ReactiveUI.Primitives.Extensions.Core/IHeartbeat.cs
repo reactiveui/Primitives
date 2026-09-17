@@ -4,15 +4,13 @@
 
 namespace ReactiveUI.Primitives.Extensions;
 
-/// <summary>Heart beat.</summary>
-/// <typeparam name="T">The type.</typeparam>
+/// <summary>Carries either a heartbeat tick or a value update from an observable sequence.</summary>
+/// <typeparam name="T">The type of the update value.</typeparam>
 public interface IHeartbeat<out T>
 {
-    /// <summary>Gets a value indicating whether this instance is heartbeat.</summary>
-    /// <value><c>true</c> if this instance is heartbeat; otherwise, <c>false</c>.</value>
+    /// <summary>Gets a value indicating whether this notification is a heartbeat tick rather than an update.</summary>
     bool IsHeartbeat { get; }
 
-    /// <summary>Gets the update.</summary>
-    /// <value>The update.</value>
+    /// <summary>Gets the update value, which carries no meaning while <see cref="IsHeartbeat"/> is <see langword="true"/>.</summary>
     T? Update { get; }
 }

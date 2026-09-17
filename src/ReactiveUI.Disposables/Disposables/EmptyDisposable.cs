@@ -4,7 +4,7 @@
 
 namespace ReactiveUI.Primitives.Disposables;
 
-/// <summary>A no-op <see cref="IDisposable"/> singleton used in place of <c>EmptyDisposable.Instance</c>.</summary>
+/// <summary>A no-op <see cref="IDisposable"/> whose shared instance stands in for the absence of a resource.</summary>
 [System.Diagnostics.DebuggerDisplay("{DebuggerDisplay,nq}")]
 public sealed class EmptyDisposable : IDisposable
 {
@@ -24,6 +24,6 @@ public sealed class EmptyDisposable : IDisposable
     /// <inheritdoc/>
     public void Dispose()
     {
-        // Intentionally empty: represents the absence of a resource, so there is nothing to release.
+        // Disposing an empty resource has no effect.
     }
 }

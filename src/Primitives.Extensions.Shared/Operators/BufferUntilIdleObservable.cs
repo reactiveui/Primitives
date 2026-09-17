@@ -10,10 +10,7 @@ namespace ReactiveUI.Primitives.Extensions.Reactive.Operators;
 namespace ReactiveUI.Primitives.Extensions.Operators;
 #endif
 
-/// <summary>
-/// Buffers elements and emits them when the stream has been idle for a specified duration. Backs both
-/// the <c>BufferUntilIdle</c> and <c>BufferUntilInactive</c> public operators.
-/// </summary>
+/// <summary>Buffers elements until the source has been idle for the specified duration.</summary>
 /// <typeparam name="T">The type of elements in the source sequence.</typeparam>
 /// <param name="source">The source observable.</param>
 /// <param name="idleTime">The duration of inactivity required to flush the buffer.</param>
@@ -35,22 +32,20 @@ internal sealed class BufferUntilIdleObservable<T>(
         return new DisposableBag(subscription, sink);
     }
 
-    /// <summary>
-    /// Sink that manages the buffer and idle timer. Composes <see cref="TimerSinkState{T}"/> for
-    /// the shared gate / timer / done-flag plumbing so this class only carries the buffer logic.
-    /// </summary>
+    /// <summary>Sink that accumulates elements and emits the buffer once the idle timer elapses.</summary>
     /// <param name="downstream">The downstream observer.</param>
     /// <param name="idleTime">The idle time period.</param>
-    /// <param name="scheduler">The scheduler.</param>
+    /// <param name="scheduler">The sequencer that times the idle period.</param>
+    /// <remarks>Buffers and terminals are queued in order under the gate and delivered after it is released.</remarks>
     private sealed class BufferUntilIdleSink(
         IObserver<IList<T>> downstream,
         TimeSpan idleTime,
         ISequencer scheduler) : IObserver<T>, IDisposable
     {
-        /// <summary>The gate protecting state transitions and downstream notification.</summary>
+        /// <summary>Guards the buffer, the terminal state and the order notifications are queued in; never held while the observer runs.</summary>
         private readonly Lock _gate = new();
 
-        /// <summary>Shared timer / done-flag plumbing.</summary>
+        /// <summary>The timer slot, terminal state and serialized delivery shared with the operator's handlers.</summary>
         private readonly TimerSinkState<IList<T>> _state = new(downstream);
 
         /// <summary>The current buffer of elements.</summary>
@@ -67,28 +62,33 @@ internal sealed class BufferUntilIdleObservable<T>(
                 }
 
                 _buffer.Add(value);
-                ScheduleFlush();
             }
+
+            ScheduleFlush();
         }
 
         /// <inheritdoc/>
         public void OnError(Exception error)
         {
-            Flush();
             lock (_gate)
             {
-                _state.HandleErrorLocked(error);
+                QueueBufferLocked();
+                _ = _state.QueueErrorLocked(error);
             }
+
+            _state.Flush();
         }
 
         /// <inheritdoc/>
         public void OnCompleted()
         {
-            Flush();
             lock (_gate)
             {
-                _state.HandleCompletedLocked();
+                QueueBufferLocked();
+                _ = _state.QueueCompletedLocked();
             }
+
+            _state.Flush();
         }
 
         /// <inheritdoc/>
@@ -100,28 +100,30 @@ internal sealed class BufferUntilIdleObservable<T>(
             }
         }
 
-        /// <summary>Schedules a flush after the idle period.</summary>
-        private void ScheduleFlush() => _state.Timer.Disposable = scheduler.Schedule(idleTime, Flush);
+        /// <summary>Replaces any pending flush with one scheduled a further idle period ahead.</summary>
+        private void ScheduleFlush() => _state.Timer.Disposable = scheduler.Schedule(idleTime, EmitBuffer);
 
-        /// <summary>Flushes the current buffer to the downstream observer.</summary>
-        private void Flush()
+        /// <summary>Queues the current buffer and delivers it to the downstream observer.</summary>
+        private void EmitBuffer()
         {
-            List<T>? toEmit = null;
             lock (_gate)
             {
-                if (_buffer.Count > 0)
-                {
-                    toEmit = _buffer;
-                    _buffer = [];
-                }
+                QueueBufferLocked();
             }
 
-            if (toEmit is null)
+            _state.Flush();
+        }
+
+        /// <summary>Queues the current buffer when it holds elements and starts a new one, while the caller holds the gate.</summary>
+        private void QueueBufferLocked()
+        {
+            if (_buffer.Count == 0)
             {
                 return;
             }
 
-            downstream.OnNext(toEmit);
+            _ = _state.QueueLocked(_buffer);
+            _buffer = [];
         }
     }
 }

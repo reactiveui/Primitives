@@ -2,25 +2,43 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Runtime.CompilerServices;
+
 namespace ReactiveUI.Primitives.Async.Advanced;
 
 /// <summary>A subscription that emits the contents of an asynchronous enumerable.</summary>
 /// <typeparam name="T">The element type.</typeparam>
 [System.Diagnostics.DebuggerDisplay("AsyncEnumerableSubscription: Source = {Source}")]
-public sealed class AsyncEnumerableSubscription<T> : TaskSignalSubscription<T>
+public sealed class AsyncEnumerableSubscription<T> : IAsyncDisposable, ITaskSignalJob<T>
 {
+    /// <summary>The observer receiving the job's notifications.</summary>
+    private readonly IObserverAsync<T> _observer;
+
+    /// <summary>Runs the job and joins it on disposal.</summary>
+    private readonly TaskSignalState _task = new();
+
     /// <summary>Initializes a new instance of the <see cref="AsyncEnumerableSubscription{T}"/> class.</summary>
     /// <param name="observer">The observer receiving the values.</param>
     /// <param name="source">The source sequence.</param>
     public AsyncEnumerableSubscription(IObserverAsync<T> observer, IAsyncEnumerable<T> source)
-        : base(observer) =>
+    {
+        _observer = observer;
         Source = source;
+    }
 
     /// <summary>Gets the source sequence.</summary>
     private IAsyncEnumerable<T> Source { get; }
 
+    /// <summary>Starts the subscription's job and returns without waiting for it to finish.</summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public void Start() => _task.Start(this, _observer);
+
     /// <inheritdoc/>
-    protected override async ValueTask ExecuteAsyncCore(IObserverAsync<T> observer, CancellationToken cancellationToken)
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public ValueTask DisposeAsync() => _task.DisposeAsync();
+
+    /// <inheritdoc/>
+    async ValueTask ITaskSignalJob<T>.ExecuteAsync(IObserverAsync<T> observer, CancellationToken cancellationToken)
     {
         await foreach (var value in Source.WithCancellation(cancellationToken))
         {

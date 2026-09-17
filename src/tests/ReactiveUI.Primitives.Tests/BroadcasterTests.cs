@@ -7,7 +7,7 @@ using ReactiveUI.Primitives.Signals;
 
 namespace ReactiveUI.Primitives.Tests;
 
-/// <summary>Coverage for the public <see cref="Broadcaster{T}"/> equality and copy-on-write surface.</summary>
+/// <summary>Tests for the public <see cref="Broadcaster{T}"/> equality and copy-on-write surface.</summary>
 public class BroadcasterTests
 {
     /// <summary>The literal one.</summary>
@@ -19,6 +19,106 @@ public class BroadcasterTests
     /// <summary>The literal three.</summary>
     private const int Three = 3;
 
+    /// <summary>A stale observer snapshot cannot replace a newer addition.</summary>
+    /// <param name="observerCount">The number of observers in the original snapshot.</param>
+    /// <returns>A task representing the asynchronous test.</returns>
+    [Test]
+    [Arguments(0)]
+    [Arguments(One)]
+    [Arguments(Two)]
+    public async Task TryAdd_StaleSnapshot_PreservesCompetingAddition(int observerCount)
+    {
+        RecordingWitness<int> first = new();
+        RecordingWitness<int> second = new();
+        RecordingWitness<int> competing = new();
+        RecordingWitness<int> incoming = new();
+        IObserver<int>[] initial = observerCount switch
+        {
+            0 => [],
+            One => [first],
+            _ => [first, second],
+        };
+        object? observers = observerCount switch
+        {
+            0 => null,
+            One => first,
+            _ => initial,
+        };
+        var stale = observers;
+        await Assert.That(Broadcaster<int>.TryAdd(ref observers, stale, competing)).IsTrue();
+        var current = observers;
+
+        await Assert.That(Broadcaster<int>.TryAdd(ref observers, stale, incoming)).IsFalse();
+        await Assert.That(observers).IsSameReferenceAs(current);
+
+        await Assert.That(Broadcaster<int>.TryAdd(ref observers, current, incoming)).IsTrue();
+        var actual = await Assert.That(observers).IsTypeOf<IObserver<int>[]>().And.IsNotNull();
+        await Assert.That(actual.SequenceEqual(initial.Append(competing).Append(incoming))).IsTrue();
+    }
+
+    /// <summary>Removal retries against the current snapshot without losing a competing addition.</summary>
+    /// <param name="multiple">True when the original snapshot contains two observers.</param>
+    /// <returns>A task representing the asynchronous test.</returns>
+    [Test]
+    [Arguments(false)]
+    [Arguments(true)]
+    public async Task TryRemove_StaleSnapshot_PreservesCompetingAddition(bool multiple)
+    {
+        RecordingWitness<int> removed = new();
+        RecordingWitness<int> retained = new();
+        RecordingWitness<int> competing = new();
+        object? observers = multiple ? new IObserver<int>[] { removed, retained } : removed;
+        var stale = observers;
+        await Assert.That(Broadcaster<int>.TryAdd(ref observers, stale, competing)).IsTrue();
+        var current = observers;
+
+        await Assert.That(Broadcaster<int>.TryRemove(ref observers, stale, removed)).IsFalse();
+        await Assert.That(observers).IsSameReferenceAs(current);
+        await Assert.That(Broadcaster<int>.TryRemove(ref observers, current, removed)).IsTrue();
+
+        if (multiple)
+        {
+            var actual = await Assert.That(observers).IsTypeOf<IObserver<int>[]>().And.IsNotNull();
+            await Assert.That(actual.SequenceEqual([retained, competing])).IsTrue();
+        }
+        else
+        {
+            await Assert.That(observers).IsSameReferenceAs(competing);
+        }
+    }
+
+    /// <summary>Removing an absent observer does not change an empty or single-observer slot.</summary>
+    /// <param name="empty">True when no observer is registered.</param>
+    /// <returns>A task representing the asynchronous test.</returns>
+    [Test]
+    [Arguments(false)]
+    [Arguments(true)]
+    public async Task TryRemove_AbsentObserver_LeavesSlotUnchanged(bool empty)
+    {
+        RecordingWitness<int> retained = new();
+        RecordingWitness<int> missing = new();
+        object? observers = empty ? null : retained;
+        var current = observers;
+
+        await Assert.That(Broadcaster<int>.TryRemove(ref observers, current, missing)).IsTrue();
+        await Assert.That(ReferenceEquals(observers, current)).IsTrue();
+    }
+
+    /// <summary>Removing the second of two observers leaves the first as the single observer.</summary>
+    /// <returns>A task representing the asynchronous test.</returns>
+    [Test]
+    public async Task TryRemove_SecondOfTwo_LeavesTheFirst()
+    {
+        RecordingWitness<int> first = new();
+        RecordingWitness<int> second = new();
+        object? observers = new IObserver<int>[] { first, second };
+
+        var removed = Broadcaster<int>.TryRemove(ref observers, observers, second);
+
+        await Assert.That(removed).IsTrue();
+        await Assert.That(observers).IsSameReferenceAs(first);
+    }
+
     /// <summary>The equality operators compare the underlying observer set by reference.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
@@ -27,21 +127,16 @@ public class BroadcasterTests
         Broadcaster<int> left = default;
         Broadcaster<int> right = default;
 
-        // Both empty -> same (null) observer set.
         await Assert.That(left == right).IsTrue();
         await Assert.That(left != right).IsFalse();
         left.Add(new DelegateWitness<int>(static _ => { }));
 
-        // Left now references an observer set; right is still empty.
+        // Left references an observer set; right is empty.
         await Assert.That(left != right).IsTrue();
         await Assert.That(left == right).IsFalse();
     }
 
-    /// <summary>
-    /// The hash follows the observer set, which has three shapes. An empty broadcaster hashes to zero, and a
-    /// broadcaster holding exactly one observer hashes to that observer's identity — so two broadcasters over
-    /// the same single observer agree, which is what equality promises.
-    /// </summary>
+    /// <summary>An empty broadcaster hashes to zero and a single-observer broadcaster hashes to that observer's identity.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
     public async Task BroadcasterHashesToZeroWhenEmptyAndToTheObserverIdentityWhenSingle()
@@ -61,7 +156,7 @@ public class BroadcasterTests
         await Assert.That(single.Equals(alsoSingle)).IsTrue();
     }
 
-    /// <summary>Covers broadcaster copy-on-write, signal late-terminal, and buffer disposal/error branches.</summary>
+    /// <summary>Verifies broadcaster copy-on-write, late terminal notifications on a signal, and buffer error handling.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
     public async Task BroadcasterCopyOnWriteSignalAndBufferCoverTerminalEdges()
@@ -109,7 +204,7 @@ public class BroadcasterTests
             source.OnNext(One);
             source.OnNext(Two);
 
-            // The window (size 3) is incomplete; completion flushes the partial trailing window.
+            // The size-3 window is incomplete, so completion flushes the partial window.
             source.OnCompleted();
         }
 

@@ -9,6 +9,7 @@ using ReactiveUI.Primitives.Advanced;
 namespace ReactiveUI.Primitives.Concurrency;
 
 /// <summary>Avalonia UI-thread scheduler that coalesces scheduled work onto a dispatcher drain.</summary>
+/// <remarks>Callbacks run at Priority in posted dispatcher batches without inline reentrancy; cancellation suppresses unstarted work.</remarks>
 /// <seealso cref="ISequencer" />
 [System.Diagnostics.DebuggerDisplay("{DebuggerDisplay,nq}")]
 public sealed class AvaloniaScheduler : ISequencer
@@ -33,10 +34,25 @@ public sealed class AvaloniaScheduler : ISequencer
     /// <param name="priority">Dispatcher priority used for posted drains and delayed work.</param>
     /// <exception cref="ArgumentNullException"><paramref name="dispatcher"/> is <see langword="null"/>.</exception>
     public AvaloniaScheduler(Dispatcher dispatcher, DispatcherPriority priority)
+        : this(dispatcher, priority, null, null)
+    {
+    }
+
+    /// <summary>Initializes a new instance of the <see cref="AvaloniaScheduler"/> class.</summary>
+    /// <param name="dispatcher">The dispatcher exposed by the scheduler.</param>
+    /// <param name="priority">The selected dispatcher priority.</param>
+    /// <param name="post">Posts drains, or null to use the dispatcher.</param>
+    /// <param name="scheduleDelayed">Schedules delayed work, or null to use dispatcher timers.</param>
+    /// <exception cref="ArgumentNullException"><paramref name="dispatcher"/> is null.</exception>
+    internal AvaloniaScheduler(
+        Dispatcher dispatcher,
+        DispatcherPriority priority,
+        Func<Action, bool>? post,
+        Action<IWorkItem, long>? scheduleDelayed)
     {
         Dispatcher = dispatcher ?? throw new ArgumentNullException(nameof(dispatcher));
         Priority = priority;
-        _state = new(this, Post, RunDrain, ScheduleDelayed);
+        _state = new(this, post ?? Post, RunDrain, scheduleDelayed ?? ScheduleDelayed);
     }
 
     /// <summary>Gets the dispatcher used to marshal work to the UI thread.</summary>
@@ -67,6 +83,7 @@ public sealed class AvaloniaScheduler : ISequencer
     /// <summary>Marshals the cached drain callback onto the dispatcher.</summary>
     /// <param name="drain">The drain callback.</param>
     /// <returns><see langword="true"/>, since the dispatcher accepts the work.</returns>
+    [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
     private bool Post(Action drain)
     {
         Dispatcher.Post(drain, Priority);
@@ -76,6 +93,7 @@ public sealed class AvaloniaScheduler : ISequencer
     /// <summary>Runs delayed work on a dispatcher timer bound to the selected dispatcher.</summary>
     /// <param name="item">Work item to execute at the due time.</param>
     /// <param name="dueTimestamp">Absolute monotonic timestamp at which to execute the item.</param>
+    [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
     private void ScheduleDelayed(IWorkItem item, long dueTimestamp)
     {
         DispatcherTimer timer =
@@ -88,7 +106,7 @@ public sealed class AvaloniaScheduler : ISequencer
         timer.Start();
     }
 
-    /// <summary>Forwards the cached drain callback to the engine.</summary>
+    /// <summary>Runs one queued batch on the coalescing engine.</summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private void RunDrain() => _state.RunDrain();
 }

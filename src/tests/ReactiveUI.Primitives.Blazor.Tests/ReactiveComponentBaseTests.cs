@@ -11,16 +11,23 @@ using ReactiveUI.Primitives.Disposables;
 
 namespace ReactiveUI.Primitives.Blazor.Tests;
 
-/// <summary>
-/// Tests for <see cref="ReactiveComponentBase"/>'s observation, refresh, and disposal behaviour. Each test
-/// attaches the component to an <see cref="HtmlRenderer"/> so its renderer-dispatcher-bound work (the guarded
-/// invoke and <c>StateHasChanged</c>) actually runs, and drives the source on the dispatcher so the
-/// notifications complete synchronously.
-/// </summary>
+/// <summary>Tests <see cref="ReactiveComponentBase"/> observation, refresh, and disposal against a component attached to an <see cref="HtmlRenderer"/>.</summary>
 public sealed class ReactiveComponentBaseTests
 {
     /// <summary>The first value pushed to a source.</summary>
     private const int FirstValue = 1;
+
+    /// <summary>The debugger reflects disposal without attaching the component to a renderer.</summary>
+    /// <returns>A task representing the asynchronous test.</returns>
+    [Test]
+    public async Task DebuggerDisplay_ReportsCurrentDisposalState()
+    {
+        HarnessComponent component = new();
+
+        await Assert.That(GetDebuggerDisplay(component)).IsEqualTo("IsDisposed = False");
+        component.Dispose();
+        await Assert.That(GetDebuggerDisplay(component)).IsEqualTo("IsDisposed = True");
+    }
 
     /// <summary>Verifies an observed value reaches the callback and refreshes the component.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
@@ -99,7 +106,7 @@ public sealed class ReactiveComponentBaseTests
         await Assert.That(completed).IsTrue();
     }
 
-    /// <summary>Verifies suppressing the refresh still delivers the value.</summary>
+    /// <summary>Verifies an observation with the refresh suppressed delivers the value to the callback.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
     public async Task ObservationWithoutRefreshStillDeliversTheValue()
@@ -143,6 +150,26 @@ public sealed class ReactiveComponentBaseTests
 
         await Assert.That(component.IsDisposedState).IsTrue();
     }
+
+    /// <summary>Verifies disposal without managed resources leaves the component undisposed.</summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    [Test]
+    public async Task DisposalWithoutManagedResourcesLeavesTheComponentUndisposed()
+    {
+        HarnessComponent component = new();
+
+        component.DisposeWithoutManagedResources();
+        await Assert.That(component.IsDisposedState).IsFalse();
+
+        component.Dispose();
+        await Assert.That(component.IsDisposedState).IsTrue();
+    }
+
+    /// <summary>Invokes the getter used by the debugger without reflection.</summary>
+    /// <param name="component">The component to display.</param>
+    /// <returns>The debugger display text.</returns>
+    [UnsafeAccessor(UnsafeAccessorKind.Method, Name = "get_DebuggerDisplay")]
+    private static extern string GetDebuggerDisplay(ReactiveComponentBase component);
 
     /// <summary>A source whose observer the test drives directly.</summary>
     /// <typeparam name="T">The value type.</typeparam>
@@ -215,6 +242,10 @@ public sealed class ReactiveComponentBaseTests
         /// <returns>A task that completes when the invalidation is accepted.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public Task InvalidateComponentAsync() => InvalidateAsync();
+
+        /// <summary>Runs the disposal path that releases no managed resources.</summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void DisposeWithoutManagedResources() => Dispose(false);
 
         /// <inheritdoc/>
         protected override void OnParametersSet() => Captured?.Invoke(this);

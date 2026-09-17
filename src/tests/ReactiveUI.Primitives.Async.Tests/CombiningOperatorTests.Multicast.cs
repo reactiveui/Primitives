@@ -354,7 +354,6 @@ public partial class CombiningOperatorTests
     [Test]
     public async Task WhenRefCountDisposedWithActiveConnection_ThenConnectionIsDisposed()
     {
-        const int ItemWaitTimeoutSeconds = 5;
         var source = Signal.Create<int>();
         var connectable = source.Values.Publish();
         var refCounted = connectable.RefCount();
@@ -371,9 +370,7 @@ public partial class CombiningOperatorTests
 
         await source.OnNextAsync(Sentinel42, CancellationToken.None);
 
-        await AsyncTestHelpers.WaitForConditionAsync(
-            () => items.Count == 1,
-            TimeSpan.FromSeconds(ItemWaitTimeoutSeconds));
+        await Assert.That(items.Count == 1).IsTrue();
 
         // Dispose the RefCountSignal via its IDisposable implementation.
         ((IDisposable)(object)refCounted).Dispose();
@@ -392,7 +389,7 @@ public partial class CombiningOperatorTests
         var connectable = source.Publish();
         var refCounted = connectable.RefCount();
 
-        // Dispose without ever subscribing — _connection is null.
+        // Dispose without ever subscribing - _connection is null.
         ((IDisposable)(object)refCounted).Dispose();
     }
 
@@ -423,7 +420,7 @@ public partial class CombiningOperatorTests
         await Assert.That(connection).IsNotNull();
     }
 
-    /// <summary>Verifies that disposing the connection handle twice is idempotent — the second
+    /// <summary>Verifies that disposing the connection handle twice is idempotent - the second
     /// call hits the <c>connection is null</c> guard inside the dispose lambda.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]

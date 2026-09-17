@@ -7,9 +7,6 @@ using System.Runtime.CompilerServices;
 namespace ReactiveUI.Primitives.Async;
 
 /// <summary>Provides a set of extension methods for working with asynchronous observable sequences.</summary>
-/// <remarks>The SignalAsync class contains static extension methods that operate on instances of
-/// SignalAsync{T}. These methods enable querying and manipulation of asynchronous observable sequences in a manner
-/// similar to LINQ, supporting scenarios such as retrieving single elements or default values asynchronously.</remarks>
 public static partial class SignalAsyncExtensions
 {
     /// <summary>Single-or-default operators for an observable source sequence.</summary>
@@ -17,41 +14,29 @@ public static partial class SignalAsyncExtensions
     /// <param name="source">The source observable sequence.</param>
     extension<T>(IObservableAsync<T> source)
     {
-        /// <summary>
-        /// Asynchronously returns the only element of a sequence that satisfies a specified condition, or a default
-        /// value if no such element exists; this operation throws if more than one matching element is found.
-        /// </summary>
+        /// <summary>Asynchronously returns the only element of the sequence that satisfies a condition, or <paramref name="defaultValue"/> when no element does.</summary>
         /// <param name="predicate">A function to test each element for a condition. The method returns the element for which this predicate
         /// returns <see langword="true"/>.</param>
         /// <param name="defaultValue">The value to return if no element in the sequence satisfies the condition specified by <paramref
         /// name="predicate"/>.</param>
-        /// <returns>A value task that represents the asynchronous operation. The result contains the single element that matches
-        /// the predicate, the specified default value if no such element is found, or throws an exception if more than
-        /// one matching element exists.</returns>
-        /// <remarks>If more than one element satisfies the condition, an exception is thrown. If no
-        /// elements satisfy the condition, the specified default value is returned. The operation observes the provided
-        /// cancellation token.</remarks>
+        /// <returns>A value task whose result is the single matching element, or <paramref name="defaultValue"/> when no
+        /// element matches.</returns>
+        /// <exception cref="InvalidOperationException">More than one element satisfies <paramref name="predicate"/>.</exception>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public ValueTask<T?> SingleOrDefaultAsync(
             Func<T, bool> predicate,
             T? defaultValue) =>
             source.SingleOrDefaultAsync(predicate, defaultValue, CancellationToken.None);
 
-        /// <summary>
-        /// Asynchronously returns the only element of a sequence that satisfies a specified condition, or a default
-        /// value if no such element exists; this operation throws if more than one matching element is found.
-        /// </summary>
+        /// <summary>Asynchronously returns the only element of the sequence that satisfies a condition, or <paramref name="defaultValue"/> when no element does.</summary>
         /// <param name="predicate">A function to test each element for a condition. The method returns the element for which this predicate
         /// returns <see langword="true"/>.</param>
         /// <param name="defaultValue">The value to return if no element in the sequence satisfies the condition specified by <paramref
         /// name="predicate"/>.</param>
-        /// <param name="cancellationToken">A cancellation token that can be used to cancel the asynchronous operation.</param>
-        /// <returns>A value task that represents the asynchronous operation. The result contains the single element that matches
-        /// the predicate, the specified default value if no such element is found, or throws an exception if more than
-        /// one matching element exists.</returns>
-        /// <remarks>If more than one element satisfies the condition, an exception is thrown. If no
-        /// elements satisfy the condition, the specified default value is returned. The operation observes the provided
-        /// cancellation token.</remarks>
+        /// <param name="cancellationToken">The token that cancels the operation.</param>
+        /// <returns>A value task whose result is the single matching element, or <paramref name="defaultValue"/> when no
+        /// element matches.</returns>
+        /// <exception cref="InvalidOperationException">More than one element satisfies <paramref name="predicate"/>.</exception>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public ValueTask<T?> SingleOrDefaultAsync(
             Func<T, bool> predicate,
@@ -59,54 +44,38 @@ public static partial class SignalAsyncExtensions
             CancellationToken cancellationToken) =>
             SingleOrDefaultCoreAsync(source, predicate, defaultValue, cancellationToken);
 
-        /// <summary>
-        /// Asynchronously returns the only element of a sequence, or a default value if the sequence is empty; this
-        /// operation throws an exception if more than one element is found.
-        /// </summary>
+        /// <summary>Asynchronously returns the only element of the sequence, or the default of <typeparamref name="T"/> when the sequence is empty.</summary>
         /// <returns>A value task that represents the asynchronous operation. The task result contains the single element of the
         /// sequence, or the default value of <typeparamref name="T"/> if the sequence is empty.</returns>
+        /// <exception cref="InvalidOperationException">The source sequence contains more than one element.</exception>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public ValueTask<T?> SingleOrDefaultAsync() =>
             source.SingleOrDefaultAsync(default, CancellationToken.None);
 
-        /// <summary>
-        /// Asynchronously returns the only element of a sequence, or a default value if the sequence is empty; this
-        /// operation throws an exception if more than one element is found.
-        /// </summary>
-        /// <param name="cancellationToken">A cancellation token that can be used to cancel the asynchronous operation.</param>
+        /// <summary>Asynchronously returns the only element of the sequence, or the default of <typeparamref name="T"/> when the sequence is empty.</summary>
+        /// <param name="cancellationToken">The token that cancels the operation.</param>
         /// <returns>A value task that represents the asynchronous operation. The task result contains the single element of the
         /// sequence, or the default value of <typeparamref name="T"/> if the sequence is empty.</returns>
+        /// <exception cref="InvalidOperationException">The source sequence contains more than one element.</exception>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public ValueTask<T?> SingleOrDefaultAsync(CancellationToken cancellationToken) =>
             source.SingleOrDefaultAsync(default, cancellationToken);
 
-        /// <summary>
-        /// Asynchronously returns the single element of the sequence, or a specified default value if the sequence is
-        /// empty. Throws an exception if the sequence contains more than one element.
-        /// </summary>
+        /// <summary>Asynchronously returns the single element of the sequence, or <paramref name="defaultValue"/> when the sequence is empty.</summary>
         /// <param name="defaultValue">The value to return if the sequence contains no elements.</param>
-        /// <returns>A task that represents the asynchronous operation. The task result contains the single element of the
-        /// sequence, the specified default value if the sequence is empty, or throws if more than one element is
-        /// present.</returns>
-        /// <remarks>Use this method when you expect the sequence to contain zero or one element. If the
-        /// sequence contains more than one element, an exception is thrown. If the sequence is empty, the specified
-        /// default value is returned.</remarks>
+        /// <returns>A value task whose result is the single element of the sequence, or <paramref name="defaultValue"/> when
+        /// the sequence is empty.</returns>
+        /// <exception cref="InvalidOperationException">The source sequence contains more than one element.</exception>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public ValueTask<T?> SingleOrDefaultAsync(T? defaultValue) =>
             source.SingleOrDefaultAsync(defaultValue, CancellationToken.None);
 
-        /// <summary>
-        /// Asynchronously returns the single element of the sequence, or a specified default value if the sequence is
-        /// empty. Throws an exception if the sequence contains more than one element.
-        /// </summary>
+        /// <summary>Asynchronously returns the single element of the sequence, or <paramref name="defaultValue"/> when the sequence is empty.</summary>
         /// <param name="defaultValue">The value to return if the sequence contains no elements.</param>
-        /// <param name="cancellationToken">A cancellation token that can be used to cancel the asynchronous operation.</param>
-        /// <returns>A task that represents the asynchronous operation. The task result contains the single element of the
-        /// sequence, the specified default value if the sequence is empty, or throws if more than one element is
-        /// present.</returns>
-        /// <remarks>Use this method when you expect the sequence to contain zero or one element. If the
-        /// sequence contains more than one element, an exception is thrown. If the sequence is empty, the specified
-        /// default value is returned.</remarks>
+        /// <param name="cancellationToken">The token that cancels the operation.</param>
+        /// <returns>A value task whose result is the single element of the sequence, or <paramref name="defaultValue"/> when
+        /// the sequence is empty.</returns>
+        /// <exception cref="InvalidOperationException">The source sequence contains more than one element.</exception>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public ValueTask<T?> SingleOrDefaultAsync(T? defaultValue, CancellationToken cancellationToken) =>
             SingleOrDefaultCoreAsync(source, null, defaultValue, cancellationToken);

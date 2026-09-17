@@ -10,23 +10,23 @@ namespace ReactiveUI.Primitives.Reactive.Advanced;
 namespace ReactiveUI.Primitives.Advanced;
 #endif
 
-/// <summary>An observable that emits a single value then completes on the supplied scheduler; the concrete backing for the scheduled emit path.</summary>
+/// <summary>Emits a single value and then completes, on the supplied sequencer.</summary>
 /// <typeparam name="T">The emitted value type.</typeparam>
 [System.Diagnostics.DebuggerDisplay("ReturnSignal: Value = {_value}, Scheduler = {_scheduler}")]
 public sealed class ReturnSignal<T> : IRequireCurrentThread<T>
 {
-    /// <summary>Stores state for the signal implementation.</summary>
+    /// <summary>The value to emit.</summary>
     private readonly T _value;
 
-    /// <summary>Stores state for the signal implementation.</summary>
+    /// <summary>The sequencer that emits the value and completion.</summary>
     private readonly ISequencer _scheduler;
 
-    /// <summary>Stores state for the signal implementation.</summary>
+    /// <summary>Whether subscription must be dispatched through the current-thread sequencer.</summary>
     private readonly bool _currentThreadRequired;
 
     /// <summary>Initializes a new instance of the <see cref="ReturnSignal{T}"/> class.</summary>
-    /// <param name="value">The value.</param>
-    /// <param name="scheduler">The scheduler value.</param>
+    /// <param name="value">The value to emit.</param>
+    /// <param name="scheduler">The sequencer that emits the value and completion.</param>
     public ReturnSignal(T value, ISequencer scheduler)
     {
         _value = value;
@@ -34,22 +34,22 @@ public sealed class ReturnSignal<T> : IRequireCurrentThread<T>
         _currentThreadRequired = scheduler == Sequencer.CurrentThread;
     }
 
-    /// <summary>Executes the IsRequiredSubscribeOnCurrentThread operation.</summary>
-    /// <returns>The result.</returns>
+    /// <summary>Gets whether subscription has to be dispatched through the current-thread sequencer.</summary>
+    /// <returns><see langword="true"/> when the supplied sequencer is the current-thread sequencer.</returns>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public bool IsRequiredSubscribeOnCurrentThread() => _currentThreadRequired;
 
-    /// <summary>Executes the Subscribe operation.</summary>
-    /// <param name="observer">The observer value.</param>
-    /// <returns>The result.</returns>
+    /// <summary>Subscribes an observer that receives the value followed by completion.</summary>
+    /// <param name="observer">The downstream observer.</param>
+    /// <returns>A disposable that cancels the emission when it has not run yet.</returns>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public IDisposable Subscribe(IObserver<T> observer) =>
         SignalSubscription.Subscribe(observer, _currentThreadRequired, SubscribeCore);
 
-    /// <summary>Executes the SubscribeCore operation.</summary>
-    /// <param name="observer">The observer value.</param>
-    /// <param name="cancel">The cancel value.</param>
-    /// <returns>The result.</returns>
+    /// <summary>Emits the value and completion inline for the immediate sequencer, otherwise on the sequencer.</summary>
+    /// <param name="observer">The downstream observer.</param>
+    /// <param name="cancel">The subscription handle the guard checks before forwarding.</param>
+    /// <returns>The disposable that cancels the scheduled emission.</returns>
     private IDisposable SubscribeCore(IObserver<T> observer, IDisposable cancel)
     {
         observer = new GuardedWitness<T>(observer, cancel);

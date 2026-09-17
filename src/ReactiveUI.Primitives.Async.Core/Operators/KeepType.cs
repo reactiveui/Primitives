@@ -2,14 +2,13 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
+using System.Runtime.CompilerServices;
 
 namespace ReactiveUI.Primitives.Async;
 
 /// <summary>Provides extension methods for working with asynchronous observable sequences.</summary>
-/// <remarks>The SignalAsync class contains static methods that extend the functionality of asynchronous
-/// observables, enabling advanced filtering, transformation, and composition operations. These methods are intended to
-/// be used with types implementing asynchronous observable patterns, such as SignalAsync{T}.</remarks>
 public static partial class SignalAsyncExtensions
 {
     /// <summary>Type-filtering operators for an observable source sequence.</summary>
@@ -17,19 +16,13 @@ public static partial class SignalAsyncExtensions
     /// <param name="source">The source observable sequence.</param>
     extension<T>(IObservableAsync<T> source)
     {
-        /// <summary>
-        /// Projects each element of the observable sequence to the specified reference type and filters out elements
-        /// that are not of that type.
-        /// </summary>
+        /// <summary>Projects each element of the observable sequence to the specified reference type and filters out elements that are not of that type.</summary>
         /// <typeparam name="TResult">The reference type to filter and project elements to. Must be a class.</typeparam>
         /// <returns>An observable sequence containing only the elements of type TResult from the original sequence.</returns>
-        /// <remarks>Elements that are not of type TResult are ignored and not included in the resulting
-        /// sequence. This method is useful for working with observable sequences containing heterogeneous types,
-        /// allowing subscribers to focus on elements of a specific type.</remarks>
         [SuppressMessage(
             "Design",
             "SST2307:Generic method type parameters should be inferable from the parameters",
-            Justification = "Public extension API — caller specifies TResult explicitly: source.OfType<Derived>().")]
+            Justification = "The caller chooses TResult; no parameter carries it.")]
         public IObservableAsync<TResult> OfType<TResult>()
             where TResult : class
         {
@@ -49,7 +42,7 @@ public static partial class SignalAsyncExtensions
         [SuppressMessage(
             "Design",
             "SST2307:Generic method type parameters should be inferable from the parameters",
-            Justification = "Deliberate lack of type inference.")]
+            Justification = "The caller chooses TResult; no parameter carries it.")]
         public IObservableAsync<TResult> KeepType<TResult>()
             where TResult : class
         {
@@ -67,39 +60,60 @@ public static partial class SignalAsyncExtensions
         where TResult : class
     {
         /// <inheritdoc/>
-        async ValueTask<IAsyncDisposable> IObservableAsync<TResult>.SubscribeAsync(
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        ValueTask<IAsyncDisposable> IObservableAsync<TResult>.SubscribeAsync(
             IObserverAsync<TResult> observer,
-            CancellationToken cancellationToken)
-        {
-            OfTypeWitness sink = new(observer, cancellationToken);
-
-            if (observer is WitnessAsync<TResult> downstreamBase)
-            {
-                downstreamBase.LinkUpstreamCancellation(sink.InternalDisposedToken);
-            }
-
-            var subscription = await source.SubscribeAsync(sink, cancellationToken).ConfigureAwait(false);
-            await sink.AssignSourceSubscriptionAsync(subscription).ConfigureAwait(false);
-            return sink;
-        }
+            CancellationToken cancellationToken) =>
+            WitnessSubscription.SubscribeAsync(
+                source,
+                new OfTypeWitness(observer, cancellationToken),
+                observer,
+                cancellationToken);
 
         /// <summary>Per-subscription witness that forwards values matching <typeparamref name="TResult"/>.</summary>
         /// <param name="downstream">The downstream witness.</param>
         /// <param name="subscribeToken">The subscribe-time cancellation token.</param>
+        [DebuggerDisplay("OfTypeWitness: {_witness}")]
         internal sealed class OfTypeWitness(
             IObserverAsync<TResult> downstream,
-            CancellationToken subscribeToken) : WitnessAsync<T>(subscribeToken)
+            CancellationToken subscribeToken) : IWitnessAsync<T>
         {
+            /// <summary>The notification gate, cancellation link and disposal state.</summary>
+            private WitnessAsyncState _witness = new(subscribeToken);
+
             /// <inheritdoc/>
-            protected override ValueTask OnNextAsyncCore(T value, CancellationToken cancellationToken) =>
+            ref WitnessAsyncState IWitnessState.Witness => ref _witness;
+
+            /// <inheritdoc/>
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public ValueTask OnNextAsync(T value, CancellationToken cancellationToken) =>
+                WitnessAsync.OnNextAsync(this, value, cancellationToken);
+
+            /// <inheritdoc/>
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public ValueTask OnErrorResumeAsync(Exception error, CancellationToken cancellationToken) =>
+                WitnessAsync.OnErrorResumeAsync(this, error, cancellationToken);
+
+            /// <inheritdoc/>
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public ValueTask OnCompletedAsync(Result result) => WitnessAsync.OnCompletedAsync(this, result);
+
+            /// <inheritdoc/>
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public ValueTask DisposeAsync() => WitnessAsync.DisposeStateAsync(this);
+
+            /// <inheritdoc/>
+            ValueTask IWitnessAsync<T>.OnNextAsyncCore(T value, CancellationToken cancellationToken) =>
                 value is TResult matched ? downstream.OnNextAsync(matched, cancellationToken) : default;
 
             /// <inheritdoc/>
-            protected override ValueTask OnErrorResumeAsyncCore(Exception error, CancellationToken cancellationToken) =>
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            ValueTask IWitnessAsync<T>.OnErrorResumeAsyncCore(Exception error, CancellationToken cancellationToken) =>
                 downstream.OnErrorResumeAsync(error, cancellationToken);
 
             /// <inheritdoc/>
-            protected override ValueTask OnCompletedAsyncCore(Result result) =>
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            ValueTask IWitnessAsync<T>.OnCompletedAsyncCore(Result result) =>
                 downstream.OnCompletedAsync(result);
         }
     }

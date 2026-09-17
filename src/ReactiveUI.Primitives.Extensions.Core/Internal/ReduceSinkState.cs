@@ -2,22 +2,23 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Runtime.CompilerServices;
+using ReactiveUI.Primitives.Advanced;
+
 namespace ReactiveUI.Primitives.Extensions.Internal;
 
-/// <summary>
-/// Shared synchronous reduce-sink state used by <c>BooleanReduceObservable</c> (AllTrue / AllFalse)
-/// and <c>MinMaxObservable</c> (Max / Min). Each per-operator sink composes one instance (has-a, not
-/// is-a) and adds only its operator-specific OnNext reduce step; the boilerplate gate, value cache,
-/// completion bookkeeping, OnError, and OnCompleted bodies all live here in one place.
-/// </summary>
-/// <typeparam name="TIn">The source element type (must be a struct so <c>TIn?</c> doubles as the
-/// "value seen yet?" Optional).</typeparam>
+/// <summary>Stores synchronized reduction state and coordinates terminal notifications.</summary>
+/// <typeparam name="TIn">The source element type; the struct constraint lets <c>TIn?</c> record whether a value has arrived.</typeparam>
 /// <typeparam name="TOut">The downstream element type the operator emits after reducing.</typeparam>
+/// <remarks>Reductions and terminals are queued in order under the gate and delivered after it is released.</remarks>
 internal sealed class ReduceSinkState<TIn, TOut>
     where TIn : struct
 {
-    /// <summary>The synchronization gate held across every state read/write and every downstream notification.</summary>
+    /// <summary>The synchronization gate held across every state read and write; never held while the observer runs.</summary>
     private readonly Lock _gate = new();
+
+    /// <summary>Serializes downstream deliveries.</summary>
+    private SerializedDelivery<TOut> _delivery = new();
 
     /// <summary>Initializes a new instance of the <see cref="ReduceSinkState{TIn, TOut}"/> class.</summary>
     /// <param name="downstream">The downstream observer.</param>
@@ -50,7 +51,7 @@ internal sealed class ReduceSinkState<TIn, TOut>
     /// <summary>Gets a value indicating whether every source has produced at least one value.</summary>
     internal bool AllValuesPresent => HasValueCount >= Values.Length;
 
-    /// <summary>Records source <paramref name="index"/>'s latest value and emits the reduced result once every source has one. Runs under the gate.</summary>
+    /// <summary>Records the source value and emits the reduction once every source has a value.</summary>
     /// <param name="index">The 0-based source index that emitted.</param>
     /// <param name="value">The latest value from that source.</param>
     /// <param name="reduce">Projects the per-source latest values into the downstream result.</param>
@@ -75,11 +76,13 @@ internal sealed class ReduceSinkState<TIn, TOut>
                 return;
             }
 
-            Downstream.OnNext(reduce(Values));
+            _ = _delivery.Post(reduce(Values));
         }
+
+        Flush();
     }
 
-    /// <summary>Forwards a terminal error to the downstream observer and marks the sink terminal. Idempotent.</summary>
+    /// <summary>Forwards the first terminal error and marks the sink terminal.</summary>
     /// <param name="error">The error to forward.</param>
     internal void HandleError(Exception error)
     {
@@ -91,14 +94,13 @@ internal sealed class ReduceSinkState<TIn, TOut>
             }
 
             IsDone = true;
-            Downstream.OnError(error);
+            _ = _delivery.PostError(error);
         }
+
+        Flush();
     }
 
-    /// <summary>
-    /// Records completion of the source at <paramref name="index"/>. The combined sequence terminates
-    /// once every source has completed OR a source completes without ever having emitted a value.
-    /// </summary>
+    /// <summary>Records source completion, terminating when all sources complete or one completes without a value.</summary>
     /// <param name="index">The 0-based source index that just completed.</param>
     internal void HandleCompleted(int index)
     {
@@ -112,11 +114,28 @@ internal sealed class ReduceSinkState<TIn, TOut>
             Completed[index] = true;
             CompletedCount++;
 
-            if (CompletedCount == Values.Length || !Values[index].HasValue)
+            if (CompletedCount != Values.Length && Values[index].HasValue)
             {
-                IsDone = true;
-                Downstream.OnCompleted();
+                return;
             }
+
+            IsDone = true;
+            _ = _delivery.PostCompleted();
         }
+
+        Flush();
+    }
+
+    /// <summary>Delivers the queued notifications on the calling thread, or hands them to the thread already delivering.</summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private void Flush() => _delivery.Flush(new PendingDrain(this));
+
+    /// <summary>Drains this state's queued notifications for the delivery gate.</summary>
+    /// <param name="Owner">The state.</param>
+    private readonly record struct PendingDrain(ReduceSinkState<TIn, TOut> Owner) : IDrainTarget
+    {
+        /// <inheritdoc/>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void Drain() => _ = Owner._delivery.DrainTo(Owner.Downstream);
     }
 }

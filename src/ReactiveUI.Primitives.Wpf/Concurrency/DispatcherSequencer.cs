@@ -9,6 +9,7 @@ using ReactiveUI.Primitives.Advanced;
 namespace ReactiveUI.Primitives.Concurrency;
 
 /// <summary>WPF dispatcher sequencer that coalesces scheduled work onto a dispatcher drain.</summary>
+/// <remarks>Callbacks run at Priority in posted dispatcher batches without inline reentrancy; cancellation suppresses unstarted work.</remarks>
 /// <seealso cref="ISequencer" />
 [System.Diagnostics.DebuggerDisplay("{DebuggerDisplay,nq}")]
 public sealed class DispatcherSequencer : ISequencer
@@ -17,7 +18,7 @@ public sealed class DispatcherSequencer : ISequencer
     private DispatchSequencerState _state;
 
     /// <summary>Initializes a new instance of the <see cref="DispatcherSequencer"/> class.</summary>
-    /// <param name="dispatcher">The dispatcher.</param>
+    /// <param name="dispatcher">The dispatcher whose thread runs the scheduled work.</param>
     /// <exception cref="ArgumentNullException"><paramref name="dispatcher"/> is <see langword="null"/>.</exception>
     public DispatcherSequencer(Dispatcher dispatcher)
         : this(dispatcher, DispatcherPriority.Normal)
@@ -25,17 +26,32 @@ public sealed class DispatcherSequencer : ISequencer
     }
 
     /// <summary>Initializes a new instance of the <see cref="DispatcherSequencer"/> class.</summary>
-    /// <param name="dispatcher">The dispatcher.</param>
+    /// <param name="dispatcher">The dispatcher whose thread runs the scheduled work.</param>
     /// <param name="priority">Dispatcher priority used for posted drains.</param>
     /// <exception cref="ArgumentNullException"><paramref name="dispatcher"/> is <see langword="null"/>.</exception>
     public DispatcherSequencer(Dispatcher dispatcher, DispatcherPriority priority)
+        : this(dispatcher, priority, null, null)
+    {
+    }
+
+    /// <summary>Initializes a new instance of the <see cref="DispatcherSequencer"/> class.</summary>
+    /// <param name="dispatcher">The dispatcher associated with this sequencer.</param>
+    /// <param name="priority">The dispatcher priority.</param>
+    /// <param name="post">Posts ready work, or null to use the dispatcher.</param>
+    /// <param name="scheduleDelayed">Schedules delayed work, or null to use a dispatcher timer.</param>
+    /// <exception cref="ArgumentNullException">The dispatcher is null.</exception>
+    internal DispatcherSequencer(
+        Dispatcher dispatcher,
+        DispatcherPriority priority,
+        Func<Action, bool>? post,
+        Action<IWorkItem, long>? scheduleDelayed)
     {
         Dispatcher = dispatcher ?? throw new ArgumentNullException(nameof(dispatcher));
         Priority = priority;
-        _state = new(this, Post, RunDrain, ScheduleDelayed);
+        _state = new(this, post ?? Post, RunDrain, scheduleDelayed ?? ScheduleDelayed);
     }
 
-    /// <summary>Gets the dispatcher.</summary>
+    /// <summary>Gets the dispatcher whose thread runs the scheduled work.</summary>
     public Dispatcher Dispatcher { get; }
 
     /// <summary>Gets the dispatcher priority used for posted drains.</summary>
@@ -49,7 +65,7 @@ public sealed class DispatcherSequencer : ISequencer
 
     /// <summary>Gets the debugger display text.</summary>
     [System.Diagnostics.DebuggerBrowsable(System.Diagnostics.DebuggerBrowsableState.Never)]
-    private string DebuggerDisplay => ToString() ?? string.Empty;
+    internal string DebuggerDisplay => ToString() ?? string.Empty;
 
     /// <inheritdoc/>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -62,6 +78,7 @@ public sealed class DispatcherSequencer : ISequencer
     /// <summary>Marshals the cached drain callback onto the dispatcher.</summary>
     /// <param name="drain">The drain callback.</param>
     /// <returns><see langword="true"/>, since the dispatcher always accepts the work.</returns>
+    [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
     private bool Post(Action drain)
     {
         _ = Dispatcher.BeginInvoke(drain, Priority);
@@ -71,6 +88,7 @@ public sealed class DispatcherSequencer : ISequencer
     /// <summary>Runs delayed work on a dispatcher timer so it executes directly on the dispatcher thread.</summary>
     /// <param name="item">Work item to execute at the due time.</param>
     /// <param name="dueTimestamp">Absolute monotonic timestamp at which to execute the item.</param>
+    [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
     private void ScheduleDelayed(IWorkItem item, long dueTimestamp)
     {
         DispatcherTimer timer =
@@ -83,7 +101,7 @@ public sealed class DispatcherSequencer : ISequencer
         timer.Start();
     }
 
-    /// <summary>Forwards the cached drain callback to the engine.</summary>
+    /// <summary>Runs one queued batch on the coalescing engine.</summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private void RunDrain() => _state.RunDrain();
 }

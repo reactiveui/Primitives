@@ -8,22 +8,15 @@ using System.Runtime.CompilerServices;
 namespace ReactiveUI.Primitives.Async.Signals;
 
 /// <summary>Provides helper methods for forwarding asynchronous observer notifications concurrently to multiple observers.</summary>
-/// <remarks>The methods in this class are intended for scenarios where multiple asynchronous observers need to be
-/// notified in parallel. All observer notifications are dispatched concurrently, and the returned ValueTask completes
-/// when all observer operations have finished. If the observers collection is empty, the methods complete immediately.
-/// Exceptions thrown by individual observers are aggregated into a single exception, consistent with Task.WhenAll
-/// behavior.</remarks>
+/// <remarks>All observers start concurrently; the returned task waits for every observer. Empty collections complete synchronously, and failures follow Task.WhenAll semantics.</remarks>
 public static class Concurrent
 {
-    /// <summary>Forwards the specified value to all observers concurrently by invoking their OnNextAsync methods.</summary>
+    /// <summary>Forwards a value to every observer without waiting for any one of them to finish first.</summary>
     /// <typeparam name="T">The type of the value to forward to the observers.</typeparam>
-    /// <param name="observers">A read-only list of observers that will receive the value. Cannot be null.</param>
+    /// <param name="observers">The observers to notify.</param>
     /// <param name="value">The value to forward to each observer.</param>
-    /// <param name="cancellationToken">A cancellation token that can be used to cancel the forwarding operation.</param>
-    /// <returns>A ValueTask that represents the asynchronous operation of forwarding the value to all observers. The task
-    /// completes when all observers have processed the value.</returns>
-    /// <remarks>If the observers list is empty, the returned ValueTask is already completed. All OnNextAsync
-    /// calls are started concurrently; exceptions from observers are aggregated in the returned task.</remarks>
+    /// <param name="cancellationToken">A token passed to each observer's notification.</param>
+    /// <returns>A task that completes once every observer has processed the value.</returns>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static ValueTask ForwardOnNextConcurrently<T>(
         ImmutableArray<IObserverAsync<T>> observers,
@@ -62,19 +55,13 @@ public static class Concurrent
         return default;
     }
 
-    /// <summary>
-    /// Forwards an error notification to all specified asynchronous observers concurrently, allowing each observer to
-    /// handle the error and resume as appropriate.
-    /// </summary>
+    /// <summary>Forwards a non-terminal error to every observer without waiting for any one of them to finish first.</summary>
     /// <typeparam name="T">The type of the elements observed by the observers.</typeparam>
-    /// <param name="observers">A read-only list of asynchronous observers to which the error notification will be forwarded. Cannot be null.</param>
+    /// <param name="observers">The observers to notify.</param>
     /// <param name="error">The exception representing the error to forward to each observer. Cannot be null.</param>
-    /// <param name="cancellationToken">A cancellation token that can be used to cancel the forwarding operation.</param>
-    /// <returns>A ValueTask that represents the asynchronous operation of forwarding the error to all observers. The task
-    /// completes when all observers have processed the error notification.</returns>
-    /// <remarks>If the list of observers is empty, the method returns a default ValueTask and no
-    /// notifications are sent. Each observer receives the error notification concurrently. If cancellation is requested
-    /// via the cancellation token, the operation may be canceled before completion.</remarks>
+    /// <param name="cancellationToken">A token passed to each observer's notification.</param>
+    /// <returns>A task that completes once every observer has processed the error.</returns>
+    /// <remarks>Cancellation is forwarded to each observer; it does not prevent other observers from being called.</remarks>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static ValueTask ForwardOnErrorResumeConcurrently<T>(
         ImmutableArray<IObserverAsync<T>> observers,
@@ -113,19 +100,11 @@ public static class Concurrent
         return default;
     }
 
-    /// <summary>
-    /// Invokes the OnCompletedAsync method on each observer in the collection concurrently, forwarding the specified
-    /// result to all observers.
-    /// </summary>
+    /// <summary>Forwards the terminal result to every observer without waiting for any one of them to finish first.</summary>
     /// <typeparam name="T">The type of the elements observed by the observers.</typeparam>
-    /// <param name="observers">A read-only list of observers to which the completion notification will be forwarded. Cannot be null.</param>
-    /// <param name="result">The result to pass to each observer's OnCompletedAsync method.</param>
-    /// <returns>A ValueTask that represents the asynchronous operation of notifying all observers. The task completes when all
-    /// observers have finished processing the completion notification. If the observers list is empty, a default
-    /// ValueTask is returned.</returns>
-    /// <remarks>All observers are notified concurrently. The returned ValueTask completes when all
-    /// OnCompletedAsync operations have finished. If any observer throws an exception, the returned task will complete
-    /// with an AggregateException containing all exceptions thrown.</remarks>
+    /// <param name="observers">The observers to notify.</param>
+    /// <param name="result">The terminal result to forward to each observer.</param>
+    /// <returns>A task that completes once every observer has processed the completion.</returns>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static ValueTask ForwardOnCompletedConcurrently<T>(
         ImmutableArray<IObserverAsync<T>> observers,

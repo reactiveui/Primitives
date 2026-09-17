@@ -13,7 +13,7 @@ namespace ReactiveUI.Primitives.Tests;
 /// <summary>Verifies <see cref="EventPattern{TEventArgs}"/> equality and formatting contracts.</summary>
 public class EventPatternTests
 {
-    /// <summary>Covers event-pattern equality, hashing, formatting, and argument validation.</summary>
+    /// <summary>Verifies event-pattern equality, hashing, formatting, and argument validation.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
     public async Task EventPatternEqualityAndFormattingCoverContracts()
@@ -36,7 +36,7 @@ public class EventPatternTests
         });
     }
 
-    /// <summary>Covers typed-sender event-pattern equality, hashing, and formatting.</summary>
+    /// <summary>Verifies typed-sender event-pattern equality, hashing, and formatting.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
     public async Task TypedSenderEventPatternEqualityAndFormattingCoverContracts()
@@ -199,7 +199,7 @@ public class EventPatternTests
         public int Value { get; } = value;
     }
 
-    /// <summary>Source used to exercise generic <see cref="EventHandler{TEventArgs}"/> event conversion.</summary>
+    /// <summary>An event source that raises a generic handler event carrying an integer value.</summary>
     private sealed class GenericEventSource
     {
         /// <summary>Raised by the test source.</summary>
@@ -211,7 +211,7 @@ public class EventPatternTests
         public void Raise(int value) => Changed?.Invoke(this, new(value));
     }
 
-    /// <summary>Source used to exercise a WPF-style non-generic event handler shape.</summary>
+    /// <summary>An event source that raises an assembly-load event through a non-generic handler.</summary>
     private sealed class AssemblyLoadEventSource
     {
         /// <summary>The handlers attached to the test source.</summary>
@@ -234,13 +234,13 @@ public class EventPatternTests
         public void Raise(System.Reflection.Assembly assembly) => _assemblyLoaded?.Invoke(this, new(assembly));
     }
 
-    /// <summary>Source used to exercise <see cref="PropertyChangedEventHandler"/> event conversion.</summary>
+    /// <summary>An event source that raises a property-changed event for a named property.</summary>
     private sealed class PropertyChangedEventSource
     {
         /// <summary>The handlers attached to the test source.</summary>
         private PropertyChangedEventHandler? _propertyChanged;
 
-        /// <summary>Gets a placeholder property name used by the event test.</summary>
+        /// <summary>Gets a placeholder property whose name the raised event carries.</summary>
         public static int Value => 0;
 
         /// <summary>Adds a handler to the test source.</summary>
@@ -257,7 +257,7 @@ public class EventPatternTests
         public void Raise(string propertyName) => _propertyChanged?.Invoke(this, new(propertyName));
     }
 
-    /// <summary>Source used to exercise <see cref="NotifyCollectionChangedEventHandler"/> event conversion.</summary>
+    /// <summary>An event source that raises a collection-changed event with an add action.</summary>
     private sealed class CollectionChangedEventSource
     {
         /// <summary>The handlers attached to the test source.</summary>
@@ -277,7 +277,7 @@ public class EventPatternTests
             _collectionChanged?.Invoke(this, new(NotifyCollectionChangedAction.Add, "value"));
     }
 
-    /// <summary>Source used to exercise <see cref="ListChangedEventHandler"/> event conversion.</summary>
+    /// <summary>An event source that raises a list-changed event with an item-added action.</summary>
     private sealed class ListChangedEventSource
     {
         /// <summary>The handlers attached to the test source.</summary>
@@ -307,7 +307,7 @@ public class EventPatternTests
         public string Command { get; }
     }
 
-    /// <summary>Fake event source used by event-pattern bridge scenarios.</summary>
+    /// <summary>An event source that raises a click event carrying a command name.</summary>
     private sealed class FakeButton
     {
         /// <summary>Raised when the fake button is clicked.</summary>

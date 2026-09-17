@@ -10,13 +10,9 @@ namespace ReactiveUI.Primitives.Reactive.Advanced;
 namespace ReactiveUI.Primitives.Advanced;
 #endif
 
-/// <summary>
-/// The observer handed to create-style subscription factories: forwards until terminated, owns the factory's
-/// cancel resource, and optionally releases it when a downstream <c>OnNext</c> throws (the safe-create contract).
-/// The shared sink behind <see cref="CreateSignal{T}"/> and <see cref="CreateSafeSignal{T}"/>, usable by any
-/// implementation that hands an observer to a caller-supplied subscribe delegate.
-/// </summary>
+/// <summary>Forwards notifications until termination and owns the resource returned by the subscription factory.</summary>
 /// <typeparam name="T">The value type.</typeparam>
+/// <remarks>When disposeOnNextThrow is enabled, a downstream OnNext failure disposes the resource before rethrowing.</remarks>
 [System.Diagnostics.DebuggerDisplay("CreateSink: Stopped = {_stopped}, Observer = {_observer}")]
 public sealed class CreateSink<T> : IDisposable, IObserver<T>
 {
@@ -60,7 +56,7 @@ public sealed class CreateSink<T> : IDisposable, IObserver<T>
         _disposeOnNextThrow = disposeOnNextThrow;
     }
 
-    /// <summary>Assigns the cancellation resource, releasing it immediately when already stopped.</summary>
+    /// <summary>Assigns the cancellation resource, releasing it immediately when the sink has stopped.</summary>
     /// <param name="cancel">Cancellation resource.</param>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void SetCancel(IDisposable cancel) =>
@@ -80,15 +76,7 @@ public sealed class CreateSink<T> : IDisposable, IObserver<T>
             return;
         }
 
-        try
-        {
-            _observer.OnNext(value);
-        }
-        catch
-        {
-            Dispose();
-            throw;
-        }
+        SinkDelivery.Next(_observer, value, this);
     }
 
     /// <inheritdoc/>

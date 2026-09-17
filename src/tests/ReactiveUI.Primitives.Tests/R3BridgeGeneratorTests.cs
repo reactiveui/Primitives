@@ -25,7 +25,7 @@ public class R3BridgeGeneratorTests
     /// <summary>Generated metadata attribute key.</summary>
     private const string GeneratedMetadataKey = "ReactiveUI.Primitives.R3Bridge.Generator";
 
-    /// <summary>Legacy generated marker attribute type name.</summary>
+    /// <summary>The name of the marker attribute type the generator must not emit.</summary>
     private const string LegacyGeneratedMarkerName = "PrimitivesR3BridgeGeneratedAttribute";
 
     /// <summary>Compiler diagnostic raised when a source type conflicts with an imported type.</summary>
@@ -329,7 +329,7 @@ public class R3BridgeGeneratorTests
         generatedSources,
         static text => text.Contains($"AssemblyMetadata(\"{GeneratedMetadataKey}\"", StringComparison.Ordinal));
 
-    /// <summary>Checks whether generated source contains the removed custom marker attribute type.</summary>
+    /// <summary>Checks whether generated source contains the custom marker attribute type.</summary>
     /// <param name="generatedSources">Generated source text to inspect.</param>
     /// <returns><see langword="true"/> when the legacy generated marker type is emitted.</returns>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]

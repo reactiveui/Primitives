@@ -10,10 +10,7 @@ namespace ReactiveUI.Primitives.Tests;
 /// <summary>Verifies <see cref="Signal"/> emit-if-quiet debounce contracts.</summary>
 public sealed class SignalEmitIfQuietTests
 {
-    /// <summary>
-    /// Verifies a source that completes twice, or errors after completing, is not forwarded twice: the quiet
-    /// observer keeps the Rx grammar even when the source breaks it.
-    /// </summary>
+    /// <summary>A second completion, or an error after completing, is dropped rather than forwarded.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
     public async Task EmitIfQuietDropsTerminalNotificationsAfterTheFirstOne()
@@ -32,7 +29,7 @@ public sealed class SignalEmitIfQuietTests
         await Assert.That(witness.Values.Count).IsEqualTo(0);
     }
 
-    /// <summary>Verifies the EmitIfQuiet method covers immediate, scheduled, completion, stale emission, and error paths.</summary>
+    /// <summary>EmitIfQuiet emits immediately with a zero window, emits the last value after a quiet period, and forwards errors.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
     public async Task EmitIfQuietCoversImmediateScheduledCompletionStaleAndErrorPaths()

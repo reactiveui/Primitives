@@ -2,19 +2,15 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using ReactiveUI.Primitives.Advanced;
+using ReactiveUI.Primitives.Concurrency;
 using ReactiveUI.Primitives.Signals;
 
 namespace ReactiveUI.Primitives.Tests;
 
-/// <summary>
-/// Verifies the factory overloads that name no sequencer and therefore run on the default one, together with
-/// the degenerate inputs those factories have to fold away: an empty range and an uncancellable token.
-/// </summary>
+/// <summary>Verifies factory defaults, cancellation, and scheduled notifications.</summary>
 public partial class SignalFactoriesTests
 {
-    /// <summary>The time allowed for a default-sequencer factory to produce its notification.</summary>
-    private static readonly TimeSpan DefaultSequencerTimeout = TimeSpan.FromSeconds(5);
-
     /// <summary>The timeout used by the expiry factory test.</summary>
     private static readonly TimeSpan ShortExpiry = TimeSpan.FromMilliseconds(20);
 
@@ -31,7 +27,7 @@ public partial class SignalFactoriesTests
         await Assert.That(completions).IsEqualTo(1);
     }
 
-    /// <summary>Verifies the cancellable enumerable factory stops when its token is already cancelled.</summary>
+    /// <summary>The enumerable factory stops for a cancelled token and emits its whole sequence for an uncancellable one.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
     public async Task FromEnumerableHonorsACancellableTokenAndIgnoresAnUncancellableOne()
@@ -52,51 +48,111 @@ public partial class SignalFactoriesTests
         await Assert.That(plainValues.SequenceEqual([One, Two, Three])).IsTrue();
     }
 
-    /// <summary>Verifies the sequencer-free expiry factory fails a sequence that never terminates.</summary>
+    /// <summary>Running the scheduled expiry fails a silent source.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
-    public async Task ExpireWithoutASequencerFailsASilentSequence()
-    {
-        List<Exception> errors = [];
-        using var subscription = Signal.Expire(Signal.Silent<int>(), ShortExpiry)
-            .Subscribe(static _ => { }, errors.Add);
-        await TestPolling.SpinUntil(() => errors.Count == 1, DefaultSequencerTimeout);
-        await Assert.That(errors[0]).IsTypeOf<TimeoutException>();
+    public async Task ExpireFailsASilentSequenceWhenTheDelayRuns()
+{
+        ManualSequencer sequencer = new();
+        RecordingWitness<int> witness = new();
+        using var subscription = Signal.Expire(Signal.Silent<int>(), ShortExpiry, sequencer).Subscribe(witness);
+        await Assert.That(witness.Errors.Count).IsEqualTo(0);
+        sequencer.RunPending();
+        await Assert.That(witness.Errors[0]).IsTypeOf<TimeoutException>();
+        await Assert.That(witness.Errors.Count).IsEqualTo(1);
     }
 
-    /// <summary>Verifies the sequencer-free <c>Start</c> factories run their work and emit its outcome.</summary>
+    /// <summary>The sequencer-free Start factories select the default sequencer without invoking their work.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
-    public async Task StartWithoutASequencerRunsTheWorkOnTheDefaultSequencer()
+    public async Task StartWithoutASequencerSelectsTheDefaultSequencer()
     {
-        List<int> functionValues = [];
-        using var functionSubscription = Signal.Start(static () => Two).Subscribe(functionValues.Add);
-        await TestPolling.SpinUntil(() => functionValues.Count == 1, DefaultSequencerTimeout);
-        await Assert.That(functionValues.SequenceEqual([Two])).IsTrue();
+        var functionRuns = 0;
+        var function = await Assert.That(Signal.Start(() => ++functionRuns)).IsTypeOf<StartSignal<int>>().And.IsNotNull();
         var actionRuns = 0;
-        List<RxVoid> actionValues = [];
-
-        // A void method group is what selects Start(Action); a lambda over 'actionRuns++' is a
-        // Func<int> and would bind to the generic Start<T> overload instead.
         void RunAction() => actionRuns++;
+        var action = await Assert.That(Signal.Start(RunAction)).IsTypeOf<StartSignal>().And.IsNotNull();
 
-        using var actionSubscription = Signal.Start(RunAction).Subscribe(actionValues.Add);
-        await TestPolling.SpinUntil(() => actionValues.Count == 1, DefaultSequencerTimeout);
-        await Assert.That(actionRuns).IsEqualTo(1);
-        await Assert.That(actionValues[0]).IsEqualTo(RxVoid.Default);
+        await Assert.That(function.Scheduler).IsSameReferenceAs(Sequencer.Default);
+        await Assert.That(action.Scheduler).IsSameReferenceAs(Sequencer.Default);
+        await Assert.That(functionRuns).IsEqualTo(0);
+        await Assert.That(actionRuns).IsEqualTo(0);
     }
 
-    /// <summary>Verifies the sequencer-free <c>Every</c> factory ticks on the default sequencer.</summary>
+    /// <summary>Each scheduled callback emits the next tick.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
-    public async Task EveryWithoutASequencerTicksOnTheDefaultSequencer()
-    {
-        List<long> ticks = [];
-        using (Signal.Every(ShortExpiry).Subscribe(ticks.Add))
-        {
-            await TestPolling.SpinUntil(() => ticks.Count >= Two, DefaultSequencerTimeout);
-        }
+    public async Task EveryTicksWhenTheSequencerRuns()
+{
+        ManualSequencer sequencer = new();
+        RecordingWitness<long> witness = new();
+        using var subscription = Signal.Every(ShortExpiry, sequencer).Subscribe(witness);
+        sequencer.RunPending();
+        sequencer.RunPending();
+        await Assert.That(witness.Values.SequenceEqual([0L, 1L])).IsTrue();
+    }
 
-        await Assert.That(ticks[1]).IsGreaterThan(ticks[0]);
+    /// <summary>The recurring factory without a scheduler creates a lazy thread-pool signal.</summary>
+    /// <returns>A task representing the asynchronous test.</returns>
+    [Test]
+    public async Task Every_WithoutScheduler_CreatesLazyRecurringSignal()
+    {
+        var signal = await Assert.That(Signal.Every(ShortExpiry)).IsTypeOf<EverySignal>().And.IsNotNull();
+
+        await Assert.That(signal.IsRequiredSubscribeOnCurrentThread()).IsFalse();
+    }
+
+    /// <summary>The expiry factory without a scheduler validates its source and preserves lazy subscription.</summary>
+    /// <returns>A task representing the asynchronous test.</returns>
+    [Test]
+    public async Task Expire_WithoutScheduler_CreatesLazyTimeoutSignal()
+    {
+        using Signal<int> source = new();
+        var signal = await Assert.That(Signal.Expire(source, ShortExpiry)).IsTypeOf<ExpireSignal<int>>().And.IsNotNull();
+
+        await Assert.That(signal.IsRequiredSubscribeOnCurrentThread()).IsFalse();
+        await Assert.That(source.HasObservers).IsFalse();
+        await Assert.That(static () => Signal.Expire<int>(null!, ShortExpiry)).ThrowsExactly<ArgumentNullException>();
+    }
+
+    /// <summary>The expiry factory falls back to the thread-pool sequencer when given a null scheduler.</summary>
+    /// <returns>A task representing the asynchronous test.</returns>
+    [Test]
+    public async Task Expire_NullScheduler_CreatesTimeoutSignal()
+    {
+        using Signal<int> source = new();
+
+        await Assert.That(Signal.Expire(source, ShortExpiry, null)).IsTypeOf<ExpireSignal<int>>();
+    }
+
+    /// <summary>The empty and failing factories complete immediately on the immediate sequencer and schedule otherwise.</summary>
+    /// <returns>A task representing the asynchronous test.</returns>
+    [Test]
+    public async Task NoneAndFail_ImmediateAndScheduledSequencers_Terminate()
+    {
+        InvalidOperationException error = new("fail");
+        RecordingWitness<int> noneImmediate = new();
+        RecordingWitness<int> failImmediate = new();
+
+        using var noneSubscription = Signal.None(Sequencer.Immediate, 0).Subscribe(noneImmediate);
+        using var failSubscription = Signal.Fail(error, Sequencer.Immediate, 0).Subscribe(failImmediate);
+
+        await Assert.That(noneImmediate.Completed).IsEqualTo(1);
+        await Assert.That(failImmediate.Errors).HasSingleItem();
+        await Assert.That(Signal.None(ThreadPoolSequencer.Instance, 0)).IsNotNull();
+        await Assert.That(Signal.Fail(error, ThreadPoolSequencer.Instance, 0)).IsNotNull();
+    }
+
+    /// <summary>An empty range completes without emitting a value.</summary>
+    /// <returns>A task representing the asynchronous test.</returns>
+    [Test]
+    public async Task Range_ZeroCount_CompletesWithoutValues()
+    {
+        RecordingWitness<int> observer = new();
+
+        using var subscription = Signal.Range(1, 0).Subscribe(observer);
+
+        await Assert.That(observer.Values).IsEmpty();
+        await Assert.That(observer.Completed).IsEqualTo(1);
     }
 }

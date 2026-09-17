@@ -2,14 +2,39 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Runtime.CompilerServices;
+using ReactiveUI.Primitives.Extensions.Operators;
+
 namespace ReactiveUI.Primitives.Extensions.Tests.Operators;
 
-/// <summary>Tests for <c>SynchronizeAsyncObservable</c> — covers the after-terminal guards
-/// on the sink that only fire when the upstream pushes events past its own completion.</summary>
+/// <summary>Tests synchronization acknowledgements and notification handling after termination.</summary>
 public class SynchronizeAsyncObservableTests
 {
-    /// <summary>Settle delay to confirm nothing fires.</summary>
-    private const int SettleDelayMilliseconds = 50;
+    /// <summary>Verifies disposal completes an acknowledgement published after the disposal step.</summary>
+    /// <returns>A task representing the asynchronous test operation.</returns>
+    [Test]
+    public async Task AcknowledgementPublishedAfterDisposalCompletes()
+    {
+        SynchronizeAsyncObservable<int>.SynchronizeAsyncSink.SyncSignal signal = new();
+        TaskCompletionSource<bool> completion = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        signal.Dispose();
+        signal.CompleteIfDisposedRaced(completion);
+        signal.CompleteIfDisposedRaced(completion);
+        await Assert.That(completion.Task.IsCompletedSuccessfully).IsTrue();
+    }
+
+    /// <summary>Verifies a live acknowledgement remains pending until disposal.</summary>
+    /// <returns>A task representing the asynchronous test operation.</returns>
+    [Test]
+    public async Task LiveAcknowledgementWaitsForDisposal()
+    {
+        SynchronizeAsyncObservable<int>.SynchronizeAsyncSink.SyncSignal signal = new();
+        var acknowledgement = signal.WaitForDisposeAsync();
+        await Assert.That(acknowledgement.IsCompleted).IsFalse();
+        signal.Dispose();
+        await acknowledgement;
+        await Assert.That(acknowledgement.IsCompletedSuccessfully).IsTrue();
+    }
 
     /// <summary>Verifies that <c>OnNext</c>, <c>OnError</c> and a duplicate <c>OnCompleted</c>
     /// arriving after the source has already completed are silently dropped.</summary>
@@ -27,7 +52,6 @@ public class SynchronizeAsyncObservableTests
         source.Observer.OnNext(1);
         source.Observer.OnError(new InvalidOperationException("late"));
         source.Observer.OnCompleted();
-        await Task.Delay(SettleDelayMilliseconds);
         await Assert.That(completedCount).IsEqualTo(1);
         await Assert.That(values).IsEmpty();
         await Assert.That(caught).IsNull();
@@ -66,7 +90,15 @@ public class SynchronizeAsyncObservableTests
             processed++;
         });
         source.Observer.OnNext(1);
-        await Task.Delay(SettleDelayMilliseconds);
         await Assert.That(processed).IsEqualTo(1);
     }
+
+    /// <summary>Verifies an observer that marshals to another thread which completes the source does not deadlock the paired value.</summary>
+    /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
+    [Test]
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public Task WhenObserverMarshalsCompletionDuringValue_ThenNoDeadlock() =>
+        SerializedDeliveryAssertions.ObserverMarshallingCompletionDoesNotDeadlock<(int Value, IDisposable Sync)>(
+            static (source, observer) => source.SynchronizeAsync().Subscribe(observer),
+            static observer => observer.OnNext(1));
 }

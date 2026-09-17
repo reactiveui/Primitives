@@ -9,7 +9,7 @@ namespace ReactiveUI.Primitives.Tests;
 /// <summary>Verifies <see cref="Moment{T}"/> equality and hashing contracts.</summary>
 public class MomentTests
 {
-    /// <summary>The timestamp used by moment tests; only its stability matters.</summary>
+    /// <summary>A fixed timestamp shared by the moment tests.</summary>
     private static readonly DateTimeOffset SampleTimestamp = new(2026, 5, 24, 22, 52, 0, TimeSpan.Zero);
 
     /// <summary>Verifies a moment with a null value uses a deterministic null hash code.</summary>

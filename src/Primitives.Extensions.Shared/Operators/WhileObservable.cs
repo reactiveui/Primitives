@@ -11,14 +11,7 @@ namespace ReactiveUI.Primitives.Extensions.Reactive.Operators;
 namespace ReactiveUI.Primitives.Extensions.Operators;
 #endif
 
-/// <summary>
-/// Loops the supplied <see cref="Action"/> on the supplied
-/// <see cref="ISequencer"/> (or inline when no scheduler is provided), emitting
-/// <see cref="RxVoid.Default"/> after each iteration, for as long as
-/// <paramref name="condition"/> returns <c>true</c>. Replaces the legacy
-/// <c>Observable.While(condition, Observable.Start(action, scheduler))</c>
-/// pattern.
-/// </summary>
+/// <summary>Invokes the action and emits <see cref="RxVoid.Default"/> per iteration while <paramref name="condition"/> returns <see langword="true"/>.</summary>
 /// <param name="condition">The loop predicate. Evaluated before each iteration.</param>
 /// <param name="action">The action to invoke per iteration.</param>
 /// <param name="scheduler">An optional scheduler; <c>null</c> runs every iteration inline.</param>
@@ -39,10 +32,7 @@ internal sealed class WhileObservable(
         return sink;
     }
 
-    /// <summary>
-    /// Sink that orchestrates the iteration loop, scheduling the next iteration
-    /// after each emission and terminating when the predicate becomes false.
-    /// </summary>
+    /// <summary>Sink that orchestrates the iteration loop, scheduling the next iteration after each emission and terminating when the predicate becomes false.</summary>
     /// <param name="downstream">The downstream observer.</param>
     /// <param name="condition">The loop predicate.</param>
     /// <param name="action">The action invoked per iteration.</param>
@@ -66,7 +56,7 @@ internal sealed class WhileObservable(
         private readonly ISequencer? _scheduler = scheduler;
 
         /// <summary>The disposable tracking the currently-scheduled iteration.</summary>
-        private readonly MutableDisposable _current = new();
+        private readonly SwapDisposable _current = new();
 
         /// <summary>Whether the sink has been disposed.</summary>
         private int _disposed;

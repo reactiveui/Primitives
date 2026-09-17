@@ -6,9 +6,7 @@ using System.Reactive.Subjects;
 
 namespace ReactiveUI.Primitives.Extensions.Tests.Operators;
 
-/// <summary>Edge-case coverage for <c>Partition</c> backed by
-/// <c>PartitionObservable&lt;T&gt;</c> — both-sides routing, single-side disposal,
-/// error broadcast, completion broadcast, and re-subscription after both sides drop.</summary>
+/// <summary>Tests partition routing, shared source lifetime, and terminal notifications.</summary>
 public partial class PartitionObservableTests
 {
     /// <summary>Synthetic error message attached to source errors.</summary>
@@ -119,7 +117,7 @@ public partial class PartitionObservableTests
         await Assert.That(oddResults).IsCollectionEqualTo([Three]);
     }
 
-    /// <summary>Verifies that the partition can be resubscribed after all sides drop — the source subscription is re-established.</summary>
+    /// <summary>Verifies that the partition can be resubscribed after all sides drop - the source subscription is re-established.</summary>
     /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenPartitionResubscribedAfterAllSidesDropped_ThenSourceRebound()
@@ -134,7 +132,7 @@ public partial class PartitionObservableTests
         await Assert.That(secondResults).IsCollectionEqualTo([Two]);
     }
 
-    /// <summary>Verifies the mid-array remove path on the false-side observer set — subscribes
+    /// <summary>Verifies the mid-array remove path on the false-side observer set - subscribes
     /// three odd-side observers, disposes the middle one, and confirms the remaining two still
     /// see odd values.</summary>
     /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
@@ -167,8 +165,7 @@ public partial class PartitionObservableTests
         var first = evens.Subscribe(static _ => { });
         first.Dispose();
 
-        // Subscribe again to create a fresh sink, then dispose the OLD disposable a second time
-        // (which now finds _sink == null because the prior tear-down already nulled it).
+        // Repeated disposal must leave the replacement subscription active.
         using var second = evens.Subscribe(static _ => { });
         first.Dispose();
         List<int> results = [];

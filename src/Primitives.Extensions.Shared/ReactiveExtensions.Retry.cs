@@ -39,21 +39,7 @@ public static partial class ReactiveExtensions
             where TException : Exception =>
             new RetryWithBackoffObservable<T>(
                 source,
-                new(
-                    int.MaxValue,
-                    TimeSpan.Zero,
-                    1.0,
-                    null,
-                    Sequencer.Default,
-                    ex =>
-                    {
-                        if (ex is not TException tex)
-                        {
-                            return;
-                        }
-
-                        onError(tex);
-                    }));
+                RetryPolicyFor(onError, int.MaxValue, TimeSpan.Zero, Sequencer.Default));
 
         /// <summary>When caught exception, do onError action and repeat observable sequence after delay time.</summary>
         /// <typeparam name="TException">The type of the exception.</typeparam>
@@ -65,21 +51,7 @@ public static partial class ReactiveExtensions
             where TException : Exception =>
             new RetryWithBackoffObservable<T>(
                 source,
-                new(
-                    int.MaxValue,
-                    delay,
-                    1.0,
-                    null,
-                    Sequencer.Default,
-                    ex =>
-                    {
-                        if (ex is not TException tex)
-                        {
-                            return;
-                        }
-
-                        onError(tex);
-                    }));
+                RetryPolicyFor(onError, int.MaxValue, delay, Sequencer.Default));
 
         /// <summary>When caught exception, do onError action and repeat observable sequence during within retryCount.</summary>
         /// <typeparam name="TException">The type of the exception.</typeparam>
@@ -91,21 +63,7 @@ public static partial class ReactiveExtensions
             where TException : Exception =>
             new RetryWithBackoffObservable<T>(
                 source,
-                new(
-                    retryCount,
-                    TimeSpan.Zero,
-                    1.0,
-                    null,
-                    Sequencer.Default,
-                    ex =>
-                    {
-                        if (ex is not TException tex)
-                        {
-                            return;
-                        }
-
-                        onError(tex);
-                    }));
+                RetryPolicyFor(onError, retryCount, TimeSpan.Zero, Sequencer.Default));
 
         /// <summary>When caught exception, do onError action and repeat observable sequence after delay time during within retryCount.</summary>
         /// <typeparam name="TException">The type of the exception.</typeparam>
@@ -118,26 +76,9 @@ public static partial class ReactiveExtensions
             where TException : Exception =>
             new RetryWithBackoffObservable<T>(
                 source,
-                new(
-                    retryCount,
-                    delay,
-                    1.0,
-                    null,
-                    Sequencer.Default,
-                    ex =>
-                    {
-                        if (ex is not TException tex)
-                        {
-                            return;
-                        }
+                RetryPolicyFor(onError, retryCount, delay, Sequencer.Default));
 
-                        onError(tex);
-                    }));
-
-        /// <summary>
-        /// When caught exception, do onError action and repeat observable sequence after delay
-        /// time(work on delayScheduler) during within retryCount.
-        /// </summary>
+        /// <summary>When caught exception, do onError action and repeat observable sequence after delay time(work on delayScheduler) during within retryCount.</summary>
         /// <typeparam name="TException">The type of the exception.</typeparam>
         /// <param name="onError">The on error.</param>
         /// <param name="retryCount">The retry count.</param>
@@ -155,21 +96,7 @@ public static partial class ReactiveExtensions
 
             return new RetryWithBackoffObservable<T>(
                 source,
-                new(
-                    retryCount,
-                    delay,
-                    1.0,
-                    null,
-                    delayScheduler,
-                    ex =>
-                    {
-                        if (ex is not TException tex)
-                        {
-                            return;
-                        }
-
-                        onError(tex);
-                    }));
+                RetryPolicyFor(onError, retryCount, delay, delayScheduler));
         }
 
         /// <summary>Retries with exponential backoff.</summary>
@@ -242,5 +169,31 @@ public static partial class ReactiveExtensions
                     null,
                     Sequencer.Default,
                     null));
+    }
+
+    /// <summary>Builds a policy that retries one exception type and passes every other error straight downstream.</summary>
+    /// <typeparam name="TException">The exception type to retry.</typeparam>
+    /// <param name="onError">Callback invoked with each retried exception.</param>
+    /// <param name="retryCount">The maximum number of retries.</param>
+    /// <param name="delay">The delay before each retry.</param>
+    /// <param name="scheduler">The sequencer that times each delay.</param>
+    /// <returns>The retry policy.</returns>
+    private static RetryBackoffPolicy RetryPolicyFor<TException>(
+        Action<TException> onError,
+        int retryCount,
+        TimeSpan delay,
+        ISequencer scheduler)
+        where TException : Exception
+    {
+        ArgumentExceptionHelper.ThrowIfNull(onError);
+
+        return new(
+            retryCount,
+            delay,
+            1.0,
+            null,
+            scheduler,
+            error => onError((TException)error),
+            static error => error is TException);
     }
 }

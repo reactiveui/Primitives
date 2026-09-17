@@ -2,6 +2,8 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Runtime.CompilerServices;
+
 namespace ReactiveUI.Primitives.Async.Advanced;
 
 /// <summary>Coordinates subscriptions and latest-value emission for the arity-4 <c>SyncLatest</c> operator.</summary>
@@ -11,7 +13,7 @@ namespace ReactiveUI.Primitives.Async.Advanced;
 /// <typeparam name="T4">Element type of source 4.</typeparam>
 /// <typeparam name="TResult">The projected element type.</typeparam>
 [System.Diagnostics.DebuggerDisplay("SyncLatest4Coordinator: Value1 = {Value1}, Value4 = {Value4}")]
-public sealed class SyncLatest4Coordinator<T1, T2, T3, T4, TResult> : SyncLatestCoordinatorBase<TResult>
+public sealed class SyncLatest4Coordinator<T1, T2, T3, T4, TResult> : ISyncLatestCoordinator<TResult>
 {
     /// <summary>Number of upstream sources this coordinator combines.</summary>
     private const int SourceCount = 4;
@@ -45,11 +47,14 @@ public sealed class SyncLatest4Coordinator<T1, T2, T3, T4, TResult> : SyncLatest
         IObserverAsync<TResult> observer,
         SyncLatest4State<T1, T2, T3, T4> sources,
         Func<T1, T2, T3, T4, TResult> selector)
-        : base(observer, SourceCount)
     {
+        Lifecycle = new(observer, SourceCount);
         Sources = sources;
         Selector = selector;
     }
+
+    /// <inheritdoc/>
+    public SyncLatestLifecycle<TResult> Lifecycle { get; }
 
     /// <summary>Gets the bundled source observables.</summary>
     private SyncLatest4State<T1, T2, T3, T4> Sources { get; }
@@ -70,7 +75,18 @@ public sealed class SyncLatest4Coordinator<T1, T2, T3, T4, TResult> : SyncLatest
     private Optional<T4> Value4 { get; set; } = Optional<T4>.Empty;
 
     /// <inheritdoc/>
-    internal override ValueTask EmitLatestAsync()
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public ValueTask DisposeAsync() => Lifecycle.DisposeAsync();
+
+    /// <summary>Subscribes to every source in index order.</summary>
+    /// <param name="cancellationToken">A token to cancel the subscription.</param>
+    /// <returns>A task representing the asynchronous subscribe operation.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public ValueTask SubscribeSourcesAsync(CancellationToken cancellationToken) =>
+        SyncLatestCoordinator.SubscribeSourcesAsync(this, cancellationToken);
+
+    /// <inheritdoc/>
+    public ValueTask EmitLatestAsync()
     {
         if (!TryReadValues(out var values))
         {
@@ -86,7 +102,7 @@ public sealed class SyncLatest4Coordinator<T1, T2, T3, T4, TResult> : SyncLatest
     }
 
     /// <inheritdoc/>
-    protected override ValueTask<IAsyncDisposable> SubscribeAtAsync(int index, CancellationToken cancellationToken) =>
+    public ValueTask<IAsyncDisposable> SubscribeAtAsync(int index, CancellationToken cancellationToken) =>
         index switch
         {
             Source1Index => Sources.Source1.SubscribeAsync(new SyncLatestWitness<T1, TResult>(this, Source1Bit, value => Value1 = new(value)), cancellationToken),
@@ -95,10 +111,7 @@ public sealed class SyncLatest4Coordinator<T1, T2, T3, T4, TResult> : SyncLatest
             _ => Sources.Source4.SubscribeAsync(new SyncLatestWitness<T4, TResult>(this, Source4Bit, value => Value4 = new(value)), cancellationToken)
         };
 
-    /// <summary>
-    /// Reads every source's latest value into a single snapshot. Returns <see langword="false"/>
-    /// until every source has produced at least one value.
-    /// </summary>
+    /// <summary>Reads every source's latest value into a single snapshot.</summary>
     /// <param name="values">When the method returns <see langword="true"/>, the snapshot.</param>
     /// <returns><see langword="true"/> when every source has produced a value; otherwise <see langword="false"/>.</returns>
     private bool TryReadValues(out (T1 V1, T2 V2, T3 V3, T4 V4) values)

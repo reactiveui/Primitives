@@ -2,16 +2,12 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Diagnostics;
+using System.Runtime.CompilerServices;
+
 namespace ReactiveUI.Primitives.Async;
 
-/// <summary>
-/// Provides extension methods for asynchronous observable sequences, enabling functional operations such as scanning
-/// and accumulation over streamed data.
-/// </summary>
-/// <remarks>The methods in this class allow developers to perform stateful transformations and aggregations on
-/// asynchronous observables. These operations are useful for scenarios where intermediate results or running totals are
-/// needed as items are received. All methods are designed to work with asynchronous patterns and support cancellation
-/// via tokens.</remarks>
+/// <summary>Provides extension methods for asynchronous observable sequences, enabling functional operations such as scanning and accumulation over streamed data.</summary>
 public static partial class SignalAsyncExtensions
 {
     /// <summary>Fold/Scan (running accumulation) operators for an observable source sequence.</summary>
@@ -19,16 +15,13 @@ public static partial class SignalAsyncExtensions
     /// <param name="source">The source observable sequence.</param>
     extension<T>(IObservableAsync<T> source)
     {
-        /// <summary>
-        /// Applies an accumulator function over the observable sequence and returns each intermediate result
-        /// using the specified asynchronous accumulator.
-        /// </summary>
+        /// <summary>Applies an accumulator function over the observable sequence and returns each intermediate result using the specified asynchronous accumulator.</summary>
         /// <typeparam name="TAcc">The type of the accumulated value.</typeparam>
         /// <param name="seed">The initial accumulator value.</param>
         /// <param name="accumulator">An asynchronous accumulator function to be invoked on each element. Receives the current accumulator value,
         /// the current element, and a cancellation token.</param>
         /// <returns>An observable sequence containing the accumulated values produced after each element is processed.</returns>
-        /// <exception cref="ArgumentExceptionHelper">Thrown if <paramref name="accumulator"/> is null.</exception>
+        /// <exception cref="ArgumentNullException"><paramref name="accumulator"/> is <see langword="null"/>.</exception>
         public IObservableAsync<TAcc> Fold<TAcc>(
             TAcc seed,
             Func<TAcc, T, CancellationToken, ValueTask<TAcc>> accumulator)
@@ -44,7 +37,7 @@ public static partial class SignalAsyncExtensions
         /// <param name="accumulator">An accumulator function to be invoked on each element. Receives the current accumulator value and the
         /// current element.</param>
         /// <returns>An observable sequence containing the accumulated values produced after each element is processed.</returns>
-        /// <exception cref="ArgumentExceptionHelper">Thrown if <paramref name="accumulator"/> is null.</exception>
+        /// <exception cref="ArgumentNullException"><paramref name="accumulator"/> is <see langword="null"/>.</exception>
         public IObservableAsync<TAcc> Fold<TAcc>(TAcc seed, Func<TAcc, T, TAcc> accumulator)
         {
             ArgumentExceptionHelper.ThrowIfNull(accumulator);
@@ -54,9 +47,8 @@ public static partial class SignalAsyncExtensions
     }
 
     /// <summary>
-    /// Async-accumulator variant of <see cref="Fold{T,TAcc}(IObservableAsync{T},TAcc,Func{TAcc,T,CancellationToken,ValueTask{TAcc}})"/>.
-    /// Allocates one observable wrapper and one sealed observer per subscription — no per-emission closure or
-    /// state-machine box from the previous <c>Create&lt;TAcc&gt;((observer, token) =&gt; ...)</c> pattern.
+    /// Async-accumulator variant of <see cref="Fold{T,TAcc}(IObservableAsync{T},TAcc,Func{TAcc,T,CancellationToken,ValueTask{TAcc}})"/>,
+    /// allocating one observer per subscription and nothing per emission.
     /// </summary>
     /// <typeparam name="T">The element type of the source sequence.</typeparam>
     /// <typeparam name="TAcc">The accumulator type.</typeparam>
@@ -69,41 +61,57 @@ public static partial class SignalAsyncExtensions
         Func<TAcc, T, CancellationToken, ValueTask<TAcc>> accumulator) : IObservableAsync<TAcc>
     {
         /// <inheritdoc/>
-        async ValueTask<IAsyncDisposable> IObservableAsync<TAcc>.SubscribeAsync(
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        ValueTask<IAsyncDisposable> IObservableAsync<TAcc>.SubscribeAsync(
             IObserverAsync<TAcc> observer,
-            CancellationToken cancellationToken)
-        {
-            FoldAsyncWitness sink = new(observer, seed, accumulator, cancellationToken);
-
-            // Wire sink's dispose token into the downstream's link chain so the downstream's hot path
-            // recognises this token without allocating a per-emission linked CTS.
-            if (observer is WitnessAsync<TAcc> downstreamBase)
-            {
-                downstreamBase.LinkUpstreamCancellation(sink.InternalDisposedToken);
-            }
-
-            var subscription = await source.SubscribeAsync(sink, cancellationToken).ConfigureAwait(false);
-            await sink.AssignSourceSubscriptionAsync(subscription).ConfigureAwait(false);
-            return sink;
-        }
+            CancellationToken cancellationToken) =>
+            WitnessSubscription.SubscribeAsync(
+                source,
+                new FoldAsyncWitness(observer, seed, accumulator, cancellationToken),
+                observer,
+                cancellationToken);
 
         /// <summary>Per-subscription observer that maintains the running accumulator and forwards each result.</summary>
         /// <param name="downstream">The downstream observer.</param>
         /// <param name="seed">The initial accumulator value used to prime <see cref="_acc"/>.</param>
         /// <param name="accumulator">The asynchronous accumulator.</param>
         /// <param name="subscribeToken">The subscribe-time cancellation token, linked into the dispose chain.</param>
+        [DebuggerDisplay("FoldAsyncWitness: {_witness}")]
         internal sealed class FoldAsyncWitness(
             IObserverAsync<TAcc> downstream,
             TAcc seed,
             Func<TAcc, T, CancellationToken, ValueTask<TAcc>> accumulator,
-            CancellationToken subscribeToken) : WitnessAsync<T>(subscribeToken)
+            CancellationToken subscribeToken) : IWitnessAsync<T>
         {
-            /// <summary>The running accumulator state. Mutated only inside <see cref="OnNextAsyncCore"/>, which the
-            /// base observer serializes via its reentrancy gate, so no additional locking is required.</summary>
+            /// <summary>The accumulator state protected by the observer's notification gate.</summary>
             private TAcc _acc = seed;
 
+            /// <summary>The notification gate, cancellation link and disposal state.</summary>
+            private WitnessAsyncState _witness = new(subscribeToken);
+
             /// <inheritdoc/>
-            protected override ValueTask OnNextAsyncCore(T value, CancellationToken cancellationToken)
+            ref WitnessAsyncState IWitnessState.Witness => ref _witness;
+
+            /// <inheritdoc/>
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public ValueTask OnNextAsync(T value, CancellationToken cancellationToken) =>
+                WitnessAsync.OnNextAsync(this, value, cancellationToken);
+
+            /// <inheritdoc/>
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public ValueTask OnErrorResumeAsync(Exception error, CancellationToken cancellationToken) =>
+                WitnessAsync.OnErrorResumeAsync(this, error, cancellationToken);
+
+            /// <inheritdoc/>
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public ValueTask OnCompletedAsync(Result result) => WitnessAsync.OnCompletedAsync(this, result);
+
+            /// <inheritdoc/>
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public ValueTask DisposeAsync() => WitnessAsync.DisposeStateAsync(this);
+
+            /// <inheritdoc/>
+            ValueTask IWitnessAsync<T>.OnNextAsyncCore(T value, CancellationToken cancellationToken)
             {
                 var pending = accumulator(_acc, value, cancellationToken);
                 if (pending.IsCompletedSuccessfully)
@@ -116,11 +124,13 @@ public static partial class SignalAsyncExtensions
             }
 
             /// <inheritdoc/>
-            protected override ValueTask OnErrorResumeAsyncCore(Exception error, CancellationToken cancellationToken) =>
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            ValueTask IWitnessAsync<T>.OnErrorResumeAsyncCore(Exception error, CancellationToken cancellationToken) =>
                 downstream.OnErrorResumeAsync(error, cancellationToken);
 
             /// <inheritdoc/>
-            protected override ValueTask OnCompletedAsyncCore(Result result) =>
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            ValueTask IWitnessAsync<T>.OnCompletedAsyncCore(Result result) =>
                 downstream.OnCompletedAsync(result);
 
             /// <summary>Slow path for asynchronously-completing accumulators; awaits and then forwards.</summary>
@@ -136,9 +146,8 @@ public static partial class SignalAsyncExtensions
     }
 
     /// <summary>
-    /// Synchronous-accumulator variant of <see cref="Fold{T,TAcc}(IObservableAsync{T},TAcc,Func{TAcc,T,TAcc})"/>. Same
-    /// allocation profile as <see cref="FoldAsyncSignal{T,TAcc}"/> but the per-emission <c>OnNextAsyncCore</c> is
-    /// sync-completed when the downstream completes synchronously.
+    /// Synchronous-accumulator variant of <see cref="Fold{T,TAcc}(IObservableAsync{T},TAcc,Func{TAcc,T,TAcc})"/>, whose
+    /// per-emission path completes synchronously whenever the downstream does.
     /// </summary>
     /// <typeparam name="T">The element type of the source sequence.</typeparam>
     /// <typeparam name="TAcc">The accumulator type.</typeparam>
@@ -151,52 +160,70 @@ public static partial class SignalAsyncExtensions
         Func<TAcc, T, TAcc> accumulator) : IObservableAsync<TAcc>
     {
         /// <inheritdoc/>
-        async ValueTask<IAsyncDisposable> IObservableAsync<TAcc>.SubscribeAsync(
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        ValueTask<IAsyncDisposable> IObservableAsync<TAcc>.SubscribeAsync(
             IObserverAsync<TAcc> observer,
-            CancellationToken cancellationToken)
-        {
-            FoldSyncWitness sink = new(observer, seed, accumulator, cancellationToken);
-
-            // Wire sink's dispose token into the downstream's link chain so the downstream's hot path
-            // recognises this token without allocating a per-emission linked CTS.
-            if (observer is WitnessAsync<TAcc> downstreamBase)
-            {
-                downstreamBase.LinkUpstreamCancellation(sink.InternalDisposedToken);
-            }
-
-            var subscription = await source.SubscribeAsync(sink, cancellationToken).ConfigureAwait(false);
-            await sink.AssignSourceSubscriptionAsync(subscription).ConfigureAwait(false);
-            return sink;
-        }
+            CancellationToken cancellationToken) =>
+            WitnessSubscription.SubscribeAsync(
+                source,
+                new FoldSyncWitness(observer, seed, accumulator, cancellationToken),
+                observer,
+                cancellationToken);
 
         /// <summary>Per-subscription observer that maintains the running accumulator and forwards each result.</summary>
         /// <param name="downstream">The downstream observer.</param>
         /// <param name="seed">The initial accumulator value used to prime <see cref="_acc"/>.</param>
         /// <param name="accumulator">The synchronous accumulator.</param>
         /// <param name="subscribeToken">The subscribe-time cancellation token, linked into the dispose chain.</param>
+        [DebuggerDisplay("FoldSyncWitness: {_witness}")]
         internal sealed class FoldSyncWitness(
             IObserverAsync<TAcc> downstream,
             TAcc seed,
             Func<TAcc, T, TAcc> accumulator,
-            CancellationToken subscribeToken) : WitnessAsync<T>(subscribeToken)
+            CancellationToken subscribeToken) : IWitnessAsync<T>
         {
-            /// <summary>The running accumulator state. Mutated only inside <see cref="OnNextAsyncCore"/>, which the
-            /// base observer serializes via its reentrancy gate, so no additional locking is required.</summary>
+            /// <summary>The accumulator state protected by the observer's notification gate.</summary>
             private TAcc _acc = seed;
 
+            /// <summary>The notification gate, cancellation link and disposal state.</summary>
+            private WitnessAsyncState _witness = new(subscribeToken);
+
             /// <inheritdoc/>
-            protected override ValueTask OnNextAsyncCore(T value, CancellationToken cancellationToken)
+            ref WitnessAsyncState IWitnessState.Witness => ref _witness;
+
+            /// <inheritdoc/>
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public ValueTask OnNextAsync(T value, CancellationToken cancellationToken) =>
+                WitnessAsync.OnNextAsync(this, value, cancellationToken);
+
+            /// <inheritdoc/>
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public ValueTask OnErrorResumeAsync(Exception error, CancellationToken cancellationToken) =>
+                WitnessAsync.OnErrorResumeAsync(this, error, cancellationToken);
+
+            /// <inheritdoc/>
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public ValueTask OnCompletedAsync(Result result) => WitnessAsync.OnCompletedAsync(this, result);
+
+            /// <inheritdoc/>
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public ValueTask DisposeAsync() => WitnessAsync.DisposeStateAsync(this);
+
+            /// <inheritdoc/>
+            ValueTask IWitnessAsync<T>.OnNextAsyncCore(T value, CancellationToken cancellationToken)
             {
                 _acc = accumulator(_acc, value);
                 return downstream.OnNextAsync(_acc, cancellationToken);
             }
 
             /// <inheritdoc/>
-            protected override ValueTask OnErrorResumeAsyncCore(Exception error, CancellationToken cancellationToken) =>
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            ValueTask IWitnessAsync<T>.OnErrorResumeAsyncCore(Exception error, CancellationToken cancellationToken) =>
                 downstream.OnErrorResumeAsync(error, cancellationToken);
 
             /// <inheritdoc/>
-            protected override ValueTask OnCompletedAsyncCore(Result result) =>
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            ValueTask IWitnessAsync<T>.OnCompletedAsyncCore(Result result) =>
                 downstream.OnCompletedAsync(result);
         }
     }

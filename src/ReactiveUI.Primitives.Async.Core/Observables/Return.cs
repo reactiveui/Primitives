@@ -7,18 +7,13 @@ using System.Runtime.CompilerServices;
 namespace ReactiveUI.Primitives.Async;
 
 /// <summary>Provides factory methods for creating asynchronous observable sequences.</summary>
-/// <remarks>The SignalAsync class contains static methods for constructing and manipulating asynchronous
-/// observables. Use these methods to create observables that emit values asynchronously, supporting scenarios such as
-/// background processing or integration with asynchronous workflows.</remarks>
 public static partial class SignalAsync
 {
     /// <summary>Creates an observable sequence that emits a single value and then completes.</summary>
     /// <typeparam name="T">The type of the value to be emitted by the observable sequence.</typeparam>
     /// <param name="value">The value to be emitted by the observable sequence.</param>
     /// <returns>An observable sequence that emits the specified value and then signals completion.</returns>
-    /// <remarks>The returned observable sequence emits the value asynchronously and completes immediately
-    /// after. Subscribe returns before the value is observed — emit + complete are scheduled onto the
-    /// threadpool, preserving the deferred semantic the surrounding pipeline expects.</remarks>
+    /// <remarks>Notification starts during subscription and may finish synchronously.</remarks>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static IObservableAsync<T> Emit<T>(T value) => new ReturnSignalAsync<T>(value);
 
@@ -30,16 +25,10 @@ public static partial class SignalAsync
     [System.Diagnostics.CodeAnalysis.SuppressMessage(
         "Design",
         "SST2318:Members should not have identical bodies",
-        Justification =
-            "Return is the System.Reactive name for Emit. Both operators intentionally build the same signal directly "
-            + "rather than one forwarding to the other, so the Rx-named alias costs nothing at the call site.")]
+        Justification = "Return is the Rx-compatible alias for Emit and builds the same signal with no forwarding hop.")]
     public static IObservableAsync<T> Return<T>(T value) => new ReturnSignalAsync<T>(value);
 
-    /// <summary>
-    /// Single-value observable that captures the emitted value as a field and routes through a typed
-    /// <see cref="TaskSignalSubscription{T}"/>. Same deferred-emit semantic as the previous
-    /// <c>CreateAsBackgroundJob</c> path, but without the per-call <c>Func</c> closure allocation.
-    /// </summary>
+    /// <summary>Defers one value per subscriber without allocating a closure.</summary>
     /// <typeparam name="T">The element type emitted.</typeparam>
     /// <param name="value">The captured value emitted on each subscribe.</param>
     internal sealed class ReturnSignalAsync<T>(T value) : IObservableAsync<T>
@@ -55,12 +44,23 @@ public static partial class SignalAsync
         }
 
         /// <summary>Per-subscription task body that emits the captured value and signals completion.</summary>
-        /// <param name="observer">The downstream observer.</param>
+        /// <param name="downstream">The downstream observer.</param>
         /// <param name="value">The captured value.</param>
-        private sealed class ReturnSubscription(IObserverAsync<T> observer, T value) : TaskSignalSubscription<T>(observer)
+        private sealed class ReturnSubscription(IObserverAsync<T> downstream, T value) : IAsyncDisposable, ITaskSignalJob<T>
         {
+            /// <summary>Runs the job and joins it on disposal.</summary>
+            private readonly TaskSignalState _task = new();
+
+            /// <summary>Starts the job and returns without waiting for it to finish.</summary>
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public void Start() => _task.Start(this, downstream);
+
             /// <inheritdoc/>
-            protected override async ValueTask ExecuteAsyncCore(
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public ValueTask DisposeAsync() => _task.DisposeAsync();
+
+            /// <inheritdoc/>
+            async ValueTask ITaskSignalJob<T>.ExecuteAsync(
                 IObserverAsync<T> observer,
                 CancellationToken cancellationToken)
             {

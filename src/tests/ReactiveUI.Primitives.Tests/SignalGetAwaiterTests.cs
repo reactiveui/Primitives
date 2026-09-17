@@ -18,7 +18,7 @@ public class SignalGetAwaiterTests
     /// <summary>Awaiter source values.</summary>
     private static readonly int[] AwaiterSource = [First, Second];
 
-    /// <summary>Covers signal awaiter completion, pre-cancellation, and registered cancellation paths.</summary>
+    /// <summary>An awaiter returns the last value, and a token cancelled before or after subscription throws.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
     public async Task GetAwaiterCoversCompletionAndCancellationPaths()

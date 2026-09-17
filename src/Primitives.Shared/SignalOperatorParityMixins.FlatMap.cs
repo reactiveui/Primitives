@@ -14,71 +14,10 @@ namespace ReactiveUI.Primitives;
 /// <summary>FlatMap helper implementations.</summary>
 public static partial class LinqExtensions
 {
-    /// <summary>Chaining FlatMap signal that avoids the Map + Chain composition path.</summary>
-    /// <typeparam name="TSource">The source value type.</typeparam>
-    /// <typeparam name="TResult">The result value type.</typeparam>
-    /// <param name="source">The source observable.</param>
-    /// <param name="selector">Projects source values to inner observables.</param>
-    private sealed class FlatMapSignal<TSource, TResult>(IObservable<TSource> source, Func<TSource, IObservable<TResult>> selector) : IObservable<TResult>
-    {
-        /// <summary>The source observable.</summary>
-        private readonly IObservable<TSource> _source = source;
-
-        /// <summary>Projects source values to inner observables.</summary>
-        private readonly Func<TSource, IObservable<TResult>> _selector = selector;
-
-        /// <inheritdoc/>
-        public IDisposable Subscribe(IObserver<TResult> observer)
-        {
-            ArgumentExceptionHelper.ThrowIfNull(observer);
-
-            return new FlatMapCoordinator<TSource, TResult>(_source, _selector, observer).Run();
-        }
-    }
-
-    /// <summary>Chaining FlatMap signal with an outer/inner result selector.</summary>
-    /// <typeparam name="TSource">The source value type.</typeparam>
-    /// <typeparam name="TCollection">The inner value type.</typeparam>
-    /// <typeparam name="TResult">The result value type.</typeparam>
-    /// <param name="source">The source observable.</param>
-    /// <param name="collectionSelector">Projects source values to inner observables.</param>
-    /// <param name="resultSelector">Projects outer and inner values to result values.</param>
-    private sealed class FlatMapResultSignal<TSource, TCollection, TResult>(
-        IObservable<TSource> source,
-        Func<TSource, IObservable<TCollection>> collectionSelector,
-        Func<TSource, TCollection, TResult> resultSelector) : IObservable<TResult>
-    {
-        /// <summary>The source observable.</summary>
-        private readonly IObservable<TSource> _source = source;
-
-        /// <summary>Projects source values to inner observables.</summary>
-        private readonly Func<TSource, IObservable<TCollection>> _collectionSelector = collectionSelector;
-
-        /// <summary>Projects outer and inner values to result values.</summary>
-        private readonly Func<TSource, TCollection, TResult> _resultSelector = resultSelector;
-
-        /// <inheritdoc/>
-        public IDisposable Subscribe(IObserver<TResult> observer)
-        {
-            ArgumentExceptionHelper.ThrowIfNull(observer);
-
-            var collectionSelector = _collectionSelector;
-            var resultSelector = _resultSelector;
-
-            return new FlatMapCoordinator<TSource, TResult>(
-                _source,
-                value => new FlatMapResultInnerSignal<TSource, TCollection, TResult>(
-                    value,
-                    collectionSelector(value),
-                    resultSelector),
-                observer).Run();
-        }
-    }
-
     /// <summary>Coordinates chain-style FlatMap subscriptions.</summary>
     /// <typeparam name="TSource">The source value type.</typeparam>
     /// <typeparam name="TResult">The result value type.</typeparam>
-    private sealed class FlatMapCoordinator<TSource, TResult> : IDisposable
+    internal sealed class FlatMapCoordinator<TSource, TResult> : IDisposable
     {
         /// <summary>Synchronizes subscription state.</summary>
         private readonly Lock _gate = new();
@@ -119,7 +58,7 @@ public static partial class LinqExtensions
         /// <summary>Value indicating whether the active inner source is currently subscribing.</summary>
         private bool _subscribingInner;
 
-        /// <summary>Value indicating whether the active inner source completed while its subscribe call was still on the stack.</summary>
+        /// <summary>Value indicating whether the active inner source completed during its own subscribe call.</summary>
         private bool _completedInnerWhileSubscribing;
 
         /// <summary>Initializes a new instance of the <see cref="FlatMapCoordinator{TSource, TResult}"/> class.</summary>
@@ -129,8 +68,7 @@ public static partial class LinqExtensions
         [SuppressMessage(
             "Correctness",
             "SST2403:Do not let 'this' escape from a constructor",
-            Justification =
-                "The witnesses are this coordinator's own sinks, stored back into its fields, and nothing notifies them until Run subscribes.")]
+            Justification = "The witnesses are this coordinator's own fields and nothing notifies them until Run subscribes.")]
         internal FlatMapCoordinator(
             IObservable<TSource> source,
             Func<TSource, IObservable<TResult>> selector,
@@ -185,6 +123,42 @@ public static partial class LinqExtensions
             }
         }
 
+        /// <summary>Subscribes to an inner source.</summary>
+        /// <param name="inner">The inner source.</param>
+        internal void SubscribeInner(IObservable<TResult> inner)
+        {
+            lock (_gate)
+            {
+                if (_disposed)
+                {
+                    return;
+                }
+
+                _subscribingInner = true;
+                _completedInnerWhileSubscribing = false;
+            }
+
+            IDisposable subscription;
+            try
+            {
+                subscription = inner.Subscribe(_innerObserver);
+            }
+            catch (Exception error)
+            {
+                CompleteSubscribe(error);
+                return;
+            }
+
+            var completed = CompleteSubscribe(subscription);
+            if (!completed)
+            {
+                return;
+            }
+
+            subscription.Dispose();
+            Drain();
+        }
+
         /// <summary>Handles a source value.</summary>
         /// <param name="value">The source value.</param>
         /// <exception cref="InvalidOperationException">The selector returned a <see langword="null"/> inner observable.</exception>
@@ -229,9 +203,6 @@ public static partial class LinqExtensions
         /// <param name="value">The inner value.</param>
         private void OnInnerNext(TResult value)
         {
-            // Hot path: only one inner is active at a time (sequential concat semantics), so the
-            // forward is already serialized. A lock-free volatile read of the disposed flag avoids
-            // a monitor acquire on every value; the lock releases elsewhere publish the write.
             if (Volatile.Read(ref _disposed))
             {
                 return;
@@ -314,42 +285,6 @@ public static partial class LinqExtensions
                 (_queue ??= new()).Enqueue(inner);
                 return false;
             }
-        }
-
-        /// <summary>Subscribes to an inner source.</summary>
-        /// <param name="inner">The inner source.</param>
-        private void SubscribeInner(IObservable<TResult> inner)
-        {
-            lock (_gate)
-            {
-                if (_disposed)
-                {
-                    return;
-                }
-
-                _subscribingInner = true;
-                _completedInnerWhileSubscribing = false;
-            }
-
-            IDisposable subscription;
-            try
-            {
-                subscription = inner.Subscribe(_innerObserver);
-            }
-            catch (Exception error)
-            {
-                CompleteSubscribe(error);
-                return;
-            }
-
-            var completed = CompleteSubscribe(subscription);
-            if (!completed)
-            {
-                return;
-            }
-
-            subscription.Dispose();
-            Drain();
         }
 
         /// <summary>Completes an inner subscribe call that threw.</summary>
@@ -468,6 +403,67 @@ public static partial class LinqExtensions
             /// <inheritdoc/>
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             public void OnNext(TResult value) => _parent.OnInnerNext(value);
+        }
+    }
+
+    /// <summary>FlatMap signal that subscribes the projected inner observables in source order.</summary>
+    /// <typeparam name="TSource">The source value type.</typeparam>
+    /// <typeparam name="TResult">The result value type.</typeparam>
+    /// <param name="source">The source observable.</param>
+    /// <param name="selector">Projects source values to inner observables.</param>
+    private sealed class FlatMapSignal<TSource, TResult>(IObservable<TSource> source, Func<TSource, IObservable<TResult>> selector) : IObservable<TResult>
+    {
+        /// <summary>The source observable.</summary>
+        private readonly IObservable<TSource> _source = source;
+
+        /// <summary>Projects source values to inner observables.</summary>
+        private readonly Func<TSource, IObservable<TResult>> _selector = selector;
+
+        /// <inheritdoc/>
+        public IDisposable Subscribe(IObserver<TResult> observer)
+        {
+            ArgumentExceptionHelper.ThrowIfNull(observer);
+
+            return new FlatMapCoordinator<TSource, TResult>(_source, _selector, observer).Run();
+        }
+    }
+
+    /// <summary>Chaining FlatMap signal with an outer/inner result selector.</summary>
+    /// <typeparam name="TSource">The source value type.</typeparam>
+    /// <typeparam name="TCollection">The inner value type.</typeparam>
+    /// <typeparam name="TResult">The result value type.</typeparam>
+    /// <param name="source">The source observable.</param>
+    /// <param name="collectionSelector">Projects source values to inner observables.</param>
+    /// <param name="resultSelector">Projects outer and inner values to result values.</param>
+    private sealed class FlatMapResultSignal<TSource, TCollection, TResult>(
+        IObservable<TSource> source,
+        Func<TSource, IObservable<TCollection>> collectionSelector,
+        Func<TSource, TCollection, TResult> resultSelector) : IObservable<TResult>
+    {
+        /// <summary>The source observable.</summary>
+        private readonly IObservable<TSource> _source = source;
+
+        /// <summary>Projects source values to inner observables.</summary>
+        private readonly Func<TSource, IObservable<TCollection>> _collectionSelector = collectionSelector;
+
+        /// <summary>Projects outer and inner values to result values.</summary>
+        private readonly Func<TSource, TCollection, TResult> _resultSelector = resultSelector;
+
+        /// <inheritdoc/>
+        public IDisposable Subscribe(IObserver<TResult> observer)
+        {
+            ArgumentExceptionHelper.ThrowIfNull(observer);
+
+            var collectionSelector = _collectionSelector;
+            var resultSelector = _resultSelector;
+
+            return new FlatMapCoordinator<TSource, TResult>(
+                _source,
+                value => new FlatMapResultInnerSignal<TSource, TCollection, TResult>(
+                    value,
+                    collectionSelector(value),
+                    resultSelector),
+                observer).Run();
         }
     }
 

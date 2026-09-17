@@ -8,7 +8,7 @@ using ReactiveUI.Primitives.Async.Disposables;
 
 namespace ReactiveUI.Primitives.Async.Tests;
 
-/// <summary>Direct coverage for <see cref="FlatMapCoordinator{TResult}"/> lifecycle paths.</summary>
+/// <summary>Tests flat-map coordinator notification and disposal behavior.</summary>
 public class FlatMapCoordinatorTests
 {
     /// <summary>Sample integer value one.</summary>
@@ -143,7 +143,7 @@ public class FlatMapCoordinatorTests
         await coordinator.FinishAsync(Result.Success);
         await coordinator.FinishAsync(Result.Failure(expected));
 
-        var captured = await capture.WaitForAsync(ex => ReferenceEquals(ex, expected), TimeSpan.FromSeconds(One));
+        var captured = await capture.WaitForAsync(ex => ReferenceEquals(ex, expected));
         await Assert.That(ignored.SubscribeCount).IsEqualTo(0);
         await Assert.That(observer.Completions.Count).IsEqualTo(0);
         await Assert.That(captured).IsSameReferenceAs(expected);

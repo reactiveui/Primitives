@@ -8,7 +8,7 @@ using ReactiveUI.Primitives.Reactive.Signals;
 
 namespace ReactiveUI.Primitives.Reactive.Tests;
 
-/// <summary>Smoke tests confirming the Reactive leaf's recompiled shared signals behave correctly.</summary>
+/// <summary>Smoke tests for the shared signal surface as recompiled into the Reactive leaf.</summary>
 public class SignalTests
 {
     /// <summary>The values replayed by <c>Signal.FromEnumerable</c>.</summary>

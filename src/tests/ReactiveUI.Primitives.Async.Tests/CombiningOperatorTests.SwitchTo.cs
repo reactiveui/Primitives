@@ -148,7 +148,7 @@ public partial class CombiningOperatorTests
         });
         await outer.OnNextAsync(throwOnDispose, CancellationToken.None);
 
-        // Switch to a new inner – this will try to dispose the previous (throwing) one
+        // Switch to a new inner - this will try to dispose the previous (throwing) one
         await outer.OnNextAsync(SignalAsync.Return(Sentinel99), CancellationToken.None);
         await Assert.That(completionResult).IsNotNull();
         await Assert.That(completionResult!.Value.IsFailure).IsTrue();
@@ -253,8 +253,7 @@ public partial class CombiningOperatorTests
         await outer.OnNextAsync(
             SignalAsync.Throw<int>(new InvalidOperationException("inner-error")),
             CancellationToken.None);
-        await Task.Yield();
-        await Assert.That(errors).Count().IsGreaterThanOrEqualTo(0);
+        await Assert.That(errors).IsEmpty();
     }
 
     /// <summary>Tests that Switch completes when outer completes with no inner sequences.</summary>
@@ -271,7 +270,7 @@ public partial class CombiningOperatorTests
                 completionResult = result;
                 return default;
             });
-        await AsyncTestHelpers.WaitForConditionAsync(() => completionResult.HasValue, CombiningWaitTimeout);
+        await Assert.That(completionResult.HasValue).IsTrue();
         await Assert.That(completionResult).IsNotNull();
         await Assert.That(completionResult!.Value.IsSuccess).IsTrue();
     }
@@ -291,7 +290,7 @@ public partial class CombiningOperatorTests
         await outer.OnNextAsync(
             SignalAsync.Throw<int>(new InvalidOperationException(InnerFailMessage)),
             CancellationToken.None);
-        await AsyncTestHelpers.WaitForConditionAsync(() => completionResult.HasValue, CombiningWaitTimeout);
+        await Assert.That(completionResult.HasValue).IsTrue();
         await Assert.That(completionResult).IsNotNull();
         await Assert.That(completionResult!.Value.IsFailure).IsTrue();
         await outer.DisposeAsync();
@@ -316,7 +315,7 @@ public partial class CombiningOperatorTests
             return default;
         });
         await outer.OnNextAsync(inner, CancellationToken.None);
-        await AsyncTestHelpers.WaitForConditionAsync(() => errors.Count >= 1, CombiningWaitTimeout);
+        await Assert.That(errors.Count >= 1).IsTrue();
         await Assert.That(errors).Count().IsEqualTo(1);
         await outer.DisposeAsync();
     }
@@ -343,7 +342,7 @@ public partial class CombiningOperatorTests
         await outer.OnNextAsync(inner2.Values, CancellationToken.None);
         await inner2.OnNextAsync(SampleValue10, CancellationToken.None);
         await inner2.OnNextAsync(SampleValue20, CancellationToken.None);
-        await AsyncTestHelpers.WaitForConditionAsync(() => items.Contains(SampleValue10), CombiningWaitTimeout);
+        await Assert.That(items.Contains(SampleValue10)).IsTrue();
         await Assert.That(items).Contains(1);
         await Assert.That(items).Contains(SampleValue10);
     }
@@ -405,5 +404,34 @@ public partial class CombiningOperatorTests
         await using var sub = await outer.Values.Switch().SubscribeAsync(static (_, _) => default, cts.Token);
         await cts.CancelAsync();
         await Assert.That(sub).IsNotNull();
+    }
+
+    /// <summary>Verifies that inners completing inside their own subscribe still let outer completion finish the switch.</summary>
+    /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
+    [Test]
+    public async Task WhenSwitchInnersCompleteDuringSubscribe_ThenOuterCompletionCompletes()
+    {
+        var outer = Signal.Create<IObservableAsync<int>>();
+        List<int> values = [];
+        Result? completionResult = null;
+        await using var sub = await outer.Values.Switch().SubscribeAsync(
+            (value, _) =>
+            {
+                values.Add(value);
+                return default;
+            },
+            null,
+            result =>
+            {
+                completionResult = result;
+                return default;
+            });
+        await outer.OnNextAsync(SignalAsync.Return(1), CancellationToken.None);
+        await outer.OnNextAsync(SignalAsync.Return(SampleValue2), CancellationToken.None);
+        await outer.OnCompletedAsync(Result.Success);
+        await Assert.That(completionResult).IsNotNull();
+        await Assert.That(completionResult!.Value.IsFailure).IsFalse();
+        await Assert.That(values.SequenceEqual([1, SampleValue2])).IsTrue();
+        await outer.DisposeAsync();
     }
 }

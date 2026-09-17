@@ -4,13 +4,7 @@
 
 namespace ReactiveUI.Primitives.ObservableEvents;
 
-/// <summary>The names the pipeline's steps are tracked under.</summary>
-/// <remarks>
-/// Tracking is what makes the caching testable: a driver told to track steps records, for every run, whether each
-/// step recomputed its value and whether that value differed from last time. Without names on the steps a
-/// regression that quietly reintroduces a symbol into a model - and so defeats the caching entirely - still
-/// produces correct output and would go unnoticed.
-/// </remarks>
+/// <summary>Names the pipeline steps reported by incremental tracking.</summary>
 internal static class GeneratorStepNames
 {
     /// <summary>The step that resolves which observable implementation is referenced.</summary>

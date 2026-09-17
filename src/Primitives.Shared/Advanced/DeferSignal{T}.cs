@@ -10,33 +10,34 @@ namespace ReactiveUI.Primitives.Reactive.Advanced;
 namespace ReactiveUI.Primitives.Advanced;
 #endif
 
-/// <summary>Represents the DeferSignal class.</summary>
-/// <typeparam name="T">The T type.</typeparam>
-internal sealed class DeferSignal<T> : IRequireCurrentThread<T>
+/// <summary>Invokes a factory per subscription and subscribes the observer to the observable it returns.</summary>
+/// <typeparam name="T">The value type.</typeparam>
+[System.Diagnostics.DebuggerDisplay("DeferSignal<{typeof(T).Name,nq}>")]
+public sealed class DeferSignal<T> : IRequireCurrentThread<T>
 {
-    /// <summary>Stores state for the signal implementation.</summary>
+    /// <summary>The factory invoked for each subscription.</summary>
     private readonly Func<IObservable<T>> _observableFactory;
 
     /// <summary>Initializes a new instance of the <see cref="DeferSignal{T}"/> class.</summary>
-    /// <param name="observableFactory">The observableFactory value.</param>
+    /// <param name="observableFactory">The factory invoked for each subscription.</param>
     public DeferSignal(Func<IObservable<T>> observableFactory) => _observableFactory = observableFactory;
 
-    /// <summary>Executes the IsRequiredSubscribeOnCurrentThread operation.</summary>
-    /// <returns>The result.</returns>
+    /// <summary>Reports that subscription needs no current-thread dispatch.</summary>
+    /// <returns>Always <see langword="false"/>.</returns>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public bool IsRequiredSubscribeOnCurrentThread() => false;
 
-    /// <summary>Executes the Subscribe operation.</summary>
-    /// <param name="observer">The observer value.</param>
-    /// <returns>The result.</returns>
+    /// <summary>Subscribes the observer to the observable produced for this subscription.</summary>
+    /// <param name="observer">The downstream observer.</param>
+    /// <returns>The disposable that releases the subscription.</returns>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public IDisposable Subscribe(IObserver<T> observer) =>
         SignalSubscription.Subscribe(observer, false, SubscribeCore);
 
-    /// <summary>Executes the SubscribeCore operation.</summary>
-    /// <param name="observer">The observer value.</param>
-    /// <param name="cancel">The cancel value.</param>
-    /// <returns>The result.</returns>
+    /// <summary>Invokes the factory and subscribes, turning a factory throw into an error notification.</summary>
+    /// <param name="observer">The downstream observer.</param>
+    /// <param name="cancel">The outer subscription handle.</param>
+    /// <returns>The subscription to the produced observable.</returns>
     private IDisposable SubscribeCore(IObserver<T> observer, IDisposable cancel)
     {
         observer = new GuardedWitness<T>(observer, cancel);

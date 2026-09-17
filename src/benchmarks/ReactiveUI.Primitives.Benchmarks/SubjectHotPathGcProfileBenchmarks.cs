@@ -3,20 +3,19 @@
 // See the LICENSE file in the project root for full license information.
 
 using BenchmarkDotNet.Attributes;
-using BenchmarkDotNet.Diagnosers;
+
 using ReactiveUI.Primitives.Signals;
 
 namespace ReactiveUI.Primitives.Benchmarks;
 
 /// <summary>
-/// GC-verbose profile for the subject hot paths touched by the lock-free copy-on-write rewrite of
-/// <see cref="Signal{T}"/>, the System.Threading.Lock migration of the value-carrying subjects, and
-/// the readonly-Observer change. Covers steady-state emission (per-OnNext should be allocation-free)
-/// and subscribe/unsubscribe churn (exercises the copy-on-write add/remove path).
+/// GC-verbose profile for the subject hot paths: steady-state emission through <see cref="Signal{T}"/>
+/// and the value-carrying subjects, and single- and multi-subscriber subscribe/dispose churn over the
+/// copy-on-write observer list.
 /// </summary>
 [ShortRunJob]
 [MemoryDiagnoser]
-[EventPipeProfiler(EventPipeProfile.GcVerbose)]
+
 public class SubjectHotPathGcProfileBenchmarks
 {
     /// <summary>The number of values emitted in each steady-state emission benchmark.</summary>

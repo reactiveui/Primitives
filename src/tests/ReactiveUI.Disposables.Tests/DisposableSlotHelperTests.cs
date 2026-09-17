@@ -6,14 +6,10 @@ using ReactiveUI.Primitives.Disposables;
 
 namespace ReactiveUI.Disposables.Tests;
 
-/// <summary>Direct RxVoid tests for <see cref="DisposableSlotHelper"/>. Covers every reachable
-/// branch — the already-disposed pre-check, the steady-state assign, the swap-disposes-previous
-/// path, and the idempotent <c>TryDispose</c> latch. The single race-recheck step that fires
-/// only under a real concurrent dispose is isolated in <c>DisposeIfRaced</c> and excluded from
-/// coverage there.</summary>
+/// <summary>Tests slot assignment, replacement disposal, and idempotent disposal.</summary>
 public class DisposableSlotHelperTests
 {
-    /// <summary>Verifies that an incoming value is disposed immediately if the slot is already disposed.</summary>
+    /// <summary>Verifies that an incoming value is disposed immediately when the slot is disposed.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenAssignWithoutDisposingPreviousIntoDisposedSlot_ThenIncomingDisposed()
@@ -28,7 +24,7 @@ public class DisposableSlotHelperTests
         await Assert.That(slot).IsNull();
     }
 
-    /// <summary>Verifies the steady-state assign — slot transitions to the new value without disposing the previous.</summary>
+    /// <summary>Verifies the steady-state assign - slot transitions to the new value without disposing the previous.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenAssignWithoutDisposingPreviousOpen_ThenStoresAndLeavesPreviousAlone()
@@ -76,7 +72,7 @@ public class DisposableSlotHelperTests
         await Assert.That(second.DisposeCount).IsEqualTo(0);
     }
 
-    /// <summary>Verifies the swap path disposes the incoming value if the slot is already disposed.</summary>
+    /// <summary>Verifies the swap path disposes the incoming value when the slot is disposed.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenSwapAndDisposePreviousIntoDisposedSlot_ThenIncomingDisposed()
@@ -107,7 +103,38 @@ public class DisposableSlotHelperTests
         await Assert.That(inner.DisposeCount).IsEqualTo(1);
     }
 
-    /// <summary>Disposable used to verify dispose counts.</summary>
+    /// <summary>Verifies assignment cleanup releases a value stored after holder disposal.</summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    [Test]
+    public async Task WhenAssignmentOverlapsDisposal_ThenReleasesStoredValueOnce()
+    {
+        CountingDisposable incoming = new();
+        IDisposable? slot = incoming;
+        var disposed = DisposableSlotHelper.DisposedSentinel;
+
+        DisposableSlotHelper.DisposeIfRaced(ref slot, ref disposed);
+        DisposableSlotHelper.DisposeIfRaced(ref slot, ref disposed);
+
+        await Assert.That(slot).IsNull();
+        await Assert.That(incoming.DisposeCount).IsEqualTo(1);
+    }
+
+    /// <summary>Verifies assignment cleanup leaves a live holder's value installed.</summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    [Test]
+    public async Task WhenAssignmentCompletesBeforeDisposal_ThenRetainsStoredValue()
+    {
+        CountingDisposable incoming = new();
+        IDisposable? slot = incoming;
+        var disposed = 0;
+
+        DisposableSlotHelper.DisposeIfRaced(ref slot, ref disposed);
+
+        await Assert.That(slot).IsSameReferenceAs(incoming);
+        await Assert.That(incoming.DisposeCount).IsEqualTo(0);
+    }
+
+    /// <summary>Disposable that records its dispose count.</summary>
     private sealed class CountingDisposable : IDisposable
     {
         /// <summary>Gets the number of times <see cref="Dispose"/> has been invoked.</summary>

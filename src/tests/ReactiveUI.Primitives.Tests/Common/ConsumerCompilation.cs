@@ -10,9 +10,8 @@ using Microsoft.CodeAnalysis.CSharp.Syntax;
 namespace ReactiveUI.Primitives.Tests;
 
 /// <summary>
-/// Compiles a snippet of consumer code against the shipped Primitives assemblies so a test can assert what a
-/// downstream project's compiler resolves. Overload resolution against a referenced assembly is not observable
-/// from inside this assembly, where the same names bind through source rather than metadata.
+/// Compiles consumer code against the shipped Primitives assemblies, so overload resolution binds through metadata
+/// the way a downstream project sees it rather than through this assembly's source.
 /// </summary>
 public static class ConsumerCompilation
 {

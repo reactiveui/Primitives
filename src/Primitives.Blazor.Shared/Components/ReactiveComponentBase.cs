@@ -12,6 +12,10 @@ namespace ReactiveUI.Primitives.Blazor.Components;
 #endif
 
 /// <summary>Base component that tracks reactive subscriptions and refreshes through Blazor's renderer dispatcher.</summary>
+/// <remarks>
+/// Callbacks run on the renderer dispatcher; callback exceptions reach the enclosing error boundary. Component disposal releases tracked
+/// subscriptions.
+/// </remarks>
 [System.Diagnostics.DebuggerDisplay("{DebuggerDisplay,nq}")]
 public class ReactiveComponentBase : ComponentBase, IDisposable
 {
@@ -44,7 +48,7 @@ public class ReactiveComponentBase : ComponentBase, IDisposable
 
     /// <summary>Tracks a subscription so it is disposed when the component is disposed.</summary>
     /// <param name="subscription">The subscription to track.</param>
-    /// <returns>The supplied subscription, or <see cref="EmptyDisposable.Instance"/> when the component has already been disposed.</returns>
+    /// <returns>The supplied subscription, or <see cref="EmptyDisposable.Instance"/> when the component is disposed.</returns>
     /// <exception cref="ArgumentNullException"><paramref name="subscription"/> is <see langword="null"/>.</exception>
     protected IDisposable Track(IDisposable subscription)
     {
@@ -136,7 +140,7 @@ public class ReactiveComponentBase : ComponentBase, IDisposable
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     protected Task InvalidateAsync() => InvokeAsync(StateHasChanged);
 
-    /// <summary>Handles an unhandled subscription error.</summary>
+    /// <summary>Handles a subscription error that no <c>onError</c> callback was given for.</summary>
     /// <param name="error">The observed error.</param>
     /// <exception cref="InvalidOperationException">Always thrown to surface the subscription error.</exception>
     protected virtual void OnObservedError(Exception error)
@@ -159,26 +163,30 @@ public class ReactiveComponentBase : ComponentBase, IDisposable
         _subscriptions.Dispose();
     }
 
-    /// <summary>
-    /// Runs a callback through the renderer and routes failures into Blazor's error handling
-    /// (<see cref="ComponentBase.DispatchExceptionAsync(Exception)"/>) so error boundaries observe them
-    /// instead of the fault being lost with the discarded task.
-    /// </summary>
+    /// <summary>Runs a renderer callback and forwards failures to Blazor error boundaries.</summary>
     /// <param name="callback">Callback to run on the renderer dispatcher.</param>
     /// <returns>A task that completes when the callback (or its failure dispatch) has finished.</returns>
     private async Task InvokeGuardedAsync(Action callback)
     {
+        Exception? failure = null;
         try
         {
             await InvokeAsync(callback).ConfigureAwait(false);
         }
         catch (Exception ex)
         {
-            await DispatchExceptionAsync(ex).ConfigureAwait(false);
+            failure = ex;
         }
+
+        if (failure is null)
+        {
+            return;
+        }
+
+        await DispatchExceptionAsync(failure).ConfigureAwait(false);
     }
 
-    /// <summary>Refreshes the component when requested and when it is still active.</summary>
+    /// <summary>Refreshes the component when requested and the component is undisposed.</summary>
     /// <param name="shouldRefresh">A value indicating whether refresh is requested.</param>
     private void Refresh(bool shouldRefresh)
     {

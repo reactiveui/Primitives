@@ -10,68 +10,59 @@ namespace ReactiveUI.Primitives.Reactive.Advanced;
 namespace ReactiveUI.Primitives.Advanced;
 #endif
 
-/// <summary>Represents the FinallySignal class.</summary>
-/// <typeparam name="T">The T type.</typeparam>
-/// <param name="source">The source value.</param>
-/// <param name="finallyAction">The finallyAction value.</param>
+/// <summary>Runs an action once the subscription ends, whether it terminated or was disposed.</summary>
+/// <typeparam name="T">The value type.</typeparam>
+/// <param name="source">The source observable.</param>
+/// <param name="finallyAction">The action run when the subscription ends.</param>
 [System.Diagnostics.DebuggerDisplay("FinallySignal: Source = {_source}")]
 public sealed class FinallySignal<T>(IObservable<T> source, Action finallyAction) : IRequireCurrentThread<T>
 {
-    /// <summary>Stores state for the signal implementation.</summary>
+    /// <summary>The source observable.</summary>
     private readonly IObservable<T> _source = source;
 
-    /// <summary>Stores state for the signal implementation.</summary>
+    /// <summary>The action run when the subscription ends.</summary>
     private readonly Action _finallyAction = finallyAction;
 
-    /// <summary>Executes the IsRequiredSubscribeOnCurrentThread operation.</summary>
-    /// <returns>The result.</returns>
+    /// <summary>Reports that subscription runs on the calling thread.</summary>
+    /// <returns>Always <see langword="true"/>.</returns>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public bool IsRequiredSubscribeOnCurrentThread() => true;
 
-    /// <summary>Executes the Subscribe operation.</summary>
-    /// <param name="observer">The observer value.</param>
-    /// <returns>The result.</returns>
+    /// <summary>Subscribes the observer and attaches the end-of-subscription action.</summary>
+    /// <param name="observer">The downstream observer.</param>
+    /// <returns>The disposable that releases the subscription and runs the action.</returns>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public IDisposable Subscribe(IObserver<T> observer) =>
         SignalSubscription.Subscribe(observer, true, SubscribeCore);
 
-    /// <summary>Executes the SubscribeCore operation.</summary>
-    /// <param name="observer">The observer value.</param>
-    /// <param name="cancel">The cancel value.</param>
-    /// <returns>The result.</returns>
+    /// <summary>Creates the handler that forwards notifications and owns the end-of-subscription action.</summary>
+    /// <param name="observer">The downstream observer.</param>
+    /// <param name="cancel">The outer subscription handle.</param>
+    /// <returns>The disposable that releases the subscription and runs the action.</returns>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private IDisposable SubscribeCore(IObserver<T> observer, IDisposable cancel) =>
         new Finally(this, observer, cancel).Run();
 
-    /// <summary>Represents the Finally class.</summary>
-    private sealed class Finally : IObserver<T>, IDisposable
+    /// <summary>Forwards notifications downstream and pairs the subscription with the end-of-subscription action.</summary>
+    /// <param name="parent">The signal supplying the source and the action.</param>
+    /// <param name="observer">The downstream observer.</param>
+    /// <param name="cancel">The outer subscription handle.</param>
+    private sealed class Finally(FinallySignal<T> parent, IObserver<T> observer, IDisposable cancel) : IObserver<T>, IDisposable
     {
-        /// <summary>Stores state for the signal implementation.</summary>
-        private readonly FinallySignal<T> _parent;
+        /// <summary>The signal supplying the source and the action.</summary>
+        private readonly FinallySignal<T> _parent = parent;
 
-        /// <summary>Stores the downstream observer.</summary>
-        private readonly IObserver<T> _observer;
+        /// <summary>The downstream observer.</summary>
+        private readonly IObserver<T> _observer = observer;
 
-        /// <summary>Stores the upstream subscription.</summary>
-        private IDisposable? _cancel;
+        /// <summary>The outer subscription handle released on teardown.</summary>
+        private IDisposable? _cancel = cancel;
 
         /// <summary>Disposed latch; 0 when alive, 1 once disposed.</summary>
         private int _disposed;
 
-        /// <summary>Initializes a new instance of the <see cref="Finally"/> class.</summary>
-        /// <param name="parent">The parent value.</param>
-        /// <param name="observer">The observer value.</param>
-        /// <param name="cancel">The cancel value.</param>
-        /// <exception cref="ArgumentNullException"><paramref name="cancel"/> is <see langword="null"/>.</exception>
-        public Finally(FinallySignal<T> parent, IObserver<T> observer, IDisposable cancel)
-        {
-            _cancel = cancel ?? throw new ArgumentNullException(nameof(cancel));
-            _observer = observer;
-            _parent = parent;
-        }
-
-        /// <summary>Executes the Run operation.</summary>
-        /// <returns>The result.</returns>
+        /// <summary>Subscribes to the source, running the action immediately if subscription throws.</summary>
+        /// <returns>The disposable that releases the source subscription and then runs the action.</returns>
         public MultipleDisposable Run()
         {
             IDisposable subscription;
@@ -88,13 +79,13 @@ public sealed class FinallySignal<T>(IObservable<T> source, Action finallyAction
             return new(subscription, new ActionDisposable(() => _parent._finallyAction()));
         }
 
-        /// <summary>Executes the OnNext operation.</summary>
-        /// <param name="value">The value.</param>
+        /// <summary>Forwards a value downstream.</summary>
+        /// <param name="value">The value to forward.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void OnNext(T value) => _observer.OnNext(value);
 
-        /// <summary>Executes the OnError operation.</summary>
-        /// <param name="error">The error value.</param>
+        /// <summary>Forwards the error downstream and releases the subscription.</summary>
+        /// <param name="error">The error to forward.</param>
         public void OnError(Exception error)
         {
             try
@@ -107,7 +98,7 @@ public sealed class FinallySignal<T>(IObservable<T> source, Action finallyAction
             }
         }
 
-        /// <summary>Executes the OnCompleted operation.</summary>
+        /// <summary>Completes downstream and releases the subscription.</summary>
         public void OnCompleted()
         {
             try
@@ -120,7 +111,7 @@ public sealed class FinallySignal<T>(IObservable<T> source, Action finallyAction
             }
         }
 
-        /// <summary>Executes the Dispose operation.</summary>
+        /// <summary>Releases the outer subscription handle once.</summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Dispose() => WitnessTeardown.Dispose(ref _disposed, ref _cancel);
     }

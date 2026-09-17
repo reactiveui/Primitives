@@ -2,13 +2,11 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
-using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
 
 namespace ReactiveUI.Primitives.Async.Helpers;
 
 /// <summary>Provides helper methods for idempotent disposal patterns using an integer flag.</summary>
-[ExcludeFromCodeCoverage]
 public static class DisposalHelper
 {
     /// <summary>Checks whether the disposed flag indicates disposal has occurred.</summary>
@@ -17,9 +15,9 @@ public static class DisposalHelper
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal static bool HasDisposed(int disposed) => disposed == 1;
 
-    /// <summary>Atomically sets the disposed flag and returns whether it was already set.</summary>
+    /// <summary>Atomically raises the disposed flag, reporting whether an earlier call got there first.</summary>
     /// <param name="disposed">A reference to the disposed flag.</param>
-    /// <returns><see langword="true"/> if already disposed; otherwise <see langword="false"/>.</returns>
+    /// <returns><see langword="true"/> when the flag was set before this call; otherwise <see langword="false"/>.</returns>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal static bool TrySetDisposed(ref int disposed) => Interlocked.Exchange(ref disposed, 1) == 1;
 }

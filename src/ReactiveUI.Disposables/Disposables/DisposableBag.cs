@@ -4,17 +4,8 @@
 
 namespace ReactiveUI.Primitives.Disposables;
 
-/// <summary>
-/// A small composite-disposable replacement specialised for the common 2-slot
-/// "subscription + sink" pair found throughout this codebase. Avoids the
-/// <see cref="List{T}"/> backing field of
-/// <c>System.Reactive.Disposables.CompositeDisposable</c>.
-/// </summary>
-/// <remarks>
-/// The first two added entries are stored inline. A third or later entry causes a fall-back
-/// to a heap-allocated array. Disposal is idempotent and disposes every contained entry,
-/// in registration order, exactly once.
-/// </remarks>
+/// <summary>A composite disposable that holds its first two entries in inline fields and spills further entries into a heap-allocated array.</summary>
+/// <remarks>Disposal is idempotent and disposes every contained entry, in registration order, exactly once.</remarks>
 [System.Diagnostics.DebuggerDisplay("{DebuggerDisplay,nq}")]
 public sealed class DisposableBag : IsDisposed
 {
@@ -77,7 +68,7 @@ public sealed class DisposableBag : IsDisposed
     [System.Diagnostics.DebuggerBrowsable(System.Diagnostics.DebuggerBrowsableState.Never)]
     private string DebuggerDisplay => ToString() ?? string.Empty;
 
-    /// <summary>Adds a disposable to the bag. If the bag is already disposed, the supplied disposable is disposed immediately.</summary>
+    /// <summary>Adds a disposable to the bag, disposing it immediately if the bag is disposed and ignoring a <see langword="null"/> argument.</summary>
     /// <param name="disposable">The disposable to add.</param>
     public void Add(IDisposable disposable)
     {

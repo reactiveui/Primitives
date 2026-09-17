@@ -1,3 +1,4 @@
+[assembly: System.Runtime.CompilerServices.InternalsVisibleTo("ReactiveUI.Primitives.Blazor.Tests")]
 namespace ReactiveUI.Primitives.Blazor.Components
 {
     [System.Diagnostics.DebuggerDisplay("{DebuggerDisplay,nq}")]

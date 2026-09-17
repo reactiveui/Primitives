@@ -10,23 +10,8 @@ namespace ReactiveUI.Primitives.Extensions.Reactive.Operators;
 namespace ReactiveUI.Primitives.Extensions.Operators;
 #endif
 
-/// <summary>
-/// Source-driven scheduled observable. Subscribes to an upstream
-/// <see cref="IObservable{T}"/> and, for every emitted value, schedules a
-/// callback on the supplied <see cref="ISequencer"/> that applies an optional
-/// <see cref="Action{T}"/> side-effect and/or <see cref="Func{T,T}"/> transform
-/// before forwarding the value to the downstream observer. Replaces the
-/// <c>Observable.Create&lt;T&gt;(o =&gt; source.Subscribe(v =&gt; scheduler.Schedule(...)))</c>
-/// family of source-driven <c>Schedule</c> overloads.
-/// </summary>
+/// <summary>Schedules source values without forwarding errors or completion.</summary>
 /// <typeparam name="T">The element type of the source observable.</typeparam>
-/// <remarks>
-/// To match the original <c>source.Subscribe(Action&lt;T&gt;)</c> semantics, this
-/// operator only forwards <see cref="IObserver{T}.OnNext"/>. Source errors and
-/// completion are intentionally not propagated to the downstream observer; that
-/// preserves the historical behaviour of <c>Observable.Create</c> + a
-/// next-only subscription.
-/// </remarks>
 internal sealed class ScheduledSourceObservable<T> : IObservable<T>
 {
     /// <summary>The upstream observable.</summary>
@@ -55,13 +40,7 @@ internal sealed class ScheduledSourceObservable<T> : IObservable<T>
         return _source.Subscribe(sink);
     }
 
-    /// <summary>
-    /// Carries the per-emission state into the scheduled callback so the
-    /// scheduler lambda does not capture any fields. A <see langword="readonly"/>
-    /// <see langword="record"/> <see langword="struct"/> so it rides inside the
-    /// scheduler's work item by value rather than as a separate per-emission heap
-    /// allocation.
-    /// </summary>
+    /// <summary>Carries the per-emission state by value into the scheduled callback so the scheduler lambda captures nothing.</summary>
     /// <param name="Observer">The downstream observer.</param>
     /// <param name="Value">The value to emit.</param>
     /// <param name="Transform">The optional transform.</param>
@@ -129,15 +108,13 @@ internal sealed class ScheduledSourceObservable<T> : IObservable<T>
         /// <inheritdoc/>
         public void OnError(Exception error)
         {
-            // Intentionally not forwarded: original Observable.Create + Subscribe(Action<T>)
-            // pattern silently dropped source errors. Preserving that behaviour.
+            // Terminal notifications are not forwarded.
         }
 
         /// <inheritdoc/>
         public void OnCompleted()
         {
-            // Intentionally not forwarded: original Observable.Create + Subscribe(Action<T>)
-            // pattern silently dropped completion. Preserving that behaviour.
+            // Terminal notifications are not forwarded.
         }
     }
 }

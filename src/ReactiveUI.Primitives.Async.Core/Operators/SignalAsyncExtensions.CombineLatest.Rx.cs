@@ -23,10 +23,7 @@ public static partial class SignalAsyncExtensions
             return new SyncLatestEnumerableSignal<TSource, IReadOnlyList<TSource>>(sources, static values => values);
         }
 
-        /// <summary>
-        /// Combines the latest value from each asynchronous observable sequence in the supplied collection and projects the
-        /// resulting snapshot into a result value.
-        /// </summary>
+        /// <summary>Combines the latest value from each asynchronous observable sequence in the supplied collection and projects the resulting snapshot into a result value.</summary>
         /// <typeparam name="TResult">The projected result type.</typeparam>
         /// <param name="resultSelector">A selector that projects the current snapshot of latest values into a result value.</param>
         /// <returns>An observable sequence that emits projected results whenever any source produces a new value, after all

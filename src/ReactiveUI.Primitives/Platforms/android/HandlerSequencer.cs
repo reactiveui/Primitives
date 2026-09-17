@@ -8,11 +8,7 @@ using ReactiveUI.Primitives.Advanced;
 
 namespace ReactiveUI.Primitives.Concurrency;
 
-/// <summary>
-/// Android sequencer that coalesces scheduled work onto the thread backing a <see cref="Handler"/> (typically the
-/// main/UI looper). Immediate work is batched through a single cached <see cref="Java.Lang.IRunnable"/> drain, so the
-/// per-post path allocates nothing; delayed work uses the native <see cref="Handler.PostDelayed(Java.Lang.IRunnable, long)"/>.
-/// </summary>
+/// <summary>Schedules immediate and delayed work on the Android handler thread.</summary>
 /// <seealso cref="ISequencer" />
 [System.Diagnostics.DebuggerDisplay("{DebuggerDisplay,nq}")]
 public sealed class HandlerSequencer : ISequencer
@@ -20,15 +16,11 @@ public sealed class HandlerSequencer : ISequencer
     /// <summary>Coalescing dispatch engine.</summary>
     private DispatchSequencerState _state;
 
-    /// <summary>
-    /// Cached runnable wrapping the drain. The drain callback is invariant for the lifetime of the sequencer,
-    /// so the JNI runnable bridge is built once and reused for every posted batch rather than per post.
-    /// </summary>
+    /// <summary>JNI drain callback reused across posted batches.</summary>
     [System.Diagnostics.CodeAnalysis.SuppressMessage(
         "Maintainability",
         "SST1422:Move this field into the method that uses it",
-        Justification =
-            "Persistent lazy cache: the JNI runnable bridge is built once and reused across every Post call, so it cannot be a method local.")]
+        Justification = "The JNI runnable bridge is built once and reused across every posted batch.")]
     private Java.Lang.IRunnable? _drainRunnable;
 
     /// <summary>Initializes a new instance of the <see cref="HandlerSequencer"/> class.</summary>
@@ -73,12 +65,20 @@ public sealed class HandlerSequencer : ISequencer
     private bool Post(Action drain)
     {
         _drainRunnable ??= new Java.Lang.Runnable(drain);
-        return Handler.Post(_drainRunnable);
+        return PostToHandler(_drainRunnable);
     }
+
+    /// <summary>Posts the runnable through the native handler.</summary>
+    /// <param name="runnable">The runnable to post.</param>
+    /// <returns>Whether the handler accepted the runnable.</returns>
+    [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private bool PostToHandler(Java.Lang.IRunnable runnable) => Handler.Post(runnable);
 
     /// <summary>Runs delayed work through the handler's native delayed post.</summary>
     /// <param name="item">Work item to execute at the due time.</param>
     /// <param name="dueTimestamp">Absolute monotonic timestamp at which to execute the item.</param>
+    [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private void ScheduleDelayed(IWorkItem item, long dueTimestamp) =>
         Handler.PostDelayed(

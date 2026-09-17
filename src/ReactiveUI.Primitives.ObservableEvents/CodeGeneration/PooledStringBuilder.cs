@@ -6,20 +6,7 @@ using System.Runtime.CompilerServices;
 
 namespace ReactiveUI.Primitives.ObservableEvents.CodeGeneration;
 
-/// <summary>A fluent builder for generated source, backed by thread-local pooled character buffers.</summary>
-/// <remarks>
-/// <para>
-/// Emission builds a great many short fragments - a payload type here, a handler parameter list there - and one
-/// large file per target. Accumulating into a pooled <c>char[]</c> lets the same buffers carry every fragment and
-/// every file in a pass, so the steady state is a handful of arrays rather than a builder and its grown chunk
-/// chain per fragment.
-/// </para>
-/// <para>
-/// The free list is thread-local rather than a shared pool: source-output callbacks run concurrently, fragment
-/// builders nest inside file builders, and nothing here outlives the call that rented it. Returning is what buys
-/// the reuse; forgetting to costs reuse, never correctness.
-/// </para>
-/// </remarks>
+/// <summary>Builds source text using buffers rented from a thread-local pool.</summary>
 internal sealed class PooledStringBuilder
 {
     /// <summary>The smallest buffer worth renting, sized to hold a typical fragment without growing.</summary>
@@ -93,13 +80,9 @@ internal sealed class PooledStringBuilder
         return this;
     }
 
-    /// <summary>Appends the invariant decimal rendering of a non-negative integer.</summary>
+    /// <summary>Appends an integer directly to the buffer without an intermediate string.</summary>
     /// <param name="value">The value to append; the only callers pass a name length, so it is never negative.</param>
     /// <returns>This builder, for chaining.</returns>
-    /// <remarks>
-    /// Formats digits straight into the buffer. These appends sit in the per-event loop that builds the mangled
-    /// static property names, where going through <c>ToString</c> would allocate a string per name segment.
-    /// </remarks>
     internal PooledStringBuilder Append(int value)
     {
         EnsureCapacity(_position + MaxIntegerDigits);
@@ -122,7 +105,6 @@ internal sealed class PooledStringBuilder
     /// <summary>Appends another builder's content, then returns that builder's buffer to the pool.</summary>
     /// <param name="other">The fragment builder to drain; it must not be appended to afterwards.</param>
     /// <returns>This builder, for chaining.</returns>
-    /// <remarks>Copies buffer to buffer, so a nested fragment joins its file without materializing a string.</remarks>
     internal PooledStringBuilder Append(PooledStringBuilder other)
     {
         if (other._position != 0)
@@ -162,14 +144,10 @@ internal sealed class PooledStringBuilder
         return this;
     }
 
-    /// <summary>Appends a block of newline-separated lines, indenting each non-empty one.</summary>
+    /// <summary>Appends indented text, leaving empty lines free of whitespace.</summary>
     /// <param name="value">The block to append, which may be empty.</param>
     /// <param name="spaces">The indentation width applied to every non-empty line.</param>
     /// <returns>This builder, for chaining.</returns>
-    /// <remarks>
-    /// Blank lines are left bare rather than filled with spaces, so an indented block never carries trailing
-    /// whitespace into the generated file.
-    /// </remarks>
     internal PooledStringBuilder AppendIndentedLines(string value, int spaces)
     {
         var start = 0;
@@ -196,8 +174,7 @@ internal sealed class PooledStringBuilder
         return this;
     }
 
-    /// <summary>Hands the buffer back to the thread's free list.</summary>
-    /// <remarks>The builder must not be appended to afterwards.</remarks>
+    /// <summary>Returns the buffer to the pool, ending this builder's lifetime.</summary>
     internal void Return()
     {
         var toReturn = _buffer;
@@ -260,7 +237,7 @@ internal sealed class PooledStringBuilder
         _pooledCount++;
     }
 
-    /// <summary>Grows the buffer when the requested length no longer fits.</summary>
+    /// <summary>Grows the buffer when the requested length exceeds its capacity.</summary>
     /// <param name="required">The total capacity required.</param>
     private void EnsureCapacity(int required)
     {
@@ -269,7 +246,6 @@ internal sealed class PooledStringBuilder
             return;
         }
 
-        // Doubling unless the caller asked for more outright, so a run of small appends does not re-rent per append.
         var next = RentBuffer(Math.Max(required, _buffer.Length * GrowthFactor));
         Array.Copy(_buffer, next, _position);
         var toReturn = _buffer;

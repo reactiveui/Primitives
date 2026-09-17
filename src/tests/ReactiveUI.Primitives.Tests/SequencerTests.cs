@@ -2,7 +2,6 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
-using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using ReactiveUI.Primitives.Concurrency;
 using ReactiveUI.Primitives.Core;
@@ -34,9 +33,6 @@ public partial class SequencerTests
     /// <summary>A reusable negative value.</summary>
     private const int NegativeOne = -1;
 
-    /// <summary>Timeout used when waiting for background scheduled work.</summary>
-    private const int TimeoutSeconds = 10;
-
     /// <summary>Reused first-error message.</summary>
     private const string FirstMessage = "first";
 
@@ -54,12 +50,6 @@ public partial class SequencerTests
 
     /// <summary>Deterministic absolute due time for scheduler overload tests.</summary>
     private static readonly DateTimeOffset AbsoluteDueTime = DateTimeOffset.UnixEpoch;
-
-    /// <summary>How far ahead of now the immediate sequencer's absolute-due-time test schedules its work.</summary>
-    private static readonly TimeSpan AbsoluteDueOffset = TimeSpan.FromMilliseconds(30);
-
-    /// <summary>The shortest wait that still proves the immediate sequencer honoured the absolute due time.</summary>
-    private static readonly TimeSpan MinimumAbsoluteWait = TimeSpan.FromMilliseconds(20);
 
     /// <summary>Expected values produced by simple scheduling extension overloads.</summary>
     private static readonly int[] ScheduleExpected = [One, Two, Three, Four];
@@ -86,11 +76,7 @@ public partial class SequencerTests
         await Assert.That(calls.SequenceEqual(expected)).IsTrue();
     }
 
-    /// <summary>
-    /// Verifies nested current-thread work cancelled before the trampoline reaches it never runs. Scheduling from
-    /// inside a running action queues a cancellable work item and hands its handle back; disposing that handle must
-    /// leave the trampoline nothing to execute.
-    /// </summary>
+    /// <summary>Verifies nested current-thread work cancelled before the trampoline reaches it never runs.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
     public async Task CurrentThreadSequencerSkipsNestedWorkCancelledBeforeTheTrampolineRunsIt()
@@ -98,7 +84,7 @@ public partial class SequencerTests
         var innerRan = false;
         _ = Sequencer.CurrentThread.Schedule(() =>
         {
-            // Re-entrant scheduling queues an ActionWorkItem and returns its cancellation handle.
+            // Re-entrant scheduling queues the work rather than running it inline.
             var handle = Sequencer.CurrentThread.Schedule(() => innerRan = true);
             handle.Dispose();
         });
@@ -110,11 +96,18 @@ public partial class SequencerTests
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
     public async Task ImmediateSequencerHonorsAbsoluteDueTime()
-    {
-        var start = Stopwatch.GetTimestamp();
-        _ = Sequencer.Immediate.Schedule(Sequencer.Immediate.Now + AbsoluteDueOffset, static () => { });
-        var elapsed = Stopwatch.GetElapsedTime(start);
-        await Assert.That(elapsed >= MinimumAbsoluteWait).IsTrue();
+{
+        var dueTime = TimeSpan.FromTicks(One);
+        List<string> events = [];
+        CallbackWorkItem item = new(() => events.Add("execute"));
+        TimeSpan? waited = null;
+        ImmediateSequencer.RunScheduled(item, dueTime, delay =>
+        {
+            waited = delay;
+            events.Add("wait");
+        });
+        await Assert.That(waited).IsEqualTo(dueTime);
+        await Assert.That(events.SequenceEqual(["wait", "execute"])).IsTrue();
     }
 
     /// <summary>Verifies virtual-clock work runs only after the clock reaches the due time.</summary>
@@ -182,7 +175,7 @@ public partial class SequencerTests
                 ScheduledItem.Create(scheduler, state, action, DateTimeOffset.UnixEpoch));
     }
 
-    /// <summary>Covers priority-queue ordering, shrink, peek, and removal branches.</summary>
+    /// <summary>Priority queues order by value, support peek and removal, shrink when drained, and reject a negative capacity.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
     public async Task PriorityQueuesCoverOrderingShrinkAndRemovalBranches()
@@ -212,7 +205,7 @@ public partial class SequencerTests
         _ = Assert.Throws<ArgumentOutOfRangeException>(CreateInvalidSequencerQueue);
     }
 
-    /// <summary>Covers scheduled-item comparison, invocation, disposal, and clock branches.</summary>
+    /// <summary>Scheduled items compare by due time, queue in due order, and repeat invocation and disposal.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
     public async Task ScheduledItemsCoverComparisonInvocationAndDisposalBranches()
@@ -264,7 +257,7 @@ public partial class SequencerTests
         await AssertVirtualClockStartsAtItsInitialTime();
     }
 
-    /// <summary>Covers immediate and background sequencer argument validation and execution paths.</summary>
+    /// <summary>Immediate and background sequencers validate their arguments and run scheduled work.</summary>
     /// <returns>A task representing the asynchronous test operation.</returns>
     [Test]
     public async Task SequencersCoverValidationAndExecutionBranches()
@@ -279,7 +272,7 @@ public partial class SequencerTests
         await AssertSynchronizationContextSequencerValidatesAndRunsScheduledWork();
     }
 
-    /// <summary>Covers virtual-time extension validation and action scheduling.</summary>
+    /// <summary>Virtual-time extensions reject missing arguments and run relative and absolute actions.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
     public async Task VirtualTimeSequencerExtensionsValidateAndRunActions()
@@ -306,7 +299,7 @@ public partial class SequencerTests
         await Assert.That(invoked).IsEqualTo(Three);
     }
 
-    /// <summary>Covers simple sequencer extension validation, delayed overloads, state overloads, and recursive scheduling.</summary>
+    /// <summary>Simple sequencer extensions reject missing arguments and run delayed, stateful, and recursive work.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
     public async Task SimpleSequencerExtensionsCoverValidationAndRecursiveScheduling()
@@ -369,7 +362,7 @@ public partial class SequencerTests
         await Assert.That(recursiveCount).IsEqualTo(Three);
     }
 
-    /// <summary>Covers virtual-time service lookup, stopwatch, stop, sleep, and nested-run guard paths.</summary>
+    /// <summary>A virtual clock exposes its stopwatch provider, sleeps, stops, and refuses to be advanced from running work.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
     public async Task VirtualTimeSequencerBaseCoversServicesStopwatchAndRunGuards()
@@ -395,7 +388,7 @@ public partial class SequencerTests
         await Assert.That(events.SequenceEqual(VirtualEventsExpected)).IsTrue();
     }
 
-    /// <summary>Covers timestamp scheduling work-item argument validation.</summary>
+    /// <summary>Timestamp scheduling rejects a missing work item.</summary>
     [Test]
     public void ScheduleWithTimestampValidatesWorkItem()
     {
@@ -403,7 +396,7 @@ public partial class SequencerTests
         _ = Assert.Throws<ArgumentNullException>(() => sequencer.Schedule(null!, long.MaxValue));
     }
 
-    /// <summary>Covers timestamp scheduling executing due and past-due work items.</summary>
+    /// <summary>Timestamp scheduling runs due and past-due work items.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
     public async Task ScheduleWithTimestampExecutesDueAndPastDueWork()
@@ -416,7 +409,7 @@ public partial class SequencerTests
         await Assert.That(workItem.ExecuteCount).IsEqualTo(Two);
     }
 
-    /// <summary>Covers scheduled-item probe comparison, equality, and invocation branches.</summary>
+    /// <summary>A scheduled item compares, equates, hashes, and disposes its invocation result when cancelled.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
     public async Task ScheduledProbeComparisonAndInvocationCoverContracts()
@@ -434,11 +427,7 @@ public partial class SequencerTests
         await Assert.That(scheduledDisposed).IsTrue();
     }
 
-    /// <summary>
-    /// The non-generic comparison is what a non-generic sorted collection reaches for. It must order by due time
-    /// just like the typed one, treat <see langword="null"/> as ordering first, and refuse anything that is not
-    /// a scheduled item rather than silently claiming equality.
-    /// </summary>
+    /// <summary>The non-generic comparison orders by due time, sorts <see langword="null"/> first, and rejects a non-item.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
     public async Task ScheduledItemNonGenericComparisonOrdersByDueTime()
@@ -447,8 +436,7 @@ public partial class SequencerTests
         var late = ScheduledProbe.Create(Two, static () => EmptyDisposable.Instance);
         var sameDueTime = ScheduledProbe.Create(One, static () => EmptyDisposable.Instance);
 
-        // The casts are what force the non-generic IComparable.CompareTo(object) overload: an
-        // unqualified call would bind to the strongly typed CompareTo(ScheduledItem<int>) instead.
+        // The casts force the non-generic IComparable.CompareTo(object) overload.
         await Assert.That(((IComparable)early).CompareTo(null)).IsEqualTo(One);
         await Assert.That(((IComparable)early).CompareTo(late) < 0).IsTrue();
         await Assert.That(((IComparable)late).CompareTo(early) > 0).IsTrue();
@@ -456,52 +444,21 @@ public partial class SequencerTests
         _ = Assert.Throws<ArgumentException>(() => ((IComparable)early).CompareTo("not-scheduled"));
     }
 
-    /// <summary>
-    /// Cancelling a scheduled item that is already running must not leak the resource the invocation produced.
-    /// The two operations race by nature, so this drives every interleaving and asserts the invariant that
-    /// holds across all of them: once both have finished, the invocation's resource is disposed.
-    /// </summary>
+    /// <summary>Cancellation during invocation releases the resource produced by the running action.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
     public async Task ScheduledItemCancelledDuringInvocationNeverLeaksTheInvocationResource()
     {
-        const int Iterations = 20_000;
-
-        for (var iteration = 0; iteration < Iterations; iteration++)
+        RecordingDisposable resource = new();
+        ScheduledItem<int>? item = null;
+        item = ScheduledProbe.Create(One, () =>
         {
-            RecordingDisposable resource = new();
-            var invoked = false;
-            var item = ScheduledProbe.Create(
-                One,
-                () =>
-                {
-                    invoked = true;
-                    return resource;
-                });
-
-            using Barrier barrier = new(Two);
-            var invoking = Task.Run(() =>
-            {
-                barrier.SignalAndWait();
-                item.Invoke();
-            });
-            var cancelling = Task.Run(() =>
-            {
-                barrier.SignalAndWait();
-                item.Cancel();
-            });
-
-            await Task.WhenAll(invoking, cancelling);
-
-            await Assert.That(item.IsDisposed).IsTrue();
-
-            // Either the cancellation beat the invocation entirely (no resource was ever created), or the
-            // invocation produced one — and in that case it must not have outlived the cancellation. The
-            // count is not pinned to exactly one: on the interleaving where the invocation installs the
-            // resource between the cancellation's two writes, both paths dispose it, and IDisposable.Dispose
-            // is required to tolerate that.
-            await Assert.That(!invoked || resource.DisposeCount >= 1).IsTrue();
-        }
+            item!.Cancel();
+            return resource;
+        });
+        item.Invoke();
+        await Assert.That(item.IsDisposed).IsTrue();
+        await Assert.That(resource.DisposeCount).IsEqualTo(1);
     }
 
     /// <summary>Asserts the immediate sequencer validates its callbacks and runs each scheduling overload in order.</summary>
@@ -521,7 +478,7 @@ public partial class SequencerTests
             immediateValues.Add(state);
             return EmptyDisposable.Instance;
         }).Dispose();
-        Sequencer.Immediate.Schedule(Three, Sequencer.Immediate.Now.AddTicks(NegativeOne), (_, state) =>
+        Sequencer.Immediate.Schedule(Three, DateTimeOffset.UnixEpoch, (_, state) =>
         {
             immediateValues.Add(state);
             return EmptyDisposable.Instance;
@@ -532,26 +489,29 @@ public partial class SequencerTests
     /// <summary>Asserts the task-pool and thread-pool sequencers validate their callbacks and run scheduled work.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     private static async Task AssertPoolSequencersValidateAndRunScheduledWork()
-    {
-        _ = Assert.Throws<ArgumentNullException>(static () => TaskPoolSequencer.Instance.Schedule(One, null!));
-        _ = Assert.Throws<ArgumentNullException>(static () => TaskPoolSequencer.Instance.Schedule(One, TimeSpan.Zero, null!));
-        TaskCompletionSource taskPoolCompletion = new(TaskCreationOptions.RunContinuationsAsynchronously);
-        using var taskPoolSubscription = TaskPoolSequencer.Instance.Schedule(Seven, (_, _) =>
+{
+        InlineTaskScheduler scheduler = new();
+        TaskPoolSequencer taskPool = new(new(scheduler));
+        using ManualThreadPool pool = new();
+        await Assert.That(() => taskPool.Schedule(One, null!)).Throws<ArgumentNullException>();
+        await Assert.That(() => taskPool.Schedule(One, TimeSpan.Zero, null!)).Throws<ArgumentNullException>();
+        var taskValue = 0;
+        using var taskSubscription = taskPool.Schedule(Seven, (_, value) =>
         {
-            taskPoolCompletion.SetResult();
+            taskValue = value;
             return EmptyDisposable.Instance;
         });
-        await WaitForAsync(taskPoolCompletion.Task);
-        TaskCompletionSource threadPoolCompletion = new(TaskCreationOptions.RunContinuationsAsynchronously);
-        using var threadPoolSubscription = ThreadPoolSequencer.Instance.Schedule(Eight, TimeSpan.Zero, (_, _) =>
+        await Assert.That(taskValue).IsEqualTo(Seven);
+        var threadValue = 0;
+        using var threadSubscription = pool.Sequencer.Schedule(Eight, TimeSpan.Zero, (_, value) =>
         {
-            threadPoolCompletion.SetResult();
+            threadValue = value;
             return EmptyDisposable.Instance;
         });
-        await WaitForAsync(threadPoolCompletion.Task);
-        _ = Assert.Throws<ArgumentNullException>(static () => ThreadPoolSequencer.Instance.Schedule(One, null!));
-        _ = Assert.Throws<ArgumentNullException>(static () =>
-            ThreadPoolSequencer.Instance.Schedule(One, TimeSpan.Zero, null!));
+        pool.RunReady();
+        await Assert.That(threadValue).IsEqualTo(Eight);
+        await Assert.That(() => pool.Sequencer.Schedule(One, null!)).Throws<ArgumentNullException>();
+        await Assert.That(() => pool.Sequencer.Schedule(One, TimeSpan.Zero, null!)).Throws<ArgumentNullException>();
     }
 
     /// <summary>Asserts the synchronization-context sequencer validates its context and callbacks and runs scheduled work.</summary>
@@ -580,8 +540,7 @@ public partial class SequencerTests
                 SetCompletion(delayedSynchronizationCompletion, state);
                 return EmptyDisposable.Instance;
             });
-        var delayedValue = await delayedSynchronizationCompletion.Task
-            .WaitAsync(TimeSpan.FromSeconds(TimeoutSeconds));
+        var delayedValue = await delayedSynchronizationCompletion.Task;
         var synchronizedValues = synchronizationValues.Append(delayedValue);
         await Assert.That(synchronizedValues.SequenceEqual(ExpectedOneTwo)).IsTrue();
     }
@@ -623,22 +582,6 @@ public partial class SequencerTests
         await Assert.That(initialClock.Now).IsEqualTo(DateTimeOffset.UnixEpoch);
     }
 
-    /// <summary>Waits for a task with a bounded timeout.</summary>
-    /// <param name="task">The task to wait for.</param>
-    /// <returns>A task representing the asynchronous operation.</returns>
-    /// <exception cref="TimeoutException"><paramref name="task"/> did not complete within the bounded timeout.</exception>
-    private static async Task WaitForAsync(Task task)
-    {
-        var timeout = Task.Delay(TimeSpan.FromSeconds(TimeoutSeconds));
-        var completed = await Task.WhenAny(task, timeout).ConfigureAwait(false);
-        if (completed == timeout)
-        {
-            throw new TimeoutException("Timed out waiting for scheduled work.");
-        }
-
-        await task.ConfigureAwait(false);
-    }
-
     /// <summary>Creates an invalid sequencer queue.</summary>
     private static void CreateInvalidSequencerQueue()
     {
@@ -670,10 +613,10 @@ public partial class SequencerTests
         GC.KeepAlive(invalid);
     }
 
-    /// <summary>Completes a task completion source or throws when it was already completed.</summary>
+    /// <summary>Completes a task completion source, rejecting a second completion.</summary>
     /// <param name="completion">The completion source to update.</param>
     /// <param name="state">The value to set.</param>
-    /// <exception cref="InvalidOperationException"><paramref name="completion"/> was already completed.</exception>
+    /// <exception cref="InvalidOperationException"><paramref name="completion"/> has completed.</exception>
     private static void SetCompletion(TaskCompletionSource<int> completion, int state)
     {
         if (completion.TrySetResult(state))

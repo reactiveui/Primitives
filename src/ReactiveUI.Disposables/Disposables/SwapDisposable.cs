@@ -6,12 +6,8 @@ using System.Runtime.CompilerServices;
 
 namespace ReactiveUI.Primitives.Disposables;
 
-/// <summary>
-/// A disposable holder whose inner disposable can be re-assigned. The previous inner
-/// disposable is disposed when replaced (in contrast to <see cref="MutableDisposable"/>).
-/// Once this object is disposed, any subsequently assigned inner disposable is disposed
-/// immediately. Replaces <c>SerialDisposable</c>.
-/// </summary>
+/// <summary>Holds a replaceable disposable and disposes each displaced value.</summary>
+/// <remarks>Assignments after disposal are disposed immediately.</remarks>
 [System.Diagnostics.DebuggerDisplay("{DebuggerDisplay,nq}")]
 public sealed class SwapDisposable : IsDisposed
 {
@@ -24,7 +20,7 @@ public sealed class SwapDisposable : IsDisposed
     /// <summary>Gets a value indicating whether this instance has been disposed.</summary>
     public bool IsDisposed => Volatile.Read(ref _disposed) == DisposableSlotHelper.DisposedSentinel;
 
-    /// <summary>Gets or sets the current inner disposable. Setting disposes the previous value.</summary>
+    /// <summary>Gets or sets the current inner disposable, disposing the previous value on assignment.</summary>
     public IDisposable? Disposable
     {
         get => Volatile.Read(ref _current);

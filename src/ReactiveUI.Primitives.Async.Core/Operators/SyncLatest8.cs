@@ -15,10 +15,7 @@ public static partial class SignalAsyncExtensions
     /// <param name="src1">Source observable 1 whose latest value is combined.</param>
     extension<T1>(IObservableAsync<T1> src1)
     {
-        /// <summary>
-        /// Combines the latest values from 8 asynchronous observable sources into a single
-        /// sequence, projecting them through <paramref name="selector"/> whenever any source emits.
-        /// </summary>
+        /// <summary>Combines the latest values from 8 asynchronous observable sources into a single sequence, projecting them through <paramref name="selector"/> whenever any source emits.</summary>
         /// <typeparam name="T2">The element type of source 2.</typeparam>
         /// <typeparam name="T3">The element type of source 3.</typeparam>
         /// <typeparam name="T4">The element type of source 4.</typeparam>
@@ -40,8 +37,7 @@ public static partial class SignalAsyncExtensions
         [SuppressMessage(
             "Maintainability",
             "SST1472:Signatures should not declare too many parameters",
-            Justification =
-                "An arity-N combinator takes N distinctly-typed sources; a parameter object would need the same N type arguments.")]
+            Justification = "An arity-N combinator takes N distinctly-typed sources.")]
         public IObservableAsync<TResult> SyncLatest<T2, T3, T4, T5, T6, T7, T8, TResult>(
             IObservableAsync<T2> src2,
             IObservableAsync<T3> src3,
@@ -55,10 +51,7 @@ public static partial class SignalAsyncExtensions
                 new(src1, src2, src3, src4, src5, src6, src7, src8),
                 selector);
 
-        /// <summary>
-        /// Combines the latest values from 8 asynchronous observable sources into a single
-        /// sequence, projecting them through <paramref name="selector"/> whenever any source emits.
-        /// </summary>
+        /// <summary>Combines the latest values from 8 asynchronous observable sources into a single sequence, projecting them through <paramref name="selector"/> whenever any source emits.</summary>
         /// <typeparam name="T2">The element type of source 2.</typeparam>
         /// <typeparam name="T3">The element type of source 3.</typeparam>
         /// <typeparam name="T4">The element type of source 4.</typeparam>
@@ -80,8 +73,7 @@ public static partial class SignalAsyncExtensions
         [SuppressMessage(
             "Maintainability",
             "SST1472:Signatures should not declare too many parameters",
-            Justification =
-                "An arity-N combinator takes N distinctly-typed sources; a parameter object would need the same N type arguments.")]
+            Justification = "An arity-N combinator takes N distinctly-typed sources.")]
         public IObservableAsync<TResult> CombineLatest<T2, T3, T4, T5, T6, T7, T8, TResult>(
             IObservableAsync<T2> src2,
             IObservableAsync<T3> src3,

@@ -7,7 +7,7 @@ using System.Runtime.CompilerServices;
 namespace ReactiveUI.Primitives.Signals;
 
 /// <summary>A signal that replays its most recent value to new subscribers.</summary>
-/// <typeparam name="T">The Type.</typeparam>
+/// <typeparam name="T">The value type.</typeparam>
 [System.Diagnostics.DebuggerDisplay("{DebuggerDisplay,nq}")]
 public sealed class BehaviorSignal<T> : ISignal<T>, IWitnessRemovable<T>
 {
@@ -18,46 +18,24 @@ public sealed class BehaviorSignal<T> : ISignal<T>, IWitnessRemovable<T>
     /// <param name="defaultValue">The default value.</param>
     public BehaviorSignal(T defaultValue) => _state = new(defaultValue);
 
-    /// <summary>Gets the current value or throws an exception.</summary>
-    /// <value>The initial value passed to the constructor until <see cref="OnNext"/> is called; after which, the last value passed to <see cref="OnNext"/>.</value>
-    /// <remarks>
-    /// <para><see cref="Value"/> is frozen after <see cref="OnCompleted"/> is called.</para>
-    /// <para>After <see cref="OnError"/> is called, <see cref="Value"/> always throws the specified exception.</para>
-    /// <para>An exception is always thrown after <see cref="Dispose()"/> is called.</para>
-    /// <alert type="caller">
-    /// Reading <see cref="Value"/> is a thread-safe operation, though there's a potential race condition when <see cref="OnNext"/> or <see cref="OnError"/> are being invoked concurrently.
-    /// In some cases, it may be necessary for a caller to use external synchronization to avoid race conditions.
-    /// </alert>
-    /// </remarks>
+    /// <summary>Gets the most recent value, which is the constructor's default until <see cref="OnNext"/> supplies one.</summary>
+    /// <remarks>Completion freezes the value; a failure makes reads throw the terminal error and disposal makes them throw <see cref="ObjectDisposedException"/>.</remarks>
     public T Value => _state.GetValue();
 
     /// <summary>Gets a value indicating whether this instance has observers.</summary>
-    /// <value>
-    ///   <c>true</c> if this instance has observers; otherwise, <c>false</c>.
-    /// </value>
     public bool HasObservers => _state.HasObservers;
 
     /// <summary>Gets a value indicating whether this instance is disposed.</summary>
-    /// <value>
-    ///   <c>true</c> if this instance is disposed; otherwise, <c>false</c>.
-    /// </value>
     public bool IsDisposed => _state.IsDisposed;
 
-    /// <summary>Gets the string representation of this object for debugger display purposes.</summary>
+    /// <summary>Gets the debugger display text.</summary>
     [System.Diagnostics.DebuggerBrowsable(System.Diagnostics.DebuggerBrowsableState.Never)]
     private string? DebuggerDisplay => ToString();
 
-    /// <summary>Tries to get the current value or throws an exception.</summary>
-    /// <param name="value">The initial value passed to the constructor until <see cref="OnNext"/> is called; after which, the last value passed to <see cref="OnNext"/>.</param>
-    /// <returns>true if a value is available; false if the subject was disposed.</returns>
-    /// <remarks>
-    /// <para>The value returned from <see cref="TryGetValue"/> is frozen after <see cref="OnCompleted"/> is called.</para>
-    /// <para>After <see cref="OnError"/> is called, <see cref="TryGetValue"/> always throws the specified exception.</para>
-    /// <alert type="caller">
-    /// Calling <see cref="TryGetValue"/> is a thread-safe operation, though there's a potential race condition when <see cref="OnNext"/> or <see cref="OnError"/> are being invoked concurrently.
-    /// In some cases, it may be necessary for a caller to use external synchronization to avoid race conditions.
-    /// </alert>
-    /// </remarks>
+    /// <summary>Tries to read the most recent value.</summary>
+    /// <param name="value">The most recent value, or <see langword="default"/> when the signal is disposed.</param>
+    /// <returns><see langword="true"/> when a value is available; <see langword="false"/> when the signal is disposed.</returns>
+    /// <remarks>A read throws the terminal error after a failure, and is not atomic with a separate state check.</remarks>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public bool TryGetValue(out T? value) => _state.TryGetValue(out value);
 
@@ -76,14 +54,14 @@ public sealed class BehaviorSignal<T> : ISignal<T>, IWitnessRemovable<T>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void OnNext(T value) => _state.OnNext(value);
 
-    /// <summary>Subscribes an observer to the subject.</summary>
-    /// <param name="observer">Observer to subscribe to the subject.</param>
-    /// <returns>Disposable object that can be used to unsubscribe the observer from the subject.</returns>
+    /// <summary>Subscribes an observer, replaying the current value or the terminal notification.</summary>
+    /// <param name="observer">The observer to subscribe.</param>
+    /// <returns>A handle that unsubscribes the observer when disposed.</returns>
     /// <exception cref="ArgumentNullException"><paramref name="observer"/> is <c>null</c>.</exception>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public IDisposable Subscribe(IObserver<T> observer) => _state.Subscribe(this, observer);
 
-    /// <summary>Releases unmanaged and - optionally - managed resources.</summary>
+    /// <summary>Drops the observers and the cached value, making later reads throw.</summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void Dispose() => _state.Release();
 

@@ -6,7 +6,7 @@ using System.Runtime.CompilerServices;
 
 namespace ReactiveUI.Primitives.Disposables;
 
-/// <summary>An <see cref="IDisposable"/> that runs the supplied <see cref="Action"/> exactly once on <see cref="Dispose"/>. Replaces <c>new ActionDisposable(Action)</c>.</summary>
+/// <summary>An <see cref="IDisposable"/> that runs the supplied <see cref="Action"/> on the first <see cref="Dispose"/> call and does nothing on later calls.</summary>
 [System.Diagnostics.DebuggerDisplay("{DebuggerDisplay,nq}")]
 public sealed class ActionDisposable : IsDisposed
 {

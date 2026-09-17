@@ -2,15 +2,13 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Diagnostics;
+using System.Runtime.CompilerServices;
 using ReactiveUI.Primitives.Async.Disposables;
 
 namespace ReactiveUI.Primitives.Async;
 
 /// <summary>Provides extension methods for working with asynchronous observable sequences.</summary>
-/// <remarks>The SignalAsync class contains static extension methods that enable advanced operations on
-/// asynchronous observables, such as filtering, transformation, and sequence control. These methods are intended to be
-/// used with the SignalAsync{T} type to facilitate reactive programming patterns in asynchronous
-/// scenarios.</remarks>
 public static partial class SignalAsyncExtensions
 {
     /// <summary>Element-limiting operators for an observable source sequence.</summary>
@@ -24,9 +22,7 @@ public static partial class SignalAsyncExtensions
         /// sequence. If <paramref name="count"/> is zero, the resulting sequence completes immediately without emitting
         /// any elements.</returns>
         /// <exception cref="ArgumentOutOfRangeException">Thrown if <paramref name="count"/> is less than zero.</exception>
-        /// <remarks>If the source sequence contains fewer elements than <paramref name="count"/>, all
-        /// available elements are emitted and the sequence completes. This method does not modify the source sequence;
-        /// it returns a new sequence with the specified behavior.</remarks>
+        /// <remarks>A source with fewer elements than <paramref name="count"/> emits all of them and completes.</remarks>
         public IObservableAsync<T> Take(int count)
         {
             ArgumentExceptionHelper.ThrowIfNull(source);
@@ -50,43 +46,62 @@ public static partial class SignalAsyncExtensions
         }
     }
 
-    /// <summary>Single-observer-layer <c>Take(count)</c>. Forwards values until the budget is exhausted, then signals completion downstream.</summary>
+    /// <summary>Forwards values until the count is exhausted, then signals completion downstream.</summary>
     /// <typeparam name="T">The element type.</typeparam>
     /// <param name="source">The upstream observable.</param>
-    /// <param name="count">The maximum number of values to forward (must be &gt; 0; the zero case uses <see cref="TakeZeroSignal{T}"/>).</param>
+    /// <param name="count">The maximum number of values to forward, always greater than zero.</param>
     internal sealed class TakeSignal<T>(IObservableAsync<T> source, int count) : IObservableAsync<T>
     {
         /// <inheritdoc/>
-        async ValueTask<IAsyncDisposable> IObservableAsync<T>.SubscribeAsync(
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        ValueTask<IAsyncDisposable> IObservableAsync<T>.SubscribeAsync(
             IObserverAsync<T> observer,
-            CancellationToken cancellationToken)
-        {
-            TakeWitness sink = new(observer, count, cancellationToken);
-
-            if (observer is WitnessAsync<T> downstreamBase)
-            {
-                downstreamBase.LinkUpstreamCancellation(sink.InternalDisposedToken);
-            }
-
-            var subscription = await source.SubscribeAsync(sink, cancellationToken).ConfigureAwait(false);
-            await sink.AssignSourceSubscriptionAsync(subscription).ConfigureAwait(false);
-            return sink;
-        }
+            CancellationToken cancellationToken) =>
+            WitnessSubscription.SubscribeAsync(
+                source,
+                new TakeWitness(observer, count, cancellationToken),
+                observer,
+                cancellationToken);
 
         /// <summary>Per-subscription observer that counts emissions and signals completion on the final one.</summary>
         /// <param name="downstream">The downstream observer.</param>
         /// <param name="budget">The take budget, decremented per emission.</param>
         /// <param name="subscribeToken">The subscribe-time cancellation token.</param>
+        [DebuggerDisplay("TakeWitness: {_witness}")]
         internal sealed class TakeWitness(
             IObserverAsync<T> downstream,
             int budget,
-            CancellationToken subscribeToken) : WitnessAsync<T>(subscribeToken)
+            CancellationToken subscribeToken) : IWitnessAsync<T>
         {
             /// <summary>Remaining take budget; decremented per forwarded value.</summary>
             private int _remaining = budget;
 
+            /// <summary>The notification gate, cancellation link and disposal state.</summary>
+            private WitnessAsyncState _witness = new(subscribeToken);
+
             /// <inheritdoc/>
-            protected override ValueTask OnNextAsyncCore(T value, CancellationToken cancellationToken)
+            ref WitnessAsyncState IWitnessState.Witness => ref _witness;
+
+            /// <inheritdoc/>
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public ValueTask OnNextAsync(T value, CancellationToken cancellationToken) =>
+                WitnessAsync.OnNextAsync(this, value, cancellationToken);
+
+            /// <inheritdoc/>
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public ValueTask OnErrorResumeAsync(Exception error, CancellationToken cancellationToken) =>
+                WitnessAsync.OnErrorResumeAsync(this, error, cancellationToken);
+
+            /// <inheritdoc/>
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public ValueTask OnCompletedAsync(Result result) => WitnessAsync.OnCompletedAsync(this, result);
+
+            /// <inheritdoc/>
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public ValueTask DisposeAsync() => WitnessAsync.DisposeStateAsync(this);
+
+            /// <inheritdoc/>
+            ValueTask IWitnessAsync<T>.OnNextAsyncCore(T value, CancellationToken cancellationToken)
             {
                 if (_remaining == 0)
                 {
@@ -100,11 +115,13 @@ public static partial class SignalAsyncExtensions
             }
 
             /// <inheritdoc/>
-            protected override ValueTask OnErrorResumeAsyncCore(Exception error, CancellationToken cancellationToken) =>
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            ValueTask IWitnessAsync<T>.OnErrorResumeAsyncCore(Exception error, CancellationToken cancellationToken) =>
                 downstream.OnErrorResumeAsync(error, cancellationToken);
 
             /// <inheritdoc/>
-            protected override ValueTask OnCompletedAsyncCore(Result result) =>
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            ValueTask IWitnessAsync<T>.OnCompletedAsyncCore(Result result) =>
                 downstream.OnCompletedAsync(result);
 
             /// <summary>Forwards the final value, then signals downstream completion.</summary>

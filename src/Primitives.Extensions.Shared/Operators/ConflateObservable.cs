@@ -11,11 +11,14 @@ namespace ReactiveUI.Primitives.Extensions.Reactive.Operators;
 namespace ReactiveUI.Primitives.Extensions.Operators;
 #endif
 
-/// <summary>Conflates an observable stream by delaying updates that occur within a minimum period.</summary>
+/// <summary>Keeps emissions at least <paramref name="minimumUpdatePeriod"/> apart on <paramref name="scheduler"/>; completion waits for a deferred value, an error discards it.</summary>
 /// <typeparam name="T">The type of elements in the source sequence.</typeparam>
 /// <param name="source">The source observable.</param>
 /// <param name="minimumUpdatePeriod">The minimum period between emissions.</param>
 /// <param name="scheduler">The scheduler to run the conflation on.</param>
+/// <remarks>Each window emits its newest value at the end of that window, not at the start. The clock starts at
+/// subscription, so the first value is held for a full period; a value arriving after a quiet gap longer than the period
+/// goes out at once.</remarks>
 internal sealed class ConflateObservable<T>(
     IObservable<T> source,
     TimeSpan minimumUpdatePeriod,
@@ -33,13 +36,8 @@ internal sealed class ConflateObservable<T>(
         return sink;
     }
 
-    /// <summary>
-    /// Single observer that combines two previously-distinct concerns into one allocation:
-    /// (1) marshals upstream notifications onto the scheduler thread — delegated to the shared
-    /// <see cref="ScheduledDrainState{T}"/> FIFO queue and scheduled drain — and (2) applies the conflate
-    /// time-window throttle to each <see cref="DrainNotificationKind.Next"/> notification. End-user-observable
-    /// semantics are unchanged from the prior two-observer implementation.
-    /// </summary>
+    /// <summary>Delivers notifications on the scheduler and limits value emissions to the conflate interval.</summary>
+    /// <remarks>Inline and deferred emissions are serialized, and no lock is held while the observer runs.</remarks>
     internal sealed class ConflateSink : IObserver<T>, IDisposable, IDrainTarget
     {
         /// <summary>The downstream observer.</summary>
@@ -51,20 +49,22 @@ internal sealed class ConflateObservable<T>(
         /// <summary>The scheduler to run the conflation on.</summary>
         private readonly ISequencer _scheduler;
 
-        /// <summary>The gate protecting the queue, throttle window, and downstream notification.</summary>
+        /// <summary>The gate protecting the queue and the throttle window; never held while the observer runs.</summary>
         private readonly Lock _gate = new();
 
-        /// <summary>Shared queue / scheduled-drain machinery.</summary>
+        /// <summary>The notification queue and scheduled-drain bookkeeping shared with the drain loop.</summary>
         private readonly ScheduledDrainState<T> _state;
 
         /// <summary>The disposable tracking a scheduled deferred emission.</summary>
         private readonly MutableDisposable _updateScheduled = new();
 
+        /// <summary>Serializes downstream deliveries.</summary>
+        private SerializedDelivery<T> _delivery = new();
+
         /// <summary>Wall-clock timestamp of the last emission forwarded downstream.</summary>
         private DateTimeOffset _lastUpdateTime = DateTimeOffset.MinValue;
 
-        /// <summary>Set to <see langword="true"/> when an upstream OnCompleted is queued but a deferred
-        /// emission is still pending; the completion fires after that emission lands.</summary>
+        /// <summary>Set when an upstream OnCompleted arrives while a deferred emission is pending, so the completion fires once that emission lands.</summary>
         private bool _completionRequested;
 
         /// <summary>Initializes a new instance of the <see cref="ConflateSink"/> class.</summary>
@@ -135,8 +135,6 @@ internal sealed class ConflateObservable<T>(
 
                     default:
                         {
-                            // DrainNotificationKind has only three values; the discard arm absorbs
-                            // Completed so the compiler sees an exhaustive switch.
                             ForwardCompleted();
                             return;
                         }
@@ -149,13 +147,9 @@ internal sealed class ConflateObservable<T>(
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         internal void AttachSourceSubscription(IDisposable subscription) => _state.Attach(subscription);
 
-        /// <summary>Applies the throttle-window decision to a dequeued value and either emits inline or
-        /// schedules a deferred emission. The emission bodies live in covered helpers; only this
-        /// race-guarded shell (whose already-done early-out is reachable only when a concurrent dispose
-        /// flips the flag between the drain dequeue and this gate acquisition) is excluded.</summary>
+        /// <summary>Emits a dequeued value immediately or defers it until the conflate interval ends.</summary>
         /// <param name="value">The value to forward.</param>
-        [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
-        private void ProcessNext(T value)
+        internal void ProcessNext(T value)
         {
             var currentUpdateTime = _scheduler.Now;
             bool scheduleRequired;
@@ -185,53 +179,9 @@ internal sealed class ConflateObservable<T>(
             }
         }
 
-        /// <summary>Schedules a deferred emission of <paramref name="value"/> at the end of the throttle window, forwarding a pending completion once it lands.</summary>
-        /// <param name="value">The value to emit when the window elapses.</param>
-        private void ScheduleDeferredEmission(T value) =>
-            _updateScheduled.Disposable = _scheduler.Schedule(
-                (Sink: this, Value: value),
-                _lastUpdateTime + _minimumUpdatePeriod,
-                static (_, state) =>
-                {
-                    state.Sink.EmitDeferred(state.Value);
-                    return EmptyDisposable.Instance;
-                });
-
-        /// <summary>Emits a deferred value and forwards a pending completion once the value lands.</summary>
-        /// <param name="value">The deferred value.</param>
-        private void EmitDeferred(T value)
-        {
-            _downstream.OnNext(value);
-
-            lock (_gate)
-            {
-                _lastUpdateTime = _scheduler.Now;
-                _updateScheduled.Disposable = null;
-                if (_completionRequested)
-                {
-                    _state.MarkDoneLocked();
-                    _downstream.OnCompleted();
-                }
-            }
-        }
-
-        /// <summary>Emits <paramref name="value"/> immediately and records the emission time.</summary>
-        /// <param name="value">The value to emit.</param>
-        private void EmitInline(T value)
-        {
-            _downstream.OnNext(value);
-            lock (_gate)
-            {
-                _lastUpdateTime = _scheduler.Now;
-            }
-        }
-
         /// <summary>Forwards an error to downstream and terminates the sink.</summary>
         /// <param name="error">The error to forward.</param>
-        /// <remarks>The already-terminated early-out is reachable only when a concurrent dispose flips the
-        /// flag between the drain dequeue and this gate acquisition; excluded as race-only.</remarks>
-        [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
-        private void ForwardError(Exception error)
+        internal void ForwardError(Exception error)
         {
             lock (_gate)
             {
@@ -244,14 +194,11 @@ internal sealed class ConflateObservable<T>(
                 _updateScheduled.Dispose();
             }
 
-            _downstream.OnError(error);
+            _delivery.OnError(error, new PendingDrain(this));
         }
 
-        /// <summary>Forwards completion, deferring if a throttled emission is still scheduled.</summary>
-        /// <remarks>The already-terminated early-out is reachable only when a concurrent dispose flips the
-        /// flag between the drain dequeue and this gate acquisition; excluded as race-only.</remarks>
-        [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
-        private void ForwardCompleted()
+        /// <summary>Forwards completion, deferring it when a throttled emission is scheduled.</summary>
+        internal void ForwardCompleted()
         {
             lock (_gate)
             {
@@ -269,7 +216,63 @@ internal sealed class ConflateObservable<T>(
                 _state.MarkDoneLocked();
             }
 
-            _downstream.OnCompleted();
+            _delivery.OnCompleted(new PendingDrain(this));
+        }
+
+        /// <summary>Schedules a value for the end of the conflate interval.</summary>
+        /// <param name="value">The value to emit when the interval elapses.</param>
+        private void ScheduleDeferredEmission(T value) =>
+            _updateScheduled.Disposable = _scheduler.Schedule(
+                (Sink: this, Value: value),
+                _lastUpdateTime + _minimumUpdatePeriod,
+                static (_, state) =>
+                {
+                    state.Sink.EmitDeferred(state.Value);
+                    return EmptyDisposable.Instance;
+                });
+
+        /// <summary>Emits a deferred value before forwarding any pending completion.</summary>
+        /// <param name="value">The deferred value.</param>
+        private void EmitDeferred(T value)
+        {
+            _delivery.OnNext(_downstream, value, new PendingDrain(this));
+
+            bool complete;
+            lock (_gate)
+            {
+                _lastUpdateTime = _scheduler.Now;
+                _updateScheduled.Disposable = null;
+                complete = _completionRequested;
+                if (complete)
+                {
+                    _state.MarkDoneLocked();
+                }
+            }
+
+            if (complete)
+            {
+                _delivery.OnCompleted(new PendingDrain(this));
+            }
+        }
+
+        /// <summary>Emits a value immediately and records the emission time.</summary>
+        /// <param name="value">The value to emit.</param>
+        private void EmitInline(T value)
+        {
+            _delivery.OnNext(_downstream, value, new PendingDrain(this));
+            lock (_gate)
+            {
+                _lastUpdateTime = _scheduler.Now;
+            }
+        }
+
+        /// <summary>Drains this sink's queued notifications for the delivery gate.</summary>
+        /// <param name="Owner">The sink.</param>
+        private readonly record struct PendingDrain(ConflateSink Owner) : IDrainTarget
+        {
+            /// <inheritdoc/>
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public void Drain() => _ = Owner._delivery.DrainTo(Owner._downstream);
         }
     }
 }

@@ -10,7 +10,7 @@ using ReactiveUI.Primitives.Signals;
 
 namespace ReactiveUI.Primitives.Tests;
 
-/// <summary>Completes branch and contract coverage for primitive signal operators and aliases.</summary>
+/// <summary>Tests signal operators and their aliases.</summary>
 public partial class SignalOperatorMixinsTests
 {
     /// <summary>The integer constant eight.</summary>
@@ -25,7 +25,7 @@ public partial class SignalOperatorMixinsTests
     /// <summary>The integer constant twenty-one.</summary>
     private const int TwentyOne = 21;
 
-    /// <summary>The integer constant forty-two used by behavior coverage.</summary>
+    /// <summary>The integer constant forty-two.</summary>
     private const int BehaviorFortyTwo = 42;
 
     /// <summary>Expected operator values.</summary>
@@ -100,7 +100,7 @@ public partial class SignalOperatorMixinsTests
     /// <summary>Expected timestamp values.</summary>
     private static readonly int[] ExpectedTimestampValues = [Eight, Nine];
 
-    /// <summary>Validates null guard coverage across public factories, operators, and observers.</summary>
+    /// <summary>Factories, operators, and observers reject null arguments.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
     public async Task NullGuardsCoverPublicFactoryOperatorAndObserverContracts()
@@ -114,14 +114,14 @@ public partial class SignalOperatorMixinsTests
         await Task.CompletedTask;
     }
 
-    /// <summary>Exercises successful operator paths and early-termination branches.</summary>
+    /// <summary>Operator chains forward their values, and empty takes and exhausted skips complete without emitting.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
     [SuppressMessage(
         "Concurrency",
         "PSH1313:Call the async overload from an async method",
         Justification =
-            "This test deliberately exercises the synchronous IObservable operator overloads, not their awaitable terminal counterparts.")]
+            "The synchronous IObservable operator overloads are the subject under test.")]
     public async Task OperatorSurfaceCoversSuccessErrorAndEarlyTerminationBranches()
     {
         List<string> values = [];
@@ -174,7 +174,7 @@ public partial class SignalOperatorMixinsTests
         await Assert.That(flatMapValues.SequenceEqual(ExpectedFlatMapValues)).IsTrue();
     }
 
-    /// <summary>Exercises error materialization, recovery, resume, and retry branches.</summary>
+    /// <summary>Spark, unspark, rescue, resume, and reattempt carry a fault through to the final observer.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
     public async Task ErrorOperatorsMaterializeRecoverAndResumeDeterministically()
@@ -233,7 +233,7 @@ public partial class SignalOperatorMixinsTests
         await AssertPairAndForkJoinCompleteWithTheShorterSource();
     }
 
-    /// <summary>Exercises virtual-time operators and aliases.</summary>
+    /// <summary>Virtual-time operators emit only once their clock reaches the due time.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
     public async Task VirtualTimeOperatorsCoverDelayTimeoutSampleTimerAndTimestampAliases()

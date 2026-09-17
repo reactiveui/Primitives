@@ -2,13 +2,19 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Diagnostics;
+using System.Runtime.CompilerServices;
+
 namespace ReactiveUI.Primitives.Async.Advanced;
 
 /// <summary>Inner observer that relays projected values to a flat-map coordinator.</summary>
 /// <typeparam name="TResult">The result element type.</typeparam>
-[System.Diagnostics.DebuggerDisplay("FlatMapWitness: Coordinator = {Coordinator}")]
-public sealed class FlatMapWitness<TResult> : WitnessAsync<TResult>
+[DebuggerDisplay("FlatMapWitness: Coordinator = {Coordinator}")]
+public sealed class FlatMapWitness<TResult> : IWitnessAsync<TResult>
 {
+    /// <summary>The notification gate, cancellation link and disposal state.</summary>
+    private WitnessAsyncState _witness;
+
     /// <summary>Initializes a new instance of the <see cref="FlatMapWitness{TResult}"/> class.</summary>
     /// <param name="coordinator">The flat-map coordinator.</param>
     public FlatMapWitness(FlatMapCoordinator<TResult> coordinator) => Coordinator = coordinator;
@@ -17,20 +23,42 @@ public sealed class FlatMapWitness<TResult> : WitnessAsync<TResult>
     private FlatMapCoordinator<TResult> Coordinator { get; }
 
     /// <inheritdoc/>
-    protected override ValueTask OnNextAsyncCore(TResult value, CancellationToken cancellationToken)
+    ref WitnessAsyncState IWitnessState.Witness => ref _witness;
+
+    /// <inheritdoc/>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public ValueTask OnNextAsync(TResult value, CancellationToken cancellationToken) =>
+        WitnessAsync.OnNextAsync(this, value, cancellationToken);
+
+    /// <inheritdoc/>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public ValueTask OnErrorResumeAsync(Exception error, CancellationToken cancellationToken) =>
+        WitnessAsync.OnErrorResumeAsync(this, error, cancellationToken);
+
+    /// <inheritdoc/>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public ValueTask OnCompletedAsync(Result result) => WitnessAsync.OnCompletedAsync(this, result);
+
+    /// <inheritdoc/>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public ValueTask DisposeAsync() => WitnessAsync.DisposeStateAsync(this);
+
+    /// <inheritdoc/>
+    ValueTask IWitnessAsync<TResult>.OnNextAsyncCore(TResult value, CancellationToken cancellationToken)
     {
         _ = cancellationToken;
         return Coordinator.RelayNextAsync(value);
     }
 
     /// <inheritdoc/>
-    protected override ValueTask OnErrorResumeAsyncCore(Exception error, CancellationToken cancellationToken)
+    ValueTask IWitnessAsync<TResult>.OnErrorResumeAsyncCore(Exception error, CancellationToken cancellationToken)
     {
         _ = cancellationToken;
         return Coordinator.RelayErrorAsync(error);
     }
 
     /// <inheritdoc/>
-    protected override ValueTask OnCompletedAsyncCore(Result result) =>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    ValueTask IWitnessAsync<TResult>.OnCompletedAsyncCore(Result result) =>
         Coordinator.CompleteInnerAsync(result);
 }

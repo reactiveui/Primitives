@@ -151,7 +151,6 @@ public partial class CombiningOperatorTests
     [Test]
     public async Task WhenMergeEnumerableCompletedTwiceWithError_ThenSecondErrorGoesToUnhandled()
     {
-        const int WaitTimeoutSeconds = 5;
         Exception? unhandledException = null;
         UnhandledExceptionHandler.Register(ex => unhandledException = ex);
 
@@ -170,9 +169,7 @@ public partial class CombiningOperatorTests
         // Second source fails - already disposed, error goes to UnhandledExceptionHandler
         await signal2.OnCompletedAsync(Result.Failure(new InvalidOperationException(SecondLiteral)));
 
-        await AsyncTestHelpers.WaitForConditionAsync(
-            () => unhandledException is not null,
-            TimeSpan.FromSeconds(WaitTimeoutSeconds));
+        await Assert.That(unhandledException is not null).IsTrue();
 
         await Assert.That(unhandledException).IsNotNull();
     }
@@ -214,7 +211,7 @@ public partial class CombiningOperatorTests
         }
         catch (OperationCanceledException)
         {
-            // Expected – the linked CTS may be cancelled
+            // Expected - the linked CTS may be cancelled
         }
 
         await Assert.That(items).Contains(1);
@@ -272,7 +269,6 @@ public partial class CombiningOperatorTests
     [Test]
     public async Task WhenMergeEnumerableCompletedTwiceWithErrorViaDirectSource_ThenUnhandledExceptionFires()
     {
-        const int WaitTimeoutSeconds = 5;
         Exception? unhandledException = null;
         UnhandledExceptionHandler.Register(ex => unhandledException = ex);
 
@@ -285,15 +281,13 @@ public partial class CombiningOperatorTests
                 static (_, _) => default,
                 null);
 
-        // First source fails – triggers FinishAsync and disposes subscription
+        // First source fails - triggers FinishAsync and disposes subscription
         await directSource1.Complete(Result.Failure(new InvalidOperationException(FirstLiteral)));
 
-        // Second source fails – already disposed, error goes to UnhandledExceptionHandler
+        // Second source fails - already disposed, error goes to UnhandledExceptionHandler
         await directSource2.Complete(Result.Failure(new InvalidOperationException(SecondLiteral)));
 
-        await AsyncTestHelpers.WaitForConditionAsync(
-            () => unhandledException is not null,
-            TimeSpan.FromSeconds(WaitTimeoutSeconds));
+        await Assert.That(unhandledException is not null).IsTrue();
 
         await Assert.That(unhandledException).IsNotNull();
     }
@@ -306,14 +300,10 @@ public partial class CombiningOperatorTests
     [Test]
     public async Task WhenMergeEnumerableCompletionHandlerThrows_ThenOuterCatchRoutesToUnhandled()
     {
-        const int WaitTimeoutSeconds = 5;
         Exception? unhandledException = null;
         UnhandledExceptionHandler.Register(ex => unhandledException = ex);
 
-        // Use a single Return source that completes synchronously during subscription.
-        // The sentinel decrement triggers FinishAsync(Result.Success), and we make the
-        // observer's OnCompletedAsync throw, which escapes the inner try/finally and is
-        // caught by the outer try in BeginSubscribing.
+        // Completion occurs inside the subscription loop.
         IObservableAsync<int>[] sources = [SignalAsync.Return(1)];
 
         await using var sub = await sources.Merge()
@@ -322,9 +312,7 @@ public partial class CombiningOperatorTests
                 null,
                 static _ => throw new InvalidOperationException("completion handler boom"));
 
-        await AsyncTestHelpers.WaitForConditionAsync(
-            () => unhandledException is not null,
-            TimeSpan.FromSeconds(WaitTimeoutSeconds));
+        await Assert.That(unhandledException is not null).IsTrue();
 
         await Assert.That(unhandledException).IsNotNull();
         await Assert.That(unhandledException!.Message).Contains("completion handler boom");
@@ -339,7 +327,6 @@ public partial class CombiningOperatorTests
     [Test]
     public async Task WhenMergeEnumerableThrowsDuringIteration_ThenRoutesToUnhandled()
     {
-        const int WaitTimeoutSeconds = 5;
         using UnhandledExceptionCapture unhandled = new();
 
         // Use an enumerable whose GetEnumerator throws, triggering the error path
@@ -351,7 +338,7 @@ public partial class CombiningOperatorTests
                 static (_, _) => default,
                 null);
 
-        var exception = await unhandled.WaitForAsync("enumerable boom", TimeSpan.FromSeconds(WaitTimeoutSeconds));
+        var exception = await unhandled.WaitForAsync("enumerable boom");
 
         await Assert.That(exception).IsNotNull();
         await Assert.That(exception!.Message).Contains("enumerable boom");
@@ -365,59 +352,26 @@ public partial class CombiningOperatorTests
     [Test]
     public async Task WhenMergeEnumerableDisposedWhileGateHeld_ThenOnNextReturnsPostGate()
     {
-        const int SecondEmissionValue = 2;
-        DirectSource<int> directSource = new();
-        List<int> items = [];
-        TaskCompletionSource gateHeld = new(TaskCreationOptions.RunContinuationsAsynchronously);
-        TaskCompletionSource proceedWithFirstEmission = new(TaskCreationOptions.RunContinuationsAsynchronously);
-
-        var sub = await new IObservableAsync<int>[] { directSource }
-            .Merge()
-            .SubscribeAsync(
-                async (x, _) =>
-                {
-                    lock (_gate)
-                    {
-                        items.Add(x);
-                    }
-
-                    if (x == 1)
-                    {
-                        gateHeld.SetResult();
-                        await proceedWithFirstEmission.Task;
-                    }
-                },
-                null);
-
-        // First emission holds the gate
-        var firstEmission = directSource.EmitNext(1, CancellationToken.None);
-        await gateHeld.Task;
-
-        // Second emission queues behind the gate
-        var secondEmissionTask = Task.Run(async () =>
+        const int SecondValue = 2;
+        List<int> values = [];
+        List<Exception> errors = [];
+        CallbackWitnessAsync<int> observer = new(
+            (value, _) =>
         {
-            try
-            {
-                await directSource.EmitNext(SecondEmissionValue, CancellationToken.None);
-            }
-            catch (OperationCanceledException)
-            {
-                // Expected
-            }
+            values.Add(value);
+            return default;
+        },
+            (exception, _) =>
+        {
+            errors.Add(exception);
+            return default;
         });
-
-        // Dispose while second emission waits for the gate
-        var disposeTask = sub.DisposeAsync();
-
-        // Release the first emission
-        proceedWithFirstEmission.SetResult();
-
-        await firstEmission;
-        await disposeTask;
-        await secondEmissionTask;
-
-        await Assert.That(items).Contains(1);
-        await Assert.That(items).DoesNotContain(SampleValue2);
+        SignalAsyncExtensions.BlendEnumerableSignal<int>.BlendSequenceCoordinator coordinator = new(observer, []);
+        coordinator.BeginSubscribing();
+        await coordinator.DisposeAsync();
+        await coordinator.RelayNextIfActiveAsync(SecondValue);
+        await Assert.That(values).IsEmpty();
+        await Assert.That(errors).IsEmpty();
     }
 
     /// <summary>
@@ -428,57 +382,24 @@ public partial class CombiningOperatorTests
     [Test]
     public async Task WhenMergeEnumerableDisposedWhileGateHeld_ThenOnErrorResumeReturnsPostGate()
     {
-        DirectSource<int> directSource = new();
+        List<int> values = [];
         List<Exception> errors = [];
-        TaskCompletionSource gateHeld = new(TaskCreationOptions.RunContinuationsAsynchronously);
-        TaskCompletionSource proceedWithFirstEmission = new(TaskCreationOptions.RunContinuationsAsynchronously);
-
-        var sub = await new IObservableAsync<int>[] { directSource }
-            .Merge()
-            .SubscribeAsync(
-                async (_, _) =>
-                {
-                    // Hold the gate on the first emission
-                    gateHeld.SetResult();
-                    await proceedWithFirstEmission.Task;
-                },
-                (ex, _) =>
-                {
-                    lock (_gate)
-                    {
-                        errors.Add(ex);
-                    }
-
-                    return default;
-                });
-
-        // First emission holds the gate
-        var firstEmission = directSource.EmitNext(1, CancellationToken.None);
-        await gateHeld.Task;
-
-        // Error emission queues behind the gate
-        var errorTask = Task.Run(async () =>
+        CallbackWitnessAsync<int> observer = new(
+            (value, _) =>
         {
-            try
-            {
-                await directSource.EmitError(new InvalidOperationException(LateErrorMessage), CancellationToken.None);
-            }
-            catch (OperationCanceledException)
-            {
-                // Expected
-            }
+            values.Add(value);
+            return default;
+        },
+            (exception, _) =>
+        {
+            errors.Add(exception);
+            return default;
         });
-
-        // Dispose while the error emission waits for the gate
-        var disposeTask = sub.DisposeAsync();
-
-        // Release the first emission
-        proceedWithFirstEmission.SetResult();
-
-        await firstEmission;
-        await disposeTask;
-        await errorTask;
-
+        SignalAsyncExtensions.BlendEnumerableSignal<int>.BlendSequenceCoordinator coordinator = new(observer, []);
+        coordinator.BeginSubscribing();
+        await coordinator.DisposeAsync();
+        await coordinator.RelayErrorIfActiveAsync(new InvalidOperationException("late"));
+        await Assert.That(values).IsEmpty();
         await Assert.That(errors).IsEmpty();
     }
 
@@ -490,7 +411,6 @@ public partial class CombiningOperatorTests
     [Test]
     public async Task WhenMergeEnumerableBeginSubscribingThrows_ThenRoutesToUnhandled()
     {
-        const int WaitTimeoutSeconds = 5;
         Exception? unhandled = null;
         UnhandledExceptionHandler.Register(ex => unhandled = ex);
 
@@ -500,9 +420,7 @@ public partial class CombiningOperatorTests
             static (_, _) => default,
             null);
 
-        await AsyncTestHelpers.WaitForConditionAsync(
-            () => unhandled is not null,
-            TimeSpan.FromSeconds(WaitTimeoutSeconds));
+        await Assert.That(unhandled is not null).IsTrue();
 
         await Assert.That(unhandled).IsNotNull();
     }
@@ -558,7 +476,6 @@ public partial class CombiningOperatorTests
     [Test]
     public async Task WhenMergeEnumerableDisposedDuringEmission_ThenDropsValues()
     {
-        const int WaitTimeoutSeconds = 5;
         DirectSource<int> innerSource = new();
         List<int> results = [];
 
@@ -574,9 +491,7 @@ public partial class CombiningOperatorTests
 
         await innerSource.EmitNext(1);
 
-        await AsyncTestHelpers.WaitForConditionAsync(
-            () => results.Count >= 1,
-            TimeSpan.FromSeconds(WaitTimeoutSeconds));
+        await Assert.That(results.Count >= 1).IsTrue();
 
         await sub.DisposeAsync();
 
@@ -594,7 +509,6 @@ public partial class CombiningOperatorTests
     [Test]
     public async Task WhenMergeEnumerableDisposedDuringErrorResume_ThenDropsErrors()
     {
-        const int WaitTimeoutSeconds = 5;
         DirectSource<int> innerSource = new();
         List<Exception> errors = [];
 
@@ -610,9 +524,7 @@ public partial class CombiningOperatorTests
 
         await innerSource.EmitError(new InvalidOperationException(FirstLiteral));
 
-        await AsyncTestHelpers.WaitForConditionAsync(
-            () => errors.Count >= 1,
-            TimeSpan.FromSeconds(WaitTimeoutSeconds));
+        await Assert.That(errors.Count >= 1).IsTrue();
 
         await sub.DisposeAsync();
 
@@ -650,7 +562,7 @@ public partial class CombiningOperatorTests
 
         await src1.EmitNext(1);
 
-        var failTask = Task.Run(() => src1.Complete(Result.Failure(new InvalidOperationException("fail"))));
+        var failTask = src1.Complete(Result.Failure(new InvalidOperationException("fail")));
         await completionBlocked.Task;
 
         await src2.EmitNext(Sentinel99);
@@ -687,7 +599,7 @@ public partial class CombiningOperatorTests
                     await allowCompletion.Task;
                 });
 
-        var failTask = Task.Run(() => src1.Complete(Result.Failure(new InvalidOperationException("fail"))));
+        var failTask = src1.Complete(Result.Failure(new InvalidOperationException("fail")));
         await completionBlocked.Task;
 
         await src2.EmitError(new InvalidOperationException("post-dispose"));

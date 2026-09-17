@@ -18,7 +18,7 @@ public sealed class CollectWitness<T> : IObserver<T>, IDisposable
     /// <summary>Serializes access to buffered values and terminal state.</summary>
     private readonly Lock _gate = new();
 
-    /// <summary>Whether a flush has already been scheduled for the current window.</summary>
+    /// <summary>Whether a flush is scheduled for the current window.</summary>
     private bool _flushScheduled;
 
     /// <summary>Whether the source has terminated.</summary>
@@ -33,7 +33,7 @@ public sealed class CollectWitness<T> : IObserver<T>, IDisposable
     /// <summary>Initializes a new instance of the <see cref="CollectWitness{T}"/> class.</summary>
     /// <param name="observer">The downstream observer.</param>
     /// <param name="timeSpan">The buffer window duration.</param>
-    /// <param name="sequencer">The sequencer used to schedule flushes.</param>
+    /// <param name="sequencer">The sequencer that schedules flushes.</param>
     /// <exception cref="ArgumentNullException"><paramref name="observer"/> or <paramref name="sequencer"/> is <see langword="null"/>.</exception>
     public CollectWitness(IObserver<IList<T>> observer, TimeSpan timeSpan, ISequencer sequencer)
     {
@@ -48,7 +48,7 @@ public sealed class CollectWitness<T> : IObserver<T>, IDisposable
     /// <summary>Gets the buffer window duration.</summary>
     private TimeSpan TimeSpan { get; }
 
-    /// <summary>Gets the sequencer used to schedule flushes.</summary>
+    /// <summary>Gets the sequencer that schedules flushes.</summary>
     private ISequencer? Sequencer { get; }
 
     /// <summary>Gets the source subscription and scheduled flushes.</summary>
@@ -132,7 +132,7 @@ public sealed class CollectWitness<T> : IObserver<T>, IDisposable
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void SetSubscription(IDisposable subscription) => Disposables.Add(subscription);
 
-    /// <summary>Flushes the current window if it still has buffered values.</summary>
+    /// <summary>Flushes the current window when it holds buffered values.</summary>
     private void Flush()
     {
         var batch = TakeScheduledBatch();
@@ -177,7 +177,7 @@ public sealed class CollectWitness<T> : IObserver<T>, IDisposable
         }
     }
 
-    /// <summary>Marks the observer as stopped if it has not already stopped.</summary>
+    /// <summary>Transitions the observer to the stopped state.</summary>
     /// <returns><see langword="true"/> when this call stopped the observer.</returns>
     private bool TryMarkStopped()
     {

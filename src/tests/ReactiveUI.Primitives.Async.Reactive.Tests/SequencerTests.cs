@@ -6,7 +6,7 @@ using ReactiveUI.Primitives.Reactive.Concurrency;
 
 namespace ReactiveUI.Primitives.Async.Reactive.Tests;
 
-/// <summary>Verifies sequencers.</summary>
+/// <summary>Verifies each built-in sequencer maps onto its System.Reactive scheduler and that interval normalization forwards.</summary>
 public class SequencerTests
 {
     /// <summary>A negative interval, which normalization clamps to zero.</summary>

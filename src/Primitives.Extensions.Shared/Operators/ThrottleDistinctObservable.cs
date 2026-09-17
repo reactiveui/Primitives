@@ -27,30 +27,25 @@ internal sealed class ThrottleDistinctObservable<T>(
         InvalidOperationExceptionHelper.ThrowIfNull(scheduler);
         ArgumentExceptionHelper.ThrowIfNull(observer);
 
-        // Implementation of .DistinctUntilChanged().Throttle(throttle, scheduler).DistinctUntilChanged()
-        // But fused into a single sink to avoid multiple operator allocations and observer chains.
         ThrottleDistinctSink sink = new(observer, throttle, scheduler);
         var subscription = source.Subscribe(sink);
         return new DisposableBag(subscription, sink);
     }
 
-    /// <summary>
-    /// Sink that implements the throttle distinct logic. Composes <see cref="TimerSinkState{T}"/>
-    /// for the shared gate / timer / done-flag plumbing so this class only carries the throttle
-    /// and distinct-value tracking.
-    /// </summary>
+    /// <summary>Sink that emits the latest value once the throttle window elapses, skipping it when it equals the last emitted value.</summary>
     /// <param name="downstream">The observer to forward elements to.</param>
     /// <param name="throttle">The throttle duration.</param>
     /// <param name="scheduler">The scheduler to use for timing.</param>
-    private sealed class ThrottleDistinctSink(
+    /// <remarks>Emissions are queued in order under the gate and delivered after it is released.</remarks>
+    internal sealed class ThrottleDistinctSink(
         IObserver<T> downstream,
         TimeSpan throttle,
         ISequencer scheduler) : IObserver<T>, IDisposable
     {
-        /// <summary>The gate protecting state transitions and downstream notification.</summary>
+        /// <summary>Guards the received and emitted values and the order notifications are queued in; never held while the observer runs.</summary>
         private readonly Lock _gate = new();
 
-        /// <summary>Shared timer / done-flag plumbing.</summary>
+        /// <summary>Shared timer, terminal state and serialized delivery.</summary>
         private readonly TimerSinkState<T> _state = new(downstream);
 
         /// <summary>The last emitted value.</summary>
@@ -84,8 +79,9 @@ internal sealed class ThrottleDistinctObservable<T>(
 
                 _lastReceived = value;
                 _hasLastReceived = true;
-                _state.Timer.Disposable = scheduler.Schedule(throttle, Emit);
             }
+
+            _state.Timer.Disposable = scheduler.Schedule(throttle, Emit);
         }
 
         /// <inheritdoc/>
@@ -93,8 +89,10 @@ internal sealed class ThrottleDistinctObservable<T>(
         {
             lock (_gate)
             {
-                _state.HandleErrorLocked(error);
+                _ = _state.QueueErrorLocked(error);
             }
+
+            _state.Flush();
         }
 
         /// <inheritdoc/>
@@ -102,8 +100,10 @@ internal sealed class ThrottleDistinctObservable<T>(
         {
             lock (_gate)
             {
-                _state.HandleCompletedLocked();
+                _ = _state.QueueCompletedLocked();
             }
+
+            _state.Flush();
         }
 
         /// <inheritdoc/>
@@ -115,15 +115,9 @@ internal sealed class ThrottleDistinctObservable<T>(
             }
         }
 
-        /// <summary>Emits the last received value if it differs from the last emitted value.
-        /// Marked <c>[ExcludeFromCodeCoverage]</c> because the in-lock
-        /// race-loser branch (sink done or no buffered value) is only reachable when the
-        /// scheduled callback fires concurrently with Dispose / OnCompleted, which the
-        /// single-threaded test harness cannot trigger.</summary>
-        [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
-        private void Emit()
+        /// <summary>Queues and delivers the last received value when it differs from the last emitted value.</summary>
+        internal void Emit()
         {
-            T? toEmit;
             lock (_gate)
             {
                 if (_state.Done || !_hasLastReceived)
@@ -131,13 +125,13 @@ internal sealed class ThrottleDistinctObservable<T>(
                     return;
                 }
 
-                toEmit = _lastReceived;
-                _lastEmitted = toEmit;
+                _lastEmitted = _lastReceived;
                 _hasLastEmitted = true;
                 _hasLastReceived = false;
+                _ = _state.QueueLocked(_lastEmitted!);
             }
 
-            downstream.OnNext(toEmit!);
+            _state.Flush();
         }
     }
 }

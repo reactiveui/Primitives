@@ -10,118 +10,107 @@ namespace ReactiveUI.Primitives.Reactive.Advanced;
 namespace ReactiveUI.Primitives.Advanced;
 #endif
 
-/// <summary>Represents the CatchSignal class.</summary>
-/// <typeparam name="T">The T type.</typeparam>
-internal sealed class CatchSignal<T> : IRequireCurrentThread<T>
+/// <summary>Subscribes to each source in turn, moving to the next one whenever a source errors.</summary>
+/// <typeparam name="T">The value type.</typeparam>
+[System.Diagnostics.DebuggerDisplay("CatchSignal<{typeof(T).Name,nq}>")]
+public sealed class CatchSignal<T> : IRequireCurrentThread<T>
 {
-    /// <summary>Stores state for the signal implementation.</summary>
+    /// <summary>The sources tried in order.</summary>
     private readonly IEnumerable<IObservable<T>> _sources;
 
     /// <summary>Initializes a new instance of the <see cref="CatchSignal{T}"/> class.</summary>
-    /// <param name="sources">The sources value.</param>
+    /// <param name="sources">The sources to try in order.</param>
     public CatchSignal(IEnumerable<IObservable<T>> sources) => _sources = sources;
 
-    /// <summary>Executes the IsRequiredSubscribeOnCurrentThread operation.</summary>
-    /// <returns>The result.</returns>
+    /// <summary>Reports that subscription runs on the calling thread.</summary>
+    /// <returns>Always <see langword="true"/>.</returns>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public bool IsRequiredSubscribeOnCurrentThread() => true;
 
-    /// <summary>Executes the Subscribe operation.</summary>
-    /// <param name="observer">The observer value.</param>
-    /// <returns>The result.</returns>
+    /// <summary>Subscribes the observer and starts walking the sources.</summary>
+    /// <param name="observer">The downstream observer.</param>
+    /// <returns>The disposable that tears the walk down.</returns>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public IDisposable Subscribe(IObserver<T> observer) =>
         SignalSubscription.Subscribe(observer, true, SubscribeCore);
 
-    /// <summary>Executes the SubscribeCore operation.</summary>
-    /// <param name="observer">The observer value.</param>
-    /// <param name="cancel">The cancel value.</param>
-    /// <returns>The result.</returns>
+    /// <summary>Creates the handler that walks the sources and starts it.</summary>
+    /// <param name="observer">The downstream observer.</param>
+    /// <param name="cancel">The outer subscription handle.</param>
+    /// <returns>The disposable that tears the walk down.</returns>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private IDisposable SubscribeCore(IObserver<T> observer, IDisposable cancel) =>
         new Catch(this, observer, cancel).Run();
 
-    /// <summary>Represents the Catch class.</summary>
-    private sealed class Catch : IObserver<T>, IDisposable
+    /// <summary>Walks the source sequence, advancing on each error and forwarding the last error if none succeed.</summary>
+    /// <param name="parent">The signal supplying the sources.</param>
+    /// <param name="observer">The downstream observer.</param>
+    /// <param name="cancel">The outer subscription handle.</param>
+    /// <remarks>
+    /// The gate only hands the enumerator between the walker and teardown. The enumerator is advanced, the next source is
+    /// subscribed and the observer is notified without the gate held; teardown that arrives while the walker is advancing
+    /// leaves disposing the enumerator to the walker, so a running enumerator is never disposed underneath it.
+    /// </remarks>
+    private sealed class Catch(CatchSignal<T> parent, IObserver<T> observer, IDisposable cancel) : IObserver<T>, IDisposable
     {
-        /// <summary>Stores state for the signal implementation.</summary>
-        private readonly CatchSignal<T> _parent;
+        /// <summary>The signal supplying the sources.</summary>
+        private readonly CatchSignal<T> _parent = parent;
 
-        /// <summary>Stores the downstream observer.</summary>
-        private readonly IObserver<T> _observer;
+        /// <summary>The downstream observer.</summary>
+        private readonly IObserver<T> _observer = observer;
 
-        /// <summary>Executes the new operation.</summary>
-        /// <returns>The result.</returns>
+        /// <summary>Guards the enumerator hand-off and the teardown flags; never held while user code runs.</summary>
         private readonly Lock _gate = new();
 
-        /// <summary>Stores the upstream subscription.</summary>
-        private IDisposable? _cancel;
+        /// <summary>The slot holding the current source subscription; an assignment after disposal is disposed at once.</summary>
+        private readonly SingleReplaceableDisposable _subscription = new();
+
+        /// <summary>The outer subscription handle released on teardown.</summary>
+        private IDisposable? _cancel = cancel;
 
         /// <summary>Disposed latch; 0 when alive, 1 once disposed.</summary>
         private int _disposed;
 
-        /// <summary>Stores state for the signal implementation.</summary>
+        /// <summary>Set under <see cref="_gate"/> once teardown ran, so no further source is subscribed.</summary>
         private bool _isDisposed;
 
-        /// <summary>Stores state for the signal implementation.</summary>
+        /// <summary>Set under <see cref="_gate"/> while the walker advances the enumerator, so teardown leaves its disposal to the walker.</summary>
+        private bool _isAdvancing;
+
+        /// <summary>The enumerator over the sources.</summary>
         private IEnumerator<IObservable<T>>? _e;
 
-        /// <summary>Stores state for the signal implementation.</summary>
-        private SingleReplaceableDisposable? _subscription;
-
-        /// <summary>Stores state for the signal implementation.</summary>
+        /// <summary>The error raised by the most recent source.</summary>
         private Exception? _lastException;
 
-        /// <summary>Stores state for the signal implementation.</summary>
+        /// <summary>The recursive continuation that advances to the next source.</summary>
         private Action? _nextSelf;
 
-        /// <summary>Initializes a new instance of the <see cref="Catch"/> class.</summary>
-        /// <param name="parent">The parent value.</param>
-        /// <param name="observer">The observer value.</param>
-        /// <param name="cancel">The cancel value.</param>
-        /// <exception cref="ArgumentNullException"><paramref name="cancel"/> is <see langword="null"/>.</exception>
-        public Catch(CatchSignal<T> parent, IObserver<T> observer, IDisposable cancel)
-        {
-            _cancel = cancel ?? throw new ArgumentNullException(nameof(cancel));
-            _observer = observer;
-            _parent = parent;
-        }
-
-        /// <summary>Executes the Run operation.</summary>
-        /// <returns>The result.</returns>
+        /// <summary>Starts the walk on the immediate sequencer.</summary>
+        /// <returns>The disposable that releases the enumerator and the current source subscription.</returns>
         public MultipleDisposable Run()
         {
-            _isDisposed = false;
             _e = _parent._sources.GetEnumerator();
-            _subscription = new();
 
             var schedule = Sequencer.Immediate.Schedule(RecursiveRun);
 
-            return new(schedule, _subscription, new ActionDisposable(() =>
-            {
-                lock (_gate)
-                {
-                    _isDisposed = true;
-                    _e?.Dispose();
-                    _e = null;
-                }
-            }));
+            return new(schedule, _subscription, new ActionDisposable(TearDown));
         }
 
-        /// <summary>Executes the OnNext operation.</summary>
-        /// <param name="value">The value.</param>
+        /// <summary>Forwards a value downstream.</summary>
+        /// <param name="value">The value to forward.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void OnNext(T value) => _observer.OnNext(value);
 
-        /// <summary>Executes the OnError operation.</summary>
-        /// <param name="error">The error value.</param>
+        /// <summary>Records the error and advances to the next source instead of terminating.</summary>
+        /// <param name="error">The error raised by the current source.</param>
         public void OnError(Exception error)
         {
             _lastException = error;
             _nextSelf!();
         }
 
-        /// <summary>Executes the OnCompleted operation.</summary>
+        /// <summary>Completes downstream and tears the walk down.</summary>
         public void OnCompleted()
         {
             try
@@ -134,20 +123,54 @@ internal sealed class CatchSignal<T> : IRequireCurrentThread<T>
             }
         }
 
-        /// <summary>Executes the Dispose operation.</summary>
+        /// <summary>Releases the enumerator, the current source subscription and the outer handle.</summary>
         public void Dispose()
         {
-            _e?.Dispose();
-            _e = null;
-            _subscription?.Dispose();
-            _subscription = null;
+            TearDown();
+            _subscription.Dispose();
             _ = WitnessTeardown.Dispose(ref _disposed, ref _cancel);
         }
 
-        /// <summary>Executes the RecursiveRun operation.</summary>
-        /// <param name="self">The self value.</param>
+        /// <summary>Advances the enumerator to the next source, recording the exception it raised when it raised one.</summary>
+        /// <param name="enumerator">The enumerator to advance.</param>
+        /// <param name="next">The next source, or <see langword="null"/> once the sequence is exhausted.</param>
+        /// <param name="error">The exception the sequence raised, when it raised one.</param>
+        /// <returns><see langword="true"/> when the sequence advanced without raising.</returns>
+        private static bool TryMoveToNextSource(IEnumerator<IObservable<T>> enumerator, out IObservable<T>? next, out Exception? error)
+        {
+            next = null;
+            error = null;
+
+            try
+            {
+                if (!enumerator.MoveNext())
+                {
+                    enumerator.Dispose();
+                    return true;
+                }
+
+                next = enumerator.Current;
+                if (next is not null)
+                {
+                    return true;
+                }
+
+                error = new InvalidOperationException("sequence is null.");
+            }
+            catch (Exception exception)
+            {
+                error = exception;
+            }
+
+            enumerator.Dispose();
+            return false;
+        }
+
+        /// <summary>Subscribes to the next source, or terminates once the sequence is exhausted.</summary>
+        /// <param name="self">The continuation that re-enters this method for the following source.</param>
         private void RecursiveRun(Action self)
         {
+            IEnumerator<IObservable<T>>? enumerator;
             lock (_gate)
             {
                 _nextSelf = self;
@@ -156,54 +179,74 @@ internal sealed class CatchSignal<T> : IRequireCurrentThread<T>
                     return;
                 }
 
-                if (!TryMoveToNextSource(out var next, out var error))
-                {
-                    FailAndDispose(error!);
-                    return;
-                }
-
-                if (next is null)
-                {
-                    FinishAndDispose();
-                    return;
-                }
-
-                _subscription?.Create(new SingleDisposable(next.Subscribe(this)));
+                enumerator = _e;
+                _isAdvancing = true;
             }
+
+            var advanced = TryMoveToNextSource(enumerator!, out var next, out var error);
+
+            if (EndAdvance())
+            {
+                ReleaseEnumerator();
+                return;
+            }
+
+            if (!advanced)
+            {
+                FailAndDispose(error!);
+                return;
+            }
+
+            if (next is null)
+            {
+                FinishAndDispose();
+                return;
+            }
+
+            _subscription.Create(new SingleDisposable(next.Subscribe(this)));
         }
 
-        /// <summary>Advances the handler sequence to the next source. Call while holding the gate.</summary>
-        /// <param name="next">The next source, or <see langword="null"/> once the sequence is exhausted.</param>
-        /// <param name="error">The exception the sequence raised, when it raised one.</param>
-        /// <returns><see langword="true"/> when the sequence advanced without raising.</returns>
-        /// <exception cref="InvalidOperationException">The sequence yielded a <see langword="null"/> source.</exception>
-        private bool TryMoveToNextSource(out IObservable<T>? next, out Exception? error)
+        /// <summary>Clears the advancing flag once the next source has been chosen.</summary>
+        /// <returns><see langword="true"/> when <see cref="TearDown"/> ran on another thread during the advance, which
+        /// leaves the enumerator for this walker to release.</returns>
+        private bool EndAdvance()
         {
-            next = null;
-            error = null;
-
-            try
+            lock (_gate)
             {
-                if (_e!.MoveNext())
-                {
-                    next = _e.Current ?? throw new InvalidOperationException("sequence is null.");
-                }
-                else
-                {
-                    _e.Dispose();
-                }
-
-                return true;
-            }
-            catch (Exception exception)
-            {
-                error = exception;
-                _e?.Dispose();
-                return false;
+                _isAdvancing = false;
+                return _isDisposed;
             }
         }
 
-        /// <summary>Forwards an error downstream and tears the handler down.</summary>
+        /// <summary>Stops the walk, disposing the enumerator unless the walker is advancing it.</summary>
+        private void TearDown()
+        {
+            lock (_gate)
+            {
+                _isDisposed = true;
+                if (_isAdvancing)
+                {
+                    return;
+                }
+            }
+
+            ReleaseEnumerator();
+        }
+
+        /// <summary>Takes the enumerator under the gate and disposes it outside the gate.</summary>
+        private void ReleaseEnumerator()
+        {
+            IEnumerator<IObservable<T>>? enumerator;
+            lock (_gate)
+            {
+                enumerator = _e;
+                _e = null;
+            }
+
+            enumerator?.Dispose();
+        }
+
+        /// <summary>Forwards an error downstream and tears the walk down.</summary>
         /// <param name="error">The error to forward.</param>
         private void FailAndDispose(Exception error)
         {

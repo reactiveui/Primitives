@@ -6,11 +6,7 @@ using System.Runtime.CompilerServices;
 
 namespace ReactiveUI.Primitives.Extensions.Operators;
 
-/// <summary>
-/// Boolean negation operator. Replaces the <c>source.Select(b =&gt; !b)</c>
-/// pattern with a dedicated forwarding observer, avoiding the per-subscription
-/// closure allocation that the projection lambda would otherwise capture.
-/// </summary>
+/// <summary>Emits each source boolean negated, passing errors and completion through unchanged.</summary>
 /// <param name="source">The boolean source observable.</param>
 public sealed class NotObservable(IObservable<bool> source) : IObservable<bool>
 {

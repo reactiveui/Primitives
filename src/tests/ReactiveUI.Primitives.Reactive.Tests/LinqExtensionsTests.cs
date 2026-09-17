@@ -5,8 +5,7 @@
 using System.Reactive;
 using System.Reactive.Disposables;
 
-// Imported so the DisposeWith tests below are compiled with System.Reactive's own fluent disposal helpers in
-// scope - that is the call-site shape the ContainerDisposable overload exists to keep unambiguous.
+// Import both fluent disposal APIs to check overload resolution.
 using System.Reactive.Disposables.Fluent;
 using System.Reactive.Linq;
 using ReactiveUI.Primitives.Advanced;
@@ -74,8 +73,7 @@ public partial class LinqExtensionsTests
         await Assert.That(result).IsSameReferenceAs(disposable);
         await Assert.That(disposables.Contains(disposable)).IsTrue();
 
-        // Resolving to this overload rather than System.Reactive's is what keeps the registration on the
-        // container itself instead of the composite it would have been converted into.
+        // Register the item on the container, not its implicit composite.
         await Assert.That(((CompositeDisposable)disposables).Count).IsEqualTo(0);
 
         disposables.Dispose();
@@ -96,7 +94,7 @@ public partial class LinqExtensionsTests
         await Assert.That(exception.ParamName).IsEqualTo("disposables");
     }
 
-    /// <summary>Verifies a container converted to a composite still disposes what System.Reactive registered on it.</summary>
+    /// <summary>Verifies a container converted to a composite disposes what System.Reactive registered on it.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
     public async Task DisposeWithComposedFromAContainerDisposesWithTheContainer()

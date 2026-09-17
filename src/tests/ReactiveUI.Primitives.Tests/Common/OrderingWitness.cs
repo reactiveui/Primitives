@@ -4,11 +4,7 @@
 
 namespace ReactiveUI.Primitives.Tests;
 
-/// <summary>
-/// An observer that watches a monotonically increasing stream and flags the first delivery that breaks the
-/// ordering contract: a value that is not strictly greater than the one before it. A repeat of the previous
-/// value (a duplicate) or a smaller value (a reorder) both trip the flag.
-/// </summary>
+/// <summary>Records the first value that is not strictly greater than its predecessor.</summary>
 /// <typeparam name="T">The observed value type.</typeparam>
 internal sealed class OrderingWitness<T> : IObserver<T>
     where T : IComparable<T>

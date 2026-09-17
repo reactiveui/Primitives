@@ -5,22 +5,17 @@
 namespace ReactiveUI.Primitives.Signals;
 
 /// <summary>A signal whose next value can be awaited.</summary>
-/// <typeparam name="T">The Type of Signal.</typeparam>
-/// <seealso cref="ISignal&lt;T&gt;" />
-/// <seealso cref="System.Runtime.CompilerServices.INotifyCompletion" />
+/// <typeparam name="T">The value type.</typeparam>
 public interface IAwaitSignal<T> : ISignal<T>, System.Runtime.CompilerServices.INotifyCompletion
 {
-    /// <summary>Gets a value indicating whether this instance is completed.</summary>
-    /// <value>
-    ///   <c>true</c> if this instance is completed; otherwise, <c>false</c>.
-    /// </value>
+    /// <summary>Gets a value indicating whether the signal has terminated, so an awaiting continuation runs inline.</summary>
     bool IsCompleted { get; }
 
-    /// <summary>Gets the awaiter.</summary>
-    /// <returns>An IAwaitSignal.</returns>
+    /// <summary>Gets the awaiter for this signal.</summary>
+    /// <returns>The signal itself, which acts as its own awaiter.</returns>
     IAwaitSignal<T> GetAwaiter();
 
-    /// <summary>Gets the result.</summary>
-    /// <returns>A value of T.</returns>
+    /// <summary>Gets the awaited value, rethrowing the terminal error when the signal faulted.</summary>
+    /// <returns>The value the signal terminated with.</returns>
     T GetResult();
 }

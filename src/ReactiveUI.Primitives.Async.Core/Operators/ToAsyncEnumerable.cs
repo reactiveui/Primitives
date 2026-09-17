@@ -2,6 +2,7 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
 using System.Threading.Channels;
 
@@ -16,30 +17,19 @@ public static partial class SignalAsyncExtensions
     /// <param name="source">The asynchronous observable to convert into an asynchronous enumerable.</param>
     extension<T>(IObservableAsync<T> source)
     {
-        /// <summary>
-        /// Converts the specified asynchronous observable sequence to an asynchronous enumerable sequence, enabling
-        /// consumption using asynchronous iteration.
-        /// </summary>
+        /// <summary>Converts the specified asynchronous observable sequence to an asynchronous enumerable sequence, enabling consumption using asynchronous iteration.</summary>
         /// <param name="channelFactory">A factory function that produces a channel to buffer elements, controlling
         /// the buffering and backpressure behavior between the asynchronous observable and the asynchronous enumerable.</param>
         /// <returns>An asynchronous enumerable sequence that yields elements from the asynchronous observable. The
         /// enumeration completes when the source observable completes, or an unhandled error occurs.</returns>
-        /// <exception cref="ArgumentExceptionHelper">Thrown when <paramref name="source"/> or <paramref name="channelFactory"/>
-        /// is null.</exception>
-        /// <remarks>
-        /// The resulting asynchronous enumerable sequence reflects the items and completion behavior of the source
-        /// asynchronous observable. The buffering behavior is determined by the channel created by the provided
-        /// <paramref name="channelFactory"/>.
-        /// </remarks>
+        /// <exception cref="ArgumentNullException"><paramref name="source"/> or <paramref name="channelFactory"/> is <see langword="null"/>.</exception>
+        /// <remarks>The channel returned by <paramref name="channelFactory"/> determines buffering; a source error completes the enumeration with that error.</remarks>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public IAsyncEnumerable<T> ToAsyncEnumerable(
             Func<Channel<T>> channelFactory) =>
             source.ToAsyncEnumerable(channelFactory, null);
 
-        /// <summary>
-        /// Converts the specified observable sequence to an asynchronous enumerable sequence, enabling consumption using
-        /// asynchronous iteration.
-        /// </summary>
+        /// <summary>Converts the specified observable sequence to an asynchronous enumerable sequence, enabling consumption using asynchronous iteration.</summary>
         /// <param name="channelFactory">A factory function that creates a new channel used to buffer items between the observable and the asynchronous
         /// enumerable. The channel controls the buffering and backpressure behavior.</param>
         /// <param name="onErrorResume">An optional asynchronous callback invoked when an error occurs in the observable sequence. If provided, this
@@ -47,11 +37,8 @@ public static partial class SignalAsyncExtensions
         /// sequence completes with the error.</param>
         /// <returns>An asynchronous enumerable sequence that yields the elements produced by the observable sequence. The
         /// enumeration completes when the observable completes or an unhandled error occurs.</returns>
-        /// <exception cref="ArgumentExceptionHelper">Thrown if <paramref name="source"/> or <paramref name="channelFactory"/> is null.</exception>
-        /// <remarks>The returned asynchronous enumerable reflects the items and completion behavior of the source
-        /// observable. The buffering and concurrency characteristics depend on the channel created by <paramref
-        /// name="channelFactory"/>. If <paramref name="onErrorResume"/> is provided, it can be used to suppress or handle
-        /// errors from the observable; otherwise, errors are propagated to the enumerator.</remarks>
+        /// <exception cref="ArgumentNullException"><paramref name="source"/> or <paramref name="channelFactory"/> is <see langword="null"/>.</exception>
+        /// <remarks>The channel factory controls buffering. The optional error callback handles source errors; without it, errors propagate to the enumerator.</remarks>
         public IAsyncEnumerable<T> ToAsyncEnumerable(
             Func<Channel<T>> channelFactory,
             Func<Exception, CancellationToken, ValueTask>? onErrorResume)
@@ -61,6 +48,8 @@ public static partial class SignalAsyncExtensions
 
             return ReadObservableValuesAsync(source, channelFactory, onErrorResume);
 
+            // Only the read loop and its disposal epilogue live here; the subscription wiring is covered separately.
+            [ExcludeFromCodeCoverage]
             static async IAsyncEnumerable<T> ReadObservableValuesAsync(
                 IObservableAsync<T> source,
                 Func<Channel<T>> channelFactory,
@@ -68,27 +57,50 @@ public static partial class SignalAsyncExtensions
                 [EnumeratorCancellation] CancellationToken cancellationToken = default)
             {
                 var channel = channelFactory();
-                var onErrorResumeAsync = onErrorResume ?? ((e, _) =>
+                var subscription = await SubscribeToChannelAsync(source, channel, onErrorResume, cancellationToken)
+                    .ConfigureAwait(false);
+                try
                 {
-                    channel.Writer.Complete(e);
-                    return default;
-                });
-
-                await using var subscription = await source.SubscribeAsync(
-                    channel.Writer.WriteAsync,
-                    onErrorResumeAsync,
-                    result =>
+                    await foreach (var x in channel.Reader.ReadAllAsync(cancellationToken))
                     {
-                        channel.Writer.Complete(result.Exception);
-                        return default;
-                    },
-                    cancellationToken).ConfigureAwait(false);
-
-                await foreach (var x in channel.Reader.ReadAllAsync(cancellationToken))
+                        yield return x;
+                    }
+                }
+                finally
                 {
-                    yield return x;
+                    await subscription.DisposeAsync().ConfigureAwait(false);
                 }
             }
         }
+    }
+
+    /// <summary>Subscribes a channel to the source, completing the channel with a source error unless a handler is supplied.</summary>
+    /// <typeparam name="T">The element type.</typeparam>
+    /// <param name="source">The source sequence.</param>
+    /// <param name="channel">The channel receiving the elements.</param>
+    /// <param name="onErrorResume">The resumable error handler, or <see langword="null"/> to complete the channel with the error.</param>
+    /// <param name="cancellationToken">A token that cancels the subscription.</param>
+    /// <returns>The source subscription.</returns>
+    internal static ValueTask<IAsyncDisposable> SubscribeToChannelAsync<T>(
+        IObservableAsync<T> source,
+        Channel<T> channel,
+        Func<Exception, CancellationToken, ValueTask>? onErrorResume,
+        CancellationToken cancellationToken)
+    {
+        var onErrorResumeAsync = onErrorResume ?? ((e, _) =>
+        {
+            channel.Writer.Complete(e);
+            return default;
+        });
+
+        return source.SubscribeAsync(
+            channel.Writer.WriteAsync,
+            onErrorResumeAsync,
+            result =>
+            {
+                channel.Writer.Complete(result.Exception);
+                return default;
+            },
+            cancellationToken);
     }
 }

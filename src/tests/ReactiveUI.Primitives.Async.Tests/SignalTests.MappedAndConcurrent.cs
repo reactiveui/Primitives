@@ -40,7 +40,7 @@ public partial class SignalTests
         await mapped.OnNextAsync(FirstInput, CancellationToken.None);
         await mapped.OnNextAsync(SecondInput, CancellationToken.None);
         await mapped.OnCompletedAsync(Result.Success);
-        await completed.Task.WaitAsync(WaitTimeout);
+        await completed.Task;
         await Assert.That(items).IsCollectionEqualTo([FirstMapped, SecondMapped]);
     }
 
@@ -545,7 +545,7 @@ public partial class SignalTests
             return default;
         });
         await signal.OnCompletedAsync(Result.Success);
-        await completed1.Task.WaitAsync(WaitTimeout);
-        await completed2.Task.WaitAsync(WaitTimeout);
+        await completed1.Task;
+        await completed2.Task;
     }
 }

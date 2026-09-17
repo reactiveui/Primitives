@@ -7,15 +7,10 @@ using ReactiveUI.Primitives.Signals;
 
 namespace ReactiveUI.Primitives.Tests;
 
-/// <summary>
-/// Verifies the operator coordinators hold the Rx grammar even when a source breaks it: a notification that
-/// arrives after the sequence has terminated, or after the subscription was disposed, is dropped rather than
-/// forwarded. Sources here are scripted so that disposing the subscription does not unhook them, which is what
-/// lets the test deliver the illegal notifications the guards exist for.
-/// </summary>
+/// <summary>Tests that operator coordinators drop notifications after termination or disposal.</summary>
 public partial class SignalOperatorMixinsTests
 {
-    /// <summary>The quiet period used by the timer-driven guard tests.</summary>
+    /// <summary>The virtual quiet period used by guard tests.</summary>
     private static readonly TimeSpan GuardPeriod = TimeSpan.FromMilliseconds(50);
 
     /// <summary>Verifies <c>Pair</c> drops values that arrive after the paired sequence has completed.</summary>
@@ -51,7 +46,7 @@ public partial class SignalOperatorMixinsTests
         await Assert.That(inner.HasObservers).IsFalse();
     }
 
-    /// <summary>Verifies <c>Shift</c> drops values a source delivers after it has already completed.</summary>
+    /// <summary>Verifies <c>Shift</c> drops the values a source delivers after its completion.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
     public async Task ShiftDropsValuesDeliveredAfterTheSourceCompletes()
@@ -82,7 +77,7 @@ public partial class SignalOperatorMixinsTests
         await Assert.That(values.SequenceEqual([One, Two])).IsTrue();
     }
 
-    /// <summary>Verifies a stale <c>Calm</c> timer tick does not re-emit the value it already delivered.</summary>
+    /// <summary>Verifies a stale <c>Calm</c> timer tick does not re-emit the value it delivered.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
     public async Task CalmIgnoresAStaleTimerTickAndPostTerminalNotifications()

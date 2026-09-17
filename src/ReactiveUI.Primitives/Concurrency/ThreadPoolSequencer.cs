@@ -26,37 +26,53 @@ public sealed class ThreadPoolSequencer : ISequencer, IDisposable
     private readonly PriorityQueue<TimedWorkItem> _queue = new();
 
     /// <summary>Single timer owned by the sequencer for all delayed work.</summary>
-    private readonly Timer _timer;
+    private readonly Timer? _timer;
 
-    /// <summary>
-    /// Non-zero once <see cref="Dispose"/> has released the timer and the queue. Written under <see cref="_gate"/>
-    /// so every path that touches the timer is ordered against disposal, but read without it on the immediate path,
-    /// which never goes near the timer.
-    /// </summary>
+    /// <summary>Reads the monotonic clock used by the delay queue.</summary>
+    private readonly Func<long> _timestamp;
+
+    /// <summary>Queues an immediate callback.</summary>
+    private readonly Action<WaitCallback, object> _queueImmediate;
+
+    /// <summary>Updates the delay timer.</summary>
+    private readonly Action<TimeSpan> _changeTimer;
+
+    /// <summary>Non-zero after disposal; writes hold the gate, and immediate scheduling reads without it.</summary>
     private int _isDisposed;
 
-    /// <summary>
-    /// Initializes a new instance of the <see cref="ThreadPoolSequencer"/> class. Callers use <see cref="Instance"/>;
-    /// this is internal so a test can own an isolated sequencer it may dispose without shutting the shared singleton
-    /// down for every other test.
-    /// </summary>
+    /// <summary>Initializes a new instance of the <see cref="ThreadPoolSequencer"/> class; callers use <see cref="Instance"/>.</summary>
     [System.Diagnostics.CodeAnalysis.SuppressMessage(
         "Correctness",
         "SST2403:Do not let 'this' escape from a constructor",
         Justification =
             "The timer is created disarmed, so nothing can call back into it until Schedule arms it after construction.")]
-    internal ThreadPoolSequencer() =>
-        _timer = new(
-            static state => ((ThreadPoolSequencer)state!).RunDue(),
-            this,
-            Timeout.InfiniteTimeSpan,
-            Timeout.InfiniteTimeSpan);
+    internal ThreadPoolSequencer()
+    {
+        _timer = CreateTimer(this);
+        _timestamp = static () => Sequencer.Timestamp;
+        _queueImmediate = QueueOnThreadPool;
+        _changeTimer = ChangeTimer;
+    }
+
+    /// <summary>Initializes a new instance of the <see cref="ThreadPoolSequencer"/> class.</summary>
+    /// <param name="timestamp">Reads the monotonic clock.</param>
+    /// <param name="queueImmediate">Queues an immediate callback.</param>
+    /// <param name="changeTimer">Updates the delay timer.</param>
+    internal ThreadPoolSequencer(
+        Func<long> timestamp,
+        Action<WaitCallback, object> queueImmediate,
+        Action<TimeSpan> changeTimer)
+    {
+        _timestamp = timestamp;
+        _queueImmediate = queueImmediate;
+        _changeTimer = changeTimer;
+    }
 
     /// <summary>Gets the scheduler's notion of current time.</summary>
     public DateTimeOffset Now => Sequencer.Now;
 
     /// <summary>Gets the scheduler's monotonic timestamp.</summary>
-    public long Timestamp => Sequencer.Timestamp;
+    public long Timestamp => _timestamp();
 
     /// <summary>Gets the debugger display text.</summary>
     [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
@@ -75,7 +91,7 @@ public sealed class ThreadPoolSequencer : ISequencer, IDisposable
         ArgumentExceptionHelper.ThrowIfNull(item);
         ObjectDisposedExceptionHelper.ThrowIf(IsDisposed, this);
 
-        _ = ThreadPool.UnsafeQueueUserWorkItem(ImmediateCallback, item);
+        _queueImmediate(ImmediateCallback, item);
     }
 
     /// <summary>Schedules a work item to be executed through the thread pool at a monotonic timestamp.</summary>
@@ -95,8 +111,6 @@ public sealed class ThreadPoolSequencer : ISequencer, IDisposable
 
         lock (_gate)
         {
-            // Tested under the same gate disposal takes, so an item that makes it into the queue is one disposal is
-            // guaranteed to see and release. It can never be enqueued behind an already-released timer.
             ObjectDisposedExceptionHelper.ThrowIf(IsDisposed, this);
 
             _queue.Enqueue(new(item, dueTimestamp));
@@ -104,16 +118,9 @@ public sealed class ThreadPoolSequencer : ISequencer, IDisposable
         }
     }
 
-    /// <summary>
-    /// Releases the delay timer this sequencer owns and cancels the delayed work still queued behind it. Scheduling
-    /// through a disposed sequencer throws <see cref="ObjectDisposedException"/> rather than accepting work that
-    /// could never become due. Work the thread pool has already picked up runs to completion.
-    /// </summary>
+    /// <summary>Cancels pending delayed work and rejects further scheduling, allowing work already picked up by the thread pool to finish.</summary>
     public void Dispose()
     {
-        // Under the gate: every arm of the timer happens under it too, so the timer can never be re-armed after it
-        // is released here. Timer.Dispose does not wait for an in-flight callback, so a drain blocked on the gate
-        // cannot deadlock this — it simply observes the disposed flag once it gets in.
         lock (_gate)
         {
             if (IsDisposed)
@@ -122,25 +129,13 @@ public sealed class ThreadPoolSequencer : ISequencer, IDisposable
             }
 
             Volatile.Write(ref _isDisposed, 1);
-            _timer.Dispose();
+            _timer?.Dispose();
             ReleaseQueuedNoLock();
         }
     }
 
-    /// <summary>Executes a work item when it has not already been cancelled.</summary>
-    /// <param name="item">Work item to execute.</param>
-    private static void ExecuteQueued(IWorkItem item)
-    {
-        if (Sequencer.IsCancelled(item))
-        {
-            return;
-        }
-
-        item.Execute();
-    }
-
     /// <summary>Runs due delayed work.</summary>
-    private void RunDue()
+    internal void RunDue()
     {
         while (true)
         {
@@ -156,6 +151,33 @@ public sealed class ThreadPoolSequencer : ISequencer, IDisposable
 
             ExecuteQueued(next.Item);
         }
+    }
+
+    /// <summary>Queues the runtime callback on the thread pool.</summary>
+    /// <param name="callback">The callback to queue.</param>
+    /// <param name="state">The callback state.</param>
+    [ExcludeFromCodeCoverage]
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static void QueueOnThreadPool(WaitCallback callback, object state) =>
+        ThreadPool.UnsafeQueueUserWorkItem(callback, state);
+
+    /// <summary>Creates a disarmed timer that drains due work.</summary>
+    /// <param name="owner">The sequencer receiving timer callbacks.</param>
+    /// <returns>The disarmed timer.</returns>
+    [ExcludeFromCodeCoverage]
+    private static Timer CreateTimer(ThreadPoolSequencer owner) =>
+        new(static state => ((ThreadPoolSequencer)state!).RunDue(), owner, Timeout.InfiniteTimeSpan, Timeout.InfiniteTimeSpan);
+
+    /// <summary>Executes the work item unless it has been cancelled.</summary>
+    /// <param name="item">Work item to execute.</param>
+    private static void ExecuteQueued(IWorkItem item)
+    {
+        if (Sequencer.IsCancelled(item))
+        {
+            return;
+        }
+
+        item.Execute();
     }
 
     /// <summary>Attempts to dequeue the next due item.</summary>
@@ -186,10 +208,7 @@ public sealed class ThreadPoolSequencer : ISequencer, IDisposable
         return false;
     }
 
-    /// <summary>
-    /// Cancels and drops every queued delayed item. The items are the handles their callers hold, so disposing them
-    /// releases the caller's work instead of stranding it in a queue nothing will ever drain again.
-    /// </summary>
+    /// <summary>Cancels and drops every queued delayed item, disposing each so its caller's handle is released.</summary>
     private void ReleaseQueuedNoLock()
     {
         while (_queue.TryDequeue(out var pending))
@@ -206,8 +225,6 @@ public sealed class ThreadPoolSequencer : ISequencer, IDisposable
     {
         if (IsDisposed)
         {
-            // Disposal released the timer and the queue under this same gate. A drain that is still unwinding on
-            // the timer's callback thread lands here, and must not re-arm a timer that no longer exists.
             return;
         }
 
@@ -218,12 +235,18 @@ public sealed class ThreadPoolSequencer : ISequencer, IDisposable
 
         if (_queue.Count == 0)
         {
-            _ = _timer.Change(Timeout.InfiniteTimeSpan, Timeout.InfiniteTimeSpan);
+            _changeTimer(Timeout.InfiniteTimeSpan);
             return;
         }
 
-        _ = _timer.Change(Sequencer.TimeUntil(_queue.Peek().DueTimestamp), Timeout.InfiniteTimeSpan);
+        _changeTimer(Sequencer.TimeUntil(_queue.Peek().DueTimestamp, Timestamp));
     }
+
+    /// <summary>Arms the runtime delay timer.</summary>
+    /// <param name="dueTime">The remaining delay.</param>
+    [ExcludeFromCodeCoverage]
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private void ChangeTimer(TimeSpan dueTime) => _timer!.Change(dueTime, Timeout.InfiniteTimeSpan);
 
     /// <summary>Delayed thread-pool work item queued in the sequencer heap.</summary>
     internal readonly struct TimedWorkItem : IComparable<TimedWorkItem>, IEquatable<TimedWorkItem>
@@ -260,10 +283,7 @@ public sealed class ThreadPoolSequencer : ISequencer, IDisposable
             unchecked((RuntimeHelpers.GetHashCode(Item) * 397) ^ DueTimestamp.GetHashCode());
     }
 
-    /// <summary>
-    /// Stateful work item carrying the scheduled state and the sequencer handed back to the action, with the
-    /// run/cancel handshake that lets a cancellation arriving mid-run still release whatever the action returned.
-    /// </summary>
+    /// <summary>Runs an action with its state and releases its result if canceled during execution.</summary>
     /// <typeparam name="TState">The scheduled state type.</typeparam>
     /// <param name="owner">The owning sequencer.</param>
     /// <param name="state">The scheduled state.</param>
@@ -277,7 +297,7 @@ public sealed class ThreadPoolSequencer : ISequencer, IDisposable
         [SuppressMessage(
             "Usage",
             "CA2213:Disposable fields should be disposed",
-            Justification = "_owner is the sequencer that queued this work item, not a resource it owns; disposing it would shut the sequencer down when one item completes.")]
+            Justification = "The sequencer that queued this work item is not a resource the work item owns.")]
         private readonly ThreadPoolSequencer _owner = owner;
 
         /// <summary>Scheduled state.</summary>
@@ -303,7 +323,7 @@ public sealed class ThreadPoolSequencer : ISequencer, IDisposable
                 return;
             }
 
-            Interlocked.Exchange(ref _disposable, EmptyDisposable.Instance)?.Dispose();
+            ReleaseResult();
         }
 
         /// <inheritdoc/>
@@ -319,6 +339,21 @@ public sealed class ThreadPoolSequencer : ISequencer, IDisposable
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         internal void Queue(TimeSpan dueTime) =>
             _owner.Schedule(this, Sequencer.AddTimestamp(_owner.Timestamp, dueTime));
+
+        /// <summary>Releases a published result if cancellation owns the work item.</summary>
+        internal void ReleaseCanceledResult()
+        {
+            if (!IsDisposed)
+            {
+                return;
+            }
+
+            ReleaseResult();
+        }
+
+        /// <summary>Takes and disposes the published result, leaving the empty disposable in its place.</summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private void ReleaseResult() => Interlocked.Exchange(ref _disposable, EmptyDisposable.Instance)?.Dispose();
 
         /// <summary>Runs scheduled work.</summary>
         private void Run()
@@ -336,12 +371,7 @@ public sealed class ThreadPoolSequencer : ISequencer, IDisposable
                 return;
             }
 
-            if (!IsDisposed)
-            {
-                return;
-            }
-
-            disposable.Dispose();
+            ReleaseCanceledResult();
         }
     }
 }

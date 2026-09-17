@@ -7,16 +7,11 @@ using ReactiveUI.Primitives.Async.Signals;
 
 namespace ReactiveUI.Primitives.Async;
 
-/// <summary>
-/// Provides async-native counterparts for high-value helper operators exposed by the synchronous reactive surface in
-/// this repository.
-/// </summary>
-/// <remarks>These members intentionally compose existing async operators from this namespace so parity is achieved via
-/// the library's own async primitives instead of by delegating to System.Reactive implementations.</remarks>
+/// <summary>Provides async-native counterparts for the helper operators on the synchronous reactive surface.</summary>
 [SuppressMessage(
     "StyleCop.CSharp.OrderingRules",
     "SA1201:ElementsShouldAppearInTheCorrectOrder",
-    Justification = "C# 14 extension methods")]
+    Justification = "Extension blocks group members by receiver rather than by element kind.")]
 public static partial class SignalAsyncExtensions
 {
     /// <summary>Aggregation parity helper operators for a sequence of boolean observable source sequences.</summary>
@@ -25,6 +20,8 @@ public static partial class SignalAsyncExtensions
     {
         /// <summary>Emits <see langword="true"/> when the latest value from every source sequence is <see langword="false"/>.</summary>
         /// <returns>A sequence of aggregate boolean states.</returns>
+        /// <remarks>An empty <paramref name="sources"/> sequence emits a single <see langword="true"/>; otherwise nothing is
+        /// emitted until every source has produced a value.</remarks>
         public IObservableAsync<bool> CombineLatestValuesAreAllFalse()
         {
             ArgumentExceptionHelper.ThrowIfNull(sources);
@@ -48,6 +45,8 @@ public static partial class SignalAsyncExtensions
 
         /// <summary>Emits <see langword="true"/> when the latest value from every source sequence is <see langword="true"/>.</summary>
         /// <returns>A sequence of aggregate boolean states.</returns>
+        /// <remarks>An empty <paramref name="sources"/> sequence emits a single <see langword="true"/>; otherwise nothing is
+        /// emitted until every source has produced a value.</remarks>
         public IObservableAsync<bool> CombineLatestValuesAreAllTrue()
         {
             ArgumentExceptionHelper.ThrowIfNull(sources);
@@ -175,7 +174,7 @@ public static partial class SignalAsyncExtensions
             return new DoOnSubscribeAsyncSignal<T>(source, action);
         }
 
-        /// <summary>Drops source values while the previous asynchronous action is still running.</summary>
+        /// <summary>Drops source values that arrive while the previous asynchronous action runs.</summary>
         /// <param name="asyncAction">The asynchronous action to execute for accepted values.</param>
         /// <returns>A sequence that emits only values that were accepted while the operator was idle.</returns>
         public IObservableAsync<T> DropIfBusy(Func<T, CancellationToken, ValueTask> asyncAction)
@@ -186,11 +185,7 @@ public static partial class SignalAsyncExtensions
             return new DropIfBusySignal<T>(source, asyncAction);
         }
 
-        /// <summary>
-        /// Emits the latest value or the provided default value before the source produces its first value.
-        /// If the first source value equals <paramref name="defaultValue"/>, it will be suppressed by the
-        /// distinct-until-changed filter.
-        /// </summary>
+        /// <summary>Starts with the default value and emits subsequent source values only when they change.</summary>
         /// <param name="defaultValue">The default value to emit first.</param>
         /// <returns>A sequence that starts with the provided default value and then emits distinct source updates.</returns>
         public IObservableAsync<T> LatestOrDefault(T defaultValue)
@@ -231,10 +226,7 @@ public static partial class SignalAsyncExtensions
             return new PairwiseSignal<T>(source);
         }
 
-        /// <summary>
-        /// Partitions the source sequence into values that satisfy the predicate and values that do not.
-        /// The predicate is evaluated exactly once per element.
-        /// </summary>
+        /// <summary>Partitions the source into matches and nonmatches, evaluating the predicate once per element.</summary>
         /// <param name="predicate">The partition predicate.</param>
         /// <returns>A tuple of true and false partitions.</returns>
         public (IObservableAsync<T> True, IObservableAsync<T> False) Partition(Func<T, bool> predicate)
@@ -362,6 +354,10 @@ public static partial class SignalAsyncExtensions
             var allSources = new IObservableAsync<T>[sources.Length + 1];
             allSources[0] = source;
             sources.CopyTo(allSources, 1);
+#if NET11_0_OR_GREATER
+            // The coordinator supplies its reusable array without copying it.
+            return new SyncLatestEnumerableSignal<T, T>(allSources, static values => ((ReadOnlySpan<T>)(T[])values).Min());
+#else
             return new SyncLatestEnumerableSignal<T, T>(allSources, static values =>
             {
                 var min = values[0];
@@ -375,6 +371,7 @@ public static partial class SignalAsyncExtensions
 
                 return min;
             });
+#endif
         }
 
         /// <summary>Returns the maximum of the latest values from the supplied source sequences.</summary>
@@ -388,6 +385,10 @@ public static partial class SignalAsyncExtensions
             var allSources = new IObservableAsync<T>[sources.Length + 1];
             allSources[0] = source;
             sources.CopyTo(allSources, 1);
+#if NET11_0_OR_GREATER
+            // The coordinator supplies its reusable array without copying it.
+            return new SyncLatestEnumerableSignal<T, T>(allSources, static values => ((ReadOnlySpan<T>)(T[])values).Max());
+#else
             return new SyncLatestEnumerableSignal<T, T>(allSources, static values =>
             {
                 var max = values[0];
@@ -401,6 +402,7 @@ public static partial class SignalAsyncExtensions
 
                 return max;
             });
+#endif
         }
     }
 

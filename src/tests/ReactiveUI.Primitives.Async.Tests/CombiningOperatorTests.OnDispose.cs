@@ -10,6 +10,36 @@ namespace ReactiveUI.Primitives.Async.Tests;
 /// <summary>Tests for the OnDispose operator.</summary>
 public partial class CombiningOperatorTests
 {
+    /// <summary>Verifies that a throwing synchronous dispose action still disposes the witness and surfaces the failure.</summary>
+    /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
+    [Test]
+    public async Task WhenOnDisposeSyncActionThrows_ThenWitnessDisposedAndFailureRethrown()
+    {
+        InvalidOperationException expected = new("dispose action failed");
+        CallbackWitnessAsync<int> observer = new(static (_, _) => default);
+        SignalAsyncExtensions.OnDisposeWitness<int> witness = new(observer, () => throw expected, null);
+
+        var error = await Assert.That(async () => await witness.DisposeAsync()).ThrowsExactly<InvalidOperationException>();
+
+        await Assert.That(error).IsSameReferenceAs(expected);
+        await Assert.That(witness.HasDisposed).IsTrue();
+    }
+
+    /// <summary>Verifies that a faulted asynchronous dispose callback still disposes the witness and surfaces the failure.</summary>
+    /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
+    [Test]
+    public async Task WhenOnDisposeAsyncCallbackFaults_ThenWitnessDisposedAndFailureRethrown()
+    {
+        InvalidOperationException expected = new("dispose callback failed");
+        CallbackWitnessAsync<int> observer = new(static (_, _) => default);
+        SignalAsyncExtensions.OnDisposeWitness<int> witness = new(observer, null, () => ValueTask.FromException(expected));
+
+        var error = await Assert.That(async () => await witness.DisposeAsync()).ThrowsExactly<InvalidOperationException>();
+
+        await Assert.That(error).IsSameReferenceAs(expected);
+        await Assert.That(witness.HasDisposed).IsTrue();
+    }
+
     /// <summary>Verifies that the synchronous OnDispose overload forwards OnNext values to the downstream observer.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
@@ -284,11 +314,10 @@ public partial class CombiningOperatorTests
         SignalAsyncExtensions.BlendCoordinator<int> subscription = new(observer);
 
         // Trigger FinishAsync with failure - blocks on observer.OnCompletedAsync
-        var failTask = Task.Run(() =>
-            subscription.FinishAsync(Result.Failure(new InvalidOperationException("fail"))));
+        var failTask = subscription.FinishAsync(Result.Failure(new InvalidOperationException("fail")));
         await completionBlocked.Task;
 
-        // _disposed is 1, gate is still alive → OnNextAsync acquires gate and hits post-gate check
+        // _disposed is 1, gate is still alive -> OnNextAsync acquires gate and hits post-gate check
         await subscription.RelayNextAsync(Sentinel99, CancellationToken.None);
 
         await Assert.That(items).IsEmpty();
@@ -321,8 +350,7 @@ public partial class CombiningOperatorTests
 
         SignalAsyncExtensions.BlendCoordinator<int> subscription = new(observer);
 
-        var failTask = Task.Run(() =>
-            subscription.FinishAsync(Result.Failure(new InvalidOperationException("fail"))));
+        var failTask = subscription.FinishAsync(Result.Failure(new InvalidOperationException("fail")));
         await completionBlocked.Task;
 
         await subscription.RelayErrorAsync(new InvalidOperationException("post-dispose"), CancellationToken.None);

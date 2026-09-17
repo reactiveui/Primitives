@@ -7,9 +7,9 @@ using ReactiveUI.Primitives.Core;
 
 namespace ReactiveUI.Primitives.Concurrency;
 
-/// <summary>Efficient scheduler queue that maintains scheduled items sorted by absolute time.</summary>
+/// <summary>Scheduler queue that keeps scheduled items ordered by absolute due time.</summary>
 /// <typeparam name="TAbsolute">Absolute time representation type.</typeparam>
-/// <remarks>This type is not thread safe; users should ensure proper synchronization.</remarks>
+/// <remarks>This type is not thread safe; concurrent callers must provide their own synchronization.</remarks>
 [System.Diagnostics.DebuggerDisplay("{DebuggerDisplay,nq}")]
 public class SequencerQueue<TAbsolute>
     where TAbsolute : IComparable<TAbsolute>
@@ -20,15 +20,15 @@ public class SequencerQueue<TAbsolute>
     /// <summary>Priority queue storing scheduled work.</summary>
     private readonly PriorityQueue<ScheduledItem<TAbsolute>> _queue;
 
-    /// <summary>Initializes a new instance of the <see cref="SequencerQueue{TAbsolute}"/> class. Creates a new scheduler queue with a default initial capacity.</summary>
+    /// <summary>Initializes a new instance of the <see cref="SequencerQueue{TAbsolute}"/> class with a default initial capacity.</summary>
     public SequencerQueue()
         : this(DefaultCapacity)
     {
     }
 
-    /// <summary>Initializes a new instance of the <see cref="SequencerQueue{TAbsolute}"/> class. Creates a new scheduler queue with the specified initial capacity.</summary>
+    /// <summary>Initializes a new instance of the <see cref="SequencerQueue{TAbsolute}"/> class with the specified initial capacity.</summary>
     /// <param name="capacity">Initial capacity of the scheduler queue.</param>
-    /// <exception cref="ArgumentOutOfRangeExceptionHelper"><paramref name="capacity"/> is less than zero.</exception>
+    /// <exception cref="ArgumentOutOfRangeException"><paramref name="capacity"/> is less than zero.</exception>
     public SequencerQueue(int capacity)
     {
         ArgumentOutOfRangeExceptionHelper.ThrowIfNegative(capacity);
@@ -41,7 +41,7 @@ public class SequencerQueue<TAbsolute>
 
     /// <summary>Gets the debugger display text.</summary>
     [System.Diagnostics.DebuggerBrowsable(System.Diagnostics.DebuggerBrowsableState.Never)]
-    private string DebuggerDisplay => ToString() ?? string.Empty;
+    private string? DebuggerDisplay => ToString();
 
     /// <summary>Enqueues the specified work item to be scheduled.</summary>
     /// <param name="scheduledItem">Work item to be scheduled.</param>

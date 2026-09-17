@@ -7,26 +7,27 @@ using ReactiveUI.Primitives.Disposables;
 
 namespace ReactiveUI.Primitives.Advanced;
 
-/// <summary>Represents the ImmediateReturnSignal class.</summary>
-/// <typeparam name="T">The T type.</typeparam>
+/// <summary>Signal that emits one value and completes synchronously inside <c>Subscribe</c>.</summary>
+/// <typeparam name="T">The value type.</typeparam>
 [System.Diagnostics.DebuggerDisplay("ImmediateReturnSignal: Value = {_value}")]
 public sealed class ImmediateReturnSignal<T> : IRequireCurrentThread<T>, IInlineSignal<T>
 {
-    /// <summary>Stores state for the signal implementation.</summary>
+    /// <summary>The value emitted to every subscriber.</summary>
     private readonly T _value;
 
     /// <summary>Initializes a new instance of the <see cref="ImmediateReturnSignal{T}"/> class.</summary>
-    /// <param name="value">The value.</param>
+    /// <param name="value">The value emitted to every subscriber.</param>
     public ImmediateReturnSignal(T value) => _value = value;
 
-    /// <summary>Executes the IsRequiredSubscribeOnCurrentThread operation.</summary>
-    /// <returns>The result.</returns>
+    /// <summary>Indicates whether subscription has to happen on the calling thread.</summary>
+    /// <returns>Always <see langword="false"/>.</returns>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public bool IsRequiredSubscribeOnCurrentThread() => false;
 
-    /// <summary>Executes the Subscribe operation.</summary>
-    /// <param name="observer">The observer value.</param>
-    /// <returns>The result.</returns>
+    /// <summary>Emits the value to <paramref name="observer"/> and completes it before returning.</summary>
+    /// <param name="observer">The observer to notify.</param>
+    /// <returns>An empty disposable; the signal has finished by the time this returns.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="observer"/> is <see langword="null"/>.</exception>
     public IDisposable Subscribe(IObserver<T> observer)
     {
         ArgumentExceptionHelper.ThrowIfNull(observer);
@@ -36,11 +37,11 @@ public sealed class ImmediateReturnSignal<T> : IRequireCurrentThread<T>, IInline
         return EmptyDisposable.Instance;
     }
 
-    /// <summary>Executes the Subscribe operation.</summary>
-    /// <param name="onNext">The onNext value.</param>
-    /// <param name="onError">The onError value.</param>
-    /// <param name="onCompleted">The onCompleted value.</param>
-    /// <returns>The result.</returns>
+    /// <summary>Invokes <paramref name="onNext"/> with the value, then <paramref name="onCompleted"/>, before returning.</summary>
+    /// <param name="onNext">Invoked with the value.</param>
+    /// <param name="onError">Never invoked.</param>
+    /// <param name="onCompleted">Invoked after the value.</param>
+    /// <returns>An empty disposable; the signal has finished by the time this returns.</returns>
     public IDisposable Subscribe(Action<T> onNext, Action<Exception> onError, Action onCompleted)
     {
         onNext(_value);

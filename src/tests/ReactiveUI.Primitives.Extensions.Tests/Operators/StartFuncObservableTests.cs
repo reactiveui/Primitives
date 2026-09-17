@@ -6,9 +6,7 @@ using ReactiveUI.Primitives.Concurrency;
 
 namespace ReactiveUI.Primitives.Extensions.Tests.Operators;
 
-/// <summary>Edge-case coverage for the <c>Start(Func{TResult}, ISequencer?)</c> overload
-/// backed by <c>StartFuncObservable&lt;TResult&gt;</c> — paths missed by the happy-path tests
-/// (inline vs scheduler dispatch and function-throws on both paths).</summary>
+/// <summary>Tests inline and scheduled function results and exception propagation.</summary>
 public class StartFuncObservableTests
 {
     /// <summary>Result returned by the Start tests.</summary>
@@ -16,9 +14,6 @@ public class StartFuncObservableTests
 
     /// <summary>Message attached to a thrown <c>Start</c> function.</summary>
     private const string FunctionFailedMessage = "function failed";
-
-    /// <summary>Guard timeout so a hung rendezvous fails this test rather than stalling the run.</summary>
-    private static readonly TimeSpan GuardTimeout = TimeSpan.FromSeconds(5);
 
     /// <summary>Verifies that the inline (null-scheduler) overload runs the function, emits the result and completes.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
@@ -40,13 +35,15 @@ public class StartFuncObservableTests
     [Test]
     public async Task WhenStartFuncOnScheduler_ThenRunsOnSchedulerAndCompletes()
     {
+        VirtualClock scheduler = new();
         List<int> results = [];
         TaskCompletionSource completed = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
-        using var sub = ReactiveExtensions.Start(static () => StartResult, Sequencer.Default)
+        using var sub = ReactiveExtensions.Start(static () => StartResult, scheduler)
             .Subscribe(results.Add, () => completed.TrySetResult());
+        scheduler.Start();
 
-        await completed.Task.WaitAsync(GuardTimeout);
+        await completed.Task;
         await Assert.That(results).IsCollectionEqualTo([StartResult]);
     }
 
@@ -69,13 +66,15 @@ public class StartFuncObservableTests
     [Test]
     public async Task WhenStartFuncOnSchedulerThrows_ThenForwardsError()
     {
+        VirtualClock scheduler = new();
         TaskCompletionSource<Exception> faulted = new(TaskCreationOptions.RunContinuationsAsynchronously);
         InvalidOperationException expected = new(FunctionFailedMessage);
 
-        using var sub = ReactiveExtensions.Start((Func<int>)(() => throw expected), Sequencer.Default)
+        using var sub = ReactiveExtensions.Start((Func<int>)(() => throw expected), scheduler)
             .Subscribe(static _ => { }, ex => faulted.TrySetResult(ex));
+        scheduler.Start();
 
-        var caught = await faulted.Task.WaitAsync(GuardTimeout);
+        var caught = await faulted.Task;
         await Assert.That(caught).IsSameReferenceAs(expected);
     }
 }

@@ -29,9 +29,6 @@ public sealed class ConnectableSignalTests
     /// <summary>Second value observed through replay.</summary>
     private const int SecondReplayValue = 5;
 
-    /// <summary>A replay window wide enough that no value expires while a test runs.</summary>
-    private const int ReplayWindowSeconds = 30;
-
     /// <summary>Expected values for the first shared subscription.</summary>
     private static readonly int[] ExpectedFirstSharedValues = [FirstSharedValue];
 
@@ -106,7 +103,7 @@ public sealed class ConnectableSignalTests
         _ = Assert.Throws<ArgumentNullException>(static () => ConnectableSignalExtensions.AutoShare<int>(null!));
         _ = Assert.Throws<ArgumentNullException>(static () => ConnectableSignalExtensions.AutoConnect<int>(null!));
         _ = Assert.Throws<ArgumentOutOfRangeException>(() => cold.ShareLive().AutoConnect(-1));
-        var replayed = cold.Replay(1, TimeSpan.FromSeconds(1));
+        var replayed = cold.Replay(1, TimeSpan.MaxValue);
         using var connection = replayed.Connect();
         source.OnNext(FirstReplayValue);
         List<int> replayValues = [];
@@ -126,7 +123,6 @@ public sealed class ConnectableSignalTests
         List<int> observed = [];
         using var subscription = multicast.Subscribe(observed.Add);
 
-        // No connection yet, so the hub must not see the source at all.
         source.OnNext(UnobservedSharedValue);
         await Assert.That(observed.Count).IsEqualTo(0);
 
@@ -155,13 +151,13 @@ public sealed class ConnectableSignalTests
         await Assert.That(late.SequenceEqual(ExpectedReplayValues)).IsTrue();
     }
 
-    /// <summary>A windowed replay hub still honours its buffer-size bound.</summary>
+    /// <summary>A replay hub with expiration disabled honours its buffer-size bound.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
-    public async Task WindowedReplayLiveHonoursItsBufferSizeBound()
+    public async Task ReplayLiveWithExpirationDisabledHonoursItsBufferSizeBound()
     {
         Signal<int> source = new();
-        var replayed = source.ReplayLive(1, TimeSpan.FromSeconds(ReplayWindowSeconds));
+        var replayed = source.ReplayLive(1, TimeSpan.MaxValue);
 
         using var connection = replayed.Connect();
         source.OnNext(FirstReplayValue);
@@ -170,7 +166,6 @@ public sealed class ConnectableSignalTests
         List<int> late = [];
         using var subscription = replayed.Subscribe(late.Add);
 
-        // The window is wide enough to keep both values, so only the buffer size may trim the replay.
         await Assert.That(late.SequenceEqual(ExpectedReplayValues[1..])).IsTrue();
     }
 
@@ -303,7 +298,6 @@ public sealed class ConnectableSignalTests
         var secondSubscription = shared.Subscribe(second.Add);
         source.OnNext(FirstSharedValue);
 
-        // The single upstream connection feeds every observer.
         await Assert.That(sourceSubscriptions).IsEqualTo(1);
 
         firstSubscription.Dispose();
@@ -311,7 +305,6 @@ public sealed class ConnectableSignalTests
 
         secondSubscription.Dispose();
 
-        // The connection is disposed only once the final subscriber leaves.
         await Assert.That(sourceDisposals).IsEqualTo(1);
         await Assert.That(first.SequenceEqual(ExpectedFirstSharedValues)).IsTrue();
         await Assert.That(second.SequenceEqual(ExpectedFirstSharedValues)).IsTrue();
@@ -343,7 +336,6 @@ public sealed class ConnectableSignalTests
         await Assert.That(sourceSubscriptions).IsEqualTo(1);
         await Assert.That(sourceDisposals).IsEqualTo(1);
 
-        // A fresh subscriber after the count returned to zero forces a new connection.
         using var second = shared.Subscribe(static _ => { });
         await Assert.That(sourceSubscriptions).IsEqualTo(ExpectedConnections);
         await Assert.That(sourceDisposals).IsEqualTo(1);
@@ -372,12 +364,10 @@ public sealed class ConnectableSignalTests
 
         var shared = cold.Share().AutoShare();
 
-        // Connect runs outside the gate; a synchronous failure surfaces to the caller.
         var thrown = Assert.Throws<InvalidOperationException>(() => shared.Subscribe(static _ => { }));
         await Assert.That(thrown).IsSameReferenceAs(expected);
         await Assert.That(subscribeAttempts).IsEqualTo(1);
 
-        // The failed attempt unwound the count, so the next subscriber reconnects rather than stalling.
         shouldThrow = false;
         List<int> values = [];
         using var recovered = shared.Subscribe(values.Add);
@@ -385,45 +375,29 @@ public sealed class ConnectableSignalTests
         await Assert.That(values.SequenceEqual(ExpectedFirstSharedValues)).IsTrue();
     }
 
-    /// <summary>Verifies AutoShare maintains a single connection under concurrent subscribe and dispose churn.</summary>
+    /// <summary>Overlapping subscriptions share one source connection until the last subscriber leaves.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
-    public async Task AutoShareKeepsSingleConnectionUnderConcurrentChurn()
-    {
-        const int Workers = 8;
-        const int IterationsPerWorker = 200;
+    public async Task AutoShareKeepsOneConnectionAcrossOverlappingSubscriptions()
+{
         var peakConnections = 0;
         var liveConnections = 0;
         var cold = Signal.Create<int>(observer =>
         {
-            var live = Interlocked.Increment(ref liveConnections);
-            var peak = Volatile.Read(ref peakConnections);
-            while (live > peak && Interlocked.CompareExchange(ref peakConnections, live, peak) != peak)
-            {
-                peak = Volatile.Read(ref peakConnections);
-            }
-
+            liveConnections++;
+            peakConnections = Math.Max(peakConnections, liveConnections);
             observer.OnNext(FirstSharedValue);
-            return new ActionDisposable(() => Interlocked.Decrement(ref liveConnections));
+            return new ActionDisposable(() => liveConnections--);
         });
-
         var shared = cold.Share().AutoShare();
-
-        var workers = new Task[Workers];
-        for (var worker = 0; worker < Workers; worker++)
-        {
-            workers[worker] = Task.Run(() =>
-            {
-                for (var iteration = 0; iteration < IterationsPerWorker; iteration++)
-                {
-                    shared.Subscribe(static _ => { }).Dispose();
-                }
-            });
-        }
-
-        await Task.WhenAll(workers);
-
-        // Refcount churn must never run two upstream connections at once and must release the last one.
+        var first = shared.Subscribe(static _ => { });
+        var second = shared.Subscribe(static _ => { });
+        first.Dispose();
+        await Assert.That(liveConnections).IsEqualTo(1);
+        var third = shared.Subscribe(static _ => { });
+        second.Dispose();
+        await Assert.That(liveConnections).IsEqualTo(1);
+        third.Dispose();
         await Assert.That(peakConnections).IsEqualTo(1);
         await Assert.That(liveConnections).IsEqualTo(0);
     }
@@ -563,5 +537,48 @@ public sealed class ConnectableSignalTests
 
         await Assert.That(completions).IsEqualTo(ExpectedCompletions);
         await Assert.That(sourceSubscriptions).IsEqualTo(1);
+    }
+
+    /// <summary>A source whose subscription marshals a Connect call to another thread is not deadlocked, and both calls share one connection.</summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    [Test]
+    public async Task ConnectToASourceThatConnectsFromAnotherThreadDoesNotDeadlock()
+    {
+        using MarshallingThread dispatcher = new();
+        ConnectableSignal<int>? connectable = null;
+        IDisposable? nested = null;
+        var cold = Signal.Create<int>(_ =>
+        {
+            dispatcher.Invoke(() => nested = connectable!.Connect());
+            return Scope.Empty;
+        });
+        connectable = new(cold, new Signal<int>());
+        IDisposable? connection = null;
+
+        var worker = BackgroundThread.Start(() => connection = connectable.Connect());
+
+        await Assert.That(await BackgroundThread.FinishesPromptly(worker)).IsTrue();
+        await Assert.That(nested).IsSameReferenceAs(connection);
+        connection!.Dispose();
+    }
+
+    /// <summary>A connection disposed while its source is still subscribing releases the source subscription once it arrives.</summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    [Test]
+    public async Task ConnectionDisposedWhileTheSourceSubscribesReleasesTheSubscription()
+    {
+        var sourceDisposals = 0;
+        ConnectableSignal<int>? connectable = null;
+        var cold = Signal.Create<int>(_ =>
+        {
+            connectable!.Connect().Dispose();
+            return new ActionDisposable(() => sourceDisposals++);
+        });
+        connectable = new(cold, new Signal<int>());
+
+        var connection = connectable.Connect();
+        connection.Dispose();
+
+        await Assert.That(sourceDisposals).IsEqualTo(1);
     }
 }

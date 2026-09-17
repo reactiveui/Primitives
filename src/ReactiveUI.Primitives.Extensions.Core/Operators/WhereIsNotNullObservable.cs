@@ -6,14 +6,10 @@ using System.Runtime.CompilerServices;
 
 namespace ReactiveUI.Primitives.Extensions.Operators;
 
-/// <summary>
-/// Filtering operator that forwards only the non-null values of the source
-/// sequence. Replaces the <c>source.Where(x =&gt; x is not null)</c> pattern,
-/// avoiding the per-subscription closure allocation that the predicate lambda
-/// would otherwise capture.
-/// </summary>
+/// <summary>Forwards only the non-null values of the source sequence, passing errors and completion through unchanged.</summary>
 /// <typeparam name="T">The element type of the source observable.</typeparam>
 /// <param name="source">The source observable whose null values are filtered out.</param>
+/// <remarks>The element type is unchanged, so a nullable source stays nullable downstream.</remarks>
 public sealed class WhereIsNotNullObservable<T>(IObservable<T> source) : IObservable<T>
 {
     /// <inheritdoc/>

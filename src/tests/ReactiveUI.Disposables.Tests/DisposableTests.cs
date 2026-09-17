@@ -9,7 +9,7 @@ namespace ReactiveUI.Disposables.Tests;
 /// <summary>Tests for the disposables family of types.</summary>
 public class DisposableTests
 {
-    /// <summary>Called when [dispose once].</summary>
+    /// <summary>Verifies an action disposable runs its action exactly once across repeated disposal.</summary>
     /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task OnlyDisposeOnce()
@@ -22,7 +22,7 @@ public class DisposableTests
         await Assert.That(disposed).IsEqualTo(1);
     }
 
-    /// <summary>Empties the disposable.</summary>
+    /// <summary>Verifies the empty disposable singleton tolerates repeated disposal without effect.</summary>
     [Test]
     public void EmptyDisposableInstanceDoesNothing()
     {
@@ -48,7 +48,7 @@ public class DisposableTests
         await Assert.That(disposable.IsDisposed).IsTrue();
     }
 
-    /// <summary>Singles the disposable dispose.</summary>
+    /// <summary>Verifies a single disposable reports itself disposed once disposed.</summary>
     /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task SingleDisposableDispose()
@@ -58,7 +58,7 @@ public class DisposableTests
         await Assert.That(disposable.IsDisposed).IsTrue();
     }
 
-    /// <summary>Singles the disposable dispose with action.</summary>
+    /// <summary>Verifies a single disposable runs its dispose action exactly once across repeated disposal.</summary>
     /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task SingleDisposableDisposeWithAction()
@@ -76,7 +76,7 @@ public class DisposableTests
         await Assert.That(disposed).IsEqualTo(1);
     }
 
-    /// <summary>Verifies action runs once and late assigned disposable is still disposed.</summary>
+    /// <summary>Verifies the dispose action runs once and a disposable created after disposal is disposed too.</summary>
     /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task SingleDisposableDisposeThenCreateRunsActionOnce()
@@ -93,7 +93,7 @@ public class DisposableTests
         await Assert.That(created).IsEqualTo(1);
     }
 
-    /// <summary>Multiples the disposable dispose.</summary>
+    /// <summary>Verifies an empty group reports itself disposed once disposed.</summary>
     /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task MultipleDisposableDispose()
@@ -103,7 +103,7 @@ public class DisposableTests
         await Assert.That(disposable.IsDisposed).IsTrue();
     }
 
-    /// <summary>Multiples the disposable with items dispose.</summary>
+    /// <summary>Verifies disposing a group disposes every disposable it holds.</summary>
     /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task MultipleDisposableWithItemsDispose()
@@ -111,7 +111,6 @@ public class DisposableTests
         MultipleDisposable disposable = [EmptyDisposable.Instance];
         var disposed = 0;
 
-        // A child disposable whose action runs when the group is disposed.
         SingleDisposable singleDisposable = new(EmptyDisposable.Instance, () => disposed++);
         disposable.Add(singleDisposable);
         SingleDisposable singleDisposable2 = new(EmptyDisposable.Instance);
@@ -233,7 +232,6 @@ public class DisposableTests
         MultipleDisposable disposable = [.. items];
         await Assert.That(disposable.Count).IsEqualTo(items.Length);
 
-        // Enumerate and copy while the group spills into the overflow store.
         var seen = 0;
         foreach (var _ in disposable)
         {
@@ -252,7 +250,6 @@ public class DisposableTests
         await Assert.That(disposable.Remove(missing)).IsFalse();
         await Assert.That(disposable.Count).IsEqualTo(items.Length - 1);
 
-        // Clear disposes the remaining items, including the overflow store.
         disposable.Clear();
         await Assert.That(disposedCount).IsEqualTo(items.Length);
     }
@@ -304,7 +301,6 @@ public class DisposableTests
         disposable.Add(new ActionDisposable(() => lateDisposed++));
         await Assert.That(lateDisposed).IsEqualTo(1);
 
-        // Clear and a redundant Dispose are no-ops on an already-disposed group.
         disposable.Clear();
         disposable.Dispose();
         await Assert.That(disposable.IsDisposed).IsTrue();

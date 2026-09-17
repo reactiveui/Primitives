@@ -7,10 +7,7 @@ using ReactiveUI.Primitives.Concurrency;
 
 namespace ReactiveUI.Primitives.Extensions.Tests;
 
-/// <summary>Coverage for the scheduler-routed overloads of the WaitFor* helpers on
-/// <see cref = "ObservableSubscriptionExtensions"/>. The non-scheduler overloads are
-/// already covered in the companion file; these dispatch the subscribe call via a
-/// scheduler before blocking.</summary>
+/// <summary>Tests helpers that schedule subscription before waiting for values or termination.</summary>
 public partial class ObservableSubscriptionExtensionsTests
 {
     /// <summary>Sentinel value emitted by single-value scheduler tests.</summary>
@@ -53,7 +50,6 @@ public partial class ObservableSubscriptionExtensionsTests
     {
         Observable.Return(RxVoid.Default).WaitForCompletion(ImmediateSequencer.Instance);
 
-        // Sentinel follow-up to give TUnit a real assertion.
         var sentinel = Observable.Return(SchedulerSentinelValue).SubscribeGetValue();
         await Assert.That(sentinel).IsEqualTo(SchedulerSentinelValue);
     }

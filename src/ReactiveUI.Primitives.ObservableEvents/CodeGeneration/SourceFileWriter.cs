@@ -51,16 +51,11 @@ internal static class SourceFileWriter
         _ = builder.AppendLine("}");
     }
 
-    /// <summary>Appends the observable property that wraps one event.</summary>
+    /// <summary>Emits one event's observable property, including the local handler that forwards the payload to the observer.</summary>
     /// <param name="builder">The destination builder.</param>
     /// <param name="model">The event to wrap.</param>
     /// <param name="provider">The observable implementation to write against.</param>
     /// <param name="indent">The indentation the property sits at.</param>
-    /// <remarks>
-    /// The handler is a local function rather than a lambda so a delegate returning <c>Task</c> or
-    /// <c>ValueTask</c> can satisfy its own signature; the subscription is torn down through the provider's own
-    /// disposable factory, so the wrapper never holds the handler alive past the subscription.
-    /// </remarks>
     internal static void AppendEventProperty(
         PooledStringBuilder builder,
         EventModel model,

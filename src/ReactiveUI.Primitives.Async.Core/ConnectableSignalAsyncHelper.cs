@@ -3,6 +3,7 @@
 // See the LICENSE file in the project root for full license information.
 
 using System.Diagnostics.CodeAnalysis;
+using System.Runtime.CompilerServices;
 using ReactiveUI.Primitives.Async.Advanced;
 using ReactiveUI.Primitives.Async.Disposables;
 
@@ -11,7 +12,7 @@ namespace ReactiveUI.Primitives.Async;
 /// <summary>Provides connectable-signal operations over flat state records.</summary>
 internal static class ConnectableSignalAsyncHelper
 {
-    /// <summary>Connects the state source once and returns a handle that can disconnect that connection.</summary>
+    /// <summary>Subscribes the state's signal to its source once, returning a handle that disconnects it.</summary>
     /// <typeparam name="T">The type of elements produced by the source sequence.</typeparam>
     /// <param name="state">The connectable signal state to operate on.</param>
     /// <param name="cancellationToken">A token that can cancel connection establishment.</param>
@@ -22,8 +23,6 @@ internal static class ConnectableSignalAsyncHelper
         ConnectableSignalAsyncState<T> state,
         CancellationToken cancellationToken)
     {
-        // A disposed signal cancels this token, and the gate's uncontended fast path does not observe
-        // cancellation, so without this check a post-disposal connect would resubscribe the cold source.
         state.DisposedCancellationToken.ThrowIfCancellationRequested();
 
         CancellationTokenSource? linkedCts = null;
@@ -82,11 +81,6 @@ internal static class ConnectableSignalAsyncHelper
     /// <summary>Disposes the connection state and releases its gate resources.</summary>
     /// <typeparam name="T">The type of elements produced by the source sequence.</typeparam>
     /// <param name="state">The connectable signal state to dispose.</param>
-    [SuppressMessage(
-        "Concurrency",
-        "PSH1315:A blocking wait on an awaitable that may not be done",
-        Justification =
-            "IDisposable.Dispose is intrinsically synchronous; this method must tear down async connection state on the sync dispose path.")]
     internal static void Dispose<T>(ConnectableSignalAsyncState<T> state)
     {
         if (!state.TryMarkDisposed())
@@ -95,7 +89,11 @@ internal static class ConnectableSignalAsyncHelper
         }
 
         state.DisposedCts.Cancel();
-        state.Connection?.DisposeAsync().AsTask().Wait(CancellationToken.None);
+        if (state.Connection is { } connection)
+        {
+            WaitForDisposal(connection.DisposeAsync().AsTask());
+        }
+
         state.Dispose();
     }
 
@@ -111,11 +109,21 @@ internal static class ConnectableSignalAsyncHelper
         CancellationToken cancellationToken)
     {
         RelayWitnessAsync<T> wrap = new(observer);
-        if (observer is WitnessAsync<T> downstream)
+        if (observer is IWitnessAsync<T> downstream)
         {
             downstream.LinkUpstreamCancellation(wrap.InternalDisposedToken);
         }
 
         return state.Signal.Values.SubscribeAsync(wrap, cancellationToken);
     }
+
+    /// <summary>Waits synchronously for connection disposal to finish.</summary>
+    /// <param name="completion">The connection's disposal task.</param>
+    [ExcludeFromCodeCoverage]
+    [SuppressMessage(
+        "Concurrency",
+        "PSH1315:A blocking wait on an awaitable that may not be done",
+        Justification = "The synchronous dispose contract leaves no way to await teardown of the async connection state.")]
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static void WaitForDisposal(Task completion) => completion.Wait(CancellationToken.None);
 }

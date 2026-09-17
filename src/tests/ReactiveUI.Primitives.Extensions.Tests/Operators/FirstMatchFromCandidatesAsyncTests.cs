@@ -7,9 +7,7 @@ using System.Reactive.Subjects;
 
 namespace ReactiveUI.Primitives.Extensions.Tests.Operators;
 
-/// <summary>Tests covering the async-sink path of
-/// <c>FirstMatchFromCandidates</c> (when projections do not complete synchronously)
-/// and edge cases not exercised by the sync fast-path tests.</summary>
+/// <summary>Tests <c>FirstMatchFromCandidates</c> where the candidate projections do not complete synchronously.</summary>
 public class FirstMatchFromCandidatesAsyncTests
 {
     /// <summary>Transformed result produced from the matching raw value.</summary>
@@ -156,7 +154,7 @@ public class FirstMatchFromCandidatesAsyncTests
             static t => t == MatchResult,
             Fallback).Subscribe(results.Add);
 
-        // Trigger async sink: complete the first projection so AsyncSink.TryNext walks the rest.
+        // Completing the first projection is what advances the walk onto the remaining candidates.
         asyncFirst.OnCompleted();
         await Assert.That(results).IsCollectionEqualTo([MatchResult]);
     }

@@ -34,8 +34,7 @@ public static class Spark
     [System.Diagnostics.CodeAnalysis.SuppressMessage(
         "Design",
         "SST2307:Generic method type parameters should be inferable from the parameters",
-        Justification =
-            "The type parameter defines the element type for this Rx-style factory and cannot be inferred from the arguments.")]
+        Justification = "The element type cannot be inferred from the arguments.")]
     public static Spark<T> CreateOnError<T>(Exception error)
     {
         ArgumentExceptionHelper.ThrowIfNull(error);
@@ -53,7 +52,6 @@ public static class Spark
     [System.Diagnostics.CodeAnalysis.SuppressMessage(
         "Design",
         "SST2307:Generic method type parameters should be inferable from the parameters",
-        Justification =
-            "The type parameter defines the element type for this Rx-style factory and cannot be inferred from the arguments.")]
+        Justification = "The element type cannot be inferred from the arguments.")]
     public static Spark<T> CreateOnCompleted<T>() => Spark<T>.OnCompleted();
 }

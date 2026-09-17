@@ -3,6 +3,7 @@
 // See the LICENSE file in the project root for full license information.
 
 using System.Runtime.CompilerServices;
+using System.Runtime.ExceptionServices;
 
 namespace ReactiveUI.Primitives.Async.Advanced;
 
@@ -12,7 +13,7 @@ namespace ReactiveUI.Primitives.Async.Advanced;
 [System.Diagnostics.DebuggerDisplay("TaskResultCompletionSource: IsCompleted = {_taskSource.Task.IsCompleted}")]
 public sealed class TaskResultCompletionSource<T>(CancellationToken cancellationToken)
 {
-    /// <summary>The task completion source used to publish the terminal result.</summary>
+    /// <summary>The task completion source that publishes the terminal result.</summary>
     private readonly TaskCompletionSource<T> _taskSource = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
     /// <summary>The cancellation token that cancels the terminal wait.</summary>
@@ -23,20 +24,27 @@ public sealed class TaskResultCompletionSource<T>(CancellationToken cancellation
     /// <returns>The terminal result value.</returns>
     public async ValueTask<T> AwaitResultAsync(IAsyncDisposable owner)
     {
+        var cancellationRegistration = RegisterCancellation();
+        ExceptionDispatchInfo? failure = null;
+        T result;
         try
         {
-#if NET8_0_OR_GREATER
-            await using var cancellationRegistration = RegisterCancellation();
-#else
-            using var cancellationRegistration = RegisterCancellation();
-#endif
-
-            return await _taskSource.Task.ConfigureAwait(false);
+            result = await _taskSource.Task.ConfigureAwait(false);
         }
-        finally
+        catch (Exception e)
         {
-            await owner.DisposeAsync().ConfigureAwait(false);
+            failure = ExceptionDispatchInfo.Capture(e);
+            result = default!;
         }
+
+#if NET8_0_OR_GREATER
+        await cancellationRegistration.DisposeAsync().ConfigureAwait(false);
+#else
+        cancellationRegistration.Dispose();
+#endif
+        await owner.DisposeAsync().ConfigureAwait(false);
+        failure?.Throw();
+        return result;
     }
 
     /// <summary>Completes the result successfully and disposes <paramref name="owner"/>.</summary>
@@ -44,16 +52,10 @@ public sealed class TaskResultCompletionSource<T>(CancellationToken cancellation
     /// <param name="owner">The owner to dispose after publishing the result. Disposed via the reentrant path
     /// because this runs from within the owner's own in-flight notification.</param>
     /// <returns>A task that completes when the owner has been disposed.</returns>
-    public async ValueTask SetResultAndDisposeAsync(T value, IReentrantAsyncDisposable owner)
+    public ValueTask SetResultAndDisposeAsync(T value, IWitnessState owner)
     {
-        try
-        {
-            _ = _taskSource.TrySetResult(value);
-        }
-        finally
-        {
-            await owner.DisposeFromNotificationAsync().ConfigureAwait(false);
-        }
+        _ = _taskSource.TrySetResult(value);
+        return WitnessAsync.DisposeFromNotificationAsync(owner);
     }
 
     /// <summary>Completes the result with an exception and disposes <paramref name="owner"/>.</summary>
@@ -61,17 +63,21 @@ public sealed class TaskResultCompletionSource<T>(CancellationToken cancellation
     /// <param name="owner">The owner to dispose after publishing the exception. Disposed via the reentrant path
     /// because this runs from within the owner's own in-flight notification.</param>
     /// <returns>A task that completes when the owner has been disposed.</returns>
-    public async ValueTask SetExceptionAndDisposeAsync(Exception exception, IReentrantAsyncDisposable owner)
+    public ValueTask SetExceptionAndDisposeAsync(Exception exception, IWitnessState owner)
     {
-        try
-        {
-            _ = _taskSource.TrySetException(exception);
-        }
-        finally
-        {
-            await owner.DisposeFromNotificationAsync().ConfigureAwait(false);
-        }
+        _ = _taskSource.TrySetException(exception);
+        return WitnessAsync.DisposeFromNotificationAsync(owner);
     }
+
+    /// <summary>Publishes <paramref name="result"/> as the terminal result and disposes <paramref name="owner"/>.</summary>
+    /// <param name="result">The terminal result; a success publishes <paramref name="value"/>, a failure publishes its exception.</param>
+    /// <param name="value">The result value published when <paramref name="result"/> is a success.</param>
+    /// <param name="owner">The owner to dispose after publishing.</param>
+    /// <returns>A task that completes when the owner has been disposed.</returns>
+    public ValueTask CompleteAndDisposeAsync(Result result, T value, IWitnessState owner) =>
+        result.IsSuccess
+            ? SetResultAndDisposeAsync(value, owner)
+            : SetExceptionAndDisposeAsync(result.Exception, owner);
 
     /// <summary>Registers cancellation for the pending result task.</summary>
     /// <returns>The cancellation registration.</returns>

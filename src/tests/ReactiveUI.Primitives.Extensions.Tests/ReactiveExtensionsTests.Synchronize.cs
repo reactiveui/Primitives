@@ -17,25 +17,16 @@ public partial class ReactiveExtensionsTests
     [Test]
     public async Task SubscribeSynchronus_RunsWithAsyncTasksInSubscriptions()
     {
-        // Given, When. SubscribeSynchronous dispatches each OnNext concurrently on the thread
-        // pool, so result / itterations need Interlocked for the read-modify-write to be safe.
+        // Each handler completes after updating the shared counters.
         var result = 0;
         var itterations = 0;
         Subject<bool> subject = new();
+        TaskCompletionSource allHandled = new(TaskCreationOptions.RunContinuationsAsynchronously);
         using var disposable = subject.SubscribeSynchronous(async x =>
         {
-            if (x)
-            {
-                await Task.Delay(LongDelayMilliseconds);
-                _ = Interlocked.Increment(ref result);
-            }
-            else
-            {
-                await Task.Delay(ShortDelayMilliseconds);
-                _ = Interlocked.Decrement(ref result);
-            }
-
-            _ = Interlocked.Increment(ref itterations);
+            await Task.Yield();
+            _ = x ? Interlocked.Increment(ref result) : Interlocked.Decrement(ref result);
+            _ = Interlocked.Increment(ref itterations) == SampleValue6 && allHandled.TrySetResult();
         });
         subject.OnNext(true);
         subject.OnNext(false);
@@ -43,10 +34,7 @@ public partial class ReactiveExtensionsTests
         subject.OnNext(false);
         subject.OnNext(true);
         subject.OnNext(false);
-        while (Volatile.Read(ref itterations) < SampleValue6)
-        {
-            _ = Thread.Yield();
-        }
+        await allHandled.Task;
 
         // Then
         await Assert.That(Volatile.Read(ref result)).IsZero();
@@ -57,10 +45,7 @@ public partial class ReactiveExtensionsTests
     [Test]
     public async Task SynchronizeSynchronous_RunsWithAsyncTasksInSubscriptions()
     {
-        // Given, When. SynchronizeSynchronous dispatches each OnNext through an independent
-        // Continuation so the six HandleAsync invocations run concurrently on the thread pool —
-        // the int read-modify-write therefore needs Interlocked. The test asserts pair-wise
-        // (+1, -1) sums to zero after WhenAll completes.
+        // Each handler completes after updating the shared counters.
         var result = 0;
         var itterations = 0;
         Subject<bool> subject = new();
@@ -71,16 +56,8 @@ public partial class ReactiveExtensionsTests
         {
             try
             {
-                if (x.Value)
-                {
-                    await Task.Delay(LongDelayMilliseconds);
-                    _ = Interlocked.Increment(ref result);
-                }
-                else
-                {
-                    await Task.Delay(ShortDelayMilliseconds);
-                    _ = Interlocked.Decrement(ref result);
-                }
+                await Task.Yield();
+                _ = x.Value ? Interlocked.Increment(ref result) : Interlocked.Decrement(ref result);
             }
             finally
             {
@@ -98,7 +75,11 @@ public partial class ReactiveExtensionsTests
         await Task.WhenAll(tasks);
 
         // Then
-        await Assert.That(Volatile.Read(ref result)).IsZero();
+        using (Assert.Multiple())
+        {
+            await Assert.That(Volatile.Read(ref result)).IsZero();
+            await Assert.That(Volatile.Read(ref itterations)).IsEqualTo(SampleValue6);
+        }
     }
 
     /// <summary>Syncronizes the asynchronous runs with asynchronous tasks in subscriptions.</summary>
@@ -106,25 +87,16 @@ public partial class ReactiveExtensionsTests
     [Test]
     public async Task SubscribeAsync_RunsWithAsyncTasksInSubscriptions()
     {
-        // Given, When. SubscribeAsync dispatches each OnNext concurrently, so the integer
-        // read-modify-write needs Interlocked and the polling read needs Volatile.
+        // Each handler completes after updating the shared counters.
         var result = 0;
         var itterations = 0;
         Subject<bool> subject = new();
+        TaskCompletionSource allHandled = new(TaskCreationOptions.RunContinuationsAsynchronously);
         using var disposable = subject.SubscribeAsync(async x =>
         {
-            if (x)
-            {
-                await Task.Delay(LongDelayMilliseconds);
-                _ = Interlocked.Increment(ref result);
-            }
-            else
-            {
-                await Task.Delay(ShortDelayMilliseconds);
-                _ = Interlocked.Decrement(ref result);
-            }
-
-            _ = Interlocked.Increment(ref itterations);
+            await Task.Yield();
+            _ = x ? Interlocked.Increment(ref result) : Interlocked.Decrement(ref result);
+            _ = Interlocked.Increment(ref itterations) == SampleValue6 && allHandled.TrySetResult();
         });
         subject.OnNext(true);
         subject.OnNext(false);
@@ -132,10 +104,7 @@ public partial class ReactiveExtensionsTests
         subject.OnNext(false);
         subject.OnNext(true);
         subject.OnNext(false);
-        while (Volatile.Read(ref itterations) < SampleValue6)
-        {
-            _ = Thread.Yield();
-        }
+        await allHandled.Task;
 
         // Then
         await Assert.That(Volatile.Read(ref result)).IsZero();
@@ -147,39 +116,35 @@ public partial class ReactiveExtensionsTests
     public async Task WithLimitedConcurrency_LimitsConcurrentTasks()
     {
         const int MaxConcurrency = 3;
+        var inFlight = 0;
         var maxConcurrent = 0;
-        var currentConcurrent = 0;
-
+        var pulled = System.Threading.Channels.Channel.CreateUnbounded<TaskCompletionSource<int>>();
+        List<int> results = [];
+        TaskCompletionSource completed = new(TaskCreationOptions.RunContinuationsAsynchronously);
         IEnumerable<Task<int>> CreateTasks()
         {
             for (var i = 1; i <= SampleValue10; i++)
             {
-                var value = i;
-                yield return Task.Run(async () =>
-                {
-                    lock (_gate)
-                    {
-                        currentConcurrent++;
-                        maxConcurrent = Math.Max(maxConcurrent, currentConcurrent);
-                    }
-
-                    await Task.Delay(SampleValue10);
-                    lock (_gate)
-                    {
-                        currentConcurrent--;
-                    }
-
-                    return value;
-                });
+                TaskCompletionSource<int> gate = new(TaskCreationOptions.RunContinuationsAsynchronously);
+                var current = Interlocked.Increment(ref inFlight);
+                maxConcurrent = Math.Max(maxConcurrent, current);
+                _ = pulled.Writer.TryWrite(gate);
+                yield return gate.Task;
             }
         }
 
-        var results = await CreateTasks().WithLimitedConcurrency(MaxConcurrency).ToList();
-        using (Assert.Multiple())
+        using var sub = CreateTasks().WithLimitedConcurrency(MaxConcurrency)
+            .Subscribe(results.Add, completed.SetResult);
+        for (var next = 1; next <= SampleValue10; next++)
         {
-            await Assert.That(results).Count().IsEqualTo(SampleValue10);
-            await Assert.That(maxConcurrent).IsLessThanOrEqualTo(MaxConcurrency);
+            var gate = await pulled.Reader.ReadAsync();
+            _ = Interlocked.Decrement(ref inFlight);
+            gate.SetResult(next);
         }
+
+        await completed.Task;
+        await Assert.That(results).Count().IsEqualTo(SampleValue10);
+        await Assert.That(maxConcurrent).IsEqualTo(MaxConcurrency);
     }
 
     /// <summary>Verifies an empty limited-concurrency task sequence completes immediately.</summary>
@@ -228,15 +193,15 @@ public partial class ReactiveExtensionsTests
     [Test]
     public async Task WithLimitedConcurrency_DisposeBeforeTaskContinuation_DropsWork()
     {
-        TaskCompletionSource<int> task = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        ConcurrencyLimiter<int> limiter = new([], 1);
         List<int> values = [];
         Exception? caught = null;
         var completed = false;
-        var sub = new[] { task.Task }.WithLimitedConcurrency(1)
-            .Subscribe(values.Add, ex => caught = ex, () => completed = true);
-        sub.Dispose();
-        task.SetResult(SampleValue10);
-        await Task.Delay(SettleDelayMilliseconds).ConfigureAwait(false);
+        ConcurrencyLimiter<int>.Subscription subscription = new(
+            limiter,
+            Observer.Create<int>(values.Add, ex => caught = ex, () => completed = true));
+        subscription.Dispose();
+        limiter.ProcessTaskCompletion(subscription, Task.FromResult(SampleValue10));
         await Assert.That(values).IsEmpty();
         await Assert.That(caught).IsNull();
         await Assert.That(completed).IsFalse();
@@ -258,6 +223,18 @@ public partial class ReactiveExtensionsTests
         await Assert.That(completed).IsFalse();
     }
 
+    /// <summary>Verifies the limiter's disposal latch can be cleared again.</summary>
+    /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
+    [Test]
+    public async Task WithLimitedConcurrency_DisposedLatchCleared_ThenReportsNotDisposed()
+    {
+        ConcurrencyLimiter<int> limiter = new([], 1) { Disposed = true };
+
+        limiter.Disposed = false;
+
+        await Assert.That(limiter.Disposed).IsFalse();
+    }
+
     /// <summary>Exercises the null-current continuation path defensively tolerated by the limiter.</summary>
     /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
@@ -269,7 +246,6 @@ public partial class ReactiveExtensionsTests
         var completed = false;
         using var sub = tasks.WithLimitedConcurrency(1)
             .Subscribe(values.Add, ex => caught = ex, () => completed = true);
-        await Task.Delay(SettleDelayMilliseconds).ConfigureAwait(false);
         await Assert.That(values).IsEmpty();
         await Assert.That(caught).IsNull();
         await Assert.That(completed).IsFalse();
@@ -332,12 +308,14 @@ public partial class ReactiveExtensionsTests
             observer.OnError(new InvalidOperationException());
             return EmptyDisposable.Instance;
         });
-        using var sub = source.SubscribeAsync(async x => results.Add(x), ex =>
+        using var sub = source.SubscribeAsync(
+            async x => results.Add(x),
+            ex =>
         {
             caughtException = ex;
             _ = errorSource.TrySetResult(true);
         });
-        await errorSource.Task.WaitAsync(WaitTimeout);
+        await errorSource.Task;
         using (Assert.Multiple())
         {
             await Assert.That(results).IsCollectionEqualTo([1]);
@@ -365,7 +343,7 @@ public partial class ReactiveExtensionsTests
         subject.OnNext(1);
         subject.OnNext(SampleValue2);
         subject.OnCompleted();
-        await completed.Task.WaitAsync(WaitTimeout);
+        await completed.Task;
         using (Assert.Multiple())
         {
             await Assert.That(results).IsCollectionEqualTo([1, SampleValue2]);
@@ -392,9 +370,9 @@ public partial class ReactiveExtensionsTests
             },
             _ => errorHandled.TrySetResult());
         subject.OnNext(1);
-        await onNextCompleted.Task.WaitAsync(WaitTimeout);
+        await onNextCompleted.Task;
         subject.OnError(new InvalidOperationException());
-        await errorHandled.Task.WaitAsync(WaitTimeout);
+        await errorHandled.Task;
         using (Assert.Multiple())
         {
             await Assert.That(results).IsCollectionEqualTo([1]);
@@ -420,7 +398,7 @@ public partial class ReactiveExtensionsTests
         subject.OnNext(1);
         subject.OnNext(SampleValue2);
         subject.OnCompleted();
-        await completed.Task.WaitAsync(WaitTimeout);
+        await completed.Task;
         using (Assert.Multiple())
         {
             await Assert.That(results).IsCollectionEqualTo([1, SampleValue2]);
@@ -446,7 +424,7 @@ public partial class ReactiveExtensionsTests
         subject.OnNext(1);
         subject.OnNext(SampleValue2);
         subject.OnNext(SampleValue3);
-        await allReceived.Task.WaitAsync(WaitTimeout);
+        await allReceived.Task;
         await Assert.That(results).IsCollectionEqualTo([1, SampleValue2, SampleValue3]);
     }
 
@@ -468,7 +446,7 @@ public partial class ReactiveExtensionsTests
         using var subscription = source.SubscribeAsync(
             async v =>
             {
-                await Task.Delay(1);
+                await Task.Yield();
                 results.Add(v);
             },
             () =>
@@ -476,7 +454,7 @@ public partial class ReactiveExtensionsTests
                 completed = true;
                 _ = completionSource.TrySetResult(true);
             });
-        await completionSource.Task.WaitAsync(WaitTimeout);
+        await completionSource.Task;
         using (Assert.Multiple())
         {
             await Assert.That(results).IsCollectionEqualTo([1, SampleValue2]);

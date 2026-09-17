@@ -10,13 +10,7 @@ namespace ReactiveUI.Primitives.Extensions.Reactive.Operators;
 namespace ReactiveUI.Primitives.Extensions.Operators;
 #endif
 
-/// <summary>
-/// Classic throttle (debounce) operator. Emits a value only after
-/// <paramref name="dueTime"/> has elapsed without any new emission from the
-/// source. Each new upstream <c>OnNext</c> cancels the pending emission and
-/// schedules a new one. Provides the equivalent of Rx's
-/// <c>Observable.Throttle</c> without depending on System.Reactive.Linq.
-/// </summary>
+/// <summary>Emits the latest value after the configured quiet period.</summary>
 /// <typeparam name="T">The element type of the source observable.</typeparam>
 /// <param name="source">The source observable.</param>
 /// <param name="dueTime">The quiescence duration required before emission.</param>
@@ -42,7 +36,7 @@ internal sealed class ThrottleObservable<T>(
     /// <param name="downstream">The downstream observer.</param>
     /// <param name="dueTime">The quiescence duration.</param>
     /// <param name="scheduler">The scheduler used to time emissions.</param>
-    private sealed class ThrottleSink(
+    internal sealed class ThrottleSink(
         IObserver<T> downstream,
         TimeSpan dueTime,
         ISequencer scheduler) : IObserver<T>, IDisposable
@@ -144,17 +138,9 @@ internal sealed class ThrottleObservable<T>(
             _pending.Dispose();
         }
 
-        /// <summary>
-        /// Emits the buffered value if it is still current (i.e. no newer
-        /// <see cref="OnNext"/> arrived after this emission was scheduled).
-        /// Marked <c>[ExcludeFromCodeCoverage]</c> because the in-lock
-        /// race-loser branch (sink done, emission superseded, value already drained) is only
-        /// reachable when the scheduled callback fires concurrently with Dispose / OnCompleted,
-        /// which the single-threaded test harness cannot trigger.
-        /// </summary>
+        /// <summary>Emits the buffered value when it is still current, meaning no newer <see cref="OnNext"/> arrived after this emission was scheduled.</summary>
         /// <param name="id">The emission id this callback was scheduled for.</param>
-        [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
-        private void Emit(long id)
+        internal void Emit(long id)
         {
             T value;
             lock (_gate)

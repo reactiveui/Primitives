@@ -64,7 +64,7 @@ public partial class SignalOperatorParityMixinsTests
         await Assert.That(task.IsCanceled).IsTrue();
     }
 
-    /// <summary>Verifies the issue #108 scenario: <c>FirstAsync().ToTask(token)</c> cancels when the token fires before a value arrives.</summary>
+    /// <summary>Verifies <c>FirstAsync().ToTask(token)</c> cancels when the token fires before a value arrives.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
     public async Task FirstAsyncToTaskCancelsWhenTokenFires()
@@ -80,7 +80,7 @@ public partial class SignalOperatorParityMixinsTests
         await Assert.That(() => pending).Throws<TaskCanceledException>();
     }
 
-    /// <summary>Verifies the issue #108 scenario: <c>FirstAsync().ToTask(token)</c> yields the first matching value when it arrives before cancellation.</summary>
+    /// <summary>Verifies <c>FirstAsync().ToTask(token)</c> yields the first matching value when it arrives before cancellation.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
     public async Task FirstAsyncToTaskYieldsFirstMatchingValue()

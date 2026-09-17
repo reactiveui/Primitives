@@ -18,25 +18,17 @@ public static partial class SignalExtensions
     /// <param name="source">Source sequence to await.</param>
     extension<TSource>(IObservable<TSource> source)
     {
-        /// <summary>
-        /// Gets an awaiter that returns the last value of the observable sequence or throws an exception if the sequence is empty.
-        /// This operation subscribes to the observable sequence, making it hot.
-        /// </summary>
+        /// <summary>Subscribes immediately and returns an awaiter for the last value, throwing if the sequence is empty.</summary>
         /// <returns>A final signal awaiter.</returns>
-        /// <exception cref="ArgumentExceptionHelper">source.</exception>
+        /// <exception cref="ArgumentExceptionHelper"><paramref name="source"/> is <see langword="null"/>.</exception>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public IAwaitSignal<TSource> GetAwaiter() =>
             Signal.RunAsync(source);
 
-        /// <summary>
-        /// Gets an awaiter that returns the last value of the observable sequence or throws an exception if the sequence is empty.
-        /// This operation subscribes to the observable sequence, making it hot.
-        /// </summary>
-        /// <param name="cancellationToken">Cancellation token.</param>
-        /// <returns>
-        /// A final signal awaiter.
-        /// </returns>
-        /// <exception cref="ArgumentExceptionHelper">source.</exception>
+        /// <summary>Subscribes immediately and returns an awaiter for the last value, throwing if the sequence is empty.</summary>
+        /// <param name="cancellationToken">Token that cancels the await and disposes the subscription.</param>
+        /// <returns>A final signal awaiter.</returns>
+        /// <exception cref="ArgumentExceptionHelper"><paramref name="source"/> is <see langword="null"/>.</exception>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public IAwaitSignal<TSource> GetAwaiter(CancellationToken cancellationToken) =>
             Signal.RunAsync(source, cancellationToken);

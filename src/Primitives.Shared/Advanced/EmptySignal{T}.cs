@@ -10,34 +10,34 @@ namespace ReactiveUI.Primitives.Reactive.Advanced;
 namespace ReactiveUI.Primitives.Advanced;
 #endif
 
-/// <summary>Represents the EmptySignal class.</summary>
-/// <typeparam name="T">The T type.</typeparam>
+/// <summary>Completes without emitting a value, delivering completion on the supplied sequencer.</summary>
+/// <typeparam name="T">The value type.</typeparam>
 [System.Diagnostics.DebuggerDisplay("EmptySignal: Scheduler = {_scheduler}")]
 public sealed class EmptySignal<T> : IRequireCurrentThread<T>
 {
-    /// <summary>Stores state for the signal implementation.</summary>
+    /// <summary>The sequencer that delivers completion.</summary>
     private readonly ISequencer _scheduler;
 
     /// <summary>Initializes a new instance of the <see cref="EmptySignal{T}"/> class.</summary>
-    /// <param name="scheduler">The scheduler value.</param>
+    /// <param name="scheduler">The sequencer that delivers completion.</param>
     public EmptySignal(ISequencer scheduler) => _scheduler = scheduler;
 
-    /// <summary>Executes the IsRequiredSubscribeOnCurrentThread operation.</summary>
-    /// <returns>The result.</returns>
+    /// <summary>Reports that subscription needs no current-thread dispatch.</summary>
+    /// <returns>Always <see langword="false"/>.</returns>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public bool IsRequiredSubscribeOnCurrentThread() => false;
 
-    /// <summary>Executes the Subscribe operation.</summary>
-    /// <param name="observer">The observer value.</param>
-    /// <returns>The result.</returns>
+    /// <summary>Subscribes the observer and arranges its completion.</summary>
+    /// <param name="observer">The downstream observer.</param>
+    /// <returns>The disposable that cancels a completion not yet delivered.</returns>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public IDisposable Subscribe(IObserver<T> observer) =>
         SignalSubscription.Subscribe(observer, false, SubscribeCore);
 
-    /// <summary>Executes the SubscribeCore operation.</summary>
-    /// <param name="observer">The observer value.</param>
-    /// <param name="cancel">The cancel value.</param>
-    /// <returns>The result.</returns>
+    /// <summary>Completes the observer inline on the immediate sequencer, otherwise schedules the completion.</summary>
+    /// <param name="observer">The downstream observer.</param>
+    /// <param name="cancel">The outer subscription handle.</param>
+    /// <returns>The disposable that cancels a scheduled completion.</returns>
     private IDisposable SubscribeCore(IObserver<T> observer, IDisposable cancel)
     {
         observer = new GuardedWitness<T>(observer, cancel);

@@ -9,6 +9,10 @@ using ReactiveUI.Primitives.Advanced;
 namespace ReactiveUI.Primitives.Concurrency;
 
 /// <summary>MAUI dispatcher sequencer that coalesces scheduled work through an <see cref="IDispatcher"/>.</summary>
+/// <remarks>
+/// Callbacks run in posted dispatcher batches without inline reentrancy; cancellation suppresses delayed actions without cancelling the
+/// underlying delay.
+/// </remarks>
 /// <seealso cref="ISequencer" />
 [System.Diagnostics.DebuggerDisplay("{DebuggerDisplay,nq}")]
 public sealed class MauiDispatcherSequencer : ISequencer
@@ -61,7 +65,7 @@ public sealed class MauiDispatcherSequencer : ISequencer
             DispatchSequencerState.DelayUntil(dueTimestamp),
             () => DispatchSequencerState.RunIfActive(item));
 
-    /// <summary>Forwards the cached drain callback to the engine.</summary>
+    /// <summary>Runs one queued batch on the coalescing engine.</summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private void RunDrain() => _state.RunDrain();
 }

@@ -11,7 +11,7 @@ namespace ReactiveUI.Primitives.Extensions.Reactive.Operators;
 namespace ReactiveUI.Primitives.Extensions.Operators;
 #endif
 
-/// <summary>Conditionally switches between two schedulers based on a reactive condition.</summary>
+/// <summary>Schedules values per the latest <paramref name="condition"/> value; terminal notifications bypass scheduling.</summary>
 /// <typeparam name="T">The type of elements in the source sequence.</typeparam>
 /// <param name="source">The source observable.</param>
 /// <param name="condition">The reactive condition observable.</param>
@@ -46,7 +46,7 @@ internal sealed class ObserveOnIfObservable<T>(
         return new DisposableBag(sourceSub, conditionSub, sink);
     }
 
-    /// <summary>Sinks the source observable and conditionally observes on different schedulers.</summary>
+    /// <summary>Sink that forwards each value on whichever scheduler the latest condition value selects.</summary>
     /// <param name="downstream">The downstream observer.</param>
     /// <param name="trueScheduler">The scheduler to use when condition is true.</param>
     /// <param name="falseScheduler">The scheduler to use when condition is false.</param>
@@ -67,7 +67,7 @@ internal sealed class ObserveOnIfObservable<T>(
         /// <summary>The scheduler to use when condition is false.</summary>
         private readonly ISequencer _falseScheduler = InvalidOperationExceptionHelper.Check(falseScheduler);
 
-        /// <summary>The current scheduler.</summary>
+        /// <summary>The scheduler chosen by the latest condition value.</summary>
         private ISequencer _currentScheduler = falseScheduler;
 
         /// <summary>The last condition value.</summary>
@@ -79,7 +79,7 @@ internal sealed class ObserveOnIfObservable<T>(
         /// <summary>Whether the sequence is done.</summary>
         private bool _done;
 
-        /// <summary>Gets the condition observer.</summary>
+        /// <summary>Gets a new observer that feeds condition values into this sink.</summary>
         public IObserver<bool> ConditionObserver => new ConditionObserverImpl(this);
 
         /// <inheritdoc/>
@@ -157,7 +157,7 @@ internal sealed class ObserveOnIfObservable<T>(
             }
         }
 
-        /// <summary>Forwards a scheduled value to the downstream observer if the sink is still active.</summary>
+        /// <summary>Forwards a scheduled value downstream unless the sink has terminated.</summary>
         /// <param name="value">The value to forward.</param>
         private void ForwardNext(T value)
         {
@@ -172,7 +172,7 @@ internal sealed class ObserveOnIfObservable<T>(
             _downstream.OnNext(value);
         }
 
-        /// <summary>Observer for condition updates.</summary>
+        /// <summary>Observer that pushes condition values into the sink and ignores the condition's terminal notifications.</summary>
         /// <param name="sink">The owning sink.</param>
         private sealed class ConditionObserverImpl(ObserveOnIfSink sink) : IObserver<bool>
         {

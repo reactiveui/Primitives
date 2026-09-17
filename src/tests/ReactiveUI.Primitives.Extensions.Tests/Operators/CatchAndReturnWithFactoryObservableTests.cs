@@ -6,10 +6,7 @@ using System.Reactive.Subjects;
 
 namespace ReactiveUI.Primitives.Extensions.Tests.Operators;
 
-/// <summary>Edge-case coverage for the factory overload of <c>CatchAndReturn</c>
-/// backed by <c>CatchAndReturnWithFactoryObservable&lt;T, TException&gt;</c> —
-/// matching exception path, non-matching exception passthrough, and
-/// factory-error propagation.</summary>
+/// <summary>Tests exception filtering and fallback factory error propagation.</summary>
 public class CatchAndReturnWithFactoryObservableTests
 {
     /// <summary>Synthetic error message attached to source errors.</summary>

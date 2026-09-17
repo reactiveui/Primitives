@@ -15,12 +15,6 @@ public class UsingAndSwitchIfEmptyEdgeTests
     /// <summary>Sentinel value the fallback observable would emit if it were subscribed.</summary>
     private const int FallbackSentinel = 99;
 
-    /// <summary>How long the scheduler test spins for the resource dispose to land, in milliseconds.</summary>
-    private const int DisposeWaitMilliseconds = 5000;
-
-    /// <summary>Longest a test waits for an asynchronous signal before failing.</summary>
-    private static readonly TimeSpan GuardTimeout = TimeSpan.FromSeconds(5);
-
     /// <summary>Verifies that <c>Using</c> with a null action still emits RxVoid, completes, and disposes the resource.</summary>
     /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
@@ -55,23 +49,17 @@ public class UsingAndSwitchIfEmptyEdgeTests
     [Test]
     public async Task WhenUsingActionWithScheduler_ThenRunsOnScheduler()
     {
+        VirtualClock scheduler = new();
         TrackedDisposable resource = new();
         var ran = false;
-        TaskCompletionSource completed = new(TaskCreationOptions.RunContinuationsAsynchronously);
-        using var sub = resource.Using(_ => ran = true, Sequencer.Default).Subscribe(
+        var completed = false;
+        using var sub = resource.Using(_ => ran = true, scheduler).Subscribe(
             static _ => { },
-            () => completed.TrySetResult());
-        await completed.Task.WaitAsync(GuardTimeout);
+            () => completed = true);
+        await Assert.That(ran).IsFalse();
+        scheduler.Start();
         await Assert.That(ran).IsTrue();
-
-        // OnCompleted is signalled before the resource is disposed on the scheduler
-        // thread, so spin briefly for the dispose to land.
-        var deadline = Environment.TickCount64 + DisposeWaitMilliseconds;
-        while (resource.DisposeCount == 0 && Environment.TickCount64 < deadline)
-        {
-            await Task.Yield();
-        }
-
+        await Assert.That(completed).IsTrue();
         await Assert.That(resource.DisposeCount).IsEqualTo(1);
     }
 

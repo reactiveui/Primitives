@@ -4,9 +4,7 @@
 
 namespace ReactiveUI.Primitives.Extensions.Tests;
 
-/// <summary>Multi-observer and post-terminal coverage for <see cref = "CurrentValueSubject{T}"/>
-/// — copy-on-write growth, mid-array unsubscribe, collapse back to single-observer, late
-/// subscribers after error or completion, and dispose with active observers.</summary>
+/// <summary>Tests multiple subscribers, unsubscribe, late subscribers, and disposal with active observers.</summary>
 public partial class CurrentValueSubjectTests
 {
     /// <summary>Initial value for multi-observer tests.</summary>
@@ -51,8 +49,7 @@ public partial class CurrentValueSubjectTests
         await Assert.That(c).IsCollectionEqualTo([MultiInitialValue, Update]);
     }
 
-    /// <summary>Verifies that going from two observers back to one collapses to the
-    /// single-observer fast path while still broadcasting correctly.</summary>
+    /// <summary>Verifies the surviving observer keeps receiving after the second of two is disposed.</summary>
     /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenSecondObserverDisposedFromPair_ThenSingleObserverStillReceives()
@@ -69,9 +66,7 @@ public partial class CurrentValueSubjectTests
         await Assert.That(b).IsCollectionEqualTo([MultiInitialValue]);
     }
 
-    /// <summary>Disposing the first observer of a 2-observer subject exercises Unsubscribe's
-    /// <c>index == 0 ? existing[1] : existing[0]</c> ternary on the true branch — the surviving
-    /// observer collapses back to the single-observer fast path.</summary>
+    /// <summary>Verifies the surviving observer keeps receiving after the first of two is disposed.</summary>
     /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenFirstObserverOfPairDisposed_ThenSingleSurvivorReceives()
@@ -83,16 +78,13 @@ public partial class CurrentValueSubjectTests
         var subA = subject.Subscribe(a.Add);
         using var subB = subject.Subscribe(b.Add);
 
-        // Dispose subA from the two-observer array; Unsubscribe's `index == 0 ? existing[1] : existing[0]`
-        // ternary picks the true branch, collapsing _observer to subB.
         subA.Dispose();
         subject.OnNext(Update);
         await Assert.That(a).IsCollectionEqualTo([MultiInitialValue]);
         await Assert.That(b).IsCollectionEqualTo([MultiInitialValue, Update]);
     }
 
-    /// <summary>Verifies that disposing the first observer of a 3-observer subject works
-    /// (collapse exercises the index==0 branch of the shrink path).</summary>
+    /// <summary>Verifies the remaining two observers keep receiving after the first of three is disposed.</summary>
     /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenFirstObserverDisposed_ThenOthersStillReceive()
@@ -112,8 +104,7 @@ public partial class CurrentValueSubjectTests
         await Assert.That(c).IsCollectionEqualTo([MultiInitialValue, Update]);
     }
 
-    /// <summary>Verifies that disposing the last observer of a 3-observer subject works
-    /// (collapse exercises the tail-only branch of the shrink path).</summary>
+    /// <summary>Verifies the remaining two observers keep receiving after the last of three is disposed.</summary>
     /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenLastObserverDisposed_ThenOthersStillReceive()
@@ -229,12 +220,7 @@ public partial class CurrentValueSubjectTests
         await Assert.That(values).IsCollectionEqualTo([MultiInitialValue]);
     }
 
-    /// <summary>Verifies the multi-observer Unsubscribe path tolerates a stale dispose —
-    /// after a middle observer is detached from a 4-observer array, disposing its returned
-    /// subscription a second time hits the <c>Array.IndexOf</c> not-found early-return.
-    /// The 4-observer setup keeps <c>_observers</c> non-null after the first dispose (the
-    /// 2-observer setup collapses back to the single-observer fast path, which hits a
-    /// different short-circuit instead of the IndexOf path).</summary>
+    /// <summary>Verifies repeated unsubscribe leaves every remaining observer attached.</summary>
     /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenMultiObserverDisposedTwice_ThenSecondDisposeIsNoOp()

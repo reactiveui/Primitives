@@ -13,7 +13,7 @@ public sealed class GuardedWitnessTests
     /// <summary>Value forwarded through the guard.</summary>
     private const int One = 1;
 
-    /// <summary>Second value used to verify forwarding continues after a value.</summary>
+    /// <summary>The second value, which shows forwarding continues after the first.</summary>
     private const int Two = 2;
 
     /// <summary>Verifies the constructor rejects null arguments.</summary>

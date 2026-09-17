@@ -6,11 +6,7 @@ using System.Runtime.CompilerServices;
 
 namespace ReactiveUI.Primitives.Concurrency;
 
-/// <summary>
-/// Virtual time scheduler that runs scheduled work against a controllable clock. Per-clock arithmetic is supplied
-/// as delegates at construction, so a single sealed type serves every <typeparamref name="TAbsolute"/>/
-/// <typeparamref name="TRelative"/> pairing without an inheritance hierarchy.
-/// </summary>
+/// <summary>Runs scheduled work against a controllable clock using the supplied time arithmetic.</summary>
 /// <typeparam name="TAbsolute">Absolute time representation type.</typeparam>
 /// <typeparam name="TRelative">Relative time representation type.</typeparam>
 [System.Diagnostics.DebuggerDisplay("{DebuggerDisplay,nq}")]
@@ -113,9 +109,7 @@ public sealed class VirtualTimeSequencer<TAbsolute, TRelative> : ISequencer, ISe
         "Design",
         "SST2318:Members should not have identical bodies",
         Justification =
-            "The relative (TimeSpan) and absolute (DateTimeOffset) Schedule overloads forward to _state.Schedule with "
-            + "the same argument names, so the source text matches, but overload resolution binds each to a different "
-            + "_state.Schedule overload by dueTime's type. Both are required by the scheduler contract.")]
+            "The dueTime type binds this body to a different state overload than the relative one it matches textually.")]
     public IDisposable Schedule<TState>(
         TState state,
         DateTimeOffset dueTime,

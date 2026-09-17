@@ -39,15 +39,7 @@ public sealed class TakeWhileWitness<T>(IObserver<T> observer, Func<T, bool> pre
             return;
         }
 
-        try
-        {
-            _observer.OnNext(value);
-        }
-        catch
-        {
-            Dispose();
-            throw;
-        }
+        SinkDelivery.Next(_observer, value, this);
     }
 
     /// <inheritdoc/>
@@ -65,7 +57,7 @@ public sealed class TakeWhileWitness<T>(IObserver<T> observer, Func<T, bool> pre
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void OnCompleted() => Complete();
 
-    /// <summary>Assigns the upstream subscription, disposing it if one is already held.</summary>
+    /// <summary>Assigns the upstream subscription, disposing the incoming one when this sink holds a subscription or has been disposed.</summary>
     /// <param name="subscription">The upstream subscription.</param>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void SetSubscription(IDisposable subscription) => SinkSubscription.Set(ref _subscription, subscription);

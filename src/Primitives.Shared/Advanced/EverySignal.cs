@@ -10,19 +10,16 @@ namespace ReactiveUI.Primitives.Reactive.Advanced;
 namespace ReactiveUI.Primitives.Advanced;
 #endif
 
-/// <summary>
-/// Dedicated signal for the interval timer factory (<c>Every</c>), replacing the self-referencing
-/// <c>CreateSafe</c> closure with a coordinator that reschedules itself through a method group.
-/// </summary>
+/// <summary>Emits an incrementing tick at a fixed interval for the <c>Every</c> factory.</summary>
 /// <param name="period">The interval between ticks.</param>
-/// <param name="scheduler">The sequencer used to schedule ticks.</param>
+/// <param name="scheduler">The sequencer that schedules ticks.</param>
 [System.Diagnostics.DebuggerDisplay("EverySignal: Period = {_period}, Scheduler = {_scheduler}")]
 public sealed class EverySignal(TimeSpan period, ISequencer scheduler) : IRequireCurrentThread<long>
 {
     /// <summary>The interval between ticks.</summary>
     private readonly TimeSpan _period = period;
 
-    /// <summary>The sequencer used to schedule ticks.</summary>
+    /// <summary>The sequencer that schedules ticks.</summary>
     private readonly ISequencer _scheduler = scheduler;
 
     /// <inheritdoc/>
@@ -34,29 +31,16 @@ public sealed class EverySignal(TimeSpan period, ISequencer scheduler) : IRequir
         ArgumentExceptionHelper.ThrowIfNull(observer);
 
         EveryCoordinator coordinator = new(observer, _scheduler, _period);
-        if (!IsRequiredSubscribeOnCurrentThread() || !CurrentThreadSequencer.IsScheduleRequired)
-        {
-            return coordinator.Run();
-        }
-
-        SingleDisposable subscription = new();
-        _ = Sequencer.CurrentThread.Schedule(
-            (subscription, coordinator),
-            static (_, s) =>
-            {
-                s.subscription.Create(s.coordinator.Run());
-                return EmptyDisposable.Instance;
-            });
-        return subscription;
+        return coordinator.Run();
     }
 
-    /// <summary>Reschedules the recurring tick without a captured closure.</summary>
+    /// <summary>Emits each tick and re-arms the schedule for the following one.</summary>
     private sealed class EveryCoordinator : IDisposable
     {
         /// <summary>The downstream observer.</summary>
         private readonly IObserver<long> _observer;
 
-        /// <summary>The sequencer used to schedule ticks.</summary>
+        /// <summary>The sequencer that schedules ticks.</summary>
         private readonly ISequencer _scheduler;
 
         /// <summary>The interval between ticks.</summary>
@@ -73,7 +57,7 @@ public sealed class EverySignal(TimeSpan period, ISequencer scheduler) : IRequir
 
         /// <summary>Initializes a new instance of the <see cref="EveryCoordinator"/> class.</summary>
         /// <param name="observer">The downstream observer.</param>
-        /// <param name="scheduler">The sequencer used to schedule ticks.</param>
+        /// <param name="scheduler">The sequencer that schedules ticks.</param>
         /// <param name="period">The interval between ticks.</param>
         internal EveryCoordinator(IObserver<long> observer, ISequencer scheduler, TimeSpan period)
         {
@@ -100,12 +84,6 @@ public sealed class EverySignal(TimeSpan period, ISequencer scheduler) : IRequir
         private void ScheduleNext() => TimerSlot.Arm(_slot, _scheduler, _period, _tickAction);
 
         /// <summary>Emits the current tick and reschedules unless cancelled.</summary>
-        /// <remarks>
-        /// Disposal is tested before the emit as well as after it. A cancelled subscription must not deliver another
-        /// value, and the sequencer's own cancellation check happens before the item is invoked, not before the
-        /// observer is called. The second test covers an observer that disposes the subscription from inside
-        /// <see cref="IObserver{T}.OnNext"/>, which must stop the recurring schedule rather than re-arm it.
-        /// </remarks>
         private void Tick()
         {
             if (_slot.IsDisposed)
@@ -116,6 +94,8 @@ public sealed class EverySignal(TimeSpan period, ISequencer scheduler) : IRequir
             var tick = _tick;
             _tick++;
             _observer.OnNext(tick);
+
+            // Disposal from OnNext stops future notifications.
             if (_slot.IsDisposed)
             {
                 return;

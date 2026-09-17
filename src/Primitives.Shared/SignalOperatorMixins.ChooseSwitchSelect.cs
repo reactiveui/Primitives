@@ -10,10 +10,7 @@ namespace ReactiveUI.Primitives.Reactive;
 namespace ReactiveUI.Primitives;
 #endif
 
-/// <summary>
-/// Fused projection operators: <c>Choose</c> (filter + map in one sink), <c>SwitchMap</c> (map-to-inner +
-/// switch-to-latest in one sink) and <c>SwitchSelect</c> (the same, skipping null source values).
-/// </summary>
+/// <summary>Fused projection operators that combine filtering or switching with a projection in one sink.</summary>
 public static partial class LinqExtensions
 {
     /// <summary>Fused projection operators for an observable source sequence.</summary>
@@ -21,17 +18,11 @@ public static partial class LinqExtensions
     /// <param name="source">The source observable.</param>
     extension<TIn>(IObservable<TIn> source)
     {
-        /// <summary>
-        /// Projects each source value to an inner observable and mirrors only the latest one — a single fused
-        /// sink in place of <c>Select(selector).Switch()</c>.
-        /// </summary>
+        /// <summary>Projects each source value to an inner observable and mirrors only the latest one - a single fused sink in place of <c>Select(selector).Switch()</c>.</summary>
         /// <typeparam name="TOut">The element type of the projected inner observables.</typeparam>
         /// <param name="selector">Projects each source value to an inner observable.</param>
         /// <returns>An observable that mirrors the latest projected inner observable.</returns>
-        /// <remarks>
-        /// Every source value switches, a null among them included. Skipping nulls, which leaves the active
-        /// inner subscription in place, is <see cref="SwitchSelect{TSource, TResult}"/> instead.
-        /// </remarks>
+        /// <remarks>Null switches the active subscription too; use SwitchSelect to ignore nulls and keep the current subscription.</remarks>
         public IObservable<TOut> SwitchMap<TOut>(Func<TIn, IObservable<TOut>> selector)
         {
             ArgumentExceptionHelper.ThrowIfNull(source);
@@ -41,11 +32,7 @@ public static partial class LinqExtensions
             return new SwitchMapSignal<TIn, TOut>(source, selector);
         }
 
-        /// <summary>
-        /// Maps each source value to a <c>(HasValue, Value)</c> pair and forwards only the values whose
-        /// <c>HasValue</c> is <see langword="true"/> — a single fused sink in place of <c>Where(...).Select(...)</c>.
-        /// Unlike a <c>TOut?</c>-returning projection, the explicit flag lets a non-nullable value type be skipped.
-        /// </summary>
+        /// <summary>Projects each value to a value-and-flag pair and forwards the value only when the flag is true.</summary>
         /// <typeparam name="TOut">The forwarded element type.</typeparam>
         /// <param name="chooser">Maps a source value to <c>(HasValue, Value)</c>; the value is skipped when <c>HasValue</c> is <see langword="false"/>.</param>
         /// <returns>An observable of the chosen values.</returns>
@@ -66,7 +53,7 @@ public static partial class LinqExtensions
     {
         /// <summary>
         /// Filters out null source values, projects each remaining value to an inner observable, and mirrors only the
-        /// latest inner observable — a single fused sink in place of <c>WhereNotNull().Select(selector).Switch()</c>.
+        /// latest inner observable - a single fused sink in place of <c>WhereNotNull().Select(selector).Switch()</c>.
         /// </summary>
         /// <typeparam name="TResult">The element type of the projected inner observables.</typeparam>
         /// <param name="selector">Projects each non-null source value to an inner observable.</param>

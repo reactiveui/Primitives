@@ -86,9 +86,7 @@ public partial class ReactiveExtensionsTests
         const int ExpectedChained = 11;
         List<int> results = [];
 
-        // Single source emission keeps the test deterministic — the operator's downstream
-        // completes once the inner-inner observable completes, so a multi-emission source
-        // would race against the early-completion semantic.
+        // The inner sequence completes the result after this emission.
         using var subscription = Observable.Return(1)
             .SelectManyThen(
                 static x => Observable.Return(x * SampleValue10),
@@ -117,13 +115,13 @@ public partial class ReactiveExtensionsTests
             results.Add,
             () => completed.TrySetResult());
 
-        await completed.Task.WaitAsync(WaitTimeout);
+        await completed.Task;
         await Assert.That(results).Count().IsEqualTo(1);
     }
 
     /// <summary>
     /// Verifies that RunAll on an empty list still emits the terminal <see cref="RxVoid.Default"/> and
-    /// completes — the empty case is vacuously "all sources completed".
+    /// completes - the empty case is vacuously "all sources completed".
     /// </summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]

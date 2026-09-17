@@ -32,14 +32,15 @@ public sealed class FromEnumerableSignal<T> : IRequireCurrentThread<T>, IInlineS
         _cancellationToken = cancellationToken;
     }
 
-    /// <summary>Executes the IsRequiredSubscribeOnCurrentThread operation.</summary>
-    /// <returns><see langword="false"/>.</returns>
+    /// <summary>Indicates whether subscription has to happen on the calling thread.</summary>
+    /// <returns>Always <see langword="false"/>.</returns>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public bool IsRequiredSubscribeOnCurrentThread() => false;
 
-    /// <summary>Executes the Subscribe operation.</summary>
-    /// <param name="observer">The observer value.</param>
-    /// <returns>The subscription.</returns>
+    /// <summary>Enumerates the source into <paramref name="observer"/> on the calling thread, completing it at the end.</summary>
+    /// <param name="observer">The observer to notify.</param>
+    /// <returns>An empty disposable; enumeration has finished by the time this returns.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="observer"/> is <see langword="null"/>.</exception>
     public IDisposable Subscribe(IObserver<T> observer)
     {
         ArgumentExceptionHelper.ThrowIfNull(observer);
@@ -80,11 +81,12 @@ public sealed class FromEnumerableSignal<T> : IRequireCurrentThread<T>, IInlineS
         return EmptyDisposable.Instance;
     }
 
-    /// <summary>Executes the Subscribe operation.</summary>
-    /// <param name="onNext">The onNext value.</param>
-    /// <param name="onError">The onError value.</param>
-    /// <param name="onCompleted">The onCompleted value.</param>
-    /// <returns>The subscription.</returns>
+    /// <summary>Enumerates the source into the callbacks on the calling thread, invoking <paramref name="onCompleted"/> at the end.</summary>
+    /// <param name="onNext">Invoked for each value.</param>
+    /// <param name="onError">Never invoked; enumeration faults propagate to the caller.</param>
+    /// <param name="onCompleted">Invoked once the source is drained, unless cancellation stops enumeration first.</param>
+    /// <returns>An empty disposable; enumeration has finished by the time this returns.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="onNext"/> or <paramref name="onCompleted"/> is <see langword="null"/>.</exception>
     public IDisposable Subscribe(Action<T> onNext, Action<Exception> onError, Action onCompleted)
     {
         ArgumentExceptionHelper.ThrowIfNull(onNext);
@@ -110,9 +112,9 @@ public sealed class FromEnumerableSignal<T> : IRequireCurrentThread<T>, IInlineS
         return EmptyDisposable.Instance;
     }
 
-    /// <summary>Attempts to expose the backing sequence when it is already indexable and cannot be cancelled.</summary>
-    /// <param name="values">The indexable values.</param>
-    /// <returns><see langword="true"/> when values can be read without enumeration allocations.</returns>
+    /// <summary>Exposes the backing sequence directly when it is an indexable list and no cancellation token was supplied.</summary>
+    /// <param name="values">The indexable values, or an empty list when the sequence cannot be exposed.</param>
+    /// <returns><see langword="true"/> when the values can be read without enumerating.</returns>
     public bool TryGetReadOnlyValues(out IReadOnlyList<T> values)
     {
         if (_cancellationToken.CanBeCanceled)

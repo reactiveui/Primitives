@@ -2,6 +2,9 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Runtime.CompilerServices;
+using ReactiveUI.Primitives.Extensions;
+
 #if REACTIVE_SHIM
 namespace ReactiveUI.Primitives.Reactive.Advanced;
 #else
@@ -10,29 +13,37 @@ namespace ReactiveUI.Primitives.Advanced;
 
 /// <summary>Coordinates bounded-concurrency merging of enumerable observable sources.</summary>
 /// <typeparam name="T">The value type.</typeparam>
+/// <remarks>
+/// Deliveries are serialized by a <see cref="SerializedDelivery{T}"/>, and the source enumerable is read by one thread at
+/// a time through a request counter, so no lock is held while the observer or the enumerable runs. A thread that asks
+/// for the next source while another thread is enumerating hands the request over and returns.
+/// </remarks>
 [System.Diagnostics.DebuggerDisplay("MaxConcurrentBlendCoordinator: Active = {_active}, EnumerationCompleted = {_enumerationCompleted}, Done = {_done}")]
 public sealed class MaxConcurrentBlendCoordinator<T> : IDisposable
 {
-    /// <summary>Serializes enumeration, counters, and downstream callbacks.</summary>
-    private readonly Lock _gate = new();
-
-    /// <summary>Active subscriptions and enumerable lifetime.</summary>
+    /// <summary>Active subscriptions.</summary>
     private readonly MultipleDisposable _subscriptions = [];
 
     /// <summary>The downstream observer.</summary>
     private readonly IObserver<T> _observer;
 
+    /// <summary>Serializes downstream deliveries.</summary>
+    private SerializedDelivery<T> _delivery = new();
+
     /// <summary>The source enumerator.</summary>
     private IEnumerator<IObservable<T>>? _enumerator;
+
+    /// <summary>The number of source requests not yet served; the thread that raises it from zero serves them.</summary>
+    private long _requests;
 
     /// <summary>The number of active inner sources.</summary>
     private int _active;
 
-    /// <summary>Whether all enumerable sources have been consumed.</summary>
-    private bool _enumerationCompleted;
+    /// <summary>Whether all enumerable sources have been consumed, as 0 or 1.</summary>
+    private int _enumerationCompleted;
 
-    /// <summary>Whether a terminal notification has been emitted.</summary>
-    private bool _done;
+    /// <summary>Whether a terminal notification has been requested, as 0 or 1.</summary>
+    private int _done;
 
     /// <summary>Initializes a new instance of the <see cref="MaxConcurrentBlendCoordinator{T}"/> class.</summary>
     /// <param name="observer">The downstream observer.</param>
@@ -41,8 +52,7 @@ public sealed class MaxConcurrentBlendCoordinator<T> : IDisposable
     /// <inheritdoc/>
     public void Dispose()
     {
-        var enumerator = _enumerator;
-        _enumerator = null;
+        var enumerator = Interlocked.Exchange(ref _enumerator, null);
         enumerator?.Dispose();
         _subscriptions.Dispose();
     }
@@ -53,112 +63,93 @@ public sealed class MaxConcurrentBlendCoordinator<T> : IDisposable
     /// <returns>The subscription cleanup.</returns>
     public MaxConcurrentBlendCoordinator<T> Run(IEnumerable<IObservable<T>> sources, int maxConcurrent)
     {
-        _enumerator = sources.GetEnumerator();
-
-        for (var i = 0; i < maxConcurrent; i++)
-        {
-            if (!SubscribeNext())
-            {
-                break;
-            }
-        }
-
+        Volatile.Write(ref _enumerator, sources.GetEnumerator());
+        RequestSources(maxConcurrent);
         return this;
     }
 
-    /// <summary>Subscribes to the next enumerable source when one is available.</summary>
+    /// <summary>Subscribes up to the requested number of sources, or hands the request to the thread already enumerating.</summary>
+    /// <param name="count">The number of sources to request.</param>
+    private void RequestSources(long count)
+    {
+        if (Interlocked.Add(ref _requests, count) != count)
+        {
+            return;
+        }
+
+        var missed = count;
+        do
+        {
+            var remaining = missed;
+            while (remaining > 0 && SubscribeNext())
+            {
+                remaining--;
+            }
+
+            missed = Interlocked.Add(ref _requests, -missed);
+        }
+        while (missed != 0);
+    }
+
+    /// <summary>Subscribes to the next enumerable source when one is available; runs only on the thread serving requests.</summary>
     /// <returns><see langword="true"/> when a new inner source was subscribed.</returns>
     private bool SubscribeNext()
     {
-        var next = TakeNextSource(out var failed);
-        if (failed)
+        var enumerator = Volatile.Read(ref _enumerator);
+        if (Volatile.Read(ref _done) != 0)
         {
-            Dispose();
+            DisposeEnumerator();
+            return false;
         }
 
-        if (next is null)
+        if (Volatile.Read(ref _enumerationCompleted) != 0)
         {
             return false;
         }
 
+        IObservable<T>? next;
+        try
+        {
+            if (enumerator?.MoveNext() != true)
+            {
+                Volatile.Write(ref _enumerationCompleted, 1);
+                DisposeEnumerator();
+                TryComplete();
+                return false;
+            }
+
+            next = enumerator.Current;
+        }
+        catch (Exception error) when (!FatalExceptionHelper.IsFatal(error))
+        {
+            OnAnyError(error);
+            return false;
+        }
+
+        if (next is null)
+        {
+            OnAnyError(new InvalidOperationException("Blend source contained null."));
+            return false;
+        }
+
+        _ = Interlocked.Increment(ref _active);
         OnceDisposable inner = new();
         _subscriptions.Add(inner);
         inner.Disposable = next.Subscribe(OnInnerNext, OnAnyError, () => OnInnerCompleted(inner));
         return true;
     }
 
-    /// <summary>Reads the next source from the enumerable under the gate.</summary>
-    /// <param name="failed">Set to <see langword="true"/> when reading the next source failed.</param>
-    /// <returns>The next source, or <see langword="null"/> when no source should be subscribed.</returns>
-    private IObservable<T>? TakeNextSource(out bool failed)
-    {
-        failed = false;
-        lock (_gate)
-        {
-            if (_done || _enumerationCompleted)
-            {
-                return null;
-            }
-
-            var enumerator = _enumerator;
-            try
-            {
-                if (enumerator?.MoveNext() != true)
-                {
-                    _enumerationCompleted = true;
-                    DisposeEnumerator();
-                    TryCompleteCore();
-                    return null;
-                }
-            }
-            catch (Exception error) when (!FatalExceptionHelper.IsFatal(error))
-            {
-                FailCore(error);
-                failed = true;
-                return null;
-            }
-
-            var next = enumerator.Current;
-            if (next is null)
-            {
-                FailCore(new InvalidOperationException("Blend source contained null."));
-                failed = true;
-                return null;
-            }
-
-            _active++;
-            return next;
-        }
-    }
-
-    /// <summary>Forwards an inner value under the serialization gate.</summary>
+    /// <summary>Forwards an inner value, directly when nothing else is delivering.</summary>
     /// <param name="value">The value to forward.</param>
-    private void OnInnerNext(T value)
-    {
-        lock (_gate)
-        {
-            if (!_done)
-            {
-                _observer.OnNext(value);
-            }
-        }
-    }
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private void OnInnerNext(T value) => _delivery.OnNext(_observer, value, new PendingDrain(this));
 
-    /// <summary>Forwards the first terminal error and releases active subscriptions.</summary>
+    /// <summary>Forwards the first terminal error; the subscriptions are released once it is delivered.</summary>
     /// <param name="error">The error to forward.</param>
     private void OnAnyError(Exception error)
     {
-        lock (_gate)
-        {
-            if (_done)
-            {
-                return;
-            }
-
-            FailCore(error);
-        }
-
-        Dispose();
+        Volatile.Write(ref _done, 1);
+        _delivery.OnError(error, new PendingDrain(this));
     }
 
     /// <summary>Completes one inner source and starts another if possible.</summary>
@@ -166,46 +157,52 @@ public sealed class MaxConcurrentBlendCoordinator<T> : IDisposable
     private void OnInnerCompleted(OnceDisposable inner)
     {
         _ = _subscriptions.Remove(inner);
-
-        lock (_gate)
-        {
-            if (_done)
-            {
-                return;
-            }
-
-            _active--;
-            TryCompleteCore();
-        }
-
-        _ = SubscribeNext();
-    }
-
-    /// <summary>Marks the coordinator failed and forwards the error. Caller must hold the gate.</summary>
-    /// <param name="error">The terminal error.</param>
-    private void FailCore(Exception error)
-    {
-        _done = true;
-        _observer.OnError(error);
-    }
-
-    /// <summary>Completes downstream once enumeration and all active sources have completed. Caller must hold the gate.</summary>
-    private void TryCompleteCore()
-    {
-        if (_done || !_enumerationCompleted || _active != 0)
+        if (Volatile.Read(ref _done) != 0)
         {
             return;
         }
 
-        _done = true;
-        _observer.OnCompleted();
+        _ = Interlocked.Decrement(ref _active);
+        TryComplete();
+        RequestSources(1);
+    }
+
+    /// <summary>Delivers completion after enumeration and all active sources finish.</summary>
+    private void TryComplete()
+    {
+        if (Volatile.Read(ref _enumerationCompleted) == 0 || Volatile.Read(ref _active) != 0)
+        {
+            return;
+        }
+
+        Volatile.Write(ref _done, 1);
+        _delivery.OnCompleted(new PendingDrain(this));
+    }
+
+    /// <summary>Releases the subscriptions after the terminal notification, and the enumerator on the thread serving requests.</summary>
+    private void ReleaseAfterTerminal()
+    {
+        _subscriptions.Dispose();
+        RequestSources(1);
     }
 
     /// <summary>Disposes the enumerable source exactly once.</summary>
-    private void DisposeEnumerator()
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private void DisposeEnumerator() => Interlocked.Exchange(ref _enumerator, null)?.Dispose();
+
+    /// <summary>Drains this coordinator's queued notifications for the delivery gate.</summary>
+    /// <param name="Owner">The coordinator.</param>
+    private readonly record struct PendingDrain(MaxConcurrentBlendCoordinator<T> Owner) : IDrainTarget
     {
-        var enumerator = _enumerator;
-        _enumerator = null;
-        enumerator?.Dispose();
+        /// <inheritdoc/>
+        public void Drain()
+        {
+            if (!Owner._delivery.DrainTo(Owner._observer))
+            {
+                return;
+            }
+
+            Owner.ReleaseAfterTerminal();
+        }
     }
 }

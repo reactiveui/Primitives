@@ -12,12 +12,7 @@ namespace ReactiveUI.Primitives.Extensions.Reactive.Operators;
 namespace ReactiveUI.Primitives.Extensions.Operators;
 #endif
 
-/// <summary>
-/// Optimized operator that shares a single timer per <c>(TimeSpan, ISequencer)</c> key.
-/// Replaces the manual <c>ConcurrentDictionary&lt;..., Lazy&lt;SharedTimer&gt;&gt;</c> shape with a stateful
-/// <c>ConcurrentDictionary.GetOrAdd</c> overload that doesn't allocate a
-/// <see cref="Lazy{T}"/> or its factory delegate on the hot path.
-/// </summary>
+/// <summary>Caches and shares one running timer per <c>(TimeSpan, ISequencer)</c> key.</summary>
 internal static class SyncTimerObservable
 {
     /// <summary>The timer cache, keyed by <c>(TimeSpan, ISequencer)</c>.</summary>
@@ -30,7 +25,7 @@ internal static class SyncTimerObservable
 
     /// <summary>Gets a shared timer for the specified period and scheduler.</summary>
     /// <param name="timeSpan">The period.</param>
-    /// <param name="scheduler">The scheduler.</param>
+    /// <param name="scheduler">The sequencer that times each tick.</param>
     /// <returns>A shared observable sequence of timer ticks.</returns>
     internal static IObservable<DateTime> Get(TimeSpan timeSpan, ISequencer scheduler)
     {
@@ -39,13 +34,9 @@ internal static class SyncTimerObservable
         return _timerList.GetOrAdd((timeSpan, scheduler), _create);
     }
 
-    /// <summary>
-    /// A manual implementation of a connectable timer that minimizes allocations and unrolls Rx chains.
-    /// Tick uses a swap-on-write <see cref="IObserver{DateTime}"/> array so the read path is allocation-free
-    /// and lock-free; subscribe / unsubscribe takes the gate and publishes a fresh array.
-    /// </summary>
+    /// <summary>Broadcasts ticks through immutable observer snapshots; subscription changes publish a new snapshot under the gate.</summary>
     /// <param name="timeSpan">The period.</param>
-    /// <param name="scheduler">The scheduler.</param>
+    /// <param name="scheduler">The sequencer that times each tick.</param>
     private sealed class SharedTimer(TimeSpan timeSpan, ISequencer scheduler) : IObservable<DateTime>
     {
         /// <summary>Sentinel empty observer array, shared so unsubscribing the last observer doesn't allocate.</summary>
@@ -54,11 +45,7 @@ internal static class SyncTimerObservable
         /// <summary>The gate for subscribe/unsubscribe writes.</summary>
         private readonly Lock _gate = new();
 
-        /// <summary>
-        /// Snapshot of currently active observers. Replaced (not mutated) on subscribe / unsubscribe under
-        /// <see cref="_gate"/>. The tick path reads this via <c>Volatile.Read</c> with no lock and no
-        /// allocation.
-        /// </summary>
+        /// <summary>Snapshot of active observers, replaced rather than mutated on subscribe and unsubscribe under <see cref="_gate"/> so the tick path can read it without the lock.</summary>
         private IObserver<DateTime>[] _observers = _emptyObservers;
 
         /// <summary>The active timer subscription, or <see langword="null"/> when no observers are attached.</summary>
@@ -87,9 +74,7 @@ internal static class SyncTimerObservable
             return new TimerSubscription(this, observer);
         }
 
-        /// <summary>Ticks every currently-subscribed observer with the scheduler's current time.
-        /// The empty-array short-circuit lives in <see cref="ObserverArrayHelpers.Broadcast{T}"/>
-        /// (excluded from coverage) so this hot path stays branchless on the steady state.</summary>
+        /// <summary>Ticks every currently-subscribed observer with the scheduler's current time.</summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private void Tick() =>
             ObserverArrayHelpers.Broadcast(Volatile.Read(ref _observers), scheduler.Now.DateTime);
@@ -100,29 +85,18 @@ internal static class SyncTimerObservable
         {
             lock (_gate)
             {
-                // TimerSubscription.Dispose's Interlocked guard ensures Remove is called at most
-                // once per subscription, and each subscription's observer was placed in _observers
-                // under this same lock before the disposable was returned — so RemoveOrNull always
-                // locates the observer by construction.
                 var updated = ObserverArrayHelpers.RemoveOrNull(_observers, observer, _emptyObservers)!;
 
                 Volatile.Write(ref _observers, updated);
                 if (ReferenceEquals(updated, _emptyObservers))
                 {
-                    // Subscribe sets _timerSubscription on first add, before the disposable is
-                    // returned; if we reach the "all observers gone" branch, at least one Subscribe
-                    // ran, so _timerSubscription is non-null by construction.
                     _timerSubscription!.Dispose();
                     _timerSubscription = null;
                 }
             }
         }
 
-        /// <summary>
-        /// Per-subscribe disposable. Holding <c>(parent, observer)</c> as fields instead of capturing them in
-        /// a lambda removes the per-subscribe closure allocation that <see cref="ActionDisposable"/> would
-        /// have required.
-        /// </summary>
+        /// <summary>Per-subscribe disposable that detaches its observer from the owning timer exactly once.</summary>
         /// <param name="parent">The owning timer.</param>
         /// <param name="observer">The observer to remove on dispose.</param>
         private sealed class TimerSubscription(SharedTimer parent, IObserver<DateTime> observer) : IDisposable

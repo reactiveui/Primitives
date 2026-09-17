@@ -34,7 +34,18 @@ public class StateSignalTests
     /// <summary>Expected projected read-only state values.</summary>
     private static readonly string[] ExpectedReadOnlyValues = ["v:10", "v:11", "v:11"];
 
-    /// <summary>Covers read-only projection error argument validation.</summary>
+    /// <summary>The debugger display leaves the latest value and observer set intact.</summary>
+    /// <returns>A task representing the asynchronous test.</returns>
+    [Test]
+    public async Task DebuggerDisplay_PreservesSignalState()
+    {
+        using StateSignal<int> signal = new(InitialStateValue);
+        await Assert.That(GetDebuggerDisplay(signal)).IsEqualTo(signal.ToString());
+        await Assert.That(signal.Value).IsEqualTo(InitialStateValue);
+        await Assert.That(signal.HasObservers).IsFalse();
+    }
+
+    /// <summary>A read-only projection rejects a null error.</summary>
     [Test]
     public void ReadOnlyStateProjectionValidatesError()
     {
@@ -43,7 +54,7 @@ public class StateSignalTests
         _ = Assert.Throws<ArgumentNullException>(() => projection.OnError(null!));
     }
 
-    /// <summary>Covers read-only projection selector errors forwarded to current and late subscribers.</summary>
+    /// <summary>A selector error reaches both the current subscribers and later ones.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
     public async Task ReadOnlyStateProjectionForwardsSelectorErrorToLateSubscribers()
@@ -143,11 +154,7 @@ public class StateSignalTests
         await Assert.That(state.IsDisposed).IsTrue();
     }
 
-    /// <summary>
-    /// A state signal that has already completed never replays its value on subscription, so the projection has
-    /// no value to seed from its source. It must fall back to projecting the source's current value directly,
-    /// and then replay that value plus the completion to anyone who subscribes later.
-    /// </summary>
+    /// <summary>A projection created after source completion seeds from its current value and replays completion.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
     public async Task ReadOnlyStateProjectionSeedsItselfFromASourceThatHasAlreadyCompleted()
@@ -165,10 +172,7 @@ public class StateSignalTests
         await Assert.That(late.Errors.Count).IsEqualTo(0);
     }
 
-    /// <summary>
-    /// Once the projection has completed, a source that keeps notifying must not be able to move the projected
-    /// value, complete the subscribers twice, or turn a completed projection into a faulted one.
-    /// </summary>
+    /// <summary>A completed projection ignores later values, completions, and faults from its source.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
     public async Task ReadOnlyStateProjectionIgnoresSourceNotificationsAfterItsTerminal()
@@ -178,8 +182,7 @@ public class StateSignalTests
         Recorder<string> observer = new();
         _ = projection.Subscribe(observer);
 
-        // The projection is its own observer of the source, so driving it directly is what a source that
-        // keeps notifying after the terminal looks like from the projection's side.
+        // Deliver notifications from a source that ignores termination.
         projection.OnCompleted();
         projection.OnCompleted();
         projection.OnNext(UpdatedStateValue);
@@ -191,10 +194,7 @@ public class StateSignalTests
         await Assert.That(observer.Errors.Count).IsEqualTo(0);
     }
 
-    /// <summary>
-    /// Disposing a projection subscription detaches that observer and only that observer; disposing the same
-    /// handle again is a no-op rather than a second detach.
-    /// </summary>
+    /// <summary>Disposing a projection subscription detaches only that observer, and disposing it twice is a no-op.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
     public async Task ReadOnlyStateProjectionStopsFeedingADisposedSubscription()
@@ -215,10 +215,7 @@ public class StateSignalTests
         await Assert.That(attached.Values.SequenceEqual(["v:10", "v:11", "v:12"])).IsTrue();
     }
 
-    /// <summary>
-    /// A disposed projection has thrown its state away, so reading or subscribing to it must fail loudly rather
-    /// than hand back a stale value. Disposing twice must still be safe.
-    /// </summary>
+    /// <summary>A disposed projection rejects reads and subscriptions, and disposing it twice is safe.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
     public async Task DisposedReadOnlyStateProjectionRejectsReadsAndSubscriptions()
@@ -236,6 +233,31 @@ public class StateSignalTests
         source.Value = UpdatedStateValue;
         await Assert.That(source.Value).IsEqualTo(UpdatedStateValue);
     }
+
+#if NET9_0_OR_GREATER
+    /// <summary>Invokes the getter used by the debugger without reflection.</summary>
+    /// <param name="signal">The instance to display.</param>
+    /// <returns>The debugger display text.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static string GetDebuggerDisplay(StateSignal<int> signal) => DebuggerAccessor<int>.Read(signal);
+
+    /// <summary>Matches the target type's generic context required by .NET 9 and later.</summary>
+    /// <typeparam name="T">The signal's value type.</typeparam>
+    private static class DebuggerAccessor<T>
+    {
+        /// <summary>Invokes the getter evaluated by the debugger.</summary>
+        /// <param name="signal">The signal to display.</param>
+        /// <returns>The debugger text.</returns>
+        [UnsafeAccessor(UnsafeAccessorKind.Method, Name = "get_DebuggerDisplay")]
+        internal static extern string Read(StateSignal<T> signal);
+    }
+#else
+    /// <summary>Invokes the getter used by the debugger without reflection.</summary>
+    /// <param name="signal">The instance to display.</param>
+    /// <returns>The debugger display text.</returns>
+    [UnsafeAccessor(UnsafeAccessorKind.Method, Name = "get_DebuggerDisplay")]
+    private static extern string GetDebuggerDisplay(StateSignal<int> signal);
+#endif
 
     /// <summary>Records observer notifications.</summary>
     /// <typeparam name="T">The observed value type.</typeparam>

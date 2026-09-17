@@ -4,14 +4,10 @@
 
 namespace ReactiveUI.Primitives.Extensions;
 
-/// <summary>
-/// Subscribes once and completes the returned <see cref="Task{T}"/> with the first emitted value;
-/// faults the task on source error or on empty completion. Combines the <see cref="TaskCompletionSource{T}"/>
-/// and the IObserver into a single allocation per call.
-/// </summary>
+/// <summary>Bridges the first value of an observable to a <see cref="Task{T}"/>, faulting on source error and on completion without a value.</summary>
 public static class FirstAsTaskHelper
 {
-    /// <summary>Subscribes and resolves a task with the first value.</summary>
+    /// <summary>Subscribes to <paramref name="source"/> and settles the returned task from its first notification, disposing the subscription at that point.</summary>
     /// <typeparam name="T">The element type.</typeparam>
     /// <param name="source">The source observable.</param>
     /// <returns>A task that completes with the first value, faults on error, or faults on empty completion.</returns>
@@ -23,11 +19,11 @@ public static class FirstAsTaskHelper
         return observer.Task;
     }
 
-    /// <summary>Combined TaskCompletionSource + IObserver — one heap allocation per call instead of two.</summary>
+    /// <summary>Observer that settles its own task from the first notification it receives.</summary>
     /// <typeparam name="T">The element type.</typeparam>
     private sealed class FirstWitness<T>() : TaskCompletionSource<T>(TaskCreationOptions.RunContinuationsAsynchronously), IObserver<T>
     {
-        /// <summary>Latches to <c>1</c> once the task has been settled so subsequent callbacks are no-ops.</summary>
+        /// <summary>Latches to <c>1</c> when the task is settled so later callbacks are no-ops.</summary>
         private int _settled;
 
         /// <summary>Gets or sets the source subscription so the first-value path can dispose it on completion.</summary>

@@ -10,12 +10,7 @@ namespace ReactiveUI.Primitives.Extensions.Reactive.Operators;
 namespace ReactiveUI.Primitives.Extensions.Operators;
 #endif
 
-/// <summary>
-/// Projection operator that emits <see cref="RxVoid.Default"/> for every source
-/// element. Replaces the <c>source.Select(_ =&gt; RxVoid.Default)</c> pattern,
-/// avoiding the per-subscription closure allocation that the projection lambda
-/// would otherwise capture.
-/// </summary>
+/// <summary>Replaces each source element with <see cref="RxVoid.Default"/>, leaving error and completion untouched.</summary>
 /// <typeparam name="T">The element type of the source observable (ignored).</typeparam>
 /// <param name="source">The source observable whose values are ignored.</param>
 internal sealed class AsSignalObservable<T>(IObservable<T> source) : IObservable<RxVoid>
@@ -28,7 +23,7 @@ internal sealed class AsSignalObservable<T>(IObservable<T> source) : IObservable
         return source.Subscribe(new AsSignalWitness(observer));
     }
 
-    /// <summary>Forwarding observer that replaces every <see cref="OnNext"/> value with <see cref="RxVoid.Default"/>. Error and completion signals pass through unchanged.</summary>
+    /// <summary>Forwards every source value as <see cref="RxVoid.Default"/>, passing error and completion through unchanged.</summary>
     /// <param name="downstream">The downstream observer.</param>
     private sealed class AsSignalWitness(IObserver<RxVoid> downstream) : IObserver<T>
     {

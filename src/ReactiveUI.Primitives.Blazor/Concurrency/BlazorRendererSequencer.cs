@@ -11,6 +11,7 @@ using ReactiveUI.Primitives.Concurrency;
 namespace ReactiveUI.Primitives.Blazor.Concurrency;
 
 /// <summary>Sequencer that coalesces scheduled work through a Blazor renderer dispatcher delegate.</summary>
+/// <remarks>Callbacks run in posted renderer batches without inline reentrancy; renderer task failures reach UnhandledExceptionHandler.</remarks>
 /// <seealso cref="ISequencer" />
 [System.Diagnostics.DebuggerDisplay("{DebuggerDisplay,nq}")]
 public sealed class BlazorRendererSequencer : ISequencer
@@ -38,11 +39,7 @@ public sealed class BlazorRendererSequencer : ISequencer
     {
     }
 
-    /// <summary>
-    /// Gets or sets the handler for exceptions the renderer task surfaces after the drain is posted.
-    /// When <see langword="null"/>, faults are rethrown on the thread pool instead of being lost as
-    /// unobserved task exceptions.
-    /// </summary>
+    /// <summary>Gets or sets the renderer fault handler, rethrowing faults on the thread pool when null.</summary>
     public Action<Exception>? UnhandledExceptionHandler { get; set; }
 
     /// <inheritdoc/>
@@ -53,7 +50,7 @@ public sealed class BlazorRendererSequencer : ISequencer
 
     /// <summary>Gets the debugger display text.</summary>
     [System.Diagnostics.DebuggerBrowsable(System.Diagnostics.DebuggerBrowsableState.Never)]
-    private string DebuggerDisplay => ToString() ?? string.Empty;
+    private string? DebuggerDisplay => ToString();
 
     /// <inheritdoc/>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -63,35 +60,35 @@ public sealed class BlazorRendererSequencer : ISequencer
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void Schedule(IWorkItem item, long dueTimestamp) => _state.Schedule(item, dueTimestamp);
 
-    /// <summary>Marshals the cached drain callback through the Blazor renderer.</summary>
-    /// <param name="drain">The drain callback.</param>
-    /// <returns><see langword="true"/>, since the renderer always accepts the work.</returns>
-    private bool Post(Action drain)
-    {
-        ObserveFaults(_invokeAsync(drain));
-        return true;
-    }
-
-    /// <summary>Routes renderer-task faults to the handler instead of leaving them unobserved.</summary>
+    /// <summary>Registers fault observation unless the renderer task has already succeeded.</summary>
     /// <param name="task">The renderer task to observe.</param>
-    private void ObserveFaults(Task task)
+    /// <param name="register">Registers the task and its owning sequencer for fault notification.</param>
+    internal void ObserveFaults(Task task, Action<Task, BlazorRendererSequencer> register)
     {
         if (task.IsCompletedSuccessfully)
         {
             return;
         }
 
-        _ = task.ContinueWith(
-            static (t, state) => ((BlazorRendererSequencer)state!).HandleFault(t.Exception!.GetBaseException()),
-            this,
-            CancellationToken.None,
-            TaskContinuationOptions.OnlyOnFaulted | TaskContinuationOptions.ExecuteSynchronously,
-            TaskScheduler.Default);
+        register(task, this);
+    }
+
+    /// <summary>Forwards a renderer task's base exception when the task faulted.</summary>
+    /// <param name="task">The renderer task whose state changed.</param>
+    internal void CompleteRendererTask(Task task)
+    {
+        if (!task.IsFaulted)
+        {
+            return;
+        }
+
+        HandleFault(task.Exception!.GetBaseException(), Rethrow);
     }
 
     /// <summary>Hands a fault to the handler, or rethrows it on the thread pool.</summary>
     /// <param name="exception">The observed fault.</param>
-    private void HandleFault(Exception exception)
+    /// <param name="rethrow">The fallback invoked when no fault handler is configured.</param>
+    internal void HandleFault(Exception exception, Action<Exception> rethrow)
     {
         var handler = UnhandledExceptionHandler;
         if (handler is not null)
@@ -100,12 +97,39 @@ public sealed class BlazorRendererSequencer : ISequencer
             return;
         }
 
+        rethrow(exception);
+    }
+
+    /// <summary>Registers notification for a renderer task that faults.</summary>
+    /// <param name="task">The renderer task to observe.</param>
+    /// <param name="sequencer">The owner receiving the fault notification.</param>
+    [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
+    private static void RegisterFaultContinuation(Task task, BlazorRendererSequencer sequencer) =>
+        _ = task.ContinueWith(
+            static (completed, state) => ((BlazorRendererSequencer)state!).CompleteRendererTask(completed),
+            sequencer,
+            CancellationToken.None,
+            TaskContinuationOptions.OnlyOnFaulted | TaskContinuationOptions.ExecuteSynchronously,
+            TaskScheduler.Default);
+
+    /// <summary>Rethrows a fault on the thread pool with its captured stack.</summary>
+    /// <param name="exception">The fault to rethrow.</param>
+    [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
+    private static void Rethrow(Exception exception) =>
         _ = ThreadPool.UnsafeQueueUserWorkItem(
             static state => ((ExceptionDispatchInfo)state!).Throw(),
             ExceptionDispatchInfo.Capture(exception));
+
+    /// <summary>Marshals the cached drain callback through the Blazor renderer.</summary>
+    /// <param name="drain">The drain callback.</param>
+    /// <returns><see langword="true"/>, since the renderer always accepts the work.</returns>
+    private bool Post(Action drain)
+    {
+        ObserveFaults(_invokeAsync(drain), RegisterFaultContinuation);
+        return true;
     }
 
-    /// <summary>Forwards the cached drain callback to the engine.</summary>
+    /// <summary>Runs one queued batch on the coalescing engine.</summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private void RunDrain() => _state.RunDrain();
 }

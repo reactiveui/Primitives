@@ -6,9 +6,7 @@ using System.Reactive.Subjects;
 
 namespace ReactiveUI.Primitives.Extensions.Tests.Operators;
 
-/// <summary>Edge-case coverage for <c>CatchIgnore&lt;TSource, TException&gt;</c> backed by
-/// <c>CatchIgnoreObservable&lt;TSource, TException&gt;</c> — exception filtering and the
-/// action-throws branch.</summary>
+/// <summary>Tests exception filtering and recovery action failures.</summary>
 public class CatchIgnoreObservableTests
 {
     /// <summary>Verifies that <c>CatchIgnore</c> invokes the action and completes on a matching exception.</summary>

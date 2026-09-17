@@ -8,11 +8,7 @@ namespace ReactiveUI.Primitives.Reactive;
 namespace ReactiveUI.Primitives;
 #endif
 
-/// <summary>
-/// Dedicated signals/sinks for the terminal collection operators (CollectList, CollectArray) and
-/// their eager range-backed fast paths, replacing the per-subscription
-/// <c>Signal.CreateSafe(observer =&gt; ...)</c> closures with parameter-holding signals.
-/// </summary>
+/// <summary>Signals backing the terminal collection operators and their eager range fast paths.</summary>
 public static partial class LinqExtensions
 {
     /// <summary>Dedicated signal for <c>CollectList</c>.</summary>
@@ -61,10 +57,6 @@ public static partial class LinqExtensions
 
     /// <summary>Eager range-backed signal for <c>CollectList</c> (no per-value subscription).</summary>
     /// <typeparam name="T">The result element type, which is always <see cref="int"/>.</typeparam>
-    /// <remarks><see cref="RangeSignal"/> is sealed and implements only <see cref="IObservable{T}"/> of
-    /// <see cref="int"/>. Covariance does not apply to a value-type argument, so an
-    /// <see cref="IObservable{T}"/> can only hold a range when <typeparamref name="T"/> is exactly
-    /// <see cref="int"/> — which is what every construction site asserts.</remarks>
     private sealed class RangeListSignal<T> : IObservable<IList<T>>
     {
         /// <summary>The source range.</summary>
@@ -85,6 +77,7 @@ public static partial class LinqExtensions
                 values.Add(_range.Start + i);
             }
 
+            // This helper requires T to be int.
             observer.OnNext((IList<T>)(object)values);
             observer.OnCompleted();
             return EmptyDisposable.Instance;
@@ -93,10 +86,6 @@ public static partial class LinqExtensions
 
     /// <summary>Eager range-backed signal for <c>CollectArray</c> (no per-value subscription).</summary>
     /// <typeparam name="T">The result element type, which is always <see cref="int"/>.</typeparam>
-    /// <remarks><see cref="RangeSignal"/> is sealed and implements only <see cref="IObservable{T}"/> of
-    /// <see cref="int"/>. Covariance does not apply to a value-type argument, so an
-    /// <see cref="IObservable{T}"/> can only hold a range when <typeparamref name="T"/> is exactly
-    /// <see cref="int"/> — which is what every construction site asserts.</remarks>
     private sealed class RangeArraySignal<T> : IObservable<T[]>
     {
         /// <summary>The source range.</summary>
@@ -117,6 +106,7 @@ public static partial class LinqExtensions
                 values[i] = _range.Start + i;
             }
 
+            // This helper requires T to be int.
             observer.OnNext((T[])(object)values);
             observer.OnCompleted();
             return EmptyDisposable.Instance;

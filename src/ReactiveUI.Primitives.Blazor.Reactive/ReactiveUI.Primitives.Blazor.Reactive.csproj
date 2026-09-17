@@ -9,9 +9,7 @@
     <PackageTags>system.reactive;rx;reactive;primitives;blazor;components;subscriptions</PackageTags>
   </PropertyGroup>
 
-  <!-- The coalescing IScheduler base shared by every platform .Reactive package, plus the shared component. -->
   <ItemGroup>
-    <Compile Include="..\Primitives.Platform.Reactive.Shared\**\*.cs" Link="Primitives.Platform.Reactive.Shared\%(RecursiveDir)%(Filename)%(Extension)"/>
     <Compile Include="..\Primitives.Blazor.Shared\**\*.cs" Link="Primitives.Blazor.Shared\%(RecursiveDir)%(Filename)%(Extension)"/>
   </ItemGroup>
 

@@ -2,13 +2,18 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Runtime.CompilerServices;
+using ReactiveUI.Primitives.Advanced;
 using ReactiveUI.Primitives.Disposables;
 
 namespace ReactiveUI.Primitives.Extensions.Operators;
 
-/// <summary>Wraps elements in a synchronization context that waits for a disposal signal before proceeding to the next element.</summary>
+/// <summary>Pairs each source value with an independent disposable acknowledgement handle.</summary>
 /// <typeparam name="T">The type of elements in the source sequence.</typeparam>
 /// <param name="source">The source observable.</param>
+/// <remarks>The handles are independent: the producer does not wait on one, and one value's handle does not gate the next.
+/// An undisposed handle leaves only its own acknowledgement pending, so a subscriber that ignores the handle still receives
+/// every value and the terminal notification.</remarks>
 public sealed class SynchronizeAsyncObservable<T>(IObservable<T> source) : IObservable<(T Value, IDisposable Sync)>
 {
     /// <inheritdoc/>
@@ -22,12 +27,16 @@ public sealed class SynchronizeAsyncObservable<T>(IObservable<T> source) : IObse
         return new DisposableBag(sub, sink);
     }
 
-    /// <summary>The sink for the <see cref="SynchronizeAsyncObservable{T}"/>.</summary>
+    /// <summary>Observer that pairs each value with a new acknowledgement handle and forwards the pair downstream.</summary>
     /// <param name="downstream">The downstream observer.</param>
-    private sealed class SynchronizeAsyncSink(IObserver<(T Value, IDisposable Sync)> downstream) : IObserver<T>, IDisposable
+    /// <remarks>Deliveries are serialized, and no lock is held while the observer runs.</remarks>
+    internal sealed class SynchronizeAsyncSink(IObserver<(T Value, IDisposable Sync)> downstream) : IObserver<T>, IDisposable
     {
-        /// <summary>The gate for state access.</summary>
+        /// <summary>Guards the flags; never held while the observer runs.</summary>
         private readonly Lock _gate = new();
+
+        /// <summary>Serializes downstream deliveries.</summary>
+        private SerializedDelivery<(T Value, IDisposable Sync)> _delivery = new();
 
         /// <summary>Whether the sink has completed.</summary>
         private bool _done;
@@ -36,7 +45,7 @@ public sealed class SynchronizeAsyncObservable<T>(IObservable<T> source) : IObse
         private bool _disposed;
 
         /// <inheritdoc/>
-        /// <param name="value">The value.</param>
+        /// <param name="value">The value to forward.</param>
         public void OnNext(T value)
         {
             lock (_gate)
@@ -47,8 +56,6 @@ public sealed class SynchronizeAsyncObservable<T>(IObservable<T> source) : IObse
                 }
             }
 
-            // Implementation note: The original used 'new Continuation().Lock(item, observer)'.
-            // This is complex and stateful, so we maintain that logic in a way that respects sequentiality.
             _ = ProcessAsync(value);
         }
 
@@ -63,8 +70,9 @@ public sealed class SynchronizeAsyncObservable<T>(IObservable<T> source) : IObse
                 }
 
                 _done = true;
-                downstream.OnError(error);
             }
+
+            _delivery.OnError(error, new PendingDrain(this));
         }
 
         /// <inheritdoc/>
@@ -78,8 +86,9 @@ public sealed class SynchronizeAsyncObservable<T>(IObservable<T> source) : IObse
                 }
 
                 _done = true;
-                downstream.OnCompleted();
             }
+
+            _delivery.OnCompleted(new PendingDrain(this));
         }
 
         /// <inheritdoc/>
@@ -91,51 +100,37 @@ public sealed class SynchronizeAsyncObservable<T>(IObservable<T> source) : IObse
             }
         }
 
-        /// <summary>
-        /// Processes the value. Pushes <c>(value, signal)</c> downstream and waits for the consumer
-        /// to dispose the signal. The fast path (consumer disposes synchronously inside <c>OnNext</c>)
-        /// returns a completed task without allocating a state machine or <see cref="TaskCompletionSource"/>;
-        /// the slow path (consumer defers disposal) lazily promotes the signal to a TCS-backed gate.
-        /// </summary>
+        /// <summary>Delivers the value with a fresh acknowledgement signal and returns the task that the signal's disposal completes.</summary>
         /// <param name="value">The value to process.</param>
         /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
         private Task ProcessAsync(T value)
         {
             SyncSignal signal = new();
-            downstream.OnNext((value, signal));
+            _delivery.OnNext(downstream, (value, signal), new PendingDrain(this));
             return signal.WaitForDisposeAsync();
         }
 
-        /// <summary>
-        /// Per-emission gate: the downstream receives this handle as <c>Sync</c>. The producer
-        /// calls <see cref="WaitForDisposeAsync"/> after pushing the value; synchronous disposal
-        /// short-circuits to <see cref="Task.CompletedTask"/> with no TCS allocation. Late
-        /// (asynchronous) disposal lazily allocates a single <see cref="TaskCompletionSource"/>.
-        /// </summary>
-        private sealed class SyncSignal : IDisposable
+        /// <summary>Delivers the queued notifications to the downstream observer.</summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private void DrainPending() => _ = _delivery.DrainTo(downstream);
+
+        /// <summary>Drains this sink's queued notifications for the delivery gate.</summary>
+        /// <param name="Owner">The sink.</param>
+        private readonly record struct PendingDrain(SynchronizeAsyncSink Owner) : IDrainTarget
         {
-            /// <summary>The lazily-created completion source; only allocated on the slow path.</summary>
+            /// <inheritdoc/>
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public void Drain() => Owner.DrainPending();
+        }
+
+        /// <summary>Acknowledgement handle for one emission whose disposal completes that emission's wait task.</summary>
+        internal sealed class SyncSignal : IDisposable
+        {
+            /// <summary>The completion source, created only when the wait cannot finish synchronously.</summary>
             private TaskCompletionSource<bool>? _tcs;
 
             /// <summary>Latches to <c>1</c> on the first dispose so signalling is idempotent.</summary>
             private int _disposed;
-
-            /// <summary>Returns the task the producer should await before completing the emission.
-            /// The producer calls this exactly once per signal, so the TCS is published with a plain
-            /// volatile write rather than a compare-exchange.</summary>
-            /// <returns>A completed task if the consumer already disposed; otherwise the lazily-allocated TCS task.</returns>
-            public Task WaitForDisposeAsync()
-            {
-                if (Volatile.Read(ref _disposed) == 1)
-                {
-                    return Task.CompletedTask;
-                }
-
-                TaskCompletionSource<bool> tcs = new(TaskCreationOptions.RunContinuationsAsynchronously);
-                Volatile.Write(ref _tcs, tcs);
-                CompleteIfDisposedRaced(tcs);
-                return tcs.Task;
-            }
 
             /// <inheritdoc/>
             public void Dispose()
@@ -148,13 +143,24 @@ public sealed class SynchronizeAsyncObservable<T>(IObservable<T> source) : IObse
                 Volatile.Read(ref _tcs)?.TrySetResult(true);
             }
 
-            /// <summary>Self-completes the just-published TCS if a dispose raced ahead of the publish and could
-            /// not see it, so the producer's await never hangs.</summary>
+            /// <summary>Returns the disposal task; the producer must call this exactly once per emission.</summary>
+            /// <returns>A completed task when the handle has been disposed; otherwise the task that its disposal completes.</returns>
+            internal Task WaitForDisposeAsync()
+            {
+                if (Volatile.Read(ref _disposed) == 1)
+                {
+                    return Task.CompletedTask;
+                }
+
+                TaskCompletionSource<bool> tcs = new(TaskCreationOptions.RunContinuationsAsynchronously);
+                Volatile.Write(ref _tcs, tcs);
+                CompleteIfDisposedRaced(tcs);
+                return tcs.Task;
+            }
+
+            /// <summary>Completes the acknowledgement task when disposal overlaps its publication.</summary>
             /// <param name="tcs">The completion source published for this signal.</param>
-            /// <remarks>The set-result is only taken when a concurrent dispose latches between the publish and
-            /// this re-check; isolated here and excluded from coverage as race-only.</remarks>
-            [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
-            private void CompleteIfDisposedRaced(TaskCompletionSource<bool> tcs)
+            internal void CompleteIfDisposedRaced(TaskCompletionSource<bool> tcs)
             {
                 if (Volatile.Read(ref _disposed) != 1)
                 {

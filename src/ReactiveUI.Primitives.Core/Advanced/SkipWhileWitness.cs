@@ -19,7 +19,7 @@ public sealed class SkipWhileWitness<T>(IObserver<T> observer, Func<T, bool> pre
     /// <summary>The predicate that determines whether to keep skipping values.</summary>
     private readonly Func<T, bool> _predicate = predicate;
 
-    /// <summary>A value indicating whether the skipping phase is still active.</summary>
+    /// <summary>A value indicating whether the sink is in its skipping phase.</summary>
     private bool _skipping = true;
 
     /// <summary>The upstream subscription.</summary>
@@ -34,15 +34,7 @@ public sealed class SkipWhileWitness<T>(IObserver<T> observer, Func<T, bool> pre
         }
 
         _skipping = false;
-        try
-        {
-            _observer.OnNext(value);
-        }
-        catch
-        {
-            Dispose();
-            throw;
-        }
+        SinkDelivery.Next(_observer, value, this);
     }
 
     /// <inheritdoc/>
@@ -53,7 +45,7 @@ public sealed class SkipWhileWitness<T>(IObserver<T> observer, Func<T, bool> pre
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void OnCompleted() => SinkTerminal.Complete(_observer, this);
 
-    /// <summary>Assigns the upstream subscription, disposing it if one is already held.</summary>
+    /// <summary>Assigns the upstream subscription, disposing the incoming one when this sink holds a subscription or has been disposed.</summary>
     /// <param name="subscription">The upstream subscription.</param>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void SetSubscription(IDisposable subscription) => SinkSubscription.Set(ref _subscription, subscription);

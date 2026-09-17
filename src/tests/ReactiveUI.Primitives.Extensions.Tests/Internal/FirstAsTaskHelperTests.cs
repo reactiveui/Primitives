@@ -9,7 +9,7 @@ using ReactiveUI.Primitives.Disposables;
 
 namespace ReactiveUI.Primitives.Extensions.Tests.Internal;
 
-/// <summary>Tests for <see cref = "FirstAsTaskHelper"/> covering the error and empty-completion paths that <c>ToHotTask</c> does not otherwise exercise.</summary>
+/// <summary>Tests for <see cref = "FirstAsTaskHelper"/>, the first-value task bridge.</summary>
 public class FirstAsTaskHelperTests
 {
     /// <summary>Message of an error the helper is expected to drop.</summary>
@@ -60,11 +60,7 @@ public class FirstAsTaskHelperTests
     public void WhenSourceNull_ThenThrowsArgumentNullException() =>
         Assert.Throws<ArgumentNullException>(static () => FirstAsTaskHelper.FirstAsTask<int>(null!));
 
-    /// <summary>Exercises the <c>Subscription?.Dispose()</c> null-conditional branch on
-    /// <c>FirstWitness.OnNext</c> — a source that synchronously emits during <c>Subscribe</c>
-    /// (such as <see cref = "Observable.Return{T}(T)"/>) fires <c>OnNext</c> before
-    /// <c>FirstAsTask</c> can assign the <c>Subscription</c> property, so the latch-and-cleanup
-    /// path sees <c>Subscription == null</c> and the conditional dispose becomes a no-op.</summary>
+    /// <summary>Verifies a source that emits during <c>Subscribe</c>, before the subscription handle exists, completes the task with that value.</summary>
     /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenSyncSourceEmits_ThenSubscriptionNullBranchSkipsDispose()
@@ -74,7 +70,7 @@ public class FirstAsTaskHelperTests
         await Assert.That(await task).IsEqualTo(Sentinel);
     }
 
-    /// <summary>Verifies emissions arriving after the task has already settled are silently ignored.</summary>
+    /// <summary>Verifies emissions arriving after the task settles are silently ignored.</summary>
     /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenSubjectErrorsThenLaterEvents_ThenLaterEventsIgnored()
@@ -89,8 +85,7 @@ public class FirstAsTaskHelperTests
         await Assert.That(ex).IsSameReferenceAs(expected);
     }
 
-    /// <summary>Verifies that a second <c>OnNext</c> arriving via a non-cooperative source
-    /// (one that does not stop emitting after the first value) is dropped by the latch.</summary>
+    /// <summary>Verifies a second <c>OnNext</c> from a source that keeps emitting is dropped by the latch.</summary>
     /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenSecondOnNextAfterFirstSettled_ThenIgnored()
@@ -132,8 +127,7 @@ public class FirstAsTaskHelperTests
         await Assert.That(() => task).ThrowsExactly<InvalidOperationException>();
     }
 
-    /// <summary>Test observable that captures its subscriber so tests can directly invoke
-    /// non-cooperative double-terminal sequences against <c>FirstAsTaskHelper</c>'s observer.</summary>
+    /// <summary>Observable that captures its subscriber so a test can notify it directly.</summary>
     /// <typeparam name = "T">The element type.</typeparam>
     private sealed class InvasiveObservable<T> : IObservable<T>
     {

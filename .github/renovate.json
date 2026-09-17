@@ -50,6 +50,59 @@
             "matchPackageNames": [
                 "/^BenchmarkDotNet(\\.|$)/"
             ]
+        },
+        {
+            "description": "These packages carry one pin per target framework, each conditioned on the framework it belongs to, so an update has to stay inside its own band. Offered the next major, a net8 pin would resolve a net10 package behind a net8 condition.",
+            "matchManagers": [
+                "nuget"
+            ],
+            "matchPackageNames": [
+                "/^Microsoft\\.AspNetCore\\./",
+                "/^Microsoft\\.Extensions\\./",
+                "/^Microsoft\\.Maui\\./"
+            ],
+            "matchCurrentVersion": "/^8\\./",
+            "allowedVersions": "<9.0.0"
+        },
+        {
+            "description": "The same, for the net9 band.",
+            "matchManagers": [
+                "nuget"
+            ],
+            "matchPackageNames": [
+                "/^Microsoft\\.AspNetCore\\./",
+                "/^Microsoft\\.Extensions\\./",
+                "/^Microsoft\\.Maui\\./"
+            ],
+            "matchCurrentVersion": "/^9\\./",
+            "allowedVersions": "<10.0.0"
+        },
+        {
+            "description": "The same, for the net10 band.",
+            "matchManagers": [
+                "nuget"
+            ],
+            "matchPackageNames": [
+                "/^Microsoft\\.AspNetCore\\./",
+                "/^Microsoft\\.Extensions\\./",
+                "/^Microsoft\\.Maui\\./"
+            ],
+            "matchCurrentVersion": "/^10\\./",
+            "allowedVersions": "<11.0.0"
+        },
+        {
+            "description": "The net11 band, which is still pre-release. Unstable versions are allowed so these pins can move through preview and rc, and capped so they cannot leave the band.",
+            "matchManagers": [
+                "nuget"
+            ],
+            "matchPackageNames": [
+                "/^Microsoft\\.AspNetCore\\./",
+                "/^Microsoft\\.Extensions\\./",
+                "/^Microsoft\\.Maui\\./"
+            ],
+            "matchCurrentVersion": "/^11\\./",
+            "allowedVersions": "<12.0.0",
+            "ignoreUnstable": false
         }
     ]
 }

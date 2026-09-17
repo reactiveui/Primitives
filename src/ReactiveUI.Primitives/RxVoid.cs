@@ -6,7 +6,7 @@ using System.Runtime.CompilerServices;
 
 namespace ReactiveUI.Primitives;
 
-/// <summary>A Reactive Void.</summary>
+/// <summary>A unit type with exactly one value, carried by sequences that signal an occurrence rather than data.</summary>
 [Serializable]
 [System.Diagnostics.DebuggerDisplay("{DebuggerDisplay,nq}")]
 public readonly struct RxVoid : IEquatable<RxVoid>
@@ -16,16 +16,16 @@ public readonly struct RxVoid : IEquatable<RxVoid>
 
     /// <summary>Gets the debugger display text.</summary>
     [System.Diagnostics.DebuggerBrowsable(System.Diagnostics.DebuggerBrowsableState.Never)]
-    private string DebuggerDisplay => ToString() ?? string.Empty;
+    private string? DebuggerDisplay => ToString();
 
-    /// <summary>Determines whether the two specified <see cref="RxVoid"/> values are not equal. Because <see cref="RxVoid"/> has a single value, this always returns <c>false</c>.</summary>
+    /// <summary>Returns false because all RxVoid values are equal.</summary>
     /// <param name="first">The first <see cref="RxVoid"/> value to compare.</param>
     /// <param name="second">The second <see cref="RxVoid"/> value to compare.</param>
     /// <returns>Because <see cref="RxVoid"/> has a single value, this always returns <c>false</c>.</returns>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static bool operator !=(RxVoid first, RxVoid second) => false;
 
-    /// <summary>Determines whether the two specified <see cref="RxVoid"/> values are equal. Because <see cref="RxVoid"/> has a single value, this always returns <c>true</c>.</summary>
+    /// <summary>Returns true because all RxVoid values are equal.</summary>
     /// <param name="first">The first <see cref="RxVoid"/> value to compare.</param>
     /// <param name="second">The second <see cref="RxVoid"/> value to compare.</param>
     /// <returns>Because <see cref="RxVoid"/> has a single value, this always returns <c>true</c>.</returns>

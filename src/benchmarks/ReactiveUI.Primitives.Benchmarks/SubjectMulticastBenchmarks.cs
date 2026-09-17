@@ -11,8 +11,8 @@ using RxSubject = System.Reactive.Subjects.Subject<int>;
 namespace ReactiveUI.Primitives.Benchmarks;
 
 /// <summary>
-/// Benchmarks fan-out emission throughput: emitting a stream of values into a subject that already has several
-/// observers attached, so the cost is dominated by the per-observer dispatch loop rather than subscription setup.
+/// Benchmarks fan-out emission throughput: emitting a stream of values into a subject with several observers
+/// attached, so the cost is dominated by the per-observer dispatch loop rather than subscription setup.
 /// </summary>
 [MemoryDiagnoser]
 public class SubjectMulticastBenchmarks

@@ -6,16 +6,11 @@ using ReactiveUI.Primitives.Concurrency;
 
 namespace ReactiveUI.Primitives.Extensions.Tests.Operators;
 
-/// <summary>Edge-case coverage for the action-form <c>Start</c> operator backed by
-/// <c>StartActionObservable</c> — synchronous inline path, scheduler dispatch,
-/// and action-throws forwarding.</summary>
+/// <summary>Tests inline and scheduled actions and exception propagation.</summary>
 public class StartActionObservableTests
 {
     /// <summary>Synthetic error message attached to action failures.</summary>
     private const string ActionFailedMessage = "action failed";
-
-    /// <summary>Guard timeout so a hung rendezvous fails this test rather than stalling the run.</summary>
-    private static readonly TimeSpan GuardTimeout = TimeSpan.FromSeconds(5);
 
     /// <summary>Verifies that <c>Start</c> with a null scheduler runs synchronously and completes.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
@@ -39,13 +34,15 @@ public class StartActionObservableTests
     [Test]
     public async Task WhenStartActionWithScheduler_ThenRunsViaScheduler()
     {
+        VirtualClock scheduler = new();
         TaskCompletionSource<bool> completed = new(TaskCreationOptions.RunContinuationsAsynchronously);
         var ran = false;
 
-        using var sub = ReactiveExtensions.Start(() => ran = true, TaskPoolSequencer.Default)
+        using var sub = ReactiveExtensions.Start(() => ran = true, scheduler)
             .Subscribe(static _ => { }, () => completed.TrySetResult(true));
+        scheduler.Start();
 
-        await completed.Task.WaitAsync(GuardTimeout);
+        await completed.Task;
         await Assert.That(ran).IsTrue();
     }
 
@@ -68,13 +65,15 @@ public class StartActionObservableTests
     [Test]
     public async Task WhenStartActionThrowsScheduled_ThenForwardsError()
     {
+        VirtualClock scheduler = new();
         TaskCompletionSource<Exception> faulted = new(TaskCreationOptions.RunContinuationsAsynchronously);
         InvalidOperationException expected = new(ActionFailedMessage);
 
-        using var sub = ReactiveExtensions.Start(() => throw expected, TaskPoolSequencer.Default)
+        using var sub = ReactiveExtensions.Start(() => throw expected, scheduler)
             .Subscribe(static _ => { }, ex => faulted.TrySetResult(ex));
+        scheduler.Start();
 
-        var caught = await faulted.Task.WaitAsync(GuardTimeout);
+        var caught = await faulted.Task;
         await Assert.That(caught).IsSameReferenceAs(expected);
     }
 }

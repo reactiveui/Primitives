@@ -2,14 +2,12 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Diagnostics;
 using System.Runtime.CompilerServices;
 
 namespace ReactiveUI.Primitives.Async;
 
 /// <summary>Provides a set of extension methods for working with asynchronous observable sequences.</summary>
-/// <remarks>The methods in this class enable querying and retrieving elements from asynchronous observables, such
-/// as obtaining the last element or a default value if no elements are found. These extensions are designed to support
-/// asynchronous and cancellation-aware operations on observable sequences.</remarks>
 public static partial class SignalAsyncExtensions
 {
     /// <summary>Last-or-default operators for an observable source sequence.</summary>
@@ -17,10 +15,7 @@ public static partial class SignalAsyncExtensions
     /// <param name="source">The source observable sequence.</param>
     extension<T>(IObservableAsync<T> source)
     {
-        /// <summary>
-        /// Asynchronously returns the last element in the sequence that satisfies the specified predicate, or a default
-        /// value if no such element is found.
-        /// </summary>
+        /// <summary>Asynchronously returns the last element in the sequence that satisfies the specified predicate, or a default value if no such element is found.</summary>
         /// <param name="predicate">A function to test each element for a condition. The method returns the last element for which this
         /// predicate returns <see langword="true"/>.</param>
         /// <param name="defaultValue">The value to return if no element in the sequence satisfies the predicate.</param>
@@ -32,10 +27,7 @@ public static partial class SignalAsyncExtensions
             T? defaultValue) =>
             source.LastOrDefaultAsync(predicate, defaultValue, CancellationToken.None);
 
-        /// <summary>
-        /// Asynchronously returns the last element in the sequence that satisfies the specified predicate, or a default
-        /// value if no such element is found.
-        /// </summary>
+        /// <summary>Asynchronously returns the last element in the sequence that satisfies the specified predicate, or a default value if no such element is found.</summary>
         /// <param name="predicate">A function to test each element for a condition. The method returns the last element for which this
         /// predicate returns <see langword="true"/>.</param>
         /// <param name="defaultValue">The value to return if no element in the sequence satisfies the predicate.</param>
@@ -69,10 +61,7 @@ public static partial class SignalAsyncExtensions
         public ValueTask<T?> LastOrDefaultAsync(CancellationToken cancellationToken) =>
             source.LastOrDefaultAsync(default, cancellationToken);
 
-        /// <summary>
-        /// Asynchronously returns the last element of the sequence, or a specified default value if the sequence
-        /// contains no elements.
-        /// </summary>
+        /// <summary>Asynchronously returns the last element of the sequence, or a specified default value if the sequence contains no elements.</summary>
         /// <param name="defaultValue">The value to return if the sequence is empty.</param>
         /// <returns>A value task that represents the asynchronous operation. The task result contains the last element of the
         /// sequence, or <paramref name="defaultValue"/> if the sequence is empty.</returns>
@@ -80,10 +69,7 @@ public static partial class SignalAsyncExtensions
         public ValueTask<T?> LastOrDefaultAsync(T? defaultValue) =>
             source.LastOrDefaultAsync(defaultValue, CancellationToken.None);
 
-        /// <summary>
-        /// Asynchronously returns the last element of the sequence, or a specified default value if the sequence
-        /// contains no elements.
-        /// </summary>
+        /// <summary>Asynchronously returns the last element of the sequence, or a specified default value if the sequence contains no elements.</summary>
         /// <param name="defaultValue">The value to return if the sequence is empty.</param>
         /// <param name="cancellationToken">A cancellation token that can be used to cancel the asynchronous operation.</param>
         /// <returns>A value task that represents the asynchronous operation. The task result contains the last element of the
@@ -103,16 +89,49 @@ public static partial class SignalAsyncExtensions
     /// <param name="predicate">An optional predicate to filter elements.</param>
     /// <param name="defaultValue">The default value to return if no element matches.</param>
     /// <param name="cancellationToken">A cancellation token for the operation.</param>
+    [DebuggerDisplay("LastOrDefaultTaskWitness: {_witness}")]
     internal sealed class LastOrDefaultTaskWitness<T>(
         Func<T, bool>? predicate,
         T? defaultValue,
-        CancellationToken cancellationToken) : TaskResultWitnessAsyncBase<T, T>(cancellationToken)
+        CancellationToken cancellationToken) : IWitnessAsync<T>
     {
+        /// <summary>Produces and cancels the witness's single result value.</summary>
+        private readonly TaskResultCompletionSource<T> _completion = new(cancellationToken);
+
         /// <summary>The most recently observed matching element, or the default value if no match has been found.</summary>
         private T? _last = defaultValue;
 
+        /// <summary>The notification gate, cancellation link and disposal state.</summary>
+        private WitnessAsyncState _witness;
+
         /// <inheritdoc/>
-        protected override ValueTask OnNextAsyncCore(T value, CancellationToken cancellationToken)
+        ref WitnessAsyncState IWitnessState.Witness => ref _witness;
+
+        /// <inheritdoc/>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public ValueTask OnNextAsync(T value, CancellationToken cancellationToken) =>
+            WitnessAsync.OnNextAsync(this, value, cancellationToken);
+
+        /// <inheritdoc/>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public ValueTask OnErrorResumeAsync(Exception error, CancellationToken cancellationToken) =>
+            WitnessAsync.OnErrorResumeAsync(this, error, cancellationToken);
+
+        /// <inheritdoc/>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public ValueTask OnCompletedAsync(Result result) => WitnessAsync.OnCompletedAsync(this, result);
+
+        /// <inheritdoc/>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public ValueTask DisposeAsync() => WitnessAsync.DisposeStateAsync(this);
+
+        /// <summary>Asynchronously waits for the witness to produce its result value.</summary>
+        /// <returns>A task representing the asynchronous operation, containing the result value.</returns>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        internal ValueTask<T> AwaitResultAsync() => _completion.AwaitResultAsync(this);
+
+        /// <inheritdoc/>
+        ValueTask IWitnessAsync<T>.OnNextAsyncCore(T value, CancellationToken cancellationToken)
         {
             if (predicate is not null && !predicate(value))
             {
@@ -125,11 +144,13 @@ public static partial class SignalAsyncExtensions
         }
 
         /// <inheritdoc/>
-        protected override ValueTask OnErrorResumeAsyncCore(Exception error, CancellationToken cancellationToken) =>
-            SetExceptionAndDisposeAsync(error);
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        ValueTask IWitnessAsync<T>.OnErrorResumeAsyncCore(Exception error, CancellationToken cancellationToken) =>
+            _completion.SetExceptionAndDisposeAsync(error, this);
 
         /// <inheritdoc/>
-        protected override ValueTask OnCompletedAsyncCore(Result result) =>
-            result.IsSuccess ? SetResultAndDisposeAsync(_last!) : SetExceptionAndDisposeAsync(result.Exception);
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        ValueTask IWitnessAsync<T>.OnCompletedAsyncCore(Result result) =>
+            _completion.CompleteAndDisposeAsync(result, _last!, this);
     }
 }

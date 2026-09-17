@@ -18,9 +18,6 @@ public class FactorySignalTests
     /// <summary>Hoisted source array used by tests (was inline literal).</summary>
     private static readonly int[] Sequence123 = [1, 2, 3];
 
-    /// <summary>Maximum time a test waits for an emission or completion to arrive.</summary>
-    private static readonly TimeSpan WaitTimeout = TimeSpan.FromSeconds(5);
-
     /// <summary>Delay before the single-shot timer fires.</summary>
     private static readonly TimeSpan SingleShotDelay = TimeSpan.FromMilliseconds(50);
 
@@ -85,15 +82,12 @@ public class FactorySignalTests
     public void WhenThrowNullException_ThenThrowsArgumentNull() =>
         Assert.Throws<ArgumentNullException>(static () => SignalAsync.Throw<int>(null!));
 
-    /// <summary>Tests Never does not complete within timeout.</summary>
+    /// <summary>Tests Never neither emits nor completes, including once its subscription token is cancelled.</summary>
     /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
-    public async Task WhenNever_ThenDoesNotCompleteWithinTimeout()
+    public async Task WhenNever_ThenNeitherEmitsNorCompletes()
     {
-        const int ObservationWindowMs = 250;
-        const int SubscriptionCancelledAfterMs = 200;
-
-        using CancellationTokenSource cts = new(SubscriptionCancelledAfterMs);
+        using CancellationTokenSource cts = new();
         List<int> items = [];
         var completed = false;
         await using var sub = await SignalAsync.Never<int>().SubscribeAsync(
@@ -109,7 +103,7 @@ public class FactorySignalTests
                 return default;
             },
             cts.Token);
-        await Task.Delay(ObservationWindowMs);
+        await cts.CancelAsync();
         await Assert.That(items).IsEmpty();
         await Assert.That(completed).IsFalse();
     }
@@ -253,7 +247,7 @@ public class FactorySignalTests
                 await observer.OnNextAsync(SentinelValue, ct);
                 await observer.OnCompletedAsync(Result.Success);
             },
-            NewThreadTaskScheduler.Instance);
+            new CustomTaskScheduler());
         var result = await source.ToListAsync();
         await Assert.That(result).IsCollectionEqualTo([SentinelValue]);
     }
@@ -263,10 +257,13 @@ public class FactorySignalTests
     [Test]
     public async Task WhenTimerSingleShot_ThenEmitsSingleValueAfterDelay()
     {
-        var source = SignalAsync.Timer(SingleShotDelay);
-        var result = await source.ToListAsync();
-        await Assert.That(result).Count().IsEqualTo(1);
-        await Assert.That(result[0]).IsEqualTo(0L);
+        ManualTimeProvider time = new();
+        var pending = SignalAsync.Timer(SingleShotDelay, time).ToListAsync().AsTask();
+        var timer = await time.NextTimerAsync();
+        await Assert.That(pending.IsCompleted).IsFalse();
+        await Assert.That(timer.DueTime).IsEqualTo(SingleShotDelay);
+        timer.Fire();
+        await Assert.That(await pending).IsCollectionEqualTo([0L]);
     }
 
     /// <summary>Tests Timer periodic emits multiple values.</summary>
@@ -274,19 +271,16 @@ public class FactorySignalTests
     [Test]
     public async Task WhenTimerPeriodic_ThenEmitsMultipleValues()
     {
-        const int MinimumEmissions = 2;
-        var source = SignalAsync.Timer(PeriodicDueTime, PeriodicInterval);
-        List<long> items = [];
-        await using var sub = await source.SubscribeAsync(
-            (x, _) =>
-            {
-                items.Add(x);
-                return default;
-            },
-            null);
-        await AsyncTestHelpers.WaitForConditionAsync(() => items.Count >= MinimumEmissions, WaitTimeout);
-        await Assert.That(items.Count).IsGreaterThanOrEqualTo(MinimumEmissions);
-        await Assert.That(items[0]).IsEqualTo(0L);
+        const int SecondValue = 2;
+        ManualTimeProvider time = new();
+        var pending = SignalAsync.Timer(PeriodicDueTime, PeriodicInterval, time).Take(SecondValue).ToListAsync().AsTask();
+        var first = await time.NextTimerAsync();
+        await Assert.That(first.DueTime).IsEqualTo(PeriodicDueTime);
+        first.Fire();
+        var second = await time.NextTimerAsync();
+        await Assert.That(second.DueTime).IsEqualTo(PeriodicInterval);
+        second.Fire();
+        await Assert.That(await pending).IsCollectionEqualTo([0L, 1L]);
     }
 
     /// <summary>Tests Timer negative due time.</summary>
@@ -370,41 +364,11 @@ public class FactorySignalTests
     [Test]
     public async Task WhenIntervalWithCancellation_ThenEmitsPeriodicValues()
     {
-        const int MinimumEmissions = 2;
-        using CancellationTokenSource cts = new();
-        var source = SignalAsync.Interval(PeriodicInterval);
-        List<long> items = [];
-        var received = false;
-        try
-        {
-            await using var sub = await source.SubscribeAsync(
-                (x, _) =>
-                {
-                    items.Add(x);
-                    return default;
-                },
-                null,
-                null,
-                cts.Token);
-            received = await AsyncTestHelpers.WaitForConditionAsync(
-                () => items.Count >= MinimumEmissions,
-                WaitTimeout);
-        }
-        catch (OperationCanceledException)
-        {
-            // Expected — the timer is being cancelled to end the test.
-        }
-        finally
-        {
-            if (!cts.IsCancellationRequested)
-            {
-                await cts.CancelAsync();
-            }
-        }
-
-        await Assert.That(received).IsTrue();
-        await Assert.That(items.Count).IsGreaterThanOrEqualTo(MinimumEmissions);
-        await Assert.That(items[0]).IsEqualTo(1L);
+        const int SecondValue = 2;
+        const long SecondTick = 1L;
+        ManualTimeProvider time = new();
+        var values = await time.RunAsync(SignalAsync.Interval(PeriodicInterval, time).Take(SecondValue).ToListAsync().AsTask());
+        await Assert.That(values).IsCollectionEqualTo([0L, SecondTick]);
     }
 
     /// <summary>Tests that enumerable subscription emission returns early when the cancellation token is already cancelled.</summary>
@@ -422,7 +386,7 @@ public class FactorySignalTests
         });
         const int RangeCount = 100;
         EnumerableSubscription<int> subscription = new(observer, Enumerable.Range(0, RangeCount));
-        await subscription.ExecuteAsync(cts.Token);
+        await TaskSignalState.ExecuteAsync(subscription, observer, cts.Token);
         await subscription.DisposeAsync();
         await Assert.That(items).IsEmpty();
     }
@@ -450,7 +414,7 @@ public class FactorySignalTests
             IgnoredResult.Of(received.TrySetResult());
             return default;
         });
-        await received.Task.WaitAsync(WaitTimeout);
+        await received.Task;
         await Assert.That(items).IsCollectionEqualTo([EmittedValue]);
     }
 
@@ -471,7 +435,7 @@ public class FactorySignalTests
                 return default;
             },
             cts.Token);
-        await received.Task.WaitAsync(WaitTimeout);
+        await received.Task;
         await Assert.That(items).IsCollectionEqualTo([EmittedValue]);
     }
 
@@ -492,7 +456,7 @@ public class FactorySignalTests
             ex => errorReceived.TrySetResult(ex),
             null,
             CancellationToken.None);
-        var error = await errorReceived.Task.WaitAsync(WaitTimeout);
+        var error = await errorReceived.Task;
         await Assert.That(error).IsTypeOf<InvalidOperationException>();
         await Assert.That(error.Message).IsEqualTo("sync error");
     }
@@ -508,7 +472,7 @@ public class FactorySignalTests
             null,
             r => completedResult.TrySetResult(r),
             CancellationToken.None);
-        var result = await completedResult.Task.WaitAsync(WaitTimeout);
+        var result = await completedResult.Task;
         await Assert.That(result.IsSuccess).IsTrue();
     }
 
@@ -524,7 +488,7 @@ public class FactorySignalTests
             null,
             _ => completed.TrySetResult(),
             CancellationToken.None);
-        await completed.Task.WaitAsync(WaitTimeout);
+        await completed.Task;
         await Assert.That(items).IsCollectionEqualTo([SentinelValue]);
     }
 
@@ -544,7 +508,7 @@ public class FactorySignalTests
             static _ => { },
             null,
             CancellationToken.None);
-        await received.Task.WaitAsync(WaitTimeout);
+        await received.Task;
         await Assert.That(items).IsCollectionEqualTo([SentinelValue]);
     }
 

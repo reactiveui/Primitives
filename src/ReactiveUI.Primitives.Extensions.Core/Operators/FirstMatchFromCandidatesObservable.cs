@@ -7,14 +7,7 @@ using ReactiveUI.Primitives.Disposables;
 
 namespace ReactiveUI.Primitives.Extensions.Operators;
 
-/// <summary>
-/// Walks a list of candidate keys sequentially, projects each into a one-shot
-/// <see cref="IObservable{TRaw}"/>, transforms the raw value into
-/// <typeparamref name="TResult"/>, and emits the first transformed value that
-/// satisfies a predicate. Errors from individual projections are swallowed (the
-/// candidate is skipped and the next one is tried). If no candidate matches,
-/// completes with a single emission of <paramref name="fallback"/>.
-/// </summary>
+/// <summary>Projects candidates sequentially, skipping projection errors, and emits the first matching transformed value or the fallback.</summary>
 /// <typeparam name="TKey">The type of candidate keys.</typeparam>
 /// <typeparam name="TRaw">The element type emitted by the projected observable.</typeparam>
 /// <typeparam name="TResult">The final result type emitted to downstream after transformation.</typeparam>
@@ -24,11 +17,7 @@ namespace ReactiveUI.Primitives.Extensions.Operators;
 /// <param name="predicate">Returns <see langword="true"/> when a transformed value is a match.</param>
 /// <param name="fallback">Value emitted when no candidate matches.</param>
 /// <remarks>
-/// <c>Subscribe</c> attempts a synchronous fast-path first: each candidate's
-/// projection is subscribed and, if it completes inline, the transform + predicate
-/// run on the calling thread with zero additional allocations. Only when a
-/// projection completes asynchronously does the method allocate an
-/// <see cref="AsyncSink"/> to track state across callbacks.
+/// Synchronous projections run on the subscribing thread; asynchronous projections continue the candidate search from their callbacks.
 /// </remarks>
 public sealed class FirstMatchFromCandidatesObservable<TKey, TRaw, TResult>(
     IReadOnlyList<TKey> candidates,
@@ -56,15 +45,11 @@ public sealed class FirstMatchFromCandidatesObservable<TKey, TRaw, TResult>(
         return TrySyncLoop(observer);
     }
 
-    /// <summary>Tries a synchronous fast-path: each candidate's projected observable is.</summary>
+    /// <summary>Walks the candidates inline, handing over to an asynchronous sink at the first projection that does not complete synchronously.</summary>
     /// <param name="observer">The downstream observer.</param>
     /// <returns>The subscription disposable.</returns>
     internal IDisposable TrySyncLoop(IObserver<TResult> observer)
     {
-        // Reuse the SyncProbe across subscribes on the current thread — it carries no
-        // per-call state once Reset, so per-cycle allocation drops to zero on the fast path.
-        // Race-free because the field is [ThreadStatic]; only one TrySyncLoop call can be
-        // active per thread.
         var probe = SyncProbe.RentForCurrentThread();
 
         for (var i = 0; i < candidates.Count; i++)
@@ -117,16 +102,11 @@ public sealed class FirstMatchFromCandidatesObservable<TKey, TRaw, TResult>(
         return EmptyDisposable.Instance;
     }
 
-    /// <summary>
-    /// Lightweight observer used by the synchronous fast-path to capture the result
-    /// of a one-shot projection. Cheaper than <see cref="AsyncSink"/> because it
-    /// carries no downstream observer, candidate list, or delegate references.
-    /// </summary>
+    /// <summary>Observer that records one candidate projection's synchronous outcome - value, error and termination - for the inline walk.</summary>
     [System.Diagnostics.DebuggerDisplay("SyncProbe: Completed = {Completed}, HasValue = {HasValue}, Value = {Value}")]
     public sealed class SyncProbe : IObserver<TRaw>
     {
-        /// <summary>Per-thread cached instance; rented on entry to <c>TrySyncLoop</c> and returned
-        /// on exit. Eliminates the per-subscribe allocation on the fast path.</summary>
+        /// <summary>Per-thread cached instance, rented on entry to the inline walk and returned on exit.</summary>
         [ThreadStatic]
         private static SyncProbe? _cached;
 
@@ -188,10 +168,7 @@ public sealed class FirstMatchFromCandidatesObservable<TKey, TRaw, TResult>(
         }
     }
 
-    /// <summary>
-    /// Heap-allocated observer used when a projection does not complete synchronously.
-    /// Walks the remaining candidates via async callbacks.
-    /// </summary>
+    /// <summary>Observer that walks the remaining candidates through asynchronous callbacks once a projection defers.</summary>
     /// <param name="downstream">The downstream observer.</param>
     /// <param name="candidates">The candidate list.</param>
     /// <param name="project">The projection delegate.</param>
@@ -217,7 +194,7 @@ public sealed class FirstMatchFromCandidatesObservable<TKey, TRaw, TResult>(
         /// <summary>One once the sink has reached a terminal state; otherwise zero.</summary>
         private int _done;
 
-        /// <summary>Whether the sink is currently looping through candidates.</summary>
+        /// <summary>Set while <see cref="TryNext"/> walks candidates, so a terminal callback from the inline subscription does not advance the walk re-entrantly.</summary>
         private bool _looping;
 
         /// <inheritdoc/>
@@ -262,7 +239,6 @@ public sealed class FirstMatchFromCandidatesObservable<TKey, TRaw, TResult>(
 
             if (_looping)
             {
-                // Sync-completion is captured by the probe in TryNext; nothing more to do here.
                 return;
             }
 
@@ -274,10 +250,7 @@ public sealed class FirstMatchFromCandidatesObservable<TKey, TRaw, TResult>(
             "Design",
             "SST2318:Members should not have identical bodies",
             Justification =
-                "A candidate that completes and a candidate that errors both mean the same thing to this operator: that "
-                + "candidate produced no match, so advance to the next one. OnError and OnCompleted are distinct "
-                + "IObserver<T> channels that deliberately share this advance logic; collapsing them would lose the "
-                + "ability to give candidate errors their own policy later.")]
+                "A candidate that errors and a candidate that completes both mean no match, so both channels advance the walk.")]
         public void OnCompleted()
         {
             if (Volatile.Read(ref _done) != 0)
@@ -287,7 +260,6 @@ public sealed class FirstMatchFromCandidatesObservable<TKey, TRaw, TResult>(
 
             if (_looping)
             {
-                // Sync-completion is captured by the probe in TryNext; nothing more to do here.
                 return;
             }
 
@@ -346,12 +318,7 @@ public sealed class FirstMatchFromCandidatesObservable<TKey, TRaw, TResult>(
             downstream.OnCompleted();
         }
 
-        /// <summary>
-        /// Forwarding <see cref="IObserver{TRaw}"/> that records whether a terminal notification
-        /// (<c>OnError</c> / <c>OnCompleted</c>) arrived synchronously during the <c>Subscribe</c>
-        /// call. Replaces the prior <c>_syncCompleted</c> field on <see cref="AsyncSink"/> so the
-        /// flag is per-iteration state rather than instance state.
-        /// </summary>
+        /// <summary>Forwards notifications and records synchronous termination for one candidate subscription.</summary>
         /// <param name="inner">The wrapped sink that receives forwarded notifications.</param>
         private sealed class CompletionFlagWitness(IObserver<TRaw> inner) : IObserver<TRaw>
         {

@@ -70,9 +70,7 @@ internal static class ArgumentOutOfRangeExceptionHelper
         "Design",
         "SST2318:Members should not have identical bodies",
         Justification =
-            "A type-specialized polyfill overload. The bounds-check body is identical to the int overload only "
-            + "because the guard shape is the same; the two operate on different value types (int vs TimeSpan) and "
-            + "cannot forward to one another. This mirrors the BCL's per-type ThrowIfLessThan overloads.")]
+            "The int and TimeSpan overloads guard different value types and cannot forward to one another.")]
     internal static void ThrowIfLessThan(
         TimeSpan value,
         TimeSpan other,

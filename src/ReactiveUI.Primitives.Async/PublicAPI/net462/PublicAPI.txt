@@ -13,7 +13,6 @@ namespace ReactiveUI.Primitives.Async
         public static ReactiveUI.Primitives.Async.AsyncContext From(ReactiveUI.Primitives.Concurrency.ISequencer scheduler) { }
         public static ReactiveUI.Primitives.Async.AsyncContext From(System.Threading.SynchronizationContext synchronizationContext) { }
         public static ReactiveUI.Primitives.Async.AsyncContext From(System.Threading.Tasks.TaskScheduler taskScheduler) { }
-        [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
         public static ReactiveUI.Primitives.Async.AsyncContext GetCurrent() { }
         [System.Diagnostics.DebuggerDisplay("AsyncContextSwitcherAwaitable: IsCompleted = {IsCompleted}, ForceYielding = {ForceYielding}")]
         public readonly record struct AsyncContextSwitcherAwaitable : System.IEquatable<ReactiveUI.Primitives.Async.AsyncContext.AsyncContextSwitcherAwaitable>, System.Runtime.CompilerServices.INotifyCompletion
@@ -102,10 +101,14 @@ namespace ReactiveUI.Primitives.Async.Advanced
         System.Threading.Tasks.ValueTask<System.IAsyncDisposable> ReactiveUI.Primitives.Async.IObservableAsync<ReactiveUI.Primitives.RxVoid>.SubscribeAsync(ReactiveUI.Primitives.Async.IObserverAsync<ReactiveUI.Primitives.RxVoid> observer, System.Threading.CancellationToken cancellationToken) { }
     }
     [System.Diagnostics.DebuggerDisplay("FromAsyncSubscription: Factory = {Factory}")]
-    public sealed class FromAsyncSubscription : ReactiveUI.Primitives.Async.Advanced.TaskSignalSubscription<ReactiveUI.Primitives.RxVoid>
+    public sealed class FromAsyncSubscription : ReactiveUI.Primitives.Async.Advanced.ITaskSignalJob<ReactiveUI.Primitives.RxVoid>, System.IAsyncDisposable
     {
         public FromAsyncSubscription(ReactiveUI.Primitives.Async.IObserverAsync<ReactiveUI.Primitives.RxVoid> observer, System.Func<System.Threading.CancellationToken, System.Threading.Tasks.ValueTask> factory) { }
-        protected override System.Threading.Tasks.ValueTask ExecuteAsyncCore(ReactiveUI.Primitives.Async.IObserverAsync<ReactiveUI.Primitives.RxVoid> observer, System.Threading.CancellationToken cancellationToken) { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public System.Threading.Tasks.ValueTask DisposeAsync() { }
+        System.Threading.Tasks.ValueTask ReactiveUI.Primitives.Async.Advanced.ITaskSignalJob<ReactiveUI.Primitives.RxVoid>.ExecuteAsync(ReactiveUI.Primitives.Async.IObserverAsync<ReactiveUI.Primitives.RxVoid> observer, System.Threading.CancellationToken cancellationToken) { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public void Start() { }
     }
     [System.Diagnostics.DebuggerDisplay("StartSignal: Action = {Action}, TaskScheduler = {TaskScheduler}")]
     public sealed class StartSignal : ReactiveUI.Primitives.Async.IObservableAsync<ReactiveUI.Primitives.RxVoid>
@@ -114,10 +117,14 @@ namespace ReactiveUI.Primitives.Async.Advanced
         System.Threading.Tasks.ValueTask<System.IAsyncDisposable> ReactiveUI.Primitives.Async.IObservableAsync<ReactiveUI.Primitives.RxVoid>.SubscribeAsync(ReactiveUI.Primitives.Async.IObserverAsync<ReactiveUI.Primitives.RxVoid> observer, System.Threading.CancellationToken cancellationToken) { }
     }
     [System.Diagnostics.DebuggerDisplay("StartSubscription: Action = {Action}, TaskScheduler = {TaskScheduler}")]
-    public sealed class StartSubscription : ReactiveUI.Primitives.Async.Advanced.TaskSignalSubscription<ReactiveUI.Primitives.RxVoid>
+    public sealed class StartSubscription : ReactiveUI.Primitives.Async.Advanced.ITaskSignalJob<ReactiveUI.Primitives.RxVoid>, System.IAsyncDisposable
     {
         public StartSubscription(ReactiveUI.Primitives.Async.IObserverAsync<ReactiveUI.Primitives.RxVoid> observer, System.Action action, System.Threading.Tasks.TaskScheduler? taskScheduler) { }
-        protected override System.Threading.Tasks.ValueTask ExecuteAsyncCore(ReactiveUI.Primitives.Async.IObserverAsync<ReactiveUI.Primitives.RxVoid> observer, System.Threading.CancellationToken cancellationToken) { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public System.Threading.Tasks.ValueTask DisposeAsync() { }
+        System.Threading.Tasks.ValueTask ReactiveUI.Primitives.Async.Advanced.ITaskSignalJob<ReactiveUI.Primitives.RxVoid>.ExecuteAsync(ReactiveUI.Primitives.Async.IObserverAsync<ReactiveUI.Primitives.RxVoid> observer, System.Threading.CancellationToken cancellationToken) { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public void Start() { }
     }
     [System.Diagnostics.DebuggerDisplay("TaskToAsyncSignal: SourceTask = {SourceTask}")]
     public sealed class TaskToAsyncSignal : ReactiveUI.Primitives.Async.IObservableAsync<ReactiveUI.Primitives.RxVoid>
@@ -126,10 +133,14 @@ namespace ReactiveUI.Primitives.Async.Advanced
         System.Threading.Tasks.ValueTask<System.IAsyncDisposable> ReactiveUI.Primitives.Async.IObservableAsync<ReactiveUI.Primitives.RxVoid>.SubscribeAsync(ReactiveUI.Primitives.Async.IObserverAsync<ReactiveUI.Primitives.RxVoid> observer, System.Threading.CancellationToken cancellationToken) { }
     }
     [System.Diagnostics.DebuggerDisplay("ToAsyncSignalSubscription: SourceTask = {SourceTask}, Completed = {SourceTask.IsCompleted}")]
-    public sealed class ToAsyncSignalSubscription : ReactiveUI.Primitives.Async.Advanced.TaskSignalSubscription<ReactiveUI.Primitives.RxVoid>
+    public sealed class ToAsyncSignalSubscription : ReactiveUI.Primitives.Async.Advanced.ITaskSignalJob<ReactiveUI.Primitives.RxVoid>, System.IAsyncDisposable
     {
         public ToAsyncSignalSubscription(ReactiveUI.Primitives.Async.IObserverAsync<ReactiveUI.Primitives.RxVoid> observer, System.Threading.Tasks.Task task) { }
-        protected override System.Threading.Tasks.ValueTask ExecuteAsyncCore(ReactiveUI.Primitives.Async.IObserverAsync<ReactiveUI.Primitives.RxVoid> observer, System.Threading.CancellationToken cancellationToken) { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public System.Threading.Tasks.ValueTask DisposeAsync() { }
+        System.Threading.Tasks.ValueTask ReactiveUI.Primitives.Async.Advanced.ITaskSignalJob<ReactiveUI.Primitives.RxVoid>.ExecuteAsync(ReactiveUI.Primitives.Async.IObserverAsync<ReactiveUI.Primitives.RxVoid> observer, System.Threading.CancellationToken cancellationToken) { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public void Start() { }
     }
     [System.Diagnostics.DebuggerDisplay("WitnessOnSignal: Source = {Source}, ForceYielding = {ForceYielding}")]
     public sealed class WitnessOnSignal<T> : ReactiveUI.Primitives.Async.IObservableAsync<T>
@@ -138,11 +149,20 @@ namespace ReactiveUI.Primitives.Async.Advanced
         System.Threading.Tasks.ValueTask<System.IAsyncDisposable> ReactiveUI.Primitives.Async.IObservableAsync<T>.SubscribeAsync(ReactiveUI.Primitives.Async.IObserverAsync<T> observer, System.Threading.CancellationToken cancellationToken) { }
     }
     [System.Diagnostics.DebuggerDisplay("WitnessOnWitness: AsyncContext = {AsyncContext}, ForceYielding = {ForceYielding}")]
-    public sealed class WitnessOnWitness<T> : ReactiveUI.Primitives.Async.WitnessAsync<T>
+    public sealed class WitnessOnWitness<T> : ReactiveUI.Primitives.Async.IWitnessAsync<T>
     {
         public WitnessOnWitness(ReactiveUI.Primitives.Async.IObserverAsync<T> observer, ReactiveUI.Primitives.Async.AsyncContext asyncContext, bool forceYielding) { }
-        protected override System.Threading.Tasks.ValueTask OnCompletedAsyncCore(ReactiveUI.Primitives.Result result) { }
-        protected override System.Threading.Tasks.ValueTask OnErrorResumeAsyncCore(System.Exception error, System.Threading.CancellationToken cancellationToken) { }
-        protected override System.Threading.Tasks.ValueTask OnNextAsyncCore(T value, System.Threading.CancellationToken cancellationToken) { }
+        ReactiveUI.Primitives.Async.WitnessAsyncState ReactiveUI.Primitives.Async.IWitnessState.Witness { get; }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public System.Threading.Tasks.ValueTask DisposeAsync() { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public System.Threading.Tasks.ValueTask OnCompletedAsync(ReactiveUI.Primitives.Result result) { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public System.Threading.Tasks.ValueTask OnErrorResumeAsync(System.Exception error, System.Threading.CancellationToken cancellationToken) { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public System.Threading.Tasks.ValueTask OnNextAsync(T value, System.Threading.CancellationToken cancellationToken) { }
+        System.Threading.Tasks.ValueTask ReactiveUI.Primitives.Async.IWitnessAsync<T>.OnCompletedAsyncCore(ReactiveUI.Primitives.Result result) { }
+        System.Threading.Tasks.ValueTask ReactiveUI.Primitives.Async.IWitnessAsync<T>.OnErrorResumeAsyncCore(System.Exception error, System.Threading.CancellationToken cancellationToken) { }
+        System.Threading.Tasks.ValueTask ReactiveUI.Primitives.Async.IWitnessAsync<T>.OnNextAsyncCore(T value, System.Threading.CancellationToken cancellationToken) { }
     }
 }

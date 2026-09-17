@@ -8,14 +8,14 @@ namespace ReactiveUI.Primitives.Reactive.Advanced;
 namespace ReactiveUI.Primitives.Advanced;
 #endif
 
-/// <summary>Scheduled enumerable-backed signal used by observable conversion overloads.</summary>
+/// <summary>Emits the values of an enumerable on the supplied sequencer, then completes.</summary>
 /// <typeparam name="T">The value type.</typeparam>
 [System.Diagnostics.DebuggerDisplay("ScheduledEnumerableSignal: Values = {Values}, Scheduler = {Scheduler}")]
 public sealed class ScheduledEnumerableSignal<T> : IObservable<T>
 {
     /// <summary>Initializes a new instance of the <see cref="ScheduledEnumerableSignal{T}"/> class.</summary>
     /// <param name="values">The values to emit.</param>
-    /// <param name="scheduler">The scheduler used to enumerate and emit the values.</param>
+    /// <param name="scheduler">The sequencer that enumerates and emits the values.</param>
     public ScheduledEnumerableSignal(IEnumerable<T> values, ISequencer scheduler)
     {
         ArgumentExceptionHelper.ThrowIfNull(values);
@@ -29,7 +29,7 @@ public sealed class ScheduledEnumerableSignal<T> : IObservable<T>
     /// <summary>Gets the values to emit.</summary>
     private IEnumerable<T> Values { get; }
 
-    /// <summary>Gets the scheduler used to enumerate and emit the values.</summary>
+    /// <summary>Gets the sequencer that enumerates and emits the values.</summary>
     private ISequencer Scheduler { get; }
 
     /// <inheritdoc/>

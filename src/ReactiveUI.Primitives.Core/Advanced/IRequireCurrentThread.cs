@@ -4,13 +4,11 @@
 
 namespace ReactiveUI.Primitives.Advanced;
 
-/// <summary>Marks a sequencer that must run on the current thread.</summary>
-/// <typeparam name="T">The Type.</typeparam>
+/// <summary>A signal that reports whether it has to be subscribed to from the calling thread.</summary>
+/// <typeparam name="T">The value type.</typeparam>
 public interface IRequireCurrentThread<out T> : IObservable<T>
 {
-    /// <summary>Determines whether [is required subscribe on current thread].</summary>
-    /// <returns>
-    ///   <c>true</c> if [is required subscribe on current thread]; otherwise, <c>false</c>.
-    /// </returns>
+    /// <summary>Indicates whether subscription has to happen on the calling thread.</summary>
+    /// <returns><see langword="true"/> when the signal is bound to the subscribing thread.</returns>
     bool IsRequiredSubscribeOnCurrentThread();
 }

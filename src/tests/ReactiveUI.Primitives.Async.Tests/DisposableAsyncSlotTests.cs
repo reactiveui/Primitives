@@ -112,6 +112,24 @@ public class DisposableAsyncSlotTests
     public async Task WhenDisposedSlotMarkerDisposed_ThenCompletesSilently() =>
         await Assert.That(static async () => await DisposableAsyncSlot.DisposedSentinel.DisposeAsync()).ThrowsNothing();
 
+    /// <summary>Verifies a stale observation retries against the current slot state.</summary>
+    /// <param name="closed">Whether the slot closed after the observation.</param>
+    /// <returns>A task representing the asynchronous test.</returns>
+    [Test]
+    [Arguments(false)]
+    [Arguments(true)]
+    public async Task WhenSwapObservationIsStale_ThenUsesCurrentSlot(bool closed)
+    {
+        RecordingAsyncDisposable previous = new();
+        RecordingAsyncDisposable incoming = new();
+        var slot = closed ? DisposableAsyncSlot.DisposedSentinel : previous;
+        await DisposableAsyncSlot.SwapObservedAsync(ref slot, incoming, null);
+        await Assert.That(incoming.DisposeCount).IsEqualTo(closed ? 1 : 0);
+        await Assert.That(previous.DisposeCount).IsEqualTo(closed ? 0 : 1);
+        await Assert.That(slot).IsSameReferenceAs(closed ? DisposableAsyncSlot.DisposedSentinel : incoming);
+        await DisposableAsyncSlot.DisposeAsync(ref slot);
+    }
+
     /// <summary>Recording async disposable that counts disposals.</summary>
     private sealed class RecordingAsyncDisposable : IAsyncDisposable
     {

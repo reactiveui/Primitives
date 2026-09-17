@@ -10,7 +10,7 @@ namespace ReactiveUI.Primitives.Extensions.Reactive.Operators;
 namespace ReactiveUI.Primitives.Extensions.Operators;
 #endif
 
-/// <summary>Debounces a sequence until a condition becomes true for an element.</summary>
+/// <summary>Emits a value inline when <paramref name="condition"/> holds for it, otherwise after <paramref name="debounce"/> of quiet.</summary>
 /// <typeparam name="T">The type of elements in the source sequence.</typeparam>
 /// <param name="source">The source observable.</param>
 /// <param name="debounce">The debounce duration.</param>
@@ -35,49 +35,46 @@ internal sealed class DebounceUntilObservable<T>(
         return new DisposableBag(subscription, sink);
     }
 
-    /// <summary>
-    /// Sink for the debounce-until observable. Composes <see cref="TimerSinkState{T}"/> for the
-    /// shared gate / timer / done-flag plumbing so this class only carries the OnNext logic.
-    /// </summary>
+    /// <summary>Sink that forwards a value inline when the condition holds and otherwise after the debounce window.</summary>
     /// <param name="downstream">The downstream observer.</param>
     /// <param name="debounce">The debounce duration.</param>
     /// <param name="condition">The condition.</param>
-    /// <param name="scheduler">The scheduler.</param>
+    /// <param name="scheduler">The sequencer that times the debounce window.</param>
+    /// <remarks>
+    /// Notifications are queued in order under the gate and delivered after it is released, so neither the observer nor the
+    /// condition runs while the gate is held.
+    /// </remarks>
     private sealed class DebounceUntilSink(
         IObserver<T> downstream,
         TimeSpan debounce,
         Func<T, bool> condition,
         ISequencer scheduler) : IObserver<T>, IDisposable
     {
-        /// <summary>The gate protecting state transitions and downstream notification.</summary>
+        /// <summary>Guards the terminal state and the order notifications are queued in.</summary>
         private readonly Lock _gate = new();
 
-        /// <summary>Shared timer / done-flag plumbing.</summary>
+        /// <summary>The timer slot, terminal state and serialized delivery shared with the operator's handlers.</summary>
         private readonly TimerSinkState<T> _state = new(downstream);
 
         /// <inheritdoc/>
         public void OnNext(T value)
         {
+            if (!condition(value))
+            {
+                _state.Timer.Disposable = scheduler.Schedule(
+                    (Sink: this, Value: value),
+                    debounce,
+                    static state => state.Sink.EmitDebounced(state.Value));
+                return;
+            }
+
             lock (_gate)
             {
-                if (_state.Done)
-                {
-                    return;
-                }
-
-                if (condition(value))
-                {
-                    _state.Timer.Disposable = null;
-                    downstream.OnNext(value);
-                }
-                else
-                {
-                    _state.Timer.Disposable = scheduler.Schedule(
-                        (Sink: this, Value: value),
-                        debounce,
-                        static state => state.Sink.EmitDebounced(state.Value));
-                }
+                _state.Timer.Disposable = null;
+                _ = _state.QueueLocked(value);
             }
+
+            _state.Flush();
         }
 
         /// <inheritdoc/>
@@ -85,8 +82,10 @@ internal sealed class DebounceUntilObservable<T>(
         {
             lock (_gate)
             {
-                _state.HandleErrorLocked(error);
+                _ = _state.QueueErrorLocked(error);
             }
+
+            _state.Flush();
         }
 
         /// <inheritdoc/>
@@ -94,8 +93,10 @@ internal sealed class DebounceUntilObservable<T>(
         {
             lock (_gate)
             {
-                _state.HandleCompletedLocked();
+                _ = _state.QueueCompletedLocked();
             }
+
+            _state.Flush();
         }
 
         /// <inheritdoc/>
@@ -107,17 +108,16 @@ internal sealed class DebounceUntilObservable<T>(
             }
         }
 
-        /// <summary>Emits a debounced value when the sink is still active.</summary>
+        /// <summary>Queues and delivers the debounced value unless the sink has terminated.</summary>
         /// <param name="value">The debounced value.</param>
         private void EmitDebounced(T value)
         {
             lock (_gate)
             {
-                if (!_state.Done)
-                {
-                    downstream.OnNext(value);
-                }
+                _ = _state.QueueLocked(value);
             }
+
+            _state.Flush();
         }
     }
 }

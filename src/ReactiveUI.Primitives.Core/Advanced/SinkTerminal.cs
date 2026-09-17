@@ -4,12 +4,7 @@
 
 namespace ReactiveUI.Primitives.Advanced;
 
-/// <summary>
-/// Shared terminal-forwarding helpers for single-source sink observers. Each sink computes a
-/// single result and forwards it downstream exactly once, disposing itself afterwards. Centralizing the
-/// forward-then-dispose <c>using</c> scope — and the <c>done</c> latch that guards it — keeps the
-/// individual sinks to their distinguishing accumulation logic and removes the otherwise-identical terminal boilerplate.
-/// </summary>
+/// <summary>Forwards a terminal notification and disposes the sink, optionally preventing repeated terminal delivery.</summary>
 public static class SinkTerminal
 {
     /// <summary>Forwards a fault to <paramref name="observer"/> and then disposes <paramref name="sink"/>.</summary>
@@ -30,7 +25,7 @@ public static class SinkTerminal
     /// <param name="observer">The downstream observer.</param>
     /// <param name="error">The error to forward.</param>
     /// <param name="sink">The sink to dispose once the error has been delivered.</param>
-    /// <param name="done">The caller-owned terminal latch; ignored once already set.</param>
+    /// <param name="done">The caller-owned terminal latch; the call is a no-op when it is set.</param>
     public static void Fault<TResult>(IObserver<TResult> observer, Exception error, IDisposable sink, ref bool done)
     {
         if (done)
@@ -61,7 +56,7 @@ public static class SinkTerminal
     /// <param name="observer">The downstream observer.</param>
     /// <param name="value">The single terminal value to emit.</param>
     /// <param name="sink">The sink to dispose once completion has been delivered.</param>
-    /// <param name="done">The caller-owned terminal latch; ignored once already set.</param>
+    /// <param name="done">The caller-owned terminal latch; the call is a no-op when it is set.</param>
     public static void Complete<TResult>(IObserver<TResult> observer, TResult value, IDisposable sink, ref bool done)
     {
         if (done)
@@ -89,7 +84,7 @@ public static class SinkTerminal
     /// <typeparam name="TResult">The downstream result type.</typeparam>
     /// <param name="observer">The downstream observer.</param>
     /// <param name="sink">The sink to dispose once completion has been delivered.</param>
-    /// <param name="done">The caller-owned terminal latch; ignored once already set.</param>
+    /// <param name="done">The caller-owned terminal latch; the call is a no-op when it is set.</param>
     public static void Complete<TResult>(IObserver<TResult> observer, IDisposable sink, ref bool done)
     {
         if (done)

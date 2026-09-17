@@ -11,7 +11,7 @@ namespace ReactiveUI.Primitives.Extensions.Reactive.Operators;
 namespace ReactiveUI.Primitives.Extensions.Operators;
 #endif
 
-/// <summary>Retries the source observable sequence upon error, with optional delay, retry count, and backoff.</summary>
+/// <summary>Re-subscribes after an error using the policy's backoff delays, forwarding the error once its budget is spent.</summary>
 /// <typeparam name="T">The type of elements in the source sequence.</typeparam>
 /// <param name="source">The source observable.</param>
 /// <param name="policy">The retry / backoff configuration.</param>
@@ -35,24 +35,28 @@ internal sealed class RetryWithBackoffObservable<T>(
     /// <param name="downstream">The downstream observer.</param>
     /// <param name="source">The source observable.</param>
     /// <param name="policy">The retry / backoff configuration.</param>
+    /// <remarks>
+    /// The retry count is advanced only by the source's serialized notifications, so no lock is needed; the observer, the
+    /// error callback and the source subscription all run without one.
+    /// </remarks>
     private sealed class RetryWithBackoffSink(
         IObserver<T> downstream,
         IObservable<T> source,
         RetryBackoffPolicy policy) : IObserver<T>, IDisposable
     {
-        /// <summary>The gate for state access.</summary>
-        private readonly Lock _gate = new();
+        /// <summary>The subscription to the source sequence; each attempt disposes the one it replaces.</summary>
+        private readonly SwapDisposable _subscription = new();
 
-        /// <summary>The subscription to the source sequence.</summary>
-        private readonly MutableDisposable _subscription = new();
+        /// <summary>The pending retry timer, held separately so re-subscribing never displaces a retry that has not fired.</summary>
+        private readonly SwapDisposable _retryTimer = new();
 
-        /// <summary>The number of retries already attempted.</summary>
+        /// <summary>The number of retries attempted so far.</summary>
         private int _retries;
 
         /// <summary>Whether the sink has been disposed.</summary>
         private bool _disposed;
 
-        /// <summary>Starts the retry process.</summary>
+        /// <summary>Subscribes the source for the first attempt.</summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Run() => SubscribeToSource();
 
@@ -63,39 +67,42 @@ internal sealed class RetryWithBackoffObservable<T>(
         /// <inheritdoc/>
         public void OnError(Exception error)
         {
+            if (policy.ShouldRetry is not null && !policy.ShouldRetry(error))
+            {
+                downstream.OnError(error);
+                return;
+            }
+
             policy.OnError?.Invoke(error);
 
-            lock (_gate)
+            if (Volatile.Read(ref _disposed))
             {
-                if (_disposed)
+                return;
+            }
+
+            if (_retries < policy.MaxRetries)
+            {
+                var delay = TimeSpan.FromTicks((long)(policy.InitialDelay.Ticks
+                                                      * Math.Pow(policy.BackoffFactor, _retries)));
+                if (policy.MaxDelay.HasValue && delay > policy.MaxDelay.Value)
                 {
-                    return;
+                    delay = policy.MaxDelay.Value;
                 }
 
-                if (_retries < policy.MaxRetries)
+                _retries++;
+
+                if (delay == TimeSpan.Zero)
                 {
-                    var delay = TimeSpan.FromTicks((long)(policy.InitialDelay.Ticks
-                                                          * Math.Pow(policy.BackoffFactor, _retries)));
-                    if (policy.MaxDelay.HasValue && delay > policy.MaxDelay.Value)
-                    {
-                        delay = policy.MaxDelay.Value;
-                    }
-
-                    _retries++;
-
-                    if (delay == TimeSpan.Zero)
-                    {
-                        SubscribeToSource();
-                    }
-                    else
-                    {
-                        _subscription.Disposable = policy.Scheduler.Schedule(delay, SubscribeToSource);
-                    }
+                    SubscribeToSource();
                 }
                 else
                 {
-                    downstream.OnError(error);
+                    _retryTimer.Disposable = policy.Scheduler.Schedule(delay, SubscribeToSource);
                 }
+            }
+            else
+            {
+                downstream.OnError(error);
             }
         }
 
@@ -106,25 +113,20 @@ internal sealed class RetryWithBackoffObservable<T>(
         /// <inheritdoc/>
         public void Dispose()
         {
-            lock (_gate)
-            {
-                _disposed = true;
-                _subscription.Dispose();
-            }
+            Volatile.Write(ref _disposed, true);
+            _retryTimer.Dispose();
+            _subscription.Dispose();
         }
 
-        /// <summary>Subscribes to the source sequence.</summary>
+        /// <summary>Subscribes to the source sequence unless the sink has been disposed.</summary>
         private void SubscribeToSource()
         {
-            lock (_gate)
+            if (Volatile.Read(ref _disposed))
             {
-                if (_disposed)
-                {
-                    return;
-                }
-
-                _subscription.Disposable = source.Subscribe(this);
+                return;
             }
+
+            _subscription.Disposable = source.Subscribe(this);
         }
     }
 }

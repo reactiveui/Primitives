@@ -4,20 +4,16 @@
 
 namespace ReactiveUI.Primitives;
 
-/// <summary>Exception helper methods.</summary>
+/// <summary>Extension methods for rethrowing exceptions.</summary>
 public static class ExceptionExtensions
 {
     /// <summary>Throwing operators for an exception.</summary>
     /// <param name="exception">Exception to throw.</param>
     extension(Exception exception)
     {
-        /// <summary>Throws the exception while preserving stack trace where required by the target framework.</summary>
-        public void Throw()
-        {
-#if NET472 || NETSTANDARD2_0
+        /// <summary>Throws the exception, keeping the stack trace from where it was first thrown.</summary>
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public void Throw() =>
             System.Runtime.ExceptionServices.ExceptionDispatchInfo.Capture(exception).Throw();
-#endif
-            throw exception;
-        }
     }
 }

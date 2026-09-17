@@ -31,13 +31,7 @@ public class SignalCreateTests
     /// <summary>Expected values for create-with-state tests.</summary>
     private static readonly int[] CreateWithStateExpected = [Third];
 
-    /// <summary>A delay long enough that the subscription is always disposed before it elapses.</summary>
-    private static readonly TimeSpan NeverElapsingDelay = TimeSpan.FromSeconds(30);
-
-    /// <summary>How long the test waits for the cancellation callback before failing.</summary>
-    private static readonly TimeSpan CancellationTimeout = TimeSpan.FromSeconds(5);
-
-    /// <summary>Creates the argument checking.</summary>
+    /// <summary>The create factory rejects a null subscribe callback and a null observer.</summary>
     [Test]
     public void Create_ArgumentChecking()
     {
@@ -46,7 +40,7 @@ public class SignalCreateTests
             Signal.Create((Func<IObserver<int>, IDisposable>)null!).Subscribe(null!));
     }
 
-    /// <summary>Creates the null coalescing action.</summary>
+    /// <summary>A create subscription disposes cleanly when its disposable carries no action.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
     public async Task Create_NullCoalescingAction()
@@ -62,14 +56,14 @@ public class SignalCreateTests
         await Assert.That(lst.SequenceEqual([CreatedValue])).IsTrue();
     }
 
-    /// <summary>Creates the exception.</summary>
+    /// <summary>A subscribe callback that throws surfaces at the subscribe call.</summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     [Test]
     public void Create_Exception() => Assert.Throws<InvalidOperationException>(static () => Signal.Create(
             new Func<IObserver<int>, IDisposable>(static _ => throw new InvalidOperationException()))
         .Subscribe());
 
-    /// <summary>Creates the observer throws.</summary>
+    /// <summary>An observer that throws from a notification surfaces the failure at the subscribe call.</summary>
     [Test]
     public void Create_ObserverThrows()
     {
@@ -90,7 +84,7 @@ public class SignalCreateTests
         }).Subscribe(static x => { }, static ex => { }, static () => throw new InvalidOperationException()));
     }
 
-    /// <summary>Creates the with disposable argument checking.</summary>
+    /// <summary>The disposable-returning create overload rejects a null callback and a null observer.</summary>
     [Test]
     public void CreateWithDisposable_ArgumentChecking()
     {
@@ -104,7 +98,7 @@ public class SignalCreateTests
         }).Subscribe(null!));
     }
 
-    /// <summary>Creates the with disposable null coalescing action.</summary>
+    /// <summary>The disposable-returning create overload tolerates a callback that returns no disposable.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
     public async Task CreateWithDisposable_NullCoalescingAction()
@@ -120,16 +114,14 @@ public class SignalCreateTests
         await Assert.That(lst.SequenceEqual([CreatedValue])).IsTrue();
     }
 
-    /// <summary>Creates the with disposable exception.</summary>
+    /// <summary>A throwing subscribe callback surfaces at the subscribe call of the disposable-returning overload.</summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     [Test]
     [System.Diagnostics.CodeAnalysis.SuppressMessage(
         "Design",
         "SST2318:Members should not have identical bodies",
         Justification =
-            "A separate named regression test covering the disposable-returning Create overload's subscribe-time throw. "
-            + "It shares its assertion shape with Create_Exception but is kept as its own [Test] so the two entry points "
-            + "have independent, named coverage.")]
+            "The two tests subscribe through different Create overloads.")]
     public void CreateWithDisposable_Exception() => Assert.Throws<InvalidOperationException>(static () => Signal.Create(
             new Func<IObserver<int>, IDisposable>(static _ => throw new InvalidOperationException()))
         .Subscribe());
@@ -182,7 +174,7 @@ public class SignalCreateTests
         await Assert.That(disposable).IsSameReferenceAs(EmptyDisposable.Instance);
     }
 
-    /// <summary>Covers create-with-state overloads and null validation.</summary>
+    /// <summary>The create-with-state overloads invoke their stateful callback and reject null arguments.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
     public async Task CreateWithStateFactoriesInvokeStatefulSubscribeCallbacks()
@@ -251,7 +243,6 @@ public class SignalCreateTests
         });
 
         var subscription = created.Subscribe(values.Add);
-        await Task.Yield();
         subscription.Dispose();
 
         await Assert.That(values.SequenceEqual([CreatedValue])).IsTrue();
@@ -261,16 +252,16 @@ public class SignalCreateTests
         InvalidOperationException expected = new("async-create");
         _ = Signal.Create<int>((_, _) => Task.FromException<IDisposable>(expected))
             .Subscribe(static _ => { }, error => observed = error);
-        await Task.Yield();
 
         await Assert.That(observed).IsSameReferenceAs(expected);
 
         TaskCompletionSource canceled = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        TaskCompletionSource release = new(TaskCreationOptions.RunContinuationsAsynchronously);
         var cancellable = Signal.Create<int>(async (_, cancellationToken) =>
         {
             try
             {
-                await Task.Delay(NeverElapsingDelay, cancellationToken).ConfigureAwait(false);
+                await release.Task.WaitAsync(cancellationToken).ConfigureAwait(false);
             }
             catch (OperationCanceledException)
             {
@@ -283,11 +274,10 @@ public class SignalCreateTests
 
         var cancellableSubscription = cancellable.Subscribe(static _ => { });
         cancellableSubscription.Dispose();
-        await canceled.Task.WaitAsync(CancellationTimeout).ConfigureAwait(false);
+        await canceled.Task.ConfigureAwait(false);
 
         var nullDisposable = Signal.Create<int>(static (_, _) => Task.FromResult<IDisposable>(null!));
         var nullSubscription = nullDisposable.Subscribe(static _ => { });
-        await Task.Yield();
         nullSubscription.Dispose();
 
         _ = Assert.Throws<ArgumentNullException>(static () =>
@@ -304,7 +294,6 @@ public class SignalCreateTests
         List<int> values = [];
         _ = Signal.Defer(static () => Task.FromResult(Signal.Emit(CreatedValue))).Subscribe(values.Add);
         _ = Signal.Defer(static _ => Task.FromResult(Signal.Emit(First))).Subscribe(values.Add);
-        await Task.Yield();
 
         await Assert.That(values.SequenceEqual([CreatedValue, First])).IsTrue();
 
@@ -312,19 +301,23 @@ public class SignalCreateTests
         InvalidOperationException expected = new("defer");
         _ = Signal.Defer(() => Task.FromException<IObservable<int>>(expected))
             .Subscribe(static _ => { }, error => observed = error);
-        await Task.Yield();
 
         await Assert.That(observed).IsSameReferenceAs(expected);
 
-        TaskCompletionSource<IObservable<int>> delayedFactory = new(TaskCreationOptions.RunContinuationsAsynchronously);
-        List<int> canceledValues = [];
-        var deferred = Signal.Defer(_ => delayedFactory.Task);
-        var subscription = deferred.Subscribe(canceledValues.Add);
-        subscription.Dispose();
-        delayedFactory.SetResult(Signal.Emit(Fourth));
-        await Task.Yield();
+        RecordingWitness<int> canceled = new();
+        AsyncSubscriptionLifetime lifetime = new();
+        using CreateWitness<int> witness = new(canceled);
+        witness.SetCancel(lifetime);
+        await AsyncDeferSignal<int>.RunAsyncFactory(
+            _ =>
+            {
+                lifetime.Dispose();
+                return Task.FromResult(Signal.Emit(Fourth));
+            },
+            witness,
+            lifetime);
 
-        await Assert.That(canceledValues.Count).IsEqualTo(0);
+        await Assert.That(canceled.Values.Count).IsEqualTo(0);
 
         _ = Assert.Throws<ArgumentNullException>(static () => Signal.Defer((Func<Task<IObservable<int>>>)null!));
         _ = Assert.Throws<ArgumentNullException>(static () =>

@@ -59,7 +59,7 @@ public class ReduceSinkStateTests
         InvalidOperationException error = new("boom");
 
         state.HandleError(error);
-        state.HandleError(new InvalidOperationException("second")); // should be no-op
+        state.HandleError(new InvalidOperationException("second"));
 
         await Assert.That(state.IsDone).IsTrue();
         await Assert.That(observer.Errors).Count().IsEqualTo(1);
@@ -77,7 +77,7 @@ public class ReduceSinkStateTests
         CaptureWitness<int> observer = new();
         ReduceSinkState<int, int> state = new(observer, PairedSourceCount);
 
-        // Seed both values so completion-without-value path isn't triggered.
+        // Both slots must hold a value, or completion takes the completed-without-value path instead.
         state.Values[0] = SeedValue1;
         state.Values[1] = SeedValue2;
         state.HasValueCount = SeededValueCount;
@@ -119,7 +119,7 @@ public class ReduceSinkStateTests
         ReduceSinkState<int, int> state = new(observer, PairedSourceCount);
 
         state.HandleCompleted(0);
-        state.HandleCompleted(0); // same index — should be no-op
+        state.HandleCompleted(0);
 
         await Assert.That(state.CompletedCount).IsEqualTo(1);
     }

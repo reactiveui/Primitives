@@ -7,18 +7,17 @@ using ReactiveUI.Primitives.Disposables;
 
 namespace ReactiveUI.Primitives.Advanced;
 
-/// <summary>Represents the ImmutableReturnInt32Signal class.</summary>
+/// <summary>Signal that emits a single <see cref="int"/> and completes synchronously inside <c>Subscribe</c>.</summary>
 [System.Diagnostics.DebuggerDisplay("ImmutableReturnInt32Signal: Value = {_x}")]
 public sealed class ImmutableReturnInt32Signal : IRequireCurrentThread<int>, IInlineSignal<int>
 {
-    /// <summary>Stores state for the signal implementation.</summary>
+    /// <summary>The lowest value with a cached instance.</summary>
     private const int MinCachedValue = -1;
 
-    /// <summary>Stores state for the signal implementation.</summary>
+    /// <summary>The highest value with a cached instance.</summary>
     private const int MaxCachedValue = 9;
 
-    /// <summary>Executes the new operation.</summary>
-    /// <returns>The result.</returns>
+    /// <summary>The instances cached for values from <see cref="MinCachedValue"/> to <see cref="MaxCachedValue"/>.</summary>
     private static readonly ImmutableReturnInt32Signal[] Caches =
     [
         new(-1),
@@ -34,29 +33,29 @@ public sealed class ImmutableReturnInt32Signal : IRequireCurrentThread<int>, IIn
         new(9)
     ];
 
-    /// <summary>Stores state for the signal implementation.</summary>
+    /// <summary>The value emitted to every subscriber.</summary>
     private readonly int _x;
 
     /// <summary>Initializes a new instance of the <see cref="ImmutableReturnInt32Signal"/> class.</summary>
-    /// <param name="x">The x value.</param>
+    /// <param name="x">The value to emit.</param>
     public ImmutableReturnInt32Signal(int x) => _x = x;
 
-    /// <summary>Executes the GetInt32Signals operation.</summary>
-    /// <param name="x">The x value.</param>
-    /// <returns>The result.</returns>
+    /// <summary>Returns a signal emitting <paramref name="x"/>, reusing a cached instance for small values.</summary>
+    /// <param name="x">The value to emit.</param>
+    /// <returns>A signal that emits <paramref name="x"/> and completes.</returns>
     public static IObservable<int> GetInt32Signals(int x) =>
         x is >= MinCachedValue and <= MaxCachedValue
             ? Caches[x - MinCachedValue]
             : new ImmediateReturnSignal<int>(x);
 
-    /// <summary>Executes the IsRequiredSubscribeOnCurrentThread operation.</summary>
-    /// <returns>The result.</returns>
+    /// <summary>Indicates whether subscription has to happen on the calling thread.</summary>
+    /// <returns>Always <see langword="false"/>.</returns>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public bool IsRequiredSubscribeOnCurrentThread() => false;
 
-    /// <summary>Executes the Subscribe operation.</summary>
-    /// <param name="observer">The observer value.</param>
-    /// <returns>The result.</returns>
+    /// <summary>Emits the value to <paramref name="observer"/> and completes it before returning.</summary>
+    /// <param name="observer">The observer to notify.</param>
+    /// <returns>An empty disposable; the signal has finished by the time this returns.</returns>
     public IDisposable Subscribe(IObserver<int> observer)
     {
         observer.OnNext(_x);
@@ -64,11 +63,11 @@ public sealed class ImmutableReturnInt32Signal : IRequireCurrentThread<int>, IIn
         return EmptyDisposable.Instance;
     }
 
-    /// <summary>Executes the Subscribe operation.</summary>
-    /// <param name="onNext">The onNext value.</param>
-    /// <param name="onError">The onError value.</param>
-    /// <param name="onCompleted">The onCompleted value.</param>
-    /// <returns>The result.</returns>
+    /// <summary>Invokes <paramref name="onNext"/> with the value, then <paramref name="onCompleted"/>.</summary>
+    /// <param name="onNext">Invoked with the value.</param>
+    /// <param name="onError">Never invoked.</param>
+    /// <param name="onCompleted">Invoked after the value.</param>
+    /// <returns>An empty disposable; the signal has finished by the time this returns.</returns>
     public IDisposable Subscribe(Action<int> onNext, Action<Exception> onError, Action onCompleted)
     {
         onNext(_x);

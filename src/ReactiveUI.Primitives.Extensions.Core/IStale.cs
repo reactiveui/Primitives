@@ -4,15 +4,13 @@
 
 namespace ReactiveUI.Primitives.Extensions;
 
-/// <summary>Indicator for connection that has become stale.</summary>
-/// <typeparam name="T">The type.</typeparam>
+/// <summary>Carries either a staleness signal or a value update from an observable sequence.</summary>
+/// <typeparam name="T">The type of the update value.</typeparam>
 public interface IStale<out T>
 {
-    /// <summary>Gets a value indicating whether this instance is stale.</summary>
-    /// <value><c>true</c> if this instance is stale; otherwise, <c>false</c>.</value>
+    /// <summary>Gets a value indicating whether this notification signals staleness rather than an update.</summary>
     bool IsStale { get; }
 
-    /// <summary>Gets the update.</summary>
-    /// <value>The update.</value>
+    /// <summary>Gets the update value; an implementation may reject the read while <see cref="IsStale"/> is <see langword="true"/>.</summary>
     T? Update { get; }
 }

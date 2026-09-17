@@ -8,9 +8,7 @@ using ReactiveUI.Primitives.Disposables;
 
 namespace ReactiveUI.Primitives.Extensions.Tests.Internal;
 
-/// <summary>Tests for <see cref = "FirstAsValueTaskHelper{T}"/> covering the value, error, and
-/// empty-completion paths the pooled <c>ToHotValueTask</c> source exposes, plus the pool reuse and
-/// post-settle drop branches.</summary>
+/// <summary>Tests for <see cref = "FirstAsValueTaskHelper{T}"/>, the pooled first-value task bridge.</summary>
 public class FirstAsValueTaskHelperTests
 {
     /// <summary>Message of an error the helper is expected to drop.</summary>
@@ -21,9 +19,6 @@ public class FirstAsValueTaskHelperTests
 
     /// <summary>Value used to verify subsequent values are ignored.</summary>
     private const int SecondValue = 11;
-
-    /// <summary>Guard timeout so a hung rendezvous fails this test rather than stalling the run.</summary>
-    private static readonly TimeSpan GuardTimeout = TimeSpan.FromSeconds(5);
 
     /// <summary>Verifies the helper completes with the first value the source emits.</summary>
     /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
@@ -65,8 +60,7 @@ public class FirstAsValueTaskHelperTests
         .That(static async () => await FirstAsValueTaskHelper<int>.FirstAsValueTask(null!))
         .ThrowsExactly<ArgumentNullException>();
 
-    /// <summary>Exercises the <c>Subscription?.Dispose()</c> null-conditional branch when a source
-    /// synchronously emits during <c>Subscribe</c> before the subscription field is assigned.</summary>
+    /// <summary>Verifies a source that emits during <c>Subscribe</c>, before the subscription handle exists, yields that value.</summary>
     /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenSyncSourceEmits_ThenSubscriptionNullBranchSkipsDispose()
@@ -76,8 +70,7 @@ public class FirstAsValueTaskHelperTests
         await Assert.That(value).IsEqualTo(Sentinel);
     }
 
-    /// <summary>Verifies the pooled source is reused across sequential calls — a second call after the
-    /// first has settled returns to the pool and resolves correctly.</summary>
+    /// <summary>Verifies a second sequential call resolves correctly against the recycled pooled source.</summary>
     /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenCalledSequentially_ThenPooledSourceReused()
@@ -88,8 +81,7 @@ public class FirstAsValueTaskHelperTests
         await Assert.That(second).IsEqualTo(SecondValue);
     }
 
-    /// <summary>Verifies awaiting the value task before the source emits registers a continuation on the
-    /// pooled source (the incomplete-await path) and resolves once the value later arrives.</summary>
+    /// <summary>Verifies a value task awaited before the source emits resolves when the value arrives.</summary>
     /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenAwaitedBeforeEmission_ThenCompletesOnLaterValue()
@@ -97,11 +89,11 @@ public class FirstAsValueTaskHelperTests
         Subject<int> subject = new();
         var pending = FirstAsValueTaskHelper<int>.FirstAsValueTask(subject).AsTask();
         subject.OnNext(FirstValue);
-        var result = await pending.WaitAsync(GuardTimeout);
+        var result = await pending;
         await Assert.That(result).IsEqualTo(FirstValue);
     }
 
-    /// <summary>Verifies emissions arriving after the value task has already settled are silently ignored.</summary>
+    /// <summary>Verifies emissions arriving after the value task settles are silently ignored.</summary>
     /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenSecondTerminalAfterSettled_ThenIgnored()
@@ -143,8 +135,7 @@ public class FirstAsValueTaskHelperTests
         await Assert.That(async () => await task).ThrowsExactly<InvalidOperationException>();
     }
 
-    /// <summary>Test observable that captures its subscriber so tests can directly invoke
-    /// non-cooperative double-terminal sequences against the pooled first-value observer.</summary>
+    /// <summary>Observable that captures its subscriber so a test can notify it directly.</summary>
     /// <typeparam name = "T">The element type.</typeparam>
     private sealed class InvasiveObservable<T> : IObservable<T>
     {

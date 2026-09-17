@@ -11,11 +11,11 @@ namespace ReactiveUI.Primitives.Async.Signals;
 /// <typeparam name="T">The observed value type.</typeparam>
 internal sealed class StatelessReplayLatestSignalAsyncState<T> : IDisposable
 {
-    /// <summary>The asynchronous gate used to synchronize mutable state.</summary>
+    /// <summary>Serializes every mutation of this state, including the replay emitted during subscribe.</summary>
     [SuppressMessage(
         "Style",
         "SST1401:Field should be private",
-        Justification = "Gate fields are intentionally direct readonly state for helper access.")]
+        Justification = "The state helpers enter this gate directly.")]
     internal readonly AsyncSerialGate Gate = new();
 
     /// <summary>Initializes a new instance of the <see cref="StatelessReplayLatestSignalAsyncState{T}"/> class.</summary>
@@ -30,11 +30,7 @@ internal sealed class StatelessReplayLatestSignalAsyncState<T> : IDisposable
     /// <summary>Gets the cancellation token source that is cancelled when this instance is disposed.</summary>
     internal CancellationTokenSource DisposedCts { get; } = new();
 
-    /// <summary>Gets the token cancelled when this instance is disposed. Captured while the source is still
-    /// alive because <see cref="Dispose"/> disposes that source, and reading
-    /// <see cref="CancellationTokenSource.Token"/> from a disposed source throws
-    /// <see cref="ObjectDisposedException"/>. Disposal always cancels before it disposes, so this token is
-    /// already cancelled by the time anyone can observe it post-disposal.</summary>
+    /// <summary>Gets the disposal token, which remains accessible after the source is disposed.</summary>
     internal CancellationToken DisposedCancellationToken { get; }
 
     /// <summary>Gets the initial value to replay, if any.</summary>

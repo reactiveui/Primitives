@@ -12,9 +12,6 @@ public sealed class SignalDeferTests
     /// <summary>Message carried by the failure a deferred source raises when an observer subscribes to it.</summary>
     private const string SubscribeFailureMessage = "defer-subscribe";
 
-    /// <summary>Longest a test waits for the deferred subscription to report back.</summary>
-    private static readonly TimeSpan WaitTimeout = TimeSpan.FromSeconds(5);
-
     /// <summary>Verifies deferred sources and blocking enumeration surface success, factory failure, and source failure paths.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
@@ -47,11 +44,7 @@ public sealed class SignalDeferTests
         _ = Assert.Throws<ArgumentNullException>(static () => ((IObservable<int>)null!).ToEnumerable());
     }
 
-    /// <summary>
-    /// Verifies an asynchronously deferred source whose subscription throws surfaces that failure to the observer.
-    /// The factory succeeded, so the failure arrives on the subscribe step rather than the await, and it must still
-    /// reach the observer instead of faulting the fire-and-forget task that drives the deferred subscription.
-    /// </summary>
+    /// <summary>A subscription failure in an asynchronously produced source reaches the observer.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
     public async Task DeferAsyncSurfacesAFailureRaisedWhenSubscribingToTheProducedSource()
@@ -70,7 +63,7 @@ public sealed class SignalDeferTests
                     _ = observed.TrySetResult();
                 });
 
-        await Assert.That(observed.Task.WaitAsync(WaitTimeout)).ThrowsNothing();
+        await Assert.That(observed.Task).ThrowsNothing();
         await Assert.That(observedError!).IsSameReferenceAs(subscribeError);
     }
 

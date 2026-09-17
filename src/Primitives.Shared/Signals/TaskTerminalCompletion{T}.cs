@@ -10,13 +10,7 @@ namespace ReactiveUI.Primitives.Reactive.Signals;
 namespace ReactiveUI.Primitives.Signals;
 #endif
 
-/// <summary>
-/// Shared completion plumbing for task-returning terminals with optional cancellation: owns the task source,
-/// the source subscription, and the cancellation registration. Callers wire their observer callbacks to
-/// <see cref="Resolve"/>/<see cref="Fail"/> and hand the subscription to <see cref="Attach"/>, which registers
-/// for cancellation only while the task is still pending — synchronous sources never pay for a registration,
-/// and registering after the subscription write publishes it to the thread that runs the cancellation callback.
-/// </summary>
+/// <summary>Owns terminal task completion, the source subscription, and cancellation registration while pending.</summary>
 /// <typeparam name="T">The task result type.</typeparam>
 internal sealed class TaskTerminalCompletion<T>
 {
@@ -56,10 +50,7 @@ internal sealed class TaskTerminalCompletion<T>
     internal void FailEmpty() =>
         Fail(new InvalidOperationException("The source completed without producing a value."));
 
-    /// <summary>
-    /// Adopts the subscription created after the observer callbacks were wired, then registers for cancellation
-    /// only when the task is still pending.
-    /// </summary>
+    /// <summary>Adopts the source subscription and registers for cancellation only while the task is pending.</summary>
     /// <param name="subscription">The source subscription.</param>
     /// <param name="cancellationToken">The token that cancels the task and disposes the subscription.</param>
     /// <returns>The terminal task.</returns>
@@ -79,9 +70,6 @@ internal sealed class TaskTerminalCompletion<T>
                 static state => ((TaskTerminalCompletion<T>)state!).Cancel(),
                 this);
 
-            // The source may have completed while the registration was being created; the observer callbacks
-            // saw a default registration then, so release the real one here (without waiting on an in-flight
-            // callback, whose effects are already race-safe).
             if (_completion.Task.IsCompleted)
             {
                 _ = _cancellationRegistration.Unregister();
@@ -94,7 +82,7 @@ internal sealed class TaskTerminalCompletion<T>
     /// <summary>Cancels the task and disposes the subscription; runs on the canceling thread.</summary>
     private void Cancel()
     {
-        _subscription?.Dispose();
+        _subscription!.Dispose();
         _ = _completion.TrySetCanceled(_cancellationToken);
     }
 

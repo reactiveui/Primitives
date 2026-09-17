@@ -2,16 +2,20 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
-using System.Runtime.CompilerServices;
-
 namespace ReactiveUI.Primitives.Extensions;
 
-/// <summary>Coordinates phase synchronization between a lock holder and its continuation.</summary>
+/// <summary>Pairs an emitted item with a release handle and completes the producer's task when the handle is disposed.</summary>
 [System.Diagnostics.DebuggerDisplay("Continuation: Locked = {_locked}, CompletedPhases = {CompletedPhases}")]
 public class Continuation : IDisposable
 {
-    /// <summary>The barrier used to synchronize phases between the lock holder and the continuation.</summary>
-    private readonly Barrier _phaseSync = new(2);
+    /// <summary>Serializes changes to the current handoff.</summary>
+    private readonly Lock _gate = new();
+
+    /// <summary>The most recently acquired handoff.</summary>
+    private Phase? _phase;
+
+    /// <summary>The number of handoffs whose delivery and release have both completed.</summary>
+    private long _completedPhases;
 
     /// <summary>One once this instance has been disposed; otherwise zero.</summary>
     private int _disposedValue;
@@ -19,98 +23,161 @@ public class Continuation : IDisposable
     /// <summary>One while the continuation is locked; otherwise zero.</summary>
     private int _locked;
 
-    /// <summary>Gets the number of completed phases.</summary>
-    /// <value>
-    /// The completed phases.
-    /// </value>
-    public long CompletedPhases => _phaseSync.CurrentPhaseNumber;
+    /// <summary>Whether managed disposal has been requested.</summary>
+    private bool _managedDisposed;
 
-    /// <summary>Performs application-defined tasks associated with freeing, releasing, or resetting unmanaged resources.</summary>
+    /// <summary>Gets the number of handoffs whose delivery and release have both completed.</summary>
+    public long CompletedPhases
+    {
+        get
+        {
+            lock (_gate)
+            {
+                return _completedPhases;
+            }
+        }
+    }
+
+    /// <summary>Releases the active handoff and disposes the continuation.</summary>
     public void Dispose()
     {
         Dispose(true);
         GC.SuppressFinalize(this);
     }
 
-    /// <summary>Locks this instance.</summary>
+    /// <summary>Emits an item paired with this release handle, or drops the item while another handoff holds the gate.</summary>
     /// <typeparam name="T">The type of the elements in the source sequence.</typeparam>
-    /// <param name="item">The item.</param>
-    /// <param name="observer">The observer.</param>
-    /// <returns>
-    /// A <see cref="Task" /> representing the asynchronous operation.
-    /// </returns>
+    /// <param name="item">The item handed to the observer.</param>
+    /// <param name="observer">The observer receiving the item and its release handle; ignored when <see langword="null"/>.</param>
+    /// <returns>A task completed after delivery and release, or a completed task when the item was dropped.</returns>
     public Task Lock<T>(T item, IObserver<(T Value, IDisposable Sync)>? observer)
     {
-        if (Interlocked.Exchange(ref _locked, 1) != 0)
+        var phase = TryBeginPhase();
+        if (phase is null)
         {
             return Task.CompletedTask;
         }
 
         observer?.OnNext((item, this));
-        return ScheduleSignalPhase();
+        CompleteDelivery(phase);
+        return phase.Completion.Task;
     }
 
-    /// <summary>
-    /// <see cref="ValueTask"/>-returning counterpart to <see cref="Lock{T}"/>. Use this at per-emission
-    /// call sites where the returned task is awaited exactly once — saves the boxed <see cref="Task"/>
-    /// wrapper allocation in the already-locked fast path.
-    /// </summary>
+    /// <summary>Emits an item with this release handle and returns a value task for its handoff.</summary>
     /// <typeparam name="T">The type of the elements in the source sequence.</typeparam>
-    /// <param name="item">The item.</param>
-    /// <param name="observer">The observer.</param>
-    /// <returns>A <see cref="ValueTask"/> representing the asynchronous operation.</returns>
+    /// <param name="item">The item handed to the observer.</param>
+    /// <param name="observer">The observer receiving the item and its release handle; ignored when <see langword="null"/>.</param>
+    /// <returns>A value task completed after delivery and release, or a completed value task when the item was dropped.</returns>
     public ValueTask LockValueTask<T>(T item, IObserver<(T Value, IDisposable Sync)>? observer)
     {
-        if (Interlocked.Exchange(ref _locked, 1) != 0)
-        {
-            return default;
-        }
-
-        observer?.OnNext((item, this));
-        return new(ScheduleSignalPhase());
+        var handoff = Lock(item, observer);
+        return ReferenceEquals(handoff, Task.CompletedTask) ? default : new(handoff);
     }
 
-    /// <summary>UnLocks this instance.</summary>
-    /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
-    internal Task UnLock() =>
-        Interlocked.Exchange(ref _locked, 0) == 0 ? Task.CompletedTask : ScheduleSignalPhase();
-
-    /// <summary>Releases unmanaged and - optionally - managed resources.</summary>
-    /// <param name="disposing"><c>true</c> to release both managed and unmanaged resources; <c>false</c> to release only unmanaged resources.</param>
-    [System.Diagnostics.CodeAnalysis.SuppressMessage(
-        "Concurrency",
-        "SST1905:Do not use async void",
-        Justification =
-            "This is the Dispose(bool) disposal-pattern overload, whose signature is fixed to return void; it cannot return "
-            + "Task. The await is best-effort teardown of the phase barrier during disposal, with no caller positioned to observe it.")]
-    protected virtual async void Dispose(bool disposing)
+    /// <summary>Releases the current handoff; repeated releases have no effect.</summary>
+    /// <returns>The handoff task, completed once its delivery has returned.</returns>
+    internal Task UnLock()
     {
-        if (Interlocked.Exchange(ref _disposedValue, 1) != 0 || !disposing)
+        var completion = Task.CompletedTask;
+        lock (_gate)
+        {
+            if (_locked != 0)
+            {
+                _locked = 0;
+                var phase = _phase!;
+                phase.Released = true;
+                TryCompletePhase(phase);
+                completion = phase.Completion.Task;
+            }
+        }
+
+        return completion;
+    }
+
+    /// <summary>Acquires a new handoff while the gate is free.</summary>
+    /// <returns>The acquired handoff, or null when another handoff holds the gate.</returns>
+    internal Phase? TryBeginPhase()
+    {
+        lock (_gate)
+        {
+            if (_locked != 0)
+            {
+                return null;
+            }
+
+            _locked = 1;
+            _phase = new(_managedDisposed);
+            return _phase;
+        }
+    }
+
+    /// <summary>Records delivery completion and completes a handoff that has already been released.</summary>
+    /// <param name="phase">The handoff whose observer callback returned.</param>
+    internal void CompleteDelivery(Phase phase)
+    {
+        lock (_gate)
+        {
+            phase.Delivered = true;
+            TryCompletePhase(phase);
+        }
+    }
+
+    /// <summary>Releases the resources held by this continuation.</summary>
+    /// <param name="disposing"><c>true</c> to release both managed and unmanaged resources; <c>false</c> to release only unmanaged resources.</param>
+    protected virtual void Dispose(bool disposing)
+    {
+        lock (_gate)
+        {
+            if (_disposedValue != 0)
+            {
+                return;
+            }
+
+            _disposedValue = 1;
+            if (!disposing)
+            {
+                return;
+            }
+
+            _managedDisposed = true;
+        }
+
+        _ = UnLock();
+    }
+
+    /// <summary>Completes a released delivery once, or faults a handoff acquired after disposal.</summary>
+    /// <param name="phase">The handoff to complete.</param>
+    private void TryCompletePhase(Phase phase)
+    {
+        if (phase.IsDisposed)
+        {
+            _ = phase.Completion.TrySetException(new ObjectDisposedException(nameof(Continuation)));
+            return;
+        }
+
+        if (!phase.Delivered || !phase.Released || phase.Completion.Task.IsCompleted)
         {
             return;
         }
 
-        await UnLock().ConfigureAwait(false);
-        _phaseSync.Dispose();
+        _completedPhases++;
+        phase.Completion.SetResult(true);
     }
 
-    /// <summary>Static state-carrying signal callback; avoids the per-call closure allocation a captured lambda would produce.</summary>
-    /// <param name="state">The owning <see cref="Continuation"/> instance.</param>
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static void SignalPhaseSync(object? state) =>
-        ((Continuation)state!)._phaseSync.SignalAndWait(CancellationToken.None);
+    /// <summary>Tracks delivery and release for one acquired handoff.</summary>
+    /// <param name="isDisposed">True when the handoff was acquired after managed disposal.</param>
+    internal sealed class Phase(bool isDisposed)
+    {
+        /// <summary>Gets the completion shared by the delivery and release participants.</summary>
+        internal TaskCompletionSource<bool> Completion { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
-    /// <summary>Schedules <see cref="SignalPhaseSync"/> on the default task scheduler. Hoisted
-    /// out of the <see cref="Lock{T}"/> and <see cref="UnLock"/> call sites because cobertura
-    /// tags the multi-argument <c>Task.Factory.StartNew(...)</c> call as a branch line — the
-    /// per-call overload-resolution metadata is collapsed here so it counts once.</summary>
-    /// <returns>The task representing the scheduled signal work.</returns>
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private Task ScheduleSignalPhase() =>
-        Task.Factory.StartNew(
-            SignalPhaseSync,
-            this,
-            CancellationToken.None,
-            TaskCreationOptions.DenyChildAttach,
-            TaskScheduler.Default);
+        /// <summary>Gets a value indicating whether the handoff was acquired after managed disposal.</summary>
+        internal bool IsDisposed { get; } = isDisposed;
+
+        /// <summary>Gets or sets a value indicating whether the observer callback returned.</summary>
+        internal bool Delivered { get; set; }
+
+        /// <summary>Gets or sets a value indicating whether the handoff was released.</summary>
+        internal bool Released { get; set; }
+    }
 }

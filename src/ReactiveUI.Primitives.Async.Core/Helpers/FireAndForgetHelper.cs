@@ -7,26 +7,29 @@ using System.Diagnostics.CodeAnalysis;
 namespace ReactiveUI.Primitives.Async.Helpers;
 
 /// <summary>
-/// Provides a helper for executing async actions as fire-and-forget with exception swallowing.
-/// Used for async void callbacks (e.g. cancellation token registrations, signal handlers)
-/// where exceptions cannot propagate to a caller.
+/// Runs asynchronous work from a synchronous callback - a cancellation-token registration, a signal handler - where
+/// there is no caller to observe a task, reporting failures to <see cref="UnhandledExceptionHandler"/>.
 /// </summary>
-[ExcludeFromCodeCoverage]
 public static class FireAndForgetHelper
 {
-    /// <summary>Executes an async action as fire-and-forget, swallowing all exceptions.</summary>
-    /// <param name="action">The async action to execute.</param>
+    /// <summary>Starts <paramref name="action"/> with no task to await, routing any failure to <see cref="UnhandledExceptionHandler"/>.</summary>
+    /// <param name="action">The asynchronous action to start.</param>
     [SuppressMessage(
         "Concurrency",
         "SST1905:Do not use async void",
-        Justification =
-            "Intentional fire-and-forget helper. There is no caller to hand a Task back to; failures are routed to the "
-            + "global handler instead. Returning Task would defeat the fire-and-forget contract this helper exists to provide.")]
+        Justification = "There is no caller to hand a Task back to, so failures go to the global handler instead.")]
     [SuppressMessage(
         "ReSharper",
         "AsyncVoidMethod",
-        Justification = "This is a fire-and-forget helper.")]
-    public static async void Run(Func<ValueTask> action)
+        Justification = "There is no caller to hand a Task back to, so failures go to the global handler instead.")]
+    [ExcludeFromCodeCoverage]
+    public static async void Run(Func<ValueTask> action) =>
+        await RunAsync(action).ConfigureAwait(false);
+
+    /// <summary>Runs the action and reports failures to the unhandled exception handler.</summary>
+    /// <param name="action">The action to execute.</param>
+    /// <returns>A task that completes once the action and any failure reporting have run.</returns>
+    internal static async ValueTask RunAsync(Func<ValueTask> action)
     {
         ArgumentExceptionHelper.ThrowIfNull(action);
 
@@ -36,7 +39,7 @@ public static class FireAndForgetHelper
         }
         catch (Exception e)
         {
-            // Fire-and-forget has no caller to propagate to; surface the failure to the global handler.
+            // Detached-operation failures reach the global handler.
             UnhandledExceptionHandler.ReportUnhandledException(e);
         }
     }

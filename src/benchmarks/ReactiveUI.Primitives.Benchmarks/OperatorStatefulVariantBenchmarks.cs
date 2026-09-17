@@ -9,12 +9,7 @@ using RxObservable = System.Reactive.Linq.Observable;
 
 namespace ReactiveUI.Primitives.Benchmarks;
 
-/// <summary>
-/// Benchmarks the state-passing operator variants (MapWith / KeepWith / TapWith) against the
-/// closure-capturing equivalents in System.Reactive and R3. The Primitives variants pass runtime
-/// state explicitly with a cached static delegate, so they allocate no per-subscription closure;
-/// the comparison frameworks must capture the same runtime value in a closure.
-/// </summary>
+/// <summary>Compares explicit-state operators with closure-based equivalents in System.Reactive and R3.</summary>
 [MemoryDiagnoser]
 [System.Diagnostics.DebuggerDisplay("OperatorStatefulVariantBenchmarks: Factor = {_factor}, Threshold = {_threshold}")]
 public class OperatorStatefulVariantBenchmarks

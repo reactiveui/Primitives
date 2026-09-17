@@ -53,14 +53,15 @@ public sealed class FlatMapCoordinator<TResult> : IAsyncDisposable
     /// <summary>Gets or sets a value indicating whether this coordinator has been disposed.</summary>
     private bool Disposed { get; set; }
 
-    /// <summary>Sets the outer observer.</summary>
-    /// <param name="observer">The outer observer.</param>
-    /// <returns>A task representing the asynchronous assignment.</returns>
+    /// <summary>Accepts the outer subscription once, disposing it immediately if this coordinator has finished.</summary>
+    /// <param name="observer">The outer subscription to own.</param>
+    /// <returns>A task that completes once the subscription has been stored or disposed.</returns>
+    /// <exception cref="InvalidOperationException">Thrown when an outer subscription is set twice.</exception>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public ValueTask SetOuterObserverAsync(IAsyncDisposable observer) =>
         OuterObserver.SetDisposableAsync(observer);
 
-    /// <summary>Links subscribe-time cancellation into the coordinator lifecycle.</summary>
+    /// <summary>Links external cancellation to this lifetime, immediately honoring an already cancelled token.</summary>
     /// <param name="external">The subscribe-time cancellation token.</param>
     public void LinkExternalCancellation(CancellationToken external)
     {
@@ -84,9 +85,9 @@ public sealed class FlatMapCoordinator<TResult> : IAsyncDisposable
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public ValueTask DisposeAsync() => FinishAsync(null);
 
-    /// <summary>Subscribes and tracks an inner sequence.</summary>
+    /// <summary>Tracks an inner subscription until completion, terminating the sequence if subscribing fails.</summary>
     /// <param name="inner">The inner sequence.</param>
-    /// <returns>A task representing the asynchronous subscription.</returns>
+    /// <returns>A task that completes once the inner sequence has been subscribed.</returns>
     public async ValueTask SubscribeInnerAsync(IObservableAsync<TResult> inner)
     {
         lock (_gate)
@@ -113,9 +114,9 @@ public sealed class FlatMapCoordinator<TResult> : IAsyncDisposable
         }
     }
 
-    /// <summary>Forwards an inner value to the downstream observer.</summary>
-    /// <param name="value">The value.</param>
-    /// <returns>A task representing the asynchronous notification.</returns>
+    /// <summary>Forwards an inner value downstream, serialized against the other inner sequences so the observer is never entered concurrently.</summary>
+    /// <param name="value">The inner value to forward.</param>
+    /// <returns>A task that completes once the observer has accepted the value.</returns>
     public async ValueTask RelayNextAsync(TResult value)
     {
         using (await ObserverGate.EnterAsync(DisposeToken).ConfigureAwait(false))
@@ -124,9 +125,9 @@ public sealed class FlatMapCoordinator<TResult> : IAsyncDisposable
         }
     }
 
-    /// <summary>Forwards a non-terminal error to the downstream observer.</summary>
+    /// <summary>Forwards a non-terminal error downstream under the same serialization as values, leaving the sequence running.</summary>
     /// <param name="error">The error.</param>
-    /// <returns>A task representing the asynchronous notification.</returns>
+    /// <returns>A task that completes once the observer has accepted the error.</returns>
     public async ValueTask RelayErrorAsync(Exception error)
     {
         using (await ObserverGate.EnterAsync(DisposeToken).ConfigureAwait(false))
@@ -135,9 +136,9 @@ public sealed class FlatMapCoordinator<TResult> : IAsyncDisposable
         }
     }
 
-    /// <summary>Handles outer source completion.</summary>
+    /// <summary>Records outer completion, finishing the sequence when the result is a failure or no inner sequence is active, and otherwise waiting for the active inner sequences.</summary>
     /// <param name="result">The completion result.</param>
-    /// <returns>A task representing the asynchronous completion handling.</returns>
+    /// <returns>A task that completes once the sequence has finished, or immediately when it continues.</returns>
     public ValueTask CompleteOuterAsync(Result result)
     {
         bool shouldComplete;
@@ -150,9 +151,9 @@ public sealed class FlatMapCoordinator<TResult> : IAsyncDisposable
         return shouldComplete ? FinishAsync(result) : default;
     }
 
-    /// <summary>Handles inner source completion.</summary>
+    /// <summary>Records one inner sequence finishing, completing the sequence when the result is a failure or when the outer source has completed and no inner sequence remains.</summary>
     /// <param name="result">The completion result.</param>
-    /// <returns>A task representing the asynchronous completion handling.</returns>
+    /// <returns>A task that completes once the sequence has finished, or immediately when it continues.</returns>
     public ValueTask CompleteInnerAsync(Result result)
     {
         bool shouldComplete;
@@ -169,9 +170,10 @@ public sealed class FlatMapCoordinator<TResult> : IAsyncDisposable
         return shouldComplete ? FinishAsync(result) : default;
     }
 
-    /// <summary>Finishes the flat-map sequence and disposes tracked subscriptions.</summary>
-    /// <param name="result">The optional result to forward.</param>
-    /// <returns>A task representing the asynchronous teardown.</returns>
+    /// <summary>Completes and releases this coordinator once, reporting subsequent failures to the unhandled exception handler.</summary>
+    /// <param name="result">The result to forward, or <see langword="null"/> to tear down without completing
+    /// the observer.</param>
+    /// <returns>A task that completes once teardown has finished.</returns>
     public async ValueTask FinishAsync(Result? result)
     {
         lock (_gate)

@@ -10,19 +10,15 @@ namespace ReactiveUI.Primitives.Reactive.Advanced;
 namespace ReactiveUI.Primitives.Advanced;
 #endif
 
-/// <summary>
-/// Forwarding observer that releases its upstream cancel resource when the sequence terminates or a downstream
-/// <c>OnNext</c> throws. The shared guard behind the scheduled factory signals (Empty, Return, Throw, Defer),
-/// usable by any signal implementation that needs terminate-and-release semantics around a downstream observer.
-/// </summary>
+/// <summary>Forwarding observer that releases its upstream cancel resource when the sequence terminates or a downstream <c>OnNext</c> throws, rethrowing the latter after release.</summary>
 /// <typeparam name="T">The value type.</typeparam>
 [System.Diagnostics.DebuggerDisplay("GuardedWitness: Disposed = {_disposed}, Observer = {_observer}")]
 public sealed class GuardedWitness<T> : IObserver<T>, IDisposable
 {
-    /// <summary>Stores the downstream observer.</summary>
+    /// <summary>The downstream observer.</summary>
     private readonly IObserver<T> _observer;
 
-    /// <summary>Stores the upstream subscription.</summary>
+    /// <summary>The upstream cancel resource released on termination.</summary>
     private IDisposable? _cancel;
 
     /// <summary>Disposed latch; 0 when alive, 1 once disposed.</summary>
@@ -41,18 +37,8 @@ public sealed class GuardedWitness<T> : IObserver<T>, IDisposable
     }
 
     /// <inheritdoc/>
-    public void OnNext(T value)
-    {
-        try
-        {
-            _observer.OnNext(value);
-        }
-        catch
-        {
-            Dispose();
-            throw;
-        }
-    }
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public void OnNext(T value) => SinkDelivery.Next(_observer, value, this);
 
     /// <inheritdoc/>
     public void OnError(Exception error)

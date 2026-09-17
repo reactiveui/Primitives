@@ -4,10 +4,7 @@
 
 namespace ReactiveUI.Primitives.Wpf.Tests;
 
-/// <summary>
-/// Placeholder so the cross-platform test host runs a test and does not report a zero-test run.
-/// The real WPF dispatcher tests compile and run on Windows only (see the csproj).
-/// </summary>
+/// <summary>Placeholder keeping the non-Windows test host from reporting a zero-test run.</summary>
 public sealed class CrossPlatformPlaceholderTests
 {
     /// <summary>Verifies this build leg is the cross-platform one, where the WPF dispatcher tests are absent.</summary>

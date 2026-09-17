@@ -9,9 +9,8 @@
     <PackageTags>system.reactive;rx;reactive;primitives;wpf;dispatcher;scheduler</PackageTags>
   </PropertyGroup>
 
-  <!-- The coalescing IScheduler base shared by every platform .Reactive package. -->
   <ItemGroup>
-    <Compile Include="..\Primitives.Platform.Reactive.Shared\**\*.cs" Link="Primitives.Platform.Reactive.Shared\%(RecursiveDir)%(Filename)%(Extension)"/>
+    <Using Include="ReactiveUI.Primitives.Reactive.Concurrency"/>
   </ItemGroup>
 
   <ItemGroup>

@@ -9,11 +9,7 @@ using ReactiveUI.Primitives.Concurrency;
 
 namespace ReactiveUI.Primitives.Advanced;
 
-/// <summary>
-/// Coalescing engine shared by UI-thread sequencers: it batches dispatcher posts and shares delayed scheduling.
-/// A sealed sequencer holds one inline and injects its platform <c>post</c> (and optionally <c>scheduleDelayed</c>)
-/// delegates plus the cached drain callback; immediate work is queued and drained one batch per post.
-/// </summary>
+/// <summary>Queues immediate work into posted batches and schedules delayed work through the supplied delegates.</summary>
 [SuppressMessage(
     "Performance",
     "SST1803:Make record struct readonly",
@@ -36,6 +32,9 @@ public record struct DispatchSequencerState
 
     /// <summary>Optional platform delayed-scheduling override; <see langword="null"/> uses the shared thread-pool timer.</summary>
     private readonly Action<IWorkItem, long>? _scheduleDelayed;
+
+    /// <summary>Schedules delayed work when the platform provides no override.</summary>
+    private readonly ISequencer _sharedTimer;
 
     /// <summary>Approximate number of ready items; snapshots a drain batch.</summary>
     private int _readyCount;
@@ -62,12 +61,29 @@ public record struct DispatchSequencerState
         Func<Action, bool> post,
         Action drain,
         Action<IWorkItem, long>? scheduleDelayed)
+        : this(owner, post, drain, scheduleDelayed, ThreadPoolSequencer.Instance)
+    {
+    }
+
+    /// <summary>Initializes a new instance of the <see cref="DispatchSequencerState"/> struct.</summary>
+    /// <param name="owner">The owning sequencer.</param>
+    /// <param name="post">Posts the cached drain.</param>
+    /// <param name="drain">The cached drain callback.</param>
+    /// <param name="scheduleDelayed">The optional platform delay override.</param>
+    /// <param name="sharedTimer">Schedules work without a platform delay override.</param>
+    internal DispatchSequencerState(
+        ISequencer owner,
+        Func<Action, bool> post,
+        Action drain,
+        Action<IWorkItem, long>? scheduleDelayed,
+        ISequencer sharedTimer)
     {
         _ready = new();
         _owner = owner;
         _post = post;
         _drain = drain;
         _scheduleDelayed = scheduleDelayed;
+        _sharedTimer = sharedTimer;
     }
 
     /// <summary>Gets the sequencer's notion of current time.</summary>
@@ -82,7 +98,7 @@ public record struct DispatchSequencerState
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static TimeSpan DelayUntil(long dueTimestamp) => Sequencer.TimeUntil(dueTimestamp);
 
-    /// <summary>Executes the work item on the current (dispatcher) thread unless it has already been cancelled.</summary>
+    /// <summary>Executes the work item on the current (dispatcher) thread unless it has been cancelled.</summary>
     /// <param name="item">The work item to execute.</param>
     public static void RunIfActive(IWorkItem item)
     {
@@ -188,16 +204,7 @@ public record struct DispatchSequencerState
         }
     }
 
-    /// <summary>
-    /// Cancels and drops every ready work item. The items are the handles their callers hold, so disposing them
-    /// releases the caller's work instead of stranding it in a queue nothing will ever drain again.
-    /// </summary>
-    /// <remarks>
-    /// Internal rather than public because only a sequencer that can retire its own dispatcher needs it: the platform
-    /// dispatchers (WPF, WinForms, WinUI, MAUI, Blazor) outlive the sequencer that posts to them and keep draining, so
-    /// they never release a queue. <see cref="WasmSequencer"/> owns the timer that is its dispatcher, and once that is
-    /// disposed nothing can drain the queue again — so it, alone, hands the queued work back.
-    /// </remarks>
+    /// <summary>Releases queued items when the sequencer owns its dispatcher lifetime.</summary>
     internal void ReleaseQueued()
     {
         while (_ready.TryDequeue(out var item))
@@ -210,23 +217,17 @@ public record struct DispatchSequencerState
         }
     }
 
-    // The only trigger for this path is the real shared thread-pool timer coming due, so no deterministic test can
-    // reach it without waiting on a live OS timer; that timer race is exactly what flaked, so exclude it from coverage.
     /// <summary>Parks delayed work on the shared thread-pool timer, which marshals it back to the dispatcher when due.</summary>
     /// <param name="item">Work item to execute once due.</param>
     /// <param name="dueTimestamp">Absolute monotonic timestamp at which to execute the item.</param>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ExcludeFromCodeCoverage]
     private readonly void ScheduleOnSharedTimer(IWorkItem item, long dueTimestamp) =>
-        ThreadPoolSequencer.Instance.Schedule(new MarshalOnDueWorkItem(_owner, item), dueTimestamp);
+        _sharedTimer.Schedule(new MarshalOnDueWorkItem(_owner, item), dueTimestamp);
 
-    // Constructed only by ScheduleOnSharedTimer and run only by the shared thread-pool timer, so it shares that
-    // path's lack of a deterministic trigger; exclude it from coverage.
     /// <summary>Work item used by the shared timer path to marshal delayed work back to the dispatcher.</summary>
     /// <param name="owner">Owning dispatch sequencer.</param>
     /// <param name="item">Work item to marshal.</param>
-    [ExcludeFromCodeCoverage]
-    private sealed class MarshalOnDueWorkItem(ISequencer owner, IWorkItem item) : IWorkItem
+    internal sealed class MarshalOnDueWorkItem(ISequencer owner, IWorkItem item) : IWorkItem
     {
         /// <summary>Owning dispatch sequencer.</summary>
         private readonly ISequencer _owner = owner;

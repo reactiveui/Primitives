@@ -12,7 +12,7 @@ using ReactiveUI.Primitives.Signals;
 namespace ReactiveUI.Primitives.Tests;
 
 /// <summary>Tests for the signal type.</summary>
-public class SignalTests
+public partial class SignalTests
 {
     /// <summary>The integer constant one.</summary>
     private const int One = 1;
@@ -83,13 +83,16 @@ public class SignalTests
     /// <summary>Expected third pair of buffered values.</summary>
     private static readonly int[] ThirdPair = [ValueFive, ValueSix];
 
+    /// <summary>The fourth batch a two-value window emits.</summary>
+    private static readonly int[] FourthPair = [ValueSeven, ValueEight];
+
     /// <summary>Expected single RxVoid notification.</summary>
     private static readonly RxVoid[] SingleRxVoid = [RxVoid.Default];
 
     /// <summary>Expected pair of RxVoid notifications.</summary>
     private static readonly RxVoid[] DoubleRxVoid = [RxVoid.Default, RxVoid.Default];
 
-    /// <summary>Called when [next].</summary>
+    /// <summary>A subscriber receives each value until its subscription is disposed.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
     public async Task OnNext()
@@ -106,7 +109,7 @@ public class SignalTests
         await Assert.That(value).IsEqualTo(PairCount);
     }
 
-    /// <summary>Called when [next disposed].</summary>
+    /// <summary>A disposed signal throws when a value is emitted.</summary>
     [Test]
     public void OnNextDisposed()
     {
@@ -115,7 +118,7 @@ public class SignalTests
         _ = Assert.Throws<ObjectDisposedException>(() => subject.OnNext(1));
     }
 
-    /// <summary>Called when [next disposed subscriber].</summary>
+    /// <summary>A disposed subscriber receives no further values.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
     public async Task OnNextDisposedSubscriber()
@@ -127,7 +130,7 @@ public class SignalTests
         await Assert.That(value).IsEqualTo(0);
     }
 
-    /// <summary>Called when [completed].</summary>
+    /// <summary>A subscriber is notified when the signal completes.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
     public async Task OnCompleted()
@@ -141,7 +144,7 @@ public class SignalTests
         await Assert.That(completed).IsTrue();
     }
 
-    /// <summary>Called when [completed no op].</summary>
+    /// <summary>Completing a signal whose subscriber handles values only raises no error.</summary>
     [Test]
     public void OnCompleted_NoErrors()
     {
@@ -150,7 +153,7 @@ public class SignalTests
         subject.OnCompleted();
     }
 
-    /// <summary>Called when [completed once].</summary>
+    /// <summary>Only the first completion is forwarded.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
     public async Task OnCompletedOnce()
@@ -166,7 +169,7 @@ public class SignalTests
         await Assert.That(completed).IsEqualTo(1);
     }
 
-    /// <summary>Called when [completed disposed].</summary>
+    /// <summary>A disposed signal throws when it is completed.</summary>
     [Test]
     public void OnCompletedDisposed()
     {
@@ -175,7 +178,7 @@ public class SignalTests
         _ = Assert.Throws<ObjectDisposedException>(subject.OnCompleted);
     }
 
-    /// <summary>Called when [completed disposed subscriber].</summary>
+    /// <summary>A disposed subscriber is not notified of completion.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
     public async Task OnCompletedDisposedSubscriber()
@@ -189,7 +192,7 @@ public class SignalTests
         await Assert.That(completed).IsFalse();
     }
 
-    /// <summary>Called when [error].</summary>
+    /// <summary>An error reaches the subscriber's error handler.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
     public async Task OnError()
@@ -203,7 +206,7 @@ public class SignalTests
         await Assert.That(error).IsTrue();
     }
 
-    /// <summary>Called when [error once].</summary>
+    /// <summary>Only the first error is forwarded.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
     public async Task OnErrorOnce()
@@ -219,7 +222,7 @@ public class SignalTests
         await Assert.That(errors).IsEqualTo(1);
     }
 
-    /// <summary>Called when [error disposed].</summary>
+    /// <summary>A disposed signal throws when an error is raised.</summary>
     [Test]
     public void OnErrorDisposed()
     {
@@ -228,7 +231,7 @@ public class SignalTests
         _ = Assert.Throws<ObjectDisposedException>(() => subject.OnError(new InvalidOperationException()));
     }
 
-    /// <summary>Called when [error disposed subscriber].</summary>
+    /// <summary>A disposed subscriber is not notified of an error.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
     public async Task OnErrorDisposedSubscriber()
@@ -266,7 +269,7 @@ public class SignalTests
         await Assert.That(faulted.HasObservers).IsFalse();
     }
 
-    /// <summary>Called when [error rethrows by default].</summary>
+    /// <summary>An error raised with no error handler subscribed rethrows at the call site.</summary>
     [Test]
     public void OnErrorRethrowsByDefault()
     {
@@ -275,17 +278,17 @@ public class SignalTests
         _ = Assert.Throws<ArgumentException>(() => subject.OnError(new ArgumentException("subject error")));
     }
 
-    /// <summary>Called when [error null throws].</summary>
+    /// <summary>A null error is rejected.</summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     [Test]
     public void OnErrorNullThrows() => Assert.Throws<ArgumentNullException>(static () => new Signal<int>().OnError(null!));
 
-    /// <summary>Subscribes the null throws.</summary>
+    /// <summary>A null observer is rejected.</summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     [Test]
     public void SubscribeNullThrows() => Assert.Throws<ArgumentNullException>(static () => new Signal<int>().Subscribe(null!));
 
-    /// <summary>Subscribes the disposed throws.</summary>
+    /// <summary>Subscribing to a disposed signal throws.</summary>
     [Test]
     public void SubscribeDisposedThrows()
     {
@@ -294,7 +297,7 @@ public class SignalTests
         _ = Assert.Throws<ObjectDisposedException>(() => subject.Subscribe(static _ => { }));
     }
 
-    /// <summary>Subscribes the on completed.</summary>
+    /// <summary>A subscriber that arrives after completion is completed at once.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
     public async Task SubscribeOnCompleted()
@@ -308,7 +311,7 @@ public class SignalTests
         await Assert.That(completed).IsTrue();
     }
 
-    /// <summary>Subscribes the on error.</summary>
+    /// <summary>A subscriber that arrives after a fault receives that fault.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
     public async Task SubscribeOnError()
@@ -322,7 +325,7 @@ public class SignalTests
         await Assert.That(error).IsTrue();
     }
 
-    /// <summary>Subscribes action observers, converts to multi-observer dispatch, and removes each observer independently.</summary>
+    /// <summary>Each action subscriber stops receiving values when its own subscription is disposed.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
     public async Task SubscribeActionObservers_DisposeIndependently()
@@ -348,7 +351,7 @@ public class SignalTests
         await Assert.That(subject.HasObservers).IsFalse();
     }
 
-    /// <summary>Subjects the where.</summary>
+    /// <summary>A filtered signal forwards only the values its predicate accepts.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
     [RequiresUnreferencedCode("Tests the action-based Subscribe overload that carries trimming annotations.")]
@@ -364,7 +367,7 @@ public class SignalTests
         await Assert.That(values).IsEquivalentTo([ValueTwo]);
     }
 
-    /// <summary>Subjects the select.</summary>
+    /// <summary>A mapped signal forwards the projected value.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
     [RequiresUnreferencedCode("Tests the action-based Subscribe overload that carries trimming annotations.")]
@@ -378,7 +381,7 @@ public class SignalTests
         await Assert.That(values).IsEquivalentTo([ValueFour]);
     }
 
-    /// <summary>Subjects the buffer.</summary>
+    /// <summary>A count-buffered signal emits each full batch of values.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
     public async Task SubjectBuffer()
@@ -398,7 +401,7 @@ public class SignalTests
         subject.Dispose();
     }
 
-    /// <summary>Subjects the buffer skip2.</summary>
+    /// <summary>A skip equal to the window size emits consecutive batches with no values dropped between them.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
     public async Task SubjectBufferTake2Skip2()
@@ -411,17 +414,17 @@ public class SignalTests
         await Assert.That(result.SequenceEqual(FirstPair)).IsTrue();
         subject.OnNext(ValueThree);
         subject.OnNext(ValueFour);
-        await Assert.That(result.SequenceEqual(FirstPair)).IsTrue();
+        await Assert.That(result.SequenceEqual(SecondPair)).IsTrue();
         subject.OnNext(ValueFive);
         subject.OnNext(ValueSix);
         await Assert.That(result.SequenceEqual(ThirdPair)).IsTrue();
         subject.OnNext(ValueSeven);
         subject.OnNext(ValueEight);
-        await Assert.That(result.SequenceEqual(ThirdPair)).IsTrue();
+        await Assert.That(result.SequenceEqual(FourthPair)).IsTrue();
         subject.Dispose();
     }
 
-    /// <summary>Subjects the rx void.</summary>
+    /// <summary>A unit-valued signal forwards each notification.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
     public async Task SubjectRxVoid()
@@ -436,7 +439,7 @@ public class SignalTests
         subject.Dispose();
     }
 
-    /// <summary>Verifies immediate core signals, range, zip, repeat, and observer failures cover remainders.</summary>
+    /// <summary>Immediate core signals, ranges, zips, and repeats forward their sequences and surface observer failures.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
     public async Task ImmediateCoreSignalsRangeZipRepeatAndObserverFailuresCoverRemainders()
@@ -468,7 +471,7 @@ public class SignalTests
         AssertObserverFailuresPropagateOutOfSubscribe();
     }
 
-    /// <summary>Covers signal subject subscriber churn, late subscriptions, disposal, and terminal no-op branches.</summary>
+    /// <summary>A signal keeps its subscribers through churn, replays terminals to late subscribers, and throws once disposed.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
     public async Task SubjectsCoverMultipleSubscriberChurnLateTerminalsAndDisposalBranches()
@@ -523,12 +526,7 @@ public class SignalTests
         _ = Assert.Throws<ObjectDisposedException>(() => disposedSubject.OnNext(1));
     }
 
-    /// <summary>
-    /// A signal disposed from inside a subscriber's value callback has torn its state down under the dispatch
-    /// that is still running. The remaining subscribers in that dispatch snapshot still see the value — they
-    /// were already promised it — but the caller is told the signal is gone, rather than the disposal being
-    /// swallowed.
-    /// </summary>
+    /// <summary>Disposing the signal from inside a dispatch delivers the value to its peers and reports the disposal.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
     public async Task OnNextReportsDisposalWhenASubscriberDisposesTheSignalMidDispatch()
@@ -536,8 +534,7 @@ public class SignalTests
         Signal<int> signal = new();
         RecordingWitness<int> survivor = new();
 
-        // Two subscribers put the signal on the multi-subscriber dispatch path rather than the single-observer
-        // fast path, which returns before the disposal is ever noticed.
+        // Two subscribers force the multi-subscriber dispatch path, the only one that notices the disposal.
         _ = signal.Subscribe(Witness.Create<int>(_ => signal.Dispose()));
         _ = signal.Subscribe(survivor);
 
@@ -547,10 +544,7 @@ public class SignalTests
         await Assert.That(survivor.Values.SequenceEqual([One])).IsTrue();
     }
 
-    /// <summary>
-    /// The finalizer path releases unmanaged resources only. It must leave the signal usable: a signal that
-    /// tore down its observers here would silently drop subscribers whenever a finalizer ran.
-    /// </summary>
+    /// <summary>The finalizer disposal path releases unmanaged resources only and leaves the signal usable.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
     public async Task UnmanagedOnlyDisposalLeavesTheSignalUsable()
@@ -566,11 +560,7 @@ public class SignalTests
         await Assert.That(observer.Values.SequenceEqual([One])).IsTrue();
     }
 
-    /// <summary>
-    /// Faults rethrow at the call site only to reach action subscribers, which have nowhere else to surface an
-    /// error. With observer subscribers alone — and enough of them to leave the single-subscriber fast path —
-    /// the error is delivered and <c>OnError</c> returns quietly.
-    /// </summary>
+    /// <summary>An error is delivered and <c>OnError</c> returns quietly when only observers are subscribed.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
     public async Task OnErrorDoesNotRethrowWhenOnlyObserversAreSubscribed()
@@ -589,10 +579,7 @@ public class SignalTests
         await Assert.That(second.Errors[0]).IsSameReferenceAs(error);
     }
 
-    /// <summary>
-    /// The subscription array reuses the slot a departed subscriber vacated instead of growing. The newcomer
-    /// must be wired up properly in that recycled slot, and the departed subscriber must stay silent.
-    /// </summary>
+    /// <summary>A newly added subscriber receives values from the vacated slot, and the departed subscriber stays silent.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
     public async Task ASubscriberAddedAfterAnotherLeavesReusesTheVacatedSlot()
@@ -614,11 +601,7 @@ public class SignalTests
         await Assert.That(arrived.Values.SequenceEqual([One])).IsTrue();
     }
 
-    /// <summary>
-    /// Small integers come from a shared cache rather than a fresh allocation. Both subscription surfaces of a
-    /// cached signal must still replay the value they were built for, and values outside the cache must still
-    /// work.
-    /// </summary>
+    /// <summary>A cached small-integer signal replays its value to both subscription surfaces, as does an uncached one.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
     public async Task CachedInt32SignalsReplayTheirValueToObserversAndCallbacks()
@@ -718,7 +701,7 @@ public class SignalTests
                 .Subscribe((IObserver<int>)null!));
     }
 
-    /// <summary>A minimal <see cref="IRequireCurrentThread{T}"/> probe used to exercise the subscription routing.</summary>
+    /// <summary>A minimal <see cref="IRequireCurrentThread{T}"/> probe that reports how a subscription was routed.</summary>
     /// <typeparam name="T">The type of the signal sequence elements.</typeparam>
     private sealed class SignalsBaseProbe<T> : IRequireCurrentThread<T>
     {
@@ -743,7 +726,7 @@ public class SignalTests
 
         /// <summary>Performs the core subscription by returning an empty disposable.</summary>
         /// <param name="observer">The observer to subscribe.</param>
-        /// <param name="cancel">The disposable used to cancel the subscription.</param>
+        /// <param name="cancel">The disposable that cancels the subscription.</param>
         /// <returns>An empty disposable.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         [SuppressMessage("Maintainability", "SST1461:Remove unread private parameters", Justification = "The signature is fixed by the delegate SignalSubscription.Subscribe expects.")]
@@ -772,7 +755,7 @@ public class SignalTests
         public int Errors { get; private set; }
 
         /// <summary>Receives the next value.</summary>
-        /// <param name = "value">The value.</param>
+        /// <param name = "value">The observed value.</param>
         public void OnNext(int value) => Total += value;
 
         /// <summary>Receives an error.</summary>

@@ -45,7 +45,7 @@ public class SubscribeExtensionsTests
         }
         """;
 
-    /// <summary>A consumer that still uses the plain subscription name with both extension namespaces in scope.</summary>
+    /// <summary>A consumer that uses the plain subscription name with both extension namespaces in scope.</summary>
     private const string AmbiguousSubscribeConsumer = """
         global using System;
         global using ReactiveUI.Primitives;
@@ -132,7 +132,7 @@ public class SubscribeExtensionsTests
         await Assert.That(symbol?.ContainingType.Name).IsEqualTo(nameof(SubscribeExtensions));
     }
 
-    /// <summary>Verifies the plain Subscribe name stays ambiguous, which is what the explicit name exists to avoid.</summary>
+    /// <summary>Verifies the plain Subscribe name stays ambiguous with System.Reactive in scope.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
     [RequiresAssemblyFiles("Builds metadata references from loaded assembly locations.")]

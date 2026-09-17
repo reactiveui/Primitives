@@ -5,9 +5,6 @@
 namespace ReactiveUI.Primitives.Async;
 
 /// <summary>Provides static methods for creating and manipulating asynchronous observable sequences.</summary>
-/// <remarks>The SignalAsync class offers factory methods and utilities for working with asynchronous
-/// observables, enabling reactive programming patterns with support for asynchronous event streams. Members of this
-/// class are thread-safe and designed for use in concurrent environments.</remarks>
 public static partial class SignalAsync
 {
     /// <summary>Creates an observable sequence that executes the supplied function and emits its result.</summary>
@@ -24,7 +21,7 @@ public static partial class SignalAsync
     /// <summary>Creates an observable sequence that executes the supplied function and emits its result.</summary>
     /// <typeparam name="TResult">The result type.</typeparam>
     /// <param name="function">The function to execute.</param>
-    /// <param name="taskScheduler">An optional scheduler used to start the function.</param>
+    /// <param name="taskScheduler">An optional scheduler that runs the function.</param>
     /// <returns>An observable sequence that emits the function result and then completes.</returns>
     public static IObservableAsync<TResult> Start<TResult>(Func<TResult> function, TaskScheduler? taskScheduler)
     {

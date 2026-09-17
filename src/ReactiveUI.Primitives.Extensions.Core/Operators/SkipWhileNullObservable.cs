@@ -6,13 +6,7 @@ using System.Runtime.CompilerServices;
 
 namespace ReactiveUI.Primitives.Extensions.Operators;
 
-/// <summary>
-/// Filtering operator that drops leading <see langword="null"/> values, then forwards every value
-/// (including subsequent <see langword="null"/>s) once the latch has opened. Replaces the previous
-/// <c>source.SkipWhile(x =&gt; x == null)</c> composition that delegated to System.Reactive's
-/// <c>SkipWhile</c>, eliminating the per-subscription closure allocation and the extra observer
-/// layer the chain introduced.
-/// </summary>
+/// <summary>Drops leading null values, then forwards every value, including subsequent nulls.</summary>
 /// <typeparam name="T">The element type of the source observable; must be a reference type so the
 /// null check is meaningful.</typeparam>
 /// <param name="source">The source observable.</param>
@@ -27,10 +21,7 @@ public sealed class SkipWhileNullObservable<T>(IObservable<T> source) : IObserva
         return source.Subscribe(new SkipWhileNullWitness(observer));
     }
 
-    /// <summary>
-    /// Forwarding observer that swallows leading <see langword="null"/> values until the first
-    /// non-null value, then becomes a transparent forwarder for the remainder of the sequence.
-    /// </summary>
+    /// <summary>Forwarding observer that drops leading nulls and forwards everything from the first non-null value onward.</summary>
     /// <param name="downstream">The downstream observer.</param>
     private sealed class SkipWhileNullWitness(IObserver<T> downstream) : IObserver<T>
     {

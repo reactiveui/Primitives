@@ -6,11 +6,10 @@ using System.Runtime.CompilerServices;
 
 namespace ReactiveUI.Primitives.Async.Signals;
 
-/// <summary>Provides an asynchronous Signal that forwards notifications to observers concurrently.</summary>
+/// <summary>An asynchronous Signal that notifies its observers concurrently and latches the terminal result.</summary>
 /// <typeparam name="T">The type of value observed and forwarded to observers.</typeparam>
-/// <remarks>Observers are notified in parallel for each event. This class is suitable for scenarios where high
-/// throughput and concurrent notification of multiple observers are required. Thread safety is ensured for observer
-/// notification operations. Cancellation tokens can be used to cancel ongoing notification tasks.</remarks>
+/// <remarks>Completion order across observers is unspecified, and a cancelled notification does not stop the
+/// others.</remarks>
 [System.Diagnostics.DebuggerDisplay("ConcurrentSignalAsync: Observers = {_state.Observers.Length}, Result = {_state.Result}")]
 public sealed class ConcurrentSignalAsync<T> : ISignalAsync<T>
 {

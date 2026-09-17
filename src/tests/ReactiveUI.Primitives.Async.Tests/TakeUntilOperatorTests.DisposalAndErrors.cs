@@ -8,20 +8,11 @@ using ReactiveUI.Primitives.Async.Signals;
 
 namespace ReactiveUI.Primitives.Async.Tests;
 
-/// <summary>TakeUntil operator tests — disposal, cancellation, forwarding errors, and integration scenarios.</summary>
+/// <summary>TakeUntil operator tests - disposal, cancellation, forwarding errors, and integration scenarios.</summary>
 public partial class TakeUntilOperatorTests
 {
     /// <summary>Message thrown by an observer from its completion callback.</summary>
     private const string ObserverCompletionThrowsMessage = "observer completion throws";
-
-    /// <summary>Time allowed for a stop signal to propagate before the next emission.</summary>
-    private static readonly TimeSpan PropagationDelay = TimeSpan.FromMilliseconds(100);
-
-    /// <summary>Time allowed for a post-stop emission to be observed, had it not been suppressed.</summary>
-    private static readonly TimeSpan SuppressedEmissionDelay = TimeSpan.FromMilliseconds(50);
-
-    /// <summary>Time the swallowed-exception tests idle to prove nothing crashes the test host.</summary>
-    private static readonly TimeSpan SwallowedExceptionWindow = TimeSpan.FromMilliseconds(200);
 
     /// <summary>Tests TakeUntil(predicate) DisposeAsyncCore when subscription is not null.</summary>
     /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
@@ -57,17 +48,16 @@ public partial class TakeUntilOperatorTests
     {
         using CancellationTokenSource cts = new();
         var source = Signal.Create<int>();
-        Result? completionResult = null;
+        TaskCompletionSource<Result> completed = new(TaskCreationOptions.RunContinuationsAsynchronously);
         await using var sub = await source.Values.TakeUntil(cts.Token).SubscribeAsync(static (_, _) => default, null, result =>
         {
-            completionResult = result;
+            IgnoredResult.Of(completed.TrySetResult(result));
             return default;
         });
         await source.OnNextAsync(1, CancellationToken.None);
         await cts.CancelAsync();
-        await AsyncTestHelpers.WaitForConditionAsync(() => completionResult is not null, WaitTimeout);
-        await Assert.That(completionResult).IsNotNull();
-        await Assert.That(completionResult!.Value.IsSuccess).IsTrue();
+        var completion = await completed.Task;
+        await Assert.That(completion.IsSuccess).IsTrue();
     }
 
     /// <summary>
@@ -80,21 +70,19 @@ public partial class TakeUntilOperatorTests
     {
         var source = Signal.Create<int>();
         Result? completionResult = null;
+        Action<Result>? notify = null;
         await using var sub = await source.Values.TakeUntil(stop =>
         {
-            _ = Task.Run(async () =>
-            {
-                await Task.Yield();
-                stop(Result.Success);
-            });
+            notify = stop;
             return DisposableAsync.Create(static () => throw new InvalidOperationException("dispose fail"));
         }).SubscribeAsync(static (_, _) => default, null, result =>
         {
             completionResult = result;
             return default;
         });
+        notify!(Result.Success);
         await source.OnNextAsync(1, CancellationToken.None);
-        await AsyncTestHelpers.WaitForConditionAsync(() => completionResult is not null, WaitTimeout);
+        await Assert.That(completionResult is not null).IsTrue();
         await Assert.That(completionResult).IsNotNull();
         await Assert.That(completionResult!.Value.IsSuccess).IsTrue();
     }
@@ -117,9 +105,7 @@ public partial class TakeUntilOperatorTests
         await source.OnNextAsync(1, CancellationToken.None);
         await source.OnNextAsync(SecondItem, CancellationToken.None);
         await stopper.OnNextAsync("stop", CancellationToken.None);
-        await AsyncTestHelpers.WaitForConditionAsync(static () => true, PropagationDelay);
         await source.OnNextAsync(ThirdItem, CancellationToken.None);
-        await AsyncTestHelpers.WaitForConditionAsync(static () => true, SuppressedEmissionDelay);
         await Assert.That(items).Contains(1);
         await Assert.That(items).DoesNotContain(ThirdItem);
     }
@@ -148,11 +134,9 @@ public partial class TakeUntilOperatorTests
         await source.OnNextAsync(1, CancellationToken.None);
         tcs.SetResult();
 
-        // Wait for the sequence to have actually stopped rather than for a delay to elapse, so a slow
-        // machine cannot let the second value through before the stop has been relayed.
-        _ = await stopped.Task.WaitAsync(WaitTimeout);
+        // Completion must be delivered before the next source value.
+        _ = await stopped.Task;
         await source.OnNextAsync(SecondItem, CancellationToken.None);
-        await AsyncTestHelpers.WaitForConditionAsync(static () => true, SuppressedEmissionDelay);
         await Assert.That(items).Contains(1);
         await Assert.That(items).DoesNotContain(SecondItem);
     }
@@ -174,7 +158,6 @@ public partial class TakeUntilOperatorTests
             null);
         await source.OnNextAsync(1, CancellationToken.None);
         await cts.CancelAsync();
-        await AsyncTestHelpers.WaitForConditionAsync(static () => true, PropagationDelay);
         await Assert.That(items).Contains(1);
     }
 
@@ -188,7 +171,7 @@ public partial class TakeUntilOperatorTests
         var result = await SignalAsync.Range(1, SourceValueCount)
             .TakeUntil(static x => x > ThirdItem)
             .ToListAsync();
-        await Assert.That(result).IsCollectionEqualTo([1, SecondItem, ThirdItem]);
+        await Assert.That(result).IsCollectionEqualTo([1, SecondItem, ThirdItem, FourthItem]);
     }
 
     /// <summary>Tests that TakeUntil with async predicate stops when predicate returns true.</summary>
@@ -203,7 +186,7 @@ public partial class TakeUntilOperatorTests
             await Task.Yield();
             return x > SecondItem;
         }).ToListAsync();
-        await Assert.That(result).IsCollectionEqualTo([1, SecondItem]);
+        await Assert.That(result).IsCollectionEqualTo([1, SecondItem, ThirdItem]);
     }
 
     /// <summary>Tests that TakeUntil throws on null predicate.</summary>
@@ -226,10 +209,9 @@ public partial class TakeUntilOperatorTests
         var source = Signal.Create<int>();
         List<Exception> errors = [];
         await using var sub = await source.Values.TakeUntil(
-            notifyStop =>
+            static notifyStop =>
             {
-                // Fire stop with failure after a brief moment
-                _ = Task.Run(() => notifyStop(Result.Failure(new InvalidOperationException("delegate fail"))));
+                notifyStop(Result.Failure(new InvalidOperationException("delegate fail")));
                 return DisposableAsync.Empty;
             },
             new TakeUntilOptions { SourceFailsWhenOtherFails = false }).SubscribeAsync(
@@ -244,7 +226,7 @@ public partial class TakeUntilOperatorTests
                 return default;
             },
             static _ => default);
-        await AsyncTestHelpers.WaitForConditionAsync(() => errors.Count >= 1, WaitTimeout);
+        await Assert.That(errors.Count >= 1).IsTrue();
         await Assert.That(errors).Count().IsGreaterThanOrEqualTo(1);
     }
 
@@ -256,9 +238,9 @@ public partial class TakeUntilOperatorTests
         var source = Signal.Create<int>();
         Result? completionResult = null;
         await using var sub = await source.Values.TakeUntil(
-            notifyStop =>
+            static notifyStop =>
             {
-                _ = Task.Run(() => notifyStop(Result.Failure(new InvalidOperationException("delegate fail"))));
+                notifyStop(Result.Failure(new InvalidOperationException("delegate fail")));
                 return DisposableAsync.Empty;
             },
             new TakeUntilOptions { SourceFailsWhenOtherFails = true }).SubscribeAsync(static (_, _) => default, null, result =>
@@ -266,7 +248,7 @@ public partial class TakeUntilOperatorTests
             completionResult = result;
             return default;
         });
-        await AsyncTestHelpers.WaitForConditionAsync(() => completionResult.HasValue, WaitTimeout);
+        await Assert.That(completionResult.HasValue).IsTrue();
         await Assert.That(completionResult).IsNotNull();
         await Assert.That(completionResult!.Value.IsFailure).IsTrue();
     }
@@ -291,7 +273,7 @@ public partial class TakeUntilOperatorTests
 
                     return default;
                 });
-        await AsyncTestHelpers.WaitForConditionAsync(() => errors.Count >= 1, WaitTimeout);
+        await Assert.That(errors.Count >= 1).IsTrue();
         await Assert.That(errors).Count().IsGreaterThanOrEqualTo(1);
     }
 
@@ -312,7 +294,7 @@ public partial class TakeUntilOperatorTests
                     completionResult = result;
                     return default;
                 });
-        await AsyncTestHelpers.WaitForConditionAsync(() => completionResult.HasValue, WaitTimeout);
+        await Assert.That(completionResult.HasValue).IsTrue();
         await Assert.That(completionResult).IsNotNull();
         await Assert.That(completionResult!.Value.IsFailure).IsTrue();
     }
@@ -348,7 +330,7 @@ public partial class TakeUntilOperatorTests
                 completionResult = result;
                 return default;
             });
-        await AsyncTestHelpers.WaitForConditionAsync(() => completionResult.HasValue, WaitTimeout);
+        await Assert.That(completionResult.HasValue).IsTrue();
         await Assert.That(errors).Count().IsGreaterThanOrEqualTo(1);
         await Assert.That(completionResult).IsNotNull();
     }
@@ -397,7 +379,7 @@ public partial class TakeUntilOperatorTests
 
         // Fire the stop signal with a failure
         storedNotifyStop!(Result.Failure(new InvalidOperationException("signal error")));
-        await AsyncTestHelpers.WaitForConditionAsync(() => errors.Count >= 1, WaitTimeout);
+        await Assert.That(errors.Count >= 1).IsTrue();
         await Assert.That(errors).Count().IsGreaterThanOrEqualTo(1);
     }
 
@@ -427,7 +409,7 @@ public partial class TakeUntilOperatorTests
                     return default;
                 });
         storedNotifyStop!(Result.Failure(new InvalidOperationException("signal error")));
-        await AsyncTestHelpers.WaitForConditionAsync(() => completionResult.HasValue, WaitTimeout);
+        await Assert.That(completionResult.HasValue).IsTrue();
         await Assert.That(completionResult).IsNotNull();
         await Assert.That(completionResult!.Value.IsFailure).IsTrue();
     }
@@ -456,9 +438,6 @@ public partial class TakeUntilOperatorTests
 
         // Fire the stop signal with success; OnCompletedAsync will throw because observer throws
         storedNotifyStop!(Result.Success);
-
-        // The outer catch block should swallow the exception; no crash
-        await AsyncTestHelpers.WaitForConditionAsync(static () => true, SwallowedExceptionWindow);
         await sub.DisposeAsync();
     }
 
@@ -476,9 +455,6 @@ public partial class TakeUntilOperatorTests
 
         // Complete the task; OnCompletedAsync will throw because observer throws
         tcs.SetResult();
-
-        // The outer catch block should swallow the exception; no crash
-        await AsyncTestHelpers.WaitForConditionAsync(static () => true, SwallowedExceptionWindow);
         await sub.DisposeAsync();
     }
 
@@ -499,9 +475,6 @@ public partial class TakeUntilOperatorTests
 
         // Cancel the token; CompleteFromCancellation will call OnCompletedAsync which will throw
         await cts.CancelAsync();
-
-        // The outer catch block should swallow the exception; no crash
-        await AsyncTestHelpers.WaitForConditionAsync(static () => true, SwallowedExceptionWindow);
         await sub.DisposeAsync();
     }
 
@@ -529,9 +502,6 @@ public partial class TakeUntilOperatorTests
 
         // Signal a failure; SourceFailsWhenOtherFails=false so OnErrorResumeAsync is called, which throws
         storedNotifyStop!(Result.Failure(new InvalidOperationException("stop error")));
-
-        // The outer catch block should swallow the exception
-        await AsyncTestHelpers.WaitForConditionAsync(static () => true, SwallowedExceptionWindow);
         await sub.DisposeAsync();
     }
 
@@ -554,9 +524,6 @@ public partial class TakeUntilOperatorTests
 
         // Fault the task; SourceFailsWhenOtherFails=false so OnErrorResumeAsync is called, which throws
         tcs.SetException(new InvalidOperationException("task error"));
-
-        // The outer catch block should swallow the exception
-        await AsyncTestHelpers.WaitForConditionAsync(static () => true, SwallowedExceptionWindow);
         await sub.DisposeAsync();
     }
 
@@ -611,7 +578,7 @@ public partial class TakeUntilOperatorTests
             });
         await source.EmitNext(1);
         await cts.CancelAsync();
-        await completed.Task.WaitAsync(WaitTimeout);
+        await completed.Task;
         await Assert.That(items).Contains(1);
     }
 
@@ -638,7 +605,7 @@ public partial class TakeUntilOperatorTests
             });
         await source.EmitNext(1);
         tcs.SetResult();
-        await completed.Task.WaitAsync(WaitTimeout);
+        await completed.Task;
         await Assert.That(items).Contains(1);
     }
 }

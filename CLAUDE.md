@@ -134,12 +134,11 @@ dotnet test "tests/ReactiveUI.Primitives.Async.Tests/ReactiveUI.Primitives.Async
   --treenode-filter "/*/*/*/Async"
 ```
 
-### API Approval Notes
+### Public API Checks
 
-- API approval baselines live under `src/tests/**/ApiApprovalTests.*.verified.txt`
-- New TFMs usually require corresponding new `DotNet11_0.verified.txt` files
-- If approval tests fail with `.received.txt` output, inspect the generated snapshot and promote it intentionally if the
-  API change is expected
+- `PublicApiSharp.Analyzers` checks each package's `src/<Project>/PublicAPI/<tfm>/PublicAPI.txt` baseline.
+- New target frameworks require a corresponding baseline directory.
+- For an intentional API change, review the affected signatures and update the corresponding framework baselines.
 
 ---
 
@@ -195,6 +194,47 @@ These rules are authoritative for everything under `src/tests/`.
 - **No `#pragma warning disable`** (see also the zero-pragma policy): fix the root cause. Long lines (S103), long
   methods (S138), and long files (S104) are fixed by wrapping/splitting, not suppressing. If a suppression is genuinely
   unavoidable, use a scoped `[SuppressMessage]` attribute, never a pragma.
+
+---
+
+## Writing Docs
+
+These rules cover `README.md`, `CLAUDE.md` and every other doc in the repository. They do not cover XML doc comments.
+
+### Who you write for
+
+Write for a reader at a grade 8 level who knows basic C#. They know what a class, a property and an event are. They do
+not know this library.
+
+### Sentences
+
+- Put the main point first.
+- Give each sentence one subject. Use two only when they are tightly coupled.
+- Keep sentences short. Split a sentence that needs a dash, a semicolon or a "which" to hold together.
+- Use the active voice. Say who does what: "the operator delivers the value", not "the value is delivered".
+- Use verbs, not nouns made from verbs. Write "decide", not "make a decision".
+- Say what is true. Avoid double negatives.
+- Cut words that add nothing. Do not restate a point in the next sentence.
+
+### Words
+
+- Use everyday words. When you need a technical term, define it the first time you use it.
+- Define each term once. After that, use it without explaining it again.
+- Use the same word for the same thing every time. Do not swap in a synonym for variety.
+- Use "you" for the reader.
+
+### Structure
+
+- Use headings so a reader can find a topic.
+- Use a list for steps or for separate items. Use a table to compare items across the same columns.
+- Show a short code example when it explains faster than words.
+
+### Scope
+
+- Each section says what this library does, on its own terms.
+- A comparison with System.Reactive, R3 or R3Async goes only under the comparison headers: "Why not System.Reactive or
+  R3?" and the migration guides in `README.md`. Do not compare with them anywhere else.
+- Describe the code as it is. Do not describe what it used to do.
 
 ---
 

@@ -2,6 +2,8 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Runtime.CompilerServices;
+
 #if REACTIVE_SHIM
 namespace ReactiveUI.Primitives.Async.Reactive.Advanced;
 #else
@@ -10,8 +12,14 @@ namespace ReactiveUI.Primitives.Async.Advanced;
 
 /// <summary>Runs an action and forwards the signal notification for one subscription.</summary>
 [System.Diagnostics.DebuggerDisplay("StartSubscription: Action = {Action}, TaskScheduler = {TaskScheduler}")]
-public sealed class StartSubscription : TaskSignalSubscription<RxVoid>
+public sealed class StartSubscription : IAsyncDisposable, ITaskSignalJob<RxVoid>
 {
+    /// <summary>The observer receiving the job's notifications.</summary>
+    private readonly IObserverAsync<RxVoid> _observer;
+
+    /// <summary>Runs the job and joins it on disposal.</summary>
+    private readonly TaskSignalState _task = new();
+
     /// <summary>Initializes a new instance of the <see cref="StartSubscription"/> class.</summary>
     /// <param name="observer">The observer receiving the signal notification.</param>
     /// <param name="action">The action invoked for this subscription.</param>
@@ -20,8 +28,8 @@ public sealed class StartSubscription : TaskSignalSubscription<RxVoid>
         IObserverAsync<RxVoid> observer,
         Action action,
         TaskScheduler? taskScheduler)
-        : base(observer)
     {
+        _observer = observer;
         ArgumentExceptionHelper.ThrowIfNull(action);
 
         Action = action;
@@ -34,8 +42,16 @@ public sealed class StartSubscription : TaskSignalSubscription<RxVoid>
     /// <summary>Gets the scheduler used to start the action.</summary>
     private TaskScheduler? TaskScheduler { get; }
 
+    /// <summary>Starts the subscription's job and returns without waiting for it to finish.</summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public void Start() => _task.Start(this, _observer);
+
     /// <inheritdoc/>
-    protected override async ValueTask ExecuteAsyncCore(
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public ValueTask DisposeAsync() => _task.DisposeAsync();
+
+    /// <inheritdoc/>
+    async ValueTask ITaskSignalJob<RxVoid>.ExecuteAsync(
         IObserverAsync<RxVoid> observer,
         CancellationToken cancellationToken)
     {
@@ -46,7 +62,21 @@ public sealed class StartSubscription : TaskSignalSubscription<RxVoid>
             return;
         }
 
-        await Task.Factory.StartNew(
+        await ExecuteOnSchedulerAsync(observer, taskScheduler, cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <summary>Starts the action through the supplied scheduler.</summary>
+    /// <param name="observer">The observer receiving the signal notification.</param>
+    /// <param name="taskScheduler">The scheduler that starts the action.</param>
+    /// <param name="cancellationToken">Cancellation for the scheduled task and notifications.</param>
+    /// <returns>The scheduled action and notification operation.</returns>
+    [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
+    [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+    private Task ExecuteOnSchedulerAsync(
+        IObserverAsync<RxVoid> observer,
+        TaskScheduler taskScheduler,
+        CancellationToken cancellationToken) =>
+        Task.Factory.StartNew(
                 static s =>
                 {
                     var (self, observer, cancellationToken) =
@@ -57,9 +87,7 @@ public sealed class StartSubscription : TaskSignalSubscription<RxVoid>
                 cancellationToken,
                 TaskCreationOptions.DenyChildAttach,
                 taskScheduler)
-            .Unwrap()
-            .ConfigureAwait(false);
-    }
+            .Unwrap();
 
     /// <summary>Runs the action and forwards the completion signal.</summary>
     /// <param name="observer">The observer receiving the signal notification.</param>

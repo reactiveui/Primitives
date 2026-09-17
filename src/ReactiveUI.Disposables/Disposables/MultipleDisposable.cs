@@ -7,456 +7,105 @@ using System.Runtime.CompilerServices;
 
 namespace ReactiveUI.Primitives.Disposables;
 
-/// <summary>A disposable pocket that contains a set of disposables and disposes them together.</summary>
-/// <remarks>
-/// Implements <see cref="ICollection{T}"/> over <see cref="IDisposable"/> so it can stand in for a
-/// composite disposable: it supports collection initializers, membership queries, and
-/// <c>DisposeWith</c>-style extension methods that accept an <see cref="ICollection{T}"/>.
-/// </remarks>
-[System.Diagnostics.DebuggerDisplay("{DebuggerDisplay,nq}")]
-public class MultipleDisposable : IsDisposed, ICollection<IDisposable>
+/// <summary>A group of disposables that are disposed together.</summary>
+[System.Diagnostics.DebuggerDisplay("MultipleDisposable: Count = {Count}, IsDisposed = {IsDisposed}")]
+public sealed class MultipleDisposable : IsDisposed, ICollection<IDisposable>
 {
-    /// <summary>Initial capacity for overflow disposable storage.</summary>
-    private const int OverflowInitialCapacity = 2;
-
-    /// <summary>Growth factor for overflow disposable storage.</summary>
-    private const int OverflowGrowthFactor = 2;
-
-    /// <summary>Synchronizes mutations to the disposable set.</summary>
-    private readonly Lock _gate = new();
-
-    /// <summary>First inline disposable slot.</summary>
-    private IDisposable? _slot0;
-
-    /// <summary>Second inline disposable slot.</summary>
-    private IDisposable? _slot1;
-
-    /// <summary>Overflow disposable slots used after the inline slots are occupied.</summary>
-    private IDisposable[]? _overflow;
-
-    /// <summary>Number of active overflow disposable slots.</summary>
-    private int _overflowCount;
-
-    /// <summary>Value indicating whether this group is disposed.</summary>
-    private bool _disposed;
+    /// <summary>The held disposables.</summary>
+    private DisposableSet _set;
 
     /// <summary>Initializes a new instance of the <see cref="MultipleDisposable"/> class.</summary>
-    public MultipleDisposable()
-    {
-    }
+    public MultipleDisposable() => _set = new();
 
     /// <summary>Initializes a new instance of the <see cref="MultipleDisposable"/> class.</summary>
     /// <param name="first">The first disposable.</param>
     /// <param name="second">The second disposable.</param>
-    public MultipleDisposable(IDisposable first, IDisposable second)
-    {
-        _slot0 = first;
-        _slot1 = second;
-    }
+    public MultipleDisposable(IDisposable first, IDisposable second) => _set = new(first, second);
 
     /// <summary>Initializes a new instance of the <see cref="MultipleDisposable"/> class.</summary>
     /// <param name="first">The first disposable.</param>
     /// <param name="second">The second disposable.</param>
     /// <param name="third">The third disposable.</param>
-    public MultipleDisposable(IDisposable first, IDisposable second, IDisposable third)
-    {
-        _slot0 = first;
-        _slot1 = second;
-        _overflow = new IDisposable[OverflowInitialCapacity];
-        _overflow[0] = third;
-        _overflowCount = 1;
-    }
+    public MultipleDisposable(IDisposable first, IDisposable second, IDisposable third) => _set = new(first, second, third);
 
     /// <summary>Initializes a new instance of the <see cref="MultipleDisposable"/> class from a group of disposables.</summary>
     /// <param name="disposables">Disposables that will be disposed together.</param>
-    /// <exception cref="ArgumentExceptionHelper"><paramref name="disposables"/> is <see langword="null"/>.</exception>
-    public MultipleDisposable(params IDisposable[] disposables)
-    {
-        ArgumentExceptionHelper.ThrowIfNull(disposables);
-
-        for (var i = 0; i < disposables.Length; i++)
-        {
-            if (disposables[i] is not null)
-            {
-                AddCore(disposables[i]);
-            }
-        }
-    }
+    /// <exception cref="ArgumentNullException"><paramref name="disposables"/> is <see langword="null"/>.</exception>
+    public MultipleDisposable(params IDisposable[] disposables) => _set = new(disposables);
 
     /// <summary>Gets a value indicating whether the object is disposed.</summary>
-    public bool IsDisposed => Volatile.Read(ref _disposed);
+    public bool IsDisposed => _set.IsDisposed;
 
-    /// <summary>Gets the number of disposables currently held. Returns zero once disposed.</summary>
-    public int Count
-    {
-        get
-        {
-            lock (_gate)
-            {
-                if (_disposed)
-                {
-                    return 0;
-                }
+    /// <summary>Gets the number of held disposables, or zero after disposal.</summary>
+    public int Count => _set.Count;
 
-                var count = _overflowCount;
-                if (_slot0 is not null)
-                {
-                    count++;
-                }
-
-                if (_slot1 is not null)
-                {
-                    count++;
-                }
-
-                return count;
-            }
-        }
-    }
-
-    /// <summary>Gets a value indicating whether the collection is read-only. Always <see langword="false"/>.</summary>
+    /// <summary>Gets a value indicating whether the collection is read-only, which is always false.</summary>
     public bool IsReadOnly => false;
-
-    /// <summary>Gets the debugger display text.</summary>
-    [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
-    [System.Diagnostics.DebuggerBrowsable(System.Diagnostics.DebuggerBrowsableState.Never)]
-    private string DebuggerDisplay => ToString() ?? string.Empty;
 
     /// <summary>Creates a new group of disposable resources that are disposed together.</summary>
     /// <param name="disposables">Disposable resources to add to the group.</param>
     /// <returns>Group of disposable resources that are disposed together.</returns>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static IDisposable Create(params IDisposable[] disposables) => new MultipleDisposableBase(disposables);
+    public static IDisposable Create(params IDisposable[] disposables) => new DisposableArray(disposables);
 
-    /// <summary>Adds a disposable to the <see cref="MultipleDisposable"/> or disposes it immediately if the pocket is already disposed.</summary>
+    /// <summary>Adds a disposable to the group, or disposes it immediately when the group is disposed.</summary>
     /// <param name="item">Disposable to add.</param>
-    /// <exception cref="ArgumentExceptionHelper"><paramref name="item"/> is <see langword="null"/>.</exception>
-    public void Add(IDisposable item)
-    {
-        ArgumentExceptionHelper.ThrowIfNull(item);
+    /// <exception cref="ArgumentNullException"><paramref name="item"/> is <see langword="null"/>.</exception>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public void Add(IDisposable item) => _set.Add(item);
 
-        var shouldDispose = false;
-        lock (_gate)
-        {
-            if (_disposed)
-            {
-                shouldDispose = true;
-            }
-            else
-            {
-                AddCore(item);
-            }
-        }
-
-        if (!shouldDispose)
-        {
-            return;
-        }
-
-        item.Dispose();
-    }
-
-    /// <summary>Removes and disposes the requested disposable from the pocket.</summary>
+    /// <summary>Removes and disposes the requested disposable from the group.</summary>
     /// <param name="item">Disposable to remove.</param>
     /// <returns><see langword="true"/> if the item was found and disposed; otherwise, <see langword="false"/>.</returns>
-    /// <exception cref="ArgumentExceptionHelper"><paramref name="item"/> is null.</exception>
-    public bool Remove(IDisposable? item)
-    {
-        ArgumentExceptionHelper.ThrowIfNull(item);
-
-        bool shouldDispose;
-        lock (_gate)
-        {
-            shouldDispose = !_disposed && RemoveCore(item);
-        }
-
-        if (shouldDispose)
-        {
-            item.Dispose();
-        }
-
-        return shouldDispose;
-    }
+    /// <exception cref="ArgumentNullException"><paramref name="item"/> is null.</exception>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public bool Remove(IDisposable? item) => _set.Remove(item);
 
     /// <summary>Removes and disposes every disposable currently held without disposing the group itself.</summary>
-    public void Clear()
-    {
-        IDisposable? slot0;
-        IDisposable? slot1;
-        IDisposable[]? overflow;
-        int overflowCount;
-        lock (_gate)
-        {
-            if (_disposed)
-            {
-                return;
-            }
-
-            slot0 = _slot0;
-            slot1 = _slot1;
-            overflow = _overflow;
-            overflowCount = _overflowCount;
-            _slot0 = null;
-            _slot1 = null;
-            _overflow = null;
-            _overflowCount = 0;
-        }
-
-        slot0?.Dispose();
-        slot1?.Dispose();
-
-        if (overflow is null)
-        {
-            return;
-        }
-
-        for (var i = 0; i < overflowCount; i++)
-        {
-            overflow[i].Dispose();
-        }
-    }
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public void Clear() => _set.Clear();
 
     /// <summary>Determines whether the group currently holds the supplied disposable.</summary>
     /// <param name="item">Disposable to locate.</param>
     /// <returns><see langword="true"/> when the disposable is held; otherwise, <see langword="false"/>.</returns>
-    public bool Contains(IDisposable item)
-    {
-        if (item is null)
-        {
-            return false;
-        }
-
-        lock (_gate)
-        {
-            if (_disposed)
-            {
-                return false;
-            }
-
-            if (_slot0 is not null && EqualityComparer<IDisposable>.Default.Equals(_slot0, item))
-            {
-                return true;
-            }
-
-            if (_slot1 is not null && EqualityComparer<IDisposable>.Default.Equals(_slot1, item))
-            {
-                return true;
-            }
-
-            var overflow = _overflow;
-            if (overflow is null)
-            {
-                return false;
-            }
-
-            for (var i = 0; i < _overflowCount; i++)
-            {
-                if (EqualityComparer<IDisposable>.Default.Equals(overflow[i], item))
-                {
-                    return true;
-                }
-            }
-
-            return false;
-        }
-    }
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public bool Contains(IDisposable item) => _set.Contains(item);
 
     /// <summary>Copies the disposables currently held into <paramref name="array"/> starting at <paramref name="arrayIndex"/>.</summary>
     /// <param name="array">Destination array.</param>
     /// <param name="arrayIndex">Zero-based index in <paramref name="array"/> at which copying begins.</param>
-    /// <exception cref="ArgumentExceptionHelper"><paramref name="array"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentNullException"><paramref name="array"/> is <see langword="null"/>.</exception>
     /// <exception cref="ArgumentOutOfRangeException"><paramref name="arrayIndex"/> is negative.</exception>
-    public void CopyTo(IDisposable[] array, int arrayIndex)
-    {
-        ArgumentExceptionHelper.ThrowIfNull(array);
-
-        ArgumentOutOfRangeExceptionHelper.ThrowIfNegative(arrayIndex);
-
-        Snapshot().CopyTo(array, arrayIndex);
-    }
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public void CopyTo(IDisposable[] array, int arrayIndex) => _set.CopyTo(array, arrayIndex);
 
     /// <summary>Returns an enumerator over a snapshot of the disposables currently held.</summary>
     /// <returns>An enumerator over the held disposables.</returns>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public IEnumerator<IDisposable> GetEnumerator() => Snapshot().GetEnumerator();
+    public IEnumerator<IDisposable> GetEnumerator() => _set.Snapshot().GetEnumerator();
 
-    /// <summary>Performs application-defined tasks associated with freeing, releasing, or resetting unmanaged resources.</summary>
-    public void Dispose()
-    {
-        Dispose(true);
-        GC.SuppressFinalize(this);
-    }
-
-    /// <summary>Releases unmanaged and - optionally - managed resources.</summary>
-    /// <param name="disposing"><c>true</c> to release both managed and unmanaged resources; <c>false</c> to release only unmanaged resources.</param>
-    protected virtual void Dispose(bool disposing)
-    {
-        if (!disposing)
-        {
-            return;
-        }
-
-        IDisposable? slot0;
-        IDisposable? slot1;
-        IDisposable[]? overflow;
-        int overflowCount;
-        lock (_gate)
-        {
-            if (_disposed)
-            {
-                return;
-            }
-
-            _disposed = true;
-            slot0 = _slot0;
-            slot1 = _slot1;
-            overflow = _overflow;
-            overflowCount = _overflowCount;
-            _slot0 = null;
-            _slot1 = null;
-            _overflow = null;
-            _overflowCount = 0;
-        }
-
-        slot0?.Dispose();
-        slot1?.Dispose();
-
-        if (overflow is null)
-        {
-            return;
-        }
-
-        for (var i = 0; i < overflowCount; i++)
-        {
-            overflow[i].Dispose();
-            overflow[i] = null!;
-        }
-    }
+    /// <summary>Disposes every held disposable and marks the group disposed; repeated calls have no further effect.</summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public void Dispose() => _set.Dispose();
 
     /// <inheritdoc/>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
 
-    /// <summary>Captures the disposables currently held into a list under the gate.</summary>
-    /// <returns>A snapshot list of the held disposables.</returns>
-    private List<IDisposable> Snapshot()
-    {
-        lock (_gate)
-        {
-            List<IDisposable> snapshot = [];
-            if (_disposed)
-            {
-                return snapshot;
-            }
-
-            if (_slot0 is not null)
-            {
-                snapshot.Add(_slot0);
-            }
-
-            if (_slot1 is not null)
-            {
-                snapshot.Add(_slot1);
-            }
-
-            var overflow = _overflow;
-            if (overflow is not null)
-            {
-                for (var i = 0; i < _overflowCount; i++)
-                {
-                    snapshot.Add(overflow[i]);
-                }
-            }
-
-            return snapshot;
-        }
-    }
-
-    /// <summary>Adds a disposable while the caller holds the gate.</summary>
-    /// <param name="disposable">Disposable to add.</param>
-    private void AddCore(IDisposable disposable)
-    {
-        if (_slot0 is null)
-        {
-            _slot0 = disposable;
-            return;
-        }
-
-        if (_slot1 is null)
-        {
-            _slot1 = disposable;
-            return;
-        }
-
-        if (_overflow is null)
-        {
-            _overflow = new IDisposable[OverflowInitialCapacity];
-        }
-        else if (_overflowCount == _overflow.Length)
-        {
-            var grown = new IDisposable[_overflow.Length * OverflowGrowthFactor];
-            Array.Copy(_overflow, grown, _overflowCount);
-            _overflow = grown;
-        }
-
-        _overflow[_overflowCount] = disposable;
-        _overflowCount++;
-    }
-
-    /// <summary>Removes a disposable while the caller holds the gate.</summary>
-    /// <param name="item">Disposable to remove.</param>
-    /// <returns><see langword="true"/> when the item was removed; otherwise, <see langword="false"/>.</returns>
-    private bool RemoveCore(IDisposable item)
-    {
-        if (_slot0 is not null && EqualityComparer<IDisposable>.Default.Equals(_slot0, item))
-        {
-            _slot0 = null;
-            return true;
-        }
-
-        if (_slot1 is not null && EqualityComparer<IDisposable>.Default.Equals(_slot1, item))
-        {
-            _slot1 = null;
-            return true;
-        }
-
-        var overflow = _overflow;
-        if (overflow is null)
-        {
-            return false;
-        }
-
-        for (var i = 0; i < _overflowCount; i++)
-        {
-            if (!EqualityComparer<IDisposable>.Default.Equals(overflow[i], item))
-            {
-                continue;
-            }
-
-            for (var j = i + 1; j < _overflowCount; j++)
-            {
-                overflow[j - 1] = overflow[j];
-            }
-
-            _overflowCount--;
-            overflow[_overflowCount] = null!;
-            return true;
-        }
-
-        return false;
-    }
-
     /// <summary>Array-backed disposable group returned by the static factory.</summary>
-    private sealed class MultipleDisposableBase : IDisposable
+    private sealed class DisposableArray : IDisposable
     {
         /// <summary>Disposables to release, or <see langword="null"/> after disposal.</summary>
         private IDisposable[]? _disposables;
 
-        /// <summary>Initializes a new instance of the <see cref="MultipleDisposableBase"/> class.</summary>
+        /// <summary>Initializes a new instance of the <see cref="DisposableArray"/> class.</summary>
         /// <param name="disposables">Disposables owned by the group.</param>
         /// <exception cref="ArgumentNullException"><paramref name="disposables"/> is <see langword="null"/>.</exception>
-        public MultipleDisposableBase(IDisposable[] disposables) =>
-            Volatile.Write(ref _disposables, disposables ?? throw new ArgumentNullException(nameof(disposables)));
+        public DisposableArray(IDisposable[] disposables)
+        {
+            ArgumentExceptionHelper.ThrowIfNull(disposables);
+            _disposables = disposables;
+        }
 
         /// <inheritdoc/>
         public void Dispose()

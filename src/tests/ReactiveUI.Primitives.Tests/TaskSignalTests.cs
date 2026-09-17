@@ -9,9 +9,9 @@ using ReactiveUI.Primitives.Signals;
 namespace ReactiveUI.Primitives.Tests;
 
 /// <summary>Verifies <see cref="TaskSignal{T}"/> cancellation and disposal contracts.</summary>
-public class TaskSignalTests
+public partial class TaskSignalTests
 {
-    /// <summary>Covers task-signal cancellation registration and disposal branches.</summary>
+    /// <summary>Disposing a task signal requests cancellation once, and a null factory is rejected.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
     public async Task TaskSignalCoversCancellationAndDisposeBranches()
@@ -49,7 +49,20 @@ public class TaskSignalTests
         await Assert.That(taskSignal.IsCancellationRequested).IsTrue();
     }
 
-    /// <summary>Disposal tolerates a token source that the completion path has already disposed.</summary>
+    /// <summary>A task signal on the immediate sequencer subscribes its source directly.</summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    [Test]
+    public async Task TaskSignalOnTheImmediateSequencerSubscribesTheSourceDirectly()
+    {
+        using var taskSignal = TaskSignal<int>.Create(static _ => Signal.Emit(SuccessValue), Sequencer.Immediate);
+        List<int> values = [];
+
+        _ = taskSignal.Subscribe(values.Add);
+
+        await Assert.That(values.SequenceEqual([SuccessValue])).IsTrue();
+    }
+
+    /// <summary>Disposal tolerates a token source that the completion path has disposed.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
     public async Task TaskSignalDisposeToleratesAnAlreadyDisposedTokenSource()
@@ -57,8 +70,7 @@ public class TaskSignalTests
         CancellationTokenSource cts = new();
         var taskSignal = TaskSignal<int>.Create(static _ => Signal.Silent<int>(), Sequencer.CurrentThread, cts);
 
-        // The task-completion path can release the token source before the outer subscription is disposed, so
-        // cancelling it during disposal throws ObjectDisposedException, which disposal has to swallow.
+        // Completion may release the token source before subscription disposal.
         cts.Dispose();
 
         taskSignal.Dispose();

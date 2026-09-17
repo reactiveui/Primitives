@@ -36,7 +36,7 @@ public sealed class CurrentThreadSequencer : ISequencer
     /// <summary>Gets the singleton instance of the current thread scheduler.</summary>
     public static CurrentThreadSequencer Instance => StaticInstance.Value;
 
-    /// <summary>Gets a value indicating whether gets a value that indicates whether the caller must call a Schedule method.</summary>
+    /// <summary>Gets a value indicating whether the caller must schedule work instead of running it inline, true when the current thread is outside any scheduled call.</summary>
     [EditorBrowsable(EditorBrowsableState.Advanced)]
     public static bool IsScheduleRequired => !_running;
 
@@ -53,7 +53,7 @@ public sealed class CurrentThreadSequencer : ISequencer
 
     /// <summary>Schedules an action to be executed on the current-thread trampoline.</summary>
     /// <param name="action">Action to execute.</param>
-    /// <returns>The disposable object used to cancel queued work, or an empty disposable when the action has already run.</returns>
+    /// <returns>The disposable object used to cancel queued work, or an empty disposable when the action ran inline.</returns>
     /// <exception cref="ArgumentExceptionHelper"><paramref name="action"/> is <see langword="null"/>.</exception>
     public IDisposable Schedule(Action action)
     {
@@ -95,7 +95,7 @@ public sealed class CurrentThreadSequencer : ISequencer
         Schedule(item, Timestamp);
     }
 
-    /// <summary>Schedules a work item to be executed at the specified monotonic timestamp.</summary>
+    /// <summary>Runs the work item on the calling thread once due, blocking until then, or queues it on the trampoline when that thread is running scheduled work.</summary>
     /// <param name="item">Work item to execute.</param>
     /// <param name="dueTimestamp">Absolute monotonic timestamp at which to execute the item.</param>
     /// <exception cref="ArgumentExceptionHelper"><paramref name="item"/> is <see langword="null"/>.</exception>
@@ -105,20 +105,15 @@ public sealed class CurrentThreadSequencer : ISequencer
 
         SequencerQueue<long>? queue;
 
-        // There is no timed task and no task is currently running
+        // Initial work executes before Schedule returns.
         if (!_running)
         {
             SetRunning(true);
 
-            var dueTime = Sequencer.TimeUntil(dueTimestamp);
-            if (dueTime > TimeSpan.Zero)
-            {
-                Thread.Sleep(dueTime);
-            }
-
-            // execute directly without queueing
             try
             {
+                WaitIfNeeded(Sequencer.TimeUntil(dueTimestamp), Wait);
+
                 if (!Sequencer.IsCancelled(item))
                 {
                     item.Execute();
@@ -131,10 +126,8 @@ public sealed class CurrentThreadSequencer : ISequencer
                 throw;
             }
 
-            // did recursive tasks arrive?
+            // Nested work finishes before the outer Schedule call returns.
             queue = GetQueue();
-
-            // yes, run those in the queue as well
             if (queue is not null)
             {
                 try
@@ -157,14 +150,13 @@ public sealed class CurrentThreadSequencer : ISequencer
 
         queue = GetQueue();
 
-        // if there is a task running or there is a queue
+        // Nested work waits for the current item to finish.
         if (queue is null)
         {
             queue = new(InitialQueueCapacity);
             SetQueue(queue);
         }
 
-        // queue up more work
         ScheduledItem<long> si = new(dueTimestamp, Comparer<long>.Default, _ =>
         {
             if (!Sequencer.IsCancelled(item))
@@ -175,6 +167,19 @@ public sealed class CurrentThreadSequencer : ISequencer
             return EmptyDisposable.Instance;
         });
         queue.Enqueue(si);
+    }
+
+    /// <summary>Waits only when work remains in the future.</summary>
+    /// <param name="dueTime">The remaining delay.</param>
+    /// <param name="wait">The wait operation.</param>
+    internal static void WaitIfNeeded(TimeSpan dueTime, Action<TimeSpan> wait)
+    {
+        if (dueTime <= TimeSpan.Zero)
+        {
+            return;
+        }
+
+        wait(dueTime);
     }
 
     /// <summary>Gets the queued recursive work for the current thread.</summary>
@@ -190,12 +195,25 @@ public sealed class CurrentThreadSequencer : ISequencer
     /// <param name="running">Value indicating whether work is running.</param>
     private static void SetRunning(bool running) => _running = running;
 
+    /// <summary>Blocks the scheduling thread until delayed work becomes due.</summary>
+    /// <param name="dueTime">The remaining delay.</param>
+    [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static void Wait(TimeSpan dueTime) => Thread.Sleep(dueTime);
+
     /// <summary>Runs queued current-thread work.</summary>
-    private static class Trampoline
+    internal static class Trampoline
     {
         /// <summary>Runs all work currently in the queue.</summary>
         /// <param name="queue">Queue to drain.</param>
-        public static void Run(SequencerQueue<long> queue)
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        internal static void Run(SequencerQueue<long> queue) => Run(queue, static () => Sequencer.Timestamp, Wait);
+
+        /// <summary>Drains work using the supplied clock and wait operation.</summary>
+        /// <param name="queue">The pending work.</param>
+        /// <param name="timestamp">The monotonic clock.</param>
+        /// <param name="wait">The wait operation.</param>
+        internal static void Run(SequencerQueue<long> queue, Func<long> timestamp, Action<TimeSpan> wait)
         {
             while (queue.Count > 0)
             {
@@ -205,11 +223,7 @@ public sealed class CurrentThreadSequencer : ISequencer
                     continue;
                 }
 
-                var wait = Sequencer.TimeUntil(item.DueTime);
-                if (wait > TimeSpan.Zero)
-                {
-                    Thread.Sleep(wait);
-                }
+                WaitIfNeeded(Sequencer.TimeUntil(item.DueTime, timestamp()), wait);
 
                 if (!item.IsDisposed)
                 {
@@ -220,7 +234,7 @@ public sealed class CurrentThreadSequencer : ISequencer
     }
 
     /// <summary>Cancellable action work item.</summary>
-    private sealed class ActionWorkItem : IWorkItem, IsDisposed
+    internal sealed class ActionWorkItem : IWorkItem, IsDisposed
     {
         /// <summary>Action to execute.</summary>
         private readonly Action _action;

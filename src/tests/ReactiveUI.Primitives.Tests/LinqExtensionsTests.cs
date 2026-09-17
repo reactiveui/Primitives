@@ -9,6 +9,27 @@ namespace ReactiveUI.Primitives.Tests;
 /// <summary>Verifies miscellaneous Primitives extension contracts.</summary>
 public partial class LinqExtensionsTests
 {
+    /// <summary>The wrapper owns its disposable and invokes its optional callback before releasing it.</summary>
+    /// <param name="withCallback">Whether the wrapper includes a disposal callback.</param>
+    /// <returns>The test operation.</returns>
+    [Test]
+    [Arguments(false)]
+    [Arguments(true)]
+    public async Task DisposeWith_WhenDisposedTwice_ThenReleasesTheResourceOnce(bool withCallback)
+    {
+        const string disposalEvent = "dispose";
+        List<string> events = [];
+        ActionDisposable resource = new(() => events.Add(disposalEvent));
+        var wrapper = withCallback
+            ? resource.DisposeWith(() => events.Add("callback"))
+            : resource.DisposeWith();
+
+        wrapper.Dispose();
+        wrapper.Dispose();
+
+        await Assert.That(events.SequenceEqual(withCallback ? ["callback", disposalEvent] : [disposalEvent])).IsTrue();
+    }
+
     /// <summary>Verifies DisposeWith preserves the concrete type and tracks the original disposable.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]

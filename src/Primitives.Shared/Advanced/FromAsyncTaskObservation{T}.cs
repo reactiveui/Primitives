@@ -48,16 +48,12 @@ internal sealed class FromAsyncTaskObservation<T>
     private CancellationTokenSource? LinkedSource { get; }
 
     /// <summary>Observes the completed task and forwards its terminal result unless the subscription was disposed.</summary>
-    /// <param name="task">The task to observe.</param>
+    /// <param name="task">The completed task to observe.</param>
     internal void Observe(Task<T> task)
     {
         try
         {
             ObserveCore(task);
-        }
-        catch (Exception) when (Lifetime.IsCancellationRequested)
-        {
-            // Subscription disposal owns this cancellation path and must stay silent downstream.
         }
         catch (Exception error)
         {
@@ -73,7 +69,7 @@ internal sealed class FromAsyncTaskObservation<T>
     }
 
     /// <summary>Forwards the task terminal state.</summary>
-    /// <param name="task">The task to observe.</param>
+    /// <param name="task">The completed task to observe.</param>
     [System.Diagnostics.CodeAnalysis.SuppressMessage(
         "Concurrency",
         "PSH1315:A blocking wait on an awaitable that may not be done",
@@ -92,14 +88,7 @@ internal sealed class FromAsyncTaskObservation<T>
             return;
         }
 
-        if (task.Exception is { InnerException: { } innerException })
-        {
-            OnError(innerException);
-        }
-        else if (task.Exception is { } exception)
-        {
-            OnError(exception);
-        }
+        OnError(task.Exception!.InnerException!);
     }
 
     /// <summary>Forwards a successful task result.</summary>

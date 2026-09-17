@@ -2,8 +2,6 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
-using System.Collections.Concurrent;
-using System.Runtime.CompilerServices;
 using ReactiveUI.Primitives.Advanced;
 using ReactiveUI.Primitives.Concurrency;
 using ReactiveUI.Primitives.Signals;
@@ -25,14 +23,37 @@ public sealed class ExpireCoordinatorTests
     /// <summary>A gap shorter than <see cref="DueTicks"/> that must not expire the timeout.</summary>
     private const int ActiveGapTicks = 9;
 
-    /// <summary>A gap shorter than <see cref="DueTicks"/> after which a value still arrives in time.</summary>
+    /// <summary>A gap shorter than <see cref="DueTicks"/> after which a value arrives in time.</summary>
     private const int ShortGapTicks = 5;
 
     /// <summary>The values forwarded by the active-source re-arming test.</summary>
     private static readonly int[] ExpectedActiveValues = [0, 1, 2, 3, 4];
 
-    /// <summary>Timeout used while waiting for background work in this test.</summary>
-    private static readonly TimeSpan WaitTimeout = TimeSpan.FromSeconds(30);
+    /// <summary>Verifies an absolute deadline fires on time even while values keep arriving before it.</summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    [Test]
+    public async Task AbsoluteTimeoutExpiresAtTheDueTimeWhateverValuesArrive()
+    {
+        VirtualClock clock = new(DateTimeOffset.UnixEpoch);
+        Signal<int> source = new();
+        List<int> values = [];
+        List<string> errors = [];
+        var deadline = clock.Now + TimeSpan.FromTicks(DueTicks);
+        using var subscription = source.Timeout(deadline, clock)
+            .Subscribe(values.Add, ex => errors.Add(ex.GetType().Name));
+
+        clock.AdvanceBy(TimeSpan.FromTicks(ShortGapTicks));
+        source.OnNext(One);
+        clock.AdvanceBy(TimeSpan.FromTicks(ActiveGapTicks - ShortGapTicks));
+        source.OnNext(One);
+
+        // Still short of the deadline, and an inactivity timeout would have been pushed back twice by now.
+        await Assert.That(errors.Count).IsEqualTo(0);
+
+        clock.AdvanceBy(TimeSpan.FromTicks(One));
+
+        await Assert.That(errors.SequenceEqual(["TimeoutException"])).IsTrue();
+    }
 
     /// <summary>Verifies the timeout re-arms on each value so an active source never expires.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
@@ -56,7 +77,7 @@ public sealed class ExpireCoordinatorTests
         await Assert.That(values.SequenceEqual(ExpectedActiveValues)).IsTrue();
     }
 
-    /// <summary>Verifies silence longer than the timeout still expires after re-arming.</summary>
+    /// <summary>Verifies silence longer than the timeout expires the sequence after re-arming.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
     public async Task TimeoutExpiresWhenSilenceExceedsDueTimeAfterAValue()
@@ -120,13 +141,7 @@ public sealed class ExpireCoordinatorTests
         await Assert.That(errors.SequenceEqual([nameof(InvalidOperationException)])).IsTrue();
     }
 
-    /// <summary>
-    /// Verifies a value that arrives after the inactivity window closed expires the sequence even though the armed
-    /// timeout has not been dispatched yet. The timeout runs on the sequencer, and a thread-pool sequencer whose pool
-    /// is saturated can dispatch it arbitrarily late while a source ticking on its own thread keeps producing. The
-    /// window is a property of the clock, not of whether the timer callback has been given a thread, so a value that
-    /// missed it must not reach the observer.
-    /// </summary>
+    /// <summary>A value after the inactivity deadline expires the sequence even when the timeout callback remains queued.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
     public async Task ValueArrivingAfterTheWindowClosedExpiresWhileTheTimeoutIsStillUndispatched()
@@ -146,10 +161,7 @@ public sealed class ExpireCoordinatorTests
         await Assert.That(errors.SequenceEqual([nameof(TimeoutException)])).IsTrue();
     }
 
-    /// <summary>
-    /// Verifies the deadline check does not expire a value that is still inside its window. This is the guard against
-    /// the previous test's fix over-firing: an undispatched timeout must not turn an on-time value into a timeout.
-    /// </summary>
+    /// <summary>A value inside the inactivity window is forwarded while its timeout callback remains queued.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
     public async Task ValueArrivingInsideTheWindowIsForwardedWhileTheTimeoutIsStillUndispatched()
@@ -168,85 +180,122 @@ public sealed class ExpireCoordinatorTests
         await Assert.That(errors.Count).IsEqualTo(0);
     }
 
-    /// <summary>Verifies an in-flight value wins the race and suppresses the superseded timeout.</summary>
+    /// <summary>Verifies a timeout that becomes due while a value is in flight is suppressed by that value.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
     public async Task TimeoutDoesNotEnterObserverWhileOnNextIsInFlight()
     {
-        QueuedSequencer sequencer = new();
+        VirtualClock clock = new(DateTimeOffset.UnixEpoch);
         Signal<int> source = new();
-        using var observer = new BlockingObserver();
-        using var subscription = source.Expire(TimeSpan.FromTicks(One), sequencer).Subscribe(observer);
+        ReentrantTimeoutObserver observer = new(clock, TimeSpan.FromTicks(One));
+        using var subscription = source.Expire(TimeSpan.FromTicks(One), clock).Subscribe(observer);
 
-        var onNextFinished = RunOnDedicatedThread(() => source.OnNext(One));
-        Task? timeoutFinished = null;
-        try
-        {
-            await observer.OnNextEntered.Task.WaitAsync(WaitTimeout).ConfigureAwait(false);
+        source.OnNext(One);
 
-            // Queue the initial timeout for a dedicated worker while OnNext owns the coordinator gate. The assertion
-            // below is only about observer serialization: it must not report an error while the value callback is
-            // still active. Releasing OnNext lets the source re-arm its replacement timer and dispose this timer.
-            timeoutFinished = RunOnDedicatedThread(sequencer.ExecuteNext);
-            await sequencer.TimeoutExecutionStarted.Task.WaitAsync(WaitTimeout).ConfigureAwait(false);
-
-            await Assert.That(observer.ErrorEnteredDuringOnNext).IsFalse();
-        }
-        finally
-        {
-            observer.ReleaseOnNext.Set();
-            if (timeoutFinished is not null)
-            {
-                await Task.WhenAll(onNextFinished, timeoutFinished).WaitAsync(WaitTimeout).ConfigureAwait(false);
-            }
-            else
-            {
-                await onNextFinished.WaitAsync(WaitTimeout).ConfigureAwait(false);
-            }
-        }
-
-        // The initial timer attempt must not terminate the sequence after the value wins the race. Executing the
-        // replacement proves that the successful value re-armed the inactivity timeout.
         await Assert.That(observer.ErrorEnteredDuringOnNext).IsFalse();
         await Assert.That(observer.Errors).IsEqualTo(0);
         await Assert.That(observer.Values).IsEqualTo(One);
-        sequencer.ExecuteNext();
-        await Assert.That(observer.Errors).IsEqualTo(One);
-        await Assert.That(observer.TimeoutErrors).IsEqualTo(One);
-        await Assert.That(observer.Values).IsEqualTo(One);
     }
 
-    /// <summary>
-    /// Runs work on its own thread and reports when it finished. Used where the work blocks for the duration of
-    /// the scenario, which the thread pool cannot absorb without the risk of the work never being given a thread.
-    /// </summary>
-    /// <param name="work">The work to run.</param>
-    /// <returns>A task that completes when the work has returned.</returns>
-    private static Task RunOnDedicatedThread(Action work)
+    /// <summary>An observer that marshals to another thread which completes the source is not deadlocked, and completion follows the value.</summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    [Test]
+    public async Task ExpireObserverMarshallingWhileTheOtherThreadCompletesDoesNotDeadlock()
     {
-        TaskCompletionSource finished = new(TaskCreationOptions.RunContinuationsAsynchronously);
-        Thread thread = new(() =>
+        using MarshallingThread dispatcher = new();
+        ManualSequencer sequencer = new();
+        IObserver<int>? source = null;
+        List<int> values = [];
+        CallbackRecordingWitness<int> downstream = new(value =>
         {
-            try
-            {
-                work();
-                _ = finished.TrySetResult();
-            }
-            catch (Exception error)
-            {
-                _ = finished.TrySetException(error);
-            }
-        }) { IsBackground = true };
+            values.Add(value);
+            dispatcher.Invoke(() => source!.OnCompleted());
+        });
+        using var subscription = new ScriptedObservable<int>(observer => source = observer)
+            .Expire(TimeSpan.FromTicks(DueTicks), sequencer)
+            .Subscribe(downstream);
 
-        thread.Start();
-        return finished.Task;
+        var worker = BackgroundThread.Start(() => source!.OnNext(One));
+
+        await Assert.That(await BackgroundThread.FinishesPromptly(worker)).IsTrue();
+        await Assert.That(values.SequenceEqual([One])).IsTrue();
+        await Assert.That(downstream.Completions).IsEqualTo(1);
     }
 
-    /// <summary>
-    /// A sequencer that accepts scheduled work and never dispatches it, modelling a thread-pool sequencer whose pool
-    /// is saturated: the timer becomes due on the clock, but no thread is free to run the callback. Its clock is
-    /// driven by the test.
-    /// </summary>
+    /// <summary>An error raised from another thread while a value is delivered does not wait for the observer and follows the value.</summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    [Test]
+    public async Task ExpireErrorRaisedDuringDeliveryFollowsTheValue()
+    {
+        using ManualResetEventSlim inside = new(false);
+        using ManualResetEventSlim release = new(false);
+        ManualSequencer sequencer = new();
+        IObserver<int>? source = null;
+        List<int> values = [];
+        var downstream = MergeDeliveryAssertions.BlockOnFirstValue(values, inside, release);
+        InvalidOperationException expected = new("expire-delivery-error");
+        using var subscription = new ScriptedObservable<int>(observer => source = observer)
+            .Expire(TimeSpan.FromTicks(DueTicks), sequencer)
+            .Subscribe(downstream);
+
+        var owner = BackgroundThread.Start(() => source!.OnNext(One));
+        inside.Wait();
+        await BackgroundThread.Start(() => source!.OnError(expected));
+        await Assert.That(downstream.Error).IsNull();
+        release.Set();
+        await owner;
+
+        await Assert.That(values.SequenceEqual([One])).IsTrue();
+        await Assert.That(downstream.Error).IsSameReferenceAs(expected);
+    }
+
+    /// <summary>Completion raised before disposal while another thread delivers is still delivered once, and disposal does not wait.</summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    [Test]
+    public async Task ExpireCompletionRaisedBeforeDisposeIsStillDelivered()
+    {
+        using ManualResetEventSlim inside = new(false);
+        using ManualResetEventSlim release = new(false);
+        ManualSequencer sequencer = new();
+        IObserver<int>? source = null;
+        List<int> values = [];
+        var downstream = MergeDeliveryAssertions.BlockOnFirstValue(values, inside, release);
+        var subscription = new ScriptedObservable<int>(observer => source = observer)
+            .Expire(TimeSpan.FromTicks(DueTicks), sequencer)
+            .Subscribe(downstream);
+
+        var owner = BackgroundThread.Start(() => source!.OnNext(One));
+        inside.Wait();
+        await BackgroundThread.Start(() => source!.OnCompleted());
+        var disposer = BackgroundThread.Start(subscription.Dispose);
+        await Assert.That(await BackgroundThread.FinishesPromptly(disposer)).IsTrue();
+        release.Set();
+        await owner;
+
+        await Assert.That(values.SequenceEqual([One])).IsTrue();
+        await Assert.That(downstream.Completions).IsEqualTo(1);
+    }
+
+    /// <summary>A timeout too large to add to the clock saturates the deadline, so a later value is still forwarded.</summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    [Test]
+    public async Task ExpireWithATimeoutBeyondTheClockRangeStillForwardsValues()
+    {
+        ManualSequencer sequencer = new();
+        IObserver<int>? source = null;
+        RecordingWitness<int> downstream = new();
+        using var subscription = new ScriptedObservable<int>(observer => source = observer)
+            .Expire(TimeSpan.MaxValue, sequencer)
+            .Subscribe(downstream);
+
+        sequencer.Advance(TimeSpan.FromTicks(DueTicks));
+        source!.OnNext(One);
+
+        await Assert.That(downstream.Values.SequenceEqual([One])).IsTrue();
+        await Assert.That(downstream.Errors.Count).IsEqualTo(0);
+    }
+
+    /// <summary>Tracks virtual time and accepts work without dispatching it.</summary>
     /// <param name="start">The instant the clock starts at.</param>
     private sealed class UndispatchedSequencer(DateTimeOffset start) : ISequencer
     {
@@ -273,54 +322,26 @@ public sealed class ExpireCoordinatorTests
         [System.Diagnostics.CodeAnalysis.SuppressMessage(
             "Design",
             "SST2318:Members should not have identical bodies",
-            Justification =
-                "The relative and absolute Schedule overloads of this test-double sequencer intentionally behave the "
-                + "same way; both are required by the ISequencer contract and, as distinct interface overloads, cannot "
-                + "forward to one another.")]
+            Justification = "Distinct interface overloads cannot forward to one another.")]
         public void Schedule(IWorkItem item, long dueTimestamp) => Pending++;
     }
 
-    /// <summary>Observer that blocks source value handling so timeout serialization can be observed.</summary>
-    private sealed class BlockingObserver : IObserver<int>, IDisposable
+    /// <summary>Observer that makes the armed timeout due from inside <see cref="OnNext"/>.</summary>
+    /// <param name="clock">The clock that dispatches due work inline.</param>
+    /// <param name="dueTime">The amount to advance the clock by so the armed timeout becomes due.</param>
+    private sealed class ReentrantTimeoutObserver(VirtualClock clock, TimeSpan dueTime) : IObserver<int>
     {
-        /// <summary>Non-zero while <see cref="OnNext"/> is active. Written by the notifying thread and read by
-        /// the timeout thread, so the two must not race on a plain field.</summary>
-        private int _isInOnNext;
-
-        /// <summary>Non-zero once an error arrived while <see cref="OnNext"/> was active. The test reads this
-        /// while both threads are still running, so the write has to be published rather than merely made.</summary>
-        private int _errorEnteredDuringOnNext;
-
-        /// <summary>The number of forwarded values.</summary>
-        private int _values;
-
-        /// <summary>The number of forwarded errors.</summary>
-        private int _errors;
-
-        /// <summary>The number of forwarded timeout errors.</summary>
-        private int _timeoutErrors;
-
-        /// <summary>Gets the task completed when <see cref="OnNext"/> is entered.</summary>
-        public TaskCompletionSource OnNextEntered { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
-
-        /// <summary>Gets the event released by the test to unblock <see cref="OnNext"/>.</summary>
-        public ManualResetEventSlim ReleaseOnNext { get; } = new();
-
         /// <summary>Gets the number of forwarded values.</summary>
-        public int Values => Volatile.Read(ref _values);
+        public int Values { get; private set; }
 
         /// <summary>Gets the number of forwarded errors.</summary>
-        public int Errors => Volatile.Read(ref _errors);
+        public int Errors { get; private set; }
 
-        /// <summary>Gets the number of forwarded timeout errors.</summary>
-        public int TimeoutErrors => Volatile.Read(ref _timeoutErrors);
+        /// <summary>Gets a value indicating whether an error arrived while <see cref="OnNext"/> was active.</summary>
+        public bool ErrorEnteredDuringOnNext { get; private set; }
 
-        /// <summary>Gets a value indicating whether an error entered while <see cref="OnNext"/> was active.</summary>
-        public bool ErrorEnteredDuringOnNext => Volatile.Read(ref _errorEnteredDuringOnNext) != 0;
-
-        /// <inheritdoc/>
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Dispose() => ReleaseOnNext.Dispose();
+        /// <summary>Gets or sets a value indicating whether <see cref="OnNext"/> is active.</summary>
+        private bool IsInOnNext { get; set; }
 
         /// <inheritdoc/>
         public void OnCompleted()
@@ -330,93 +351,21 @@ public sealed class ExpireCoordinatorTests
         /// <inheritdoc/>
         public void OnError(Exception error)
         {
-            if (Volatile.Read(ref _isInOnNext) != 0)
+            if (IsInOnNext)
             {
-                Volatile.Write(ref _errorEnteredDuringOnNext, 1);
+                ErrorEnteredDuringOnNext = true;
             }
 
-            if (error is TimeoutException)
-            {
-                _ = Interlocked.Increment(ref _timeoutErrors);
-            }
-
-            _ = Interlocked.Increment(ref _errors);
+            Errors++;
         }
 
         /// <inheritdoc/>
         public void OnNext(int value)
         {
-            _ = Interlocked.Increment(ref _values);
-            Volatile.Write(ref _isInOnNext, 1);
-            _ = OnNextEntered.TrySetResult();
-            try
-            {
-                if (!ReleaseOnNext.Wait(WaitTimeout))
-                {
-                    throw new TimeoutException("The test did not release the in-flight OnNext callback.");
-                }
-            }
-            finally
-            {
-                Volatile.Write(ref _isInOnNext, 0);
-            }
-        }
-    }
-
-    /// <summary>Sequencer that queues work until this test explicitly executes it.</summary>
-    private sealed class QueuedSequencer : ISequencer
-    {
-        /// <summary>Scheduled work waiting for the test to execute it.</summary>
-        private readonly ConcurrentQueue<(IWorkItem Item, long DueTimestamp)> _items = new();
-
-        /// <summary>The current monotonic timestamp, updated before a queued item is invoked.</summary>
-        private long _timestamp;
-
-        /// <summary>Gets the task completed when a worker dequeues a queued timeout for execution.</summary>
-        public TaskCompletionSource TimeoutExecutionStarted { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
-
-        /// <inheritdoc/>
-        public DateTimeOffset Now => DateTimeOffset.UnixEpoch + Sequencer.ToTimeSpanDelta(Timestamp);
-
-        /// <inheritdoc/>
-        public long Timestamp => Volatile.Read(ref _timestamp);
-
-        /// <inheritdoc/>
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Schedule(IWorkItem item) => _items.Enqueue((item, Timestamp));
-
-        /// <inheritdoc/>
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Schedule(IWorkItem item, long dueTimestamp) => _items.Enqueue((item, dueTimestamp));
-
-        /// <summary>Executes the next queued work item.</summary>
-        /// <exception cref="InvalidOperationException">No timer was queued when execution was requested.</exception>
-        public void ExecuteNext()
-        {
-            if (!_items.TryDequeue(out var scheduled))
-            {
-                throw new InvalidOperationException("No queued timeout was available to execute.");
-            }
-
-            AdvanceTo(scheduled.DueTimestamp);
-            _ = TimeoutExecutionStarted.TrySetResult();
-            scheduled.Item.Execute();
-        }
-
-        /// <summary>Advances the clock to a scheduled due timestamp without moving it backwards.</summary>
-        /// <param name="dueTimestamp">The timestamp of the work about to execute.</param>
-        private void AdvanceTo(long dueTimestamp)
-        {
-            long currentTimestamp;
-            do
-            {
-                currentTimestamp = Timestamp;
-                if (currentTimestamp >= dueTimestamp)
-                {
-                    return;
-                }
-            }
-            while (Interlocked.CompareExchange(ref _timestamp, dueTimestamp, currentTimestamp) != currentTimestamp);
+            Values++;
+            IsInOnNext = true;
+            clock.AdvanceBy(dueTime);
+            IsInOnNext = false;
         }
     }
 }

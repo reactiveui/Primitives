@@ -2,14 +2,12 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Diagnostics;
 using System.Runtime.CompilerServices;
 
 namespace ReactiveUI.Primitives.Async;
 
 /// <summary>Provides extension methods for working with asynchronous observable sequences.</summary>
-/// <remarks>The methods in this class enable the addition of side effects, such as logging or resource
-/// management, to asynchronous observable sequences without modifying their elements or control flow. These methods are
-/// intended to be used as part of a fluent query or processing pipeline for asynchronous observables.</remarks>
 public static partial class SignalAsyncExtensions
 {
     /// <summary>Side-effect (Tap/Do) operators that invoke callbacks for each notification of an observable source sequence.</summary>
@@ -48,10 +46,7 @@ public static partial class SignalAsyncExtensions
             Action onCompleted) =>
             new TapSyncSignal<T>(source, onNext, onError, _ => onCompleted());
 
-        /// <summary>
-        /// Invokes the specified asynchronous actions for each element, error, or completion notification in the
-        /// observable sequence without modifying the sequence.
-        /// </summary>
+        /// <summary>Invokes the specified asynchronous actions for each element, error, or completion notification in the observable sequence without modifying the sequence.</summary>
         /// <param name="onNext">An asynchronous callback to invoke for each element in the sequence.</param>
         /// <param name="onErrorResume">An optional asynchronous callback to invoke if an error occurs in the sequence.</param>
         /// <param name="onCompleted">An optional asynchronous callback to invoke when the sequence completes.</param>
@@ -70,10 +65,7 @@ public static partial class SignalAsyncExtensions
         public IObservableAsync<T> Do(Func<T, CancellationToken, ValueTask>? onNext) =>
             onNext is null ? source : new TapAsyncSignal<T>(source, onNext, null, null);
 
-        /// <summary>
-        /// Invokes the specified actions in response to notifications from the observable sequence without modifying
-        /// the sequence itself.
-        /// </summary>
+        /// <summary>Invokes the specified actions in response to notifications from the observable sequence without modifying the sequence itself.</summary>
         /// <param name="onNext">An action to invoke for each element in the sequence as it is emitted.</param>
         /// <param name="onErrorResume">An action to invoke if an error occurs in the sequence.</param>
         /// <param name="onCompleted">An action to invoke when the sequence completes, receiving the final result.</param>
@@ -119,14 +111,42 @@ public static partial class SignalAsyncExtensions
         /// <param name="onNext">An asynchronous callback to invoke for each element, or null to take no action on elements.</param>
         /// <param name="onErrorResume">An asynchronous callback to invoke on error, or null to take no action on errors.</param>
         /// <param name="onCompleted">An asynchronous callback to invoke on completion, or null to take no action on completion.</param>
+        [DebuggerDisplay("AsyncSideEffectWitness: {_witness}")]
         internal sealed class AsyncSideEffectWitness(
             IObserverAsync<T> observer,
             Func<T, CancellationToken, ValueTask>? onNext,
             Func<Exception, CancellationToken, ValueTask>? onErrorResume,
-            Func<Result, ValueTask>? onCompleted) : ForwardingWitnessAsync<T>(observer)
+            Func<Result, ValueTask>? onCompleted) : IWitnessAsync<T>
         {
+            /// <summary>The notification gate, cancellation link and disposal state.</summary>
+            private WitnessAsyncState _witness;
+
+            /// <summary>Gets the observer that receives forwarded notifications.</summary>
+            private IObserverAsync<T> Downstream { get; } = observer;
+
             /// <inheritdoc/>
-            protected override async ValueTask OnNextAsyncCore(T value, CancellationToken cancellationToken)
+            ref WitnessAsyncState IWitnessState.Witness => ref _witness;
+
+            /// <inheritdoc/>
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public ValueTask OnNextAsync(T value, CancellationToken cancellationToken) =>
+                WitnessAsync.OnNextAsync(this, value, cancellationToken);
+
+            /// <inheritdoc/>
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public ValueTask OnErrorResumeAsync(Exception error, CancellationToken cancellationToken) =>
+                WitnessAsync.OnErrorResumeAsync(this, error, cancellationToken);
+
+            /// <inheritdoc/>
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public ValueTask OnCompletedAsync(Result result) => WitnessAsync.OnCompletedAsync(this, result);
+
+            /// <inheritdoc/>
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public ValueTask DisposeAsync() => WitnessAsync.DisposeStateAsync(this);
+
+            /// <inheritdoc/>
+            async ValueTask IWitnessAsync<T>.OnNextAsyncCore(T value, CancellationToken cancellationToken)
             {
                 if (onNext is not null)
                 {
@@ -137,7 +157,7 @@ public static partial class SignalAsyncExtensions
             }
 
             /// <inheritdoc/>
-            protected override async ValueTask OnErrorResumeAsyncCore(
+            async ValueTask IWitnessAsync<T>.OnErrorResumeAsyncCore(
                 Exception error,
                 CancellationToken cancellationToken)
             {
@@ -150,7 +170,7 @@ public static partial class SignalAsyncExtensions
             }
 
             /// <inheritdoc/>
-            protected override async ValueTask OnCompletedAsyncCore(Result result)
+            async ValueTask IWitnessAsync<T>.OnCompletedAsyncCore(Result result)
             {
                 if (onCompleted is not null)
                 {
@@ -188,28 +208,56 @@ public static partial class SignalAsyncExtensions
         /// <param name="onNext">An action to invoke for each element, or null to take no action on elements.</param>
         /// <param name="onErrorResume">An action to invoke on error, or null to take no action on errors.</param>
         /// <param name="onCompleted">An action to invoke on completion, or null to take no action on completion.</param>
+        [DebuggerDisplay("SyncSideEffectWitness: {_witness}")]
         internal sealed class SyncSideEffectWitness(
             IObserverAsync<T> observer,
             Action<T>? onNext,
             Action<Exception>? onErrorResume,
-            Action<Result>? onCompleted) : ForwardingWitnessAsync<T>(observer)
+            Action<Result>? onCompleted) : IWitnessAsync<T>
         {
+            /// <summary>The notification gate, cancellation link and disposal state.</summary>
+            private WitnessAsyncState _witness;
+
+            /// <summary>Gets the observer that receives forwarded notifications.</summary>
+            private IObserverAsync<T> Downstream { get; } = observer;
+
             /// <inheritdoc/>
-            protected override ValueTask OnNextAsyncCore(T value, CancellationToken cancellationToken)
+            ref WitnessAsyncState IWitnessState.Witness => ref _witness;
+
+            /// <inheritdoc/>
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public ValueTask OnNextAsync(T value, CancellationToken cancellationToken) =>
+                WitnessAsync.OnNextAsync(this, value, cancellationToken);
+
+            /// <inheritdoc/>
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public ValueTask OnErrorResumeAsync(Exception error, CancellationToken cancellationToken) =>
+                WitnessAsync.OnErrorResumeAsync(this, error, cancellationToken);
+
+            /// <inheritdoc/>
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public ValueTask OnCompletedAsync(Result result) => WitnessAsync.OnCompletedAsync(this, result);
+
+            /// <inheritdoc/>
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public ValueTask DisposeAsync() => WitnessAsync.DisposeStateAsync(this);
+
+            /// <inheritdoc/>
+            ValueTask IWitnessAsync<T>.OnNextAsyncCore(T value, CancellationToken cancellationToken)
             {
                 onNext?.Invoke(value);
                 return Downstream.OnNextAsync(value, cancellationToken);
             }
 
             /// <inheritdoc/>
-            protected override ValueTask OnErrorResumeAsyncCore(Exception error, CancellationToken cancellationToken)
+            ValueTask IWitnessAsync<T>.OnErrorResumeAsyncCore(Exception error, CancellationToken cancellationToken)
             {
                 onErrorResume?.Invoke(error);
                 return Downstream.OnErrorResumeAsync(error, cancellationToken);
             }
 
             /// <inheritdoc/>
-            protected override ValueTask OnCompletedAsyncCore(Result result)
+            ValueTask IWitnessAsync<T>.OnCompletedAsyncCore(Result result)
             {
                 onCompleted?.Invoke(result);
                 return Downstream.OnCompletedAsync(result);

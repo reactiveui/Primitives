@@ -2,11 +2,75 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using ReactiveUI.Primitives.Async.Disposables;
+
 namespace ReactiveUI.Primitives.Async.Tests;
 
 /// <summary>Tests for the Using operator.</summary>
 public partial class CombiningOperatorTests
 {
+    /// <summary>Tests Using forwards a resumable source error to the subscriber.</summary>
+    /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
+    [Test]
+    public async Task WhenUsingSourceErrorResumes_ThenErrorIsForwarded()
+    {
+        TrackingAsyncDisposable trackingResource = new();
+        List<Exception> errors = [];
+        Exception expected = new InvalidOperationException("resume");
+
+        await using var subscription = await SignalAsync.Using(
+                _ => new ValueTask<TrackingAsyncDisposable>(trackingResource),
+                _ => SignalAsync.Create<int>(async (observer, ct) =>
+                {
+                    await observer.OnErrorResumeAsync(expected, ct);
+                    await observer.OnCompletedAsync(Result.Success);
+                    return DisposableAsync.Empty;
+                }))
+            .SubscribeAsync(
+                static (_, _) => default,
+                (error, _) =>
+                {
+                    errors.Add(error);
+                    return default;
+                });
+
+        await Assert.That(errors).IsCollectionEqualTo([expected]);
+        await Assert.That(trackingResource.IsDisposed).IsTrue();
+    }
+
+    /// <summary>Tests a faulted resource disposal still disposes the Using witness and surfaces the failure.</summary>
+    /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
+    [Test]
+    public async Task WhenUsingResourceDisposeFaults_ThenWitnessDisposedAndFailureRethrown()
+    {
+        InvalidOperationException expected = new("resource dispose failed");
+        CallbackWitnessAsync<int> observer = new(static (_, _) => default);
+        UsingWitness<FailingAsyncDisposable, int> witness = new(observer, new(expected));
+
+        var error = await Assert.That(async () => await witness.DisposeAsync()).ThrowsExactly<InvalidOperationException>();
+
+        await Assert.That(error).IsSameReferenceAs(expected);
+        await Assert.That(witness.HasDisposed).IsTrue();
+    }
+
+    /// <summary>Tests Using disposes the resource through its witness when the source subscribe call throws.</summary>
+    /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
+    [Test]
+    public async Task WhenUsingSourceSubscribeThrows_ThenResourceDisposedAndFailureRethrown()
+    {
+        TrackingAsyncDisposable trackingResource = new();
+        InvalidOperationException expected = new("subscribe call failed");
+        var observable = SignalAsync.Using<int, TrackingAsyncDisposable>(
+            _ => new(trackingResource),
+            _ => new ThrowingSubscribeSource<int>(expected));
+
+        var error = await Assert.That(async () => await observable.SubscribeAsync(static (_, _) => default, null))
+            .ThrowsExactly<InvalidOperationException>();
+
+        await Assert.That(error).IsSameReferenceAs(expected);
+        await Assert.That(trackingResource.IsDisposed).IsTrue();
+    }
+
     /// <summary>Tests Using creates resource, emits values, and disposes resource on completion.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]

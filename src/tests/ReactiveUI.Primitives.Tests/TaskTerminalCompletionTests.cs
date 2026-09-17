@@ -12,7 +12,7 @@ public class TaskTerminalCompletionTests
     /// <summary>Expected value used by terminal completion assertions.</summary>
     private const int ExpectedValue = 42;
 
-    /// <summary>Verifies that the terminal task is exposed and resolved with the supplied value.</summary>
+    /// <summary>The terminal task resolves with the supplied value.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
     public async Task TaskReturnsResolvedResult()
@@ -56,7 +56,7 @@ public class TaskTerminalCompletionTests
         await Assert.That(subscription.DisposeCount).IsEqualTo(1);
     }
 
-    /// <summary>Verifies that attaching with an already-canceled token cancels inline and releases the registration.</summary>
+    /// <summary>Attaching a subscription to a canceled token cancels inline and releases the registration.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
     public async Task AttachWithAlreadyCanceledTokenCancelsAndDisposesSubscription()
@@ -87,7 +87,7 @@ public class TaskTerminalCompletionTests
         await Assert.That(subscription.DisposeCount).IsEqualTo(1);
     }
 
-    /// <summary>Verifies the shared empty-source failure shape.</summary>
+    /// <summary>An empty-source failure faults the terminal task with the shared empty-source message.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
     public async Task FailEmptyFaultsWithEmptySourceError()

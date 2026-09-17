@@ -9,7 +9,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Compile Include="..\Primitives.Platform.Reactive.Shared\**\*.cs" Link="Primitives.Platform.Reactive.Shared\%(RecursiveDir)%(Filename)%(Extension)"/>
+    <Using Include="ReactiveUI.Primitives.Reactive.Concurrency"/>
   </ItemGroup>
 
   <ItemGroup>

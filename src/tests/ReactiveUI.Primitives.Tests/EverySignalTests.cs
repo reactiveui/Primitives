@@ -3,21 +3,12 @@
 // See the LICENSE file in the project root for full license information.
 
 using System.Runtime.CompilerServices;
-using System.Runtime.ExceptionServices;
 using ReactiveUI.Primitives.Concurrency;
 using ReactiveUI.Primitives.Signals;
 
 namespace ReactiveUI.Primitives.Tests;
 
-/// <summary>
-/// Tests for the recurring <c>Every</c> timer on the current-thread sequencer, whose trampoline runs the
-/// ticks on the subscribing thread and therefore has to hand the subscription back before it starts ticking.
-/// Every bounding operator layered over it — <c>Take</c>, <c>TakeWhile</c>, <c>TakeUntil</c>, <c>Any</c>,
-/// <c>All</c>, <c>Contains</c>, <c>IsEmpty</c>, <c>Expire</c> — has to enter the trampoline itself, so that the
-/// source only queues its first tick and the sink owns the upstream handle in time to dispose it when the bound
-/// is reached. An operator that skips that step drains the trampoline from inside the source's own subscribe
-/// call and never learns its bound was hit, livelocking the subscribing thread.
-/// </summary>
+/// <summary>Tests recurring ticks and bounded subscriptions on the current-thread sequencer.</summary>
 public sealed class EverySignalTests
 {
     /// <summary>The number of ticks the bounded subscriptions ask for.</summary>
@@ -32,29 +23,10 @@ public sealed class EverySignalTests
     /// <summary>The period between ticks.</summary>
     private static readonly TimeSpan TickPeriod = TimeSpan.FromMilliseconds(10);
 
-    /// <summary>
-    /// A tick period an order of magnitude longer than <see cref="ExpiryPeriod"/>, so the inactivity timeout always
-    /// fires first, yet short enough that the trampoline's wait for the tick that never arrives stays inside
-    /// <see cref="LivelockTimeout"/>.
-    /// </summary>
-    private static readonly TimeSpan QuietTickPeriod = TimeSpan.FromSeconds(1);
-
     /// <summary>The inactivity window <c>Expire</c> allows before it times the sequence out.</summary>
     private static readonly TimeSpan ExpiryPeriod = TimeSpan.FromMilliseconds(50);
 
-    /// <summary>
-    /// The time a subscribing thread is given to return before it is declared livelocked. A livelocked trampoline
-    /// never returns, so the window costs nothing to widen and is deliberately far longer than any of these
-    /// subscriptions needs: it only has to outlast a runner busy enough to stall a thread that is merely slow.
-    /// </summary>
-    private static readonly TimeSpan LivelockTimeout = TimeSpan.FromSeconds(30);
-
-    /// <summary>
-    /// Verifies the recurring schedule survives a sequencer that runs the first tick before its own
-    /// <c>Schedule</c> returns. That tick arms the next one, and the handle the outer call goes on to return
-    /// must not replace - and so cancel - the successor the tick just armed, which would stop the interval
-    /// after a single value.
-    /// </summary>
+    /// <summary>A tick that fires inline during scheduling keeps the successor tick it arms.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
     public async Task EveryRetainsTheTickArmedByAnInlineFirstTick()
@@ -77,36 +49,23 @@ public sealed class EverySignalTests
     {
         List<long> ticks = [];
         var completions = 0;
-
-        var subscriber = RunOnDedicatedThread(() =>
-        {
-            using var subscription = Signal.Every(TickPeriod, Sequencer.CurrentThread)
-                .Take(RequestedTicks)
-                .Subscribe(ticks.Add, static _ => { }, () => completions++);
-        });
-
-        await Assert.That(CompletedWithinTimeout(subscriber)).IsTrue();
+        using var subscription = Signal.Every(TimeSpan.Zero, Sequencer.CurrentThread)
+            .Take(RequestedTicks)
+            .Subscribe(ticks.Add, static _ => { }, () => completions++);
         await Assert.That(ticks.SequenceEqual(ExpectedTicks)).IsTrue();
         await Assert.That(completions).IsEqualTo(1);
     }
 
-    /// <summary>Verifies the current-thread ticks stay on the subscribing thread rather than moving to a pool thread.</summary>
+    /// <summary>Verifies the current-thread ticks are delivered on the subscribing thread.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
     public async Task EveryOnTheCurrentThreadSequencerTicksOnTheSubscribingThread()
     {
         List<int> tickThreadIds = [];
-        var subscriberThreadId = 0;
-
-        var subscriber = RunOnDedicatedThread(() =>
-        {
-            subscriberThreadId = Environment.CurrentManagedThreadId;
-            using var subscription = Signal.Every(TickPeriod, Sequencer.CurrentThread)
-                .Take(RequestedTicks)
-                .Subscribe(_ => tickThreadIds.Add(Environment.CurrentManagedThreadId));
-        });
-
-        await Assert.That(CompletedWithinTimeout(subscriber)).IsTrue();
+        var subscriberThreadId = Environment.CurrentManagedThreadId;
+        using var subscription = Signal.Every(TimeSpan.Zero, Sequencer.CurrentThread)
+            .Take(RequestedTicks)
+            .Subscribe(_ => tickThreadIds.Add(Environment.CurrentManagedThreadId));
         await Assert.That(tickThreadIds.Count).IsEqualTo(RequestedTicks);
         await Assert.That(tickThreadIds.TrueForAll(id => id == subscriberThreadId)).IsTrue();
     }
@@ -119,24 +78,17 @@ public sealed class EverySignalTests
         List<long> ticks = [];
         List<int> tickThreadIds = [];
         var completions = 0;
-        var subscriberThreadId = 0;
-
-        var subscriber = RunOnDedicatedThread(() =>
-        {
-            subscriberThreadId = Environment.CurrentManagedThreadId;
-            using var subscription = Signal.Every(TickPeriod, Sequencer.CurrentThread)
-                .TakeWhile(static tick => tick < RequestedTicks)
-                .Subscribe(
-                    tick =>
-                    {
-                        ticks.Add(tick);
-                        tickThreadIds.Add(Environment.CurrentManagedThreadId);
-                    },
-                    static _ => { },
-                    () => completions++);
-        });
-
-        await Assert.That(CompletedWithinTimeout(subscriber)).IsTrue();
+        var subscriberThreadId = Environment.CurrentManagedThreadId;
+        using var subscription = Signal.Every(TimeSpan.Zero, Sequencer.CurrentThread)
+            .TakeWhile(static tick => tick < RequestedTicks)
+            .Subscribe(
+                tick =>
+                {
+                    ticks.Add(tick);
+                    tickThreadIds.Add(Environment.CurrentManagedThreadId);
+                },
+                static _ => { },
+                () => completions++);
         await Assert.That(ticks.SequenceEqual(ExpectedTicks)).IsTrue();
         await Assert.That(completions).IsEqualTo(1);
         await Assert.That(tickThreadIds.TrueForAll(id => id == subscriberThreadId)).IsTrue();
@@ -152,29 +104,23 @@ public sealed class EverySignalTests
         var completions = 0;
         var subscriberThreadId = 0;
         using CancellationTokenSource stop = new();
-
-        var subscriber = RunOnDedicatedThread(() =>
-        {
-            subscriberThreadId = Environment.CurrentManagedThreadId;
-            using var subscription = Signal.Every(TickPeriod, Sequencer.CurrentThread)
-                .TakeUntil(stop.Token)
-                .Subscribe(
-                    tick =>
+        subscriberThreadId = Environment.CurrentManagedThreadId;
+        using var subscription = Signal.Every(TimeSpan.Zero, Sequencer.CurrentThread)
+            .TakeUntil(stop.Token)
+            .Subscribe(
+                tick =>
+                {
+                    ticks.Add(tick);
+                    tickThreadIds.Add(Environment.CurrentManagedThreadId);
+                    if (ticks.Count != RequestedTicks)
                     {
-                        ticks.Add(tick);
-                        tickThreadIds.Add(Environment.CurrentManagedThreadId);
-                        if (ticks.Count != RequestedTicks)
-                        {
-                            return;
-                        }
+                        return;
+                    }
 
-                        stop.Cancel();
-                    },
-                    static _ => { },
-                    () => completions++);
-        });
-
-        await Assert.That(CompletedWithinTimeout(subscriber)).IsTrue();
+                    stop.Cancel();
+                },
+                static _ => { },
+                () => completions++);
         await Assert.That(ticks.SequenceEqual(ExpectedTicks)).IsTrue();
         await Assert.That(completions).IsEqualTo(1);
         await Assert.That(tickThreadIds.TrueForAll(id => id == subscriberThreadId)).IsTrue();
@@ -225,36 +171,38 @@ public sealed class EverySignalTests
             static source => source.IsEmpty(),
             expectedResult: false);
 
-    /// <summary>
-    /// Verifies <c>Expire</c> times a silent current-thread source out instead of livelocking on it. The tick period
-    /// is far longer than the expiry window, so the inactivity timeout is guaranteed to fire before the first tick.
-    /// </summary>
+    /// <summary>Advancing to the expiry boundary terminates the source before its first scheduled tick.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
-    public async Task EveryOnTheCurrentThreadSequencerExpiresWhenNoTickArrivesInTime()
-    {
+    public async Task EveryExpiresBeforeTheFirstVirtualTick()
+{
+        VirtualClock clock = new();
         var ticks = 0;
         Exception? failure = null;
-
-        var subscriber = RunOnDedicatedThread(() =>
-        {
-            using var subscription = Signal.Every(QuietTickPeriod, Sequencer.CurrentThread)
-                .Expire(ExpiryPeriod)
-                .Subscribe(
-                    _ => ticks++,
-                    error => failure = error,
-                    static () => { });
-        });
-
-        await Assert.That(CompletedWithinTimeout(subscriber)).IsTrue();
+        using var subscription = Signal.Every(ExpiryPeriod + ExpiryPeriod, clock)
+            .Expire(ExpiryPeriod, clock)
+            .Subscribe(_ => ticks++, error => failure = error, static () => { });
+        clock.AdvanceBy(ExpiryPeriod);
         await Assert.That(ticks).IsEqualTo(0);
         await Assert.That(failure).IsTypeOf<TimeoutException>();
     }
 
-    /// <summary>
-    /// Asserts a boolean bounding operator terminates the current-thread ticks at the first tick that satisfies it,
-    /// and that it hands its single result back on the subscribing thread the trampoline ticks on.
-    /// </summary>
+    /// <summary>A tick that runs after the subscription was disposed emits nothing.</summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    [Test]
+    public async Task EveryTickRunningAfterDisposalEmitsNothing()
+    {
+        DisposingSequencer sequencer = new();
+        List<long> ticks = [];
+        using var subscription = Signal.Every(TickPeriod, sequencer).Subscribe(ticks.Add);
+        sequencer.BeforeInlineRun = subscription.Dispose;
+
+        sequencer.RunPending();
+
+        await Assert.That(ticks.SequenceEqual([0L])).IsTrue();
+    }
+
+    /// <summary>Checks the bounding result and completion on the subscribing thread.</summary>
     /// <param name="bound">Applies the bounding operator to the current-thread tick source.</param>
     /// <param name="expectedResult">The value the bounded sequence must emit before it completes.</param>
     /// <returns>A task representing the asynchronous operation.</returns>
@@ -265,104 +213,61 @@ public sealed class EverySignalTests
         List<bool> results = [];
         List<int> resultThreadIds = [];
         var completions = 0;
-        var subscriberThreadId = 0;
-
-        var subscriber = RunOnDedicatedThread(() =>
-        {
-            subscriberThreadId = Environment.CurrentManagedThreadId;
-            using var subscription = bound(Signal.Every(TickPeriod, Sequencer.CurrentThread))
-                .Subscribe(
-                    result =>
-                    {
-                        results.Add(result);
-                        resultThreadIds.Add(Environment.CurrentManagedThreadId);
-                    },
-                    static _ => { },
-                    () => completions++);
-        });
-
-        await Assert.That(CompletedWithinTimeout(subscriber)).IsTrue();
+        var subscriberThreadId = Environment.CurrentManagedThreadId;
+        using var subscription = bound(Signal.Every(TimeSpan.Zero, Sequencer.CurrentThread))
+            .Subscribe(
+                result =>
+                {
+                    results.Add(result);
+                    resultThreadIds.Add(Environment.CurrentManagedThreadId);
+                },
+                static _ => { },
+                () => completions++);
         await Assert.That(results).IsEquivalentTo([expectedResult], EqualityComparer<bool>.Default);
         await Assert.That(completions).IsEqualTo(1);
         await Assert.That(resultThreadIds.TrueForAll(id => id == subscriberThreadId)).IsTrue();
     }
 
-    /// <summary>Runs the subscription body on its own background thread so a livelock cannot hang the test host.</summary>
-    /// <param name="body">The subscription body to run.</param>
-    /// <returns>The subscribing thread, already running the body.</returns>
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static SubscribingThread RunOnDedicatedThread(Action body) => SubscribingThread.Start(body);
-
-    /// <summary>Waits for the subscribing thread to finish within the livelock timeout.</summary>
-    /// <param name="subscriber">The subscribing thread to wait on.</param>
-    /// <returns><see langword="true"/> when the subscribing thread finished in time.</returns>
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static bool CompletedWithinTimeout(SubscribingThread subscriber) =>
-        subscriber.ReturnedWithin(LivelockTimeout);
-
-    /// <summary>The thread a subscription body runs on, and whatever that body threw.</summary>
-    /// <remarks>
-    /// The livelock guard waits on the thread itself rather than on a task the thread completes. Completing a task
-    /// only queues its continuation to the thread pool, so the guard would be racing two pool-scheduled
-    /// continuations: on a runner whose pool is saturated the subscribing thread's continuation can be dequeued
-    /// after the guard's window has already closed, reporting a livelock in a trampoline that in truth returned in
-    /// milliseconds. <see cref="Thread.Join(TimeSpan)"/> is an OS-level wait no amount of pool pressure can starve,
-    /// so it observes the subscribing thread returning rather than the pool getting round to saying that it did.
-    /// A thread that is genuinely livelocked never returns, so the guard still trips on it.
-    /// </remarks>
-    private sealed class SubscribingThread
+    /// <summary>Queues work, or runs it inline after a callback the test installs for the next schedule.</summary>
+    private sealed class DisposingSequencer : ISequencer
     {
-        /// <summary>The subscription body to run.</summary>
-        private readonly Action _body;
+        /// <summary>Work items queued and not yet run.</summary>
+        private readonly Queue<IWorkItem> _pending = new();
 
-        /// <summary>The background thread the body runs on.</summary>
-        private readonly Thread _thread;
+        /// <inheritdoc/>
+        public DateTimeOffset Now => DateTimeOffset.UnixEpoch;
 
-        /// <summary>The exception the body threw, if any.</summary>
-        private ExceptionDispatchInfo? _failure;
+        /// <inheritdoc/>
+        public long Timestamp => 0;
 
-        /// <summary>Initializes a new instance of the <see cref="SubscribingThread"/> class.</summary>
-        /// <param name="body">The subscription body to run.</param>
-        private SubscribingThread(Action body)
+        /// <summary>Gets or sets the callback run before the next scheduled item, which then runs inline.</summary>
+        internal Action? BeforeInlineRun { get; set; }
+
+        /// <inheritdoc/>
+        public void Schedule(IWorkItem item)
         {
-            _body = body;
-            _thread = new(Run) { IsBackground = true, };
-        }
-
-        /// <summary>Starts a subscription body on a background thread of its own.</summary>
-        /// <param name="body">The subscription body to run.</param>
-        /// <returns>The running subscribing thread.</returns>
-        internal static SubscribingThread Start(Action body)
-        {
-            SubscribingThread subscriber = new(body);
-            subscriber._thread.Start();
-            return subscriber;
-        }
-
-        /// <summary>Waits for the thread to return, rethrowing whatever the subscription body threw.</summary>
-        /// <param name="timeout">How long the thread is given to return before it is declared livelocked.</param>
-        /// <returns><see langword="true"/> when the thread returned within <paramref name="timeout"/>.</returns>
-        internal bool ReturnedWithin(TimeSpan timeout)
-        {
-            if (!_thread.Join(timeout))
+            var beforeInlineRun = BeforeInlineRun;
+            if (beforeInlineRun is null)
             {
-                return false;
+                _pending.Enqueue(item);
+                return;
             }
 
-            _failure?.Throw();
-            return true;
+            BeforeInlineRun = null;
+            beforeInlineRun();
+            item.Execute();
         }
 
-        /// <summary>Runs the subscription body, capturing a failure so it can be rethrown with its original stack.</summary>
-        private void Run()
+        /// <inheritdoc/>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void Schedule(IWorkItem item, long dueTimestamp) => Schedule(item);
+
+        /// <summary>Runs the queued work items.</summary>
+        internal void RunPending()
         {
-            try
+            while (_pending.Count > 0)
             {
-                _body();
-            }
-            catch (Exception error)
-            {
-                _failure = ExceptionDispatchInfo.Capture(error);
+                _pending.Dequeue().Execute();
             }
         }
     }

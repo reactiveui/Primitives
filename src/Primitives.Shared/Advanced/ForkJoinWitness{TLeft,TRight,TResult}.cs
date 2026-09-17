@@ -2,6 +2,14 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Runtime.CompilerServices;
+using ReactiveUI.Primitives.Extensions;
+#if REACTIVE_SHIM
+using ReactiveUI.Primitives.Reactive.Internal;
+#else
+using ReactiveUI.Primitives.Internal;
+#endif
+
 #if REACTIVE_SHIM
 namespace ReactiveUI.Primitives.Reactive.Advanced;
 #else
@@ -12,11 +20,25 @@ namespace ReactiveUI.Primitives.Advanced;
 /// <typeparam name="TLeft">The left value type.</typeparam>
 /// <typeparam name="TRight">The right value type.</typeparam>
 /// <typeparam name="TResult">The result value type.</typeparam>
+/// <remarks>
+/// Each side's values are recorded inside a serialized delivery, so the projection and the downstream observer run with no
+/// lock held. The first error, or the result and completion once both sources complete, is delivered after every value
+/// recorded before it; nothing follows the first terminal notification.
+/// </remarks>
 [System.Diagnostics.DebuggerDisplay("ForkJoinWitness: HasLeft = {HasLeft}, HasRight = {HasRight}, IsDone = {IsDone}")]
 public sealed class ForkJoinWitness<TLeft, TRight, TResult>
 {
-    /// <summary>The synchronization gate.</summary>
-    private readonly Lock _gate = new();
+    /// <summary>Serializes recording values and downstream deliveries.</summary>
+    private DeliveryGateState _delivery;
+
+    /// <summary>Values and the terminal notification queued while another thread delivers.</summary>
+    private PendingNotifications<Update> _pending = new();
+
+    /// <summary>Whether the left source completed, as 0 or 1.</summary>
+    private int _leftDone;
+
+    /// <summary>Whether the right source completed, as 0 or 1.</summary>
+    private int _rightDone;
 
     /// <summary>Initializes a new instance of the <see cref="ForkJoinWitness{TLeft, TRight, TResult}"/> class.</summary>
     /// <param name="observer">The downstream observer.</param>
@@ -33,26 +55,20 @@ public sealed class ForkJoinWitness<TLeft, TRight, TResult>
     /// <summary>Gets the result projection.</summary>
     private Func<TLeft, TRight, TResult> Selector { get; }
 
-    /// <summary>Gets or sets a value indicating whether the left source produced a value.</summary>
+    /// <summary>Gets or sets a value indicating whether the left source produced a value; touched only inside a delivery.</summary>
     private bool HasLeft { get; set; }
 
-    /// <summary>Gets or sets a value indicating whether the right source produced a value.</summary>
+    /// <summary>Gets or sets a value indicating whether the right source produced a value; touched only inside a delivery.</summary>
     private bool HasRight { get; set; }
 
-    /// <summary>Gets or sets a value indicating whether the left source completed.</summary>
-    private bool IsLeftDone { get; set; }
-
-    /// <summary>Gets or sets a value indicating whether the right source completed.</summary>
-    private bool IsRightDone { get; set; }
-
-    /// <summary>Gets or sets the latest left value.</summary>
+    /// <summary>Gets or sets the latest left value; touched only inside a delivery.</summary>
     private TLeft? LatestLeft { get; set; }
 
-    /// <summary>Gets or sets the latest right value.</summary>
+    /// <summary>Gets or sets the latest right value; touched only inside a delivery.</summary>
     private TRight? LatestRight { get; set; }
 
-    /// <summary>Gets or sets a value indicating whether a terminal notification has been emitted.</summary>
-    private bool IsDone { get; set; }
+    /// <summary>Gets a value indicating whether the terminal notification has been taken for delivery.</summary>
+    private bool IsDone => _pending.IsTerminated;
 
     /// <summary>Subscribes to both sources.</summary>
     /// <param name="left">The left source.</param>
@@ -65,88 +81,132 @@ public sealed class ForkJoinWitness<TLeft, TRight, TResult>
 
     /// <summary>Records a left value.</summary>
     /// <param name="value">The left value.</param>
-    private void OnLeftNext(TLeft value)
-    {
-        lock (_gate)
-        {
-            HasLeft = true;
-            LatestLeft = value;
-        }
-    }
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private void OnLeftNext(TLeft value) => Process(new(IsLeft: true, value, default!));
 
     /// <summary>Records a right value.</summary>
     /// <param name="value">The right value.</param>
-    private void OnRightNext(TRight value)
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private void OnRightNext(TRight value) => Process(new(IsLeft: false, default!, value));
+
+    /// <summary>Queues a value and records it on this thread, or hands it to the thread already delivering.</summary>
+    /// <param name="update">The value and its side.</param>
+    /// <remarks>A value only updates state, so it always takes the queue; that keeps every value ordered ahead of the terminal.</remarks>
+    private void Process(Update update)
     {
-        lock (_gate)
+        if (!_pending.TryEnqueue(update))
         {
-            HasRight = true;
-            LatestRight = value;
+            return;
         }
+
+        DeliveryGate.Signal(ref _delivery, new PendingDrain(this));
     }
 
     /// <summary>Marks the left source complete.</summary>
     private void OnLeftCompleted()
     {
-        lock (_gate)
-        {
-            if (IsDone)
-            {
-                return;
-            }
-
-            IsLeftDone = true;
-            TryFinish();
-        }
+        Volatile.Write(ref _leftDone, 1);
+        TryFinish();
     }
 
     /// <summary>Marks the right source complete.</summary>
     private void OnRightCompleted()
     {
-        lock (_gate)
-        {
-            if (IsDone)
-            {
-                return;
-            }
-
-            IsRightDone = true;
-            TryFinish();
-        }
+        Volatile.Write(ref _rightDone, 1);
+        TryFinish();
     }
 
-    /// <summary>Forwards the first source error and gates every later notification.</summary>
+    /// <summary>Requests the first error as the terminal notification.</summary>
     /// <param name="error">The error to forward.</param>
     private void OnError(Exception error)
     {
-        lock (_gate)
-        {
-            if (IsDone)
-            {
-                return;
-            }
-
-            IsDone = true;
-            Observer.OnError(error);
-        }
-    }
-
-    /// <summary>Emits the result and completes once both sources are done.</summary>
-    /// <remarks>Must be called while holding <see cref="_gate"/> so the terminal notification stays serialized.</remarks>
-    private void TryFinish()
-    {
-        if (!IsLeftDone || !IsRightDone)
+        if (IsDone)
         {
             return;
         }
 
-        IsDone = true;
+        // A request that loses to another terminal only signals a drain with nothing new to deliver.
+        _ = _pending.TryRequestTerminal(error);
+        DeliveryGate.Signal(ref _delivery, new PendingDrain(this));
+    }
 
-        if (HasLeft && HasRight)
+    /// <summary>Requests completion once both sources have completed.</summary>
+    private void TryFinish()
+    {
+        if (Volatile.Read(ref _leftDone) == 0 || Volatile.Read(ref _rightDone) == 0 || !_pending.TryRequestTerminal(null))
         {
-            Observer.OnNext(Selector(LatestLeft!, LatestRight!));
+            return;
         }
 
-        Observer.OnCompleted();
+        DeliveryGate.Signal(ref _delivery, new PendingDrain(this));
+    }
+
+    /// <summary>Records queued values in order, then delivers the terminal notification.</summary>
+    private void DrainPending()
+    {
+        while (true)
+        {
+            switch (_pending.TakeNext(out var update, out var error))
+            {
+                case PendingDelivery.Value:
+                {
+                    Apply(update);
+                    break;
+                }
+
+                case PendingDelivery.Terminal when error is null:
+                {
+                    if (HasLeft && HasRight)
+                    {
+                        Observer.OnNext(Selector(LatestLeft!, LatestRight!));
+                    }
+
+                    Observer.OnCompleted();
+                    return;
+                }
+
+                case PendingDelivery.Terminal:
+                {
+                    Observer.OnError(error);
+                    return;
+                }
+
+                default:
+                {
+                    return;
+                }
+            }
+        }
+    }
+
+    /// <summary>Records a value as the latest for its side.</summary>
+    /// <param name="update">The value and its side.</param>
+    private void Apply(in Update update)
+    {
+        if (update.IsLeft)
+        {
+            LatestLeft = update.Left;
+            HasLeft = true;
+        }
+        else
+        {
+            LatestRight = update.Right;
+            HasRight = true;
+        }
+    }
+
+    /// <summary>A value from one side.</summary>
+    /// <param name="IsLeft">Whether the value came from the left source.</param>
+    /// <param name="Left">The left value, when <paramref name="IsLeft"/> is set.</param>
+    /// <param name="Right">The right value, when <paramref name="IsLeft"/> is clear.</param>
+    private readonly record struct Update(bool IsLeft, TLeft Left, TRight Right);
+
+    /// <summary>Drains this witness's queued values for the delivery gate.</summary>
+    /// <param name="Owner">The witness.</param>
+    private readonly record struct PendingDrain(ForkJoinWitness<TLeft, TRight, TResult> Owner) : IDrainTarget
+    {
+        /// <inheritdoc/>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void Drain() => Owner.DrainPending();
     }
 }

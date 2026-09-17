@@ -7,25 +7,15 @@ using ReactiveUI.Primitives.Concurrency;
 
 namespace ReactiveUI.Primitives.Tests;
 
-/// <summary>
-/// A sequencer that runs the first work item inline, before <c>Schedule</c> returns, and queues every item
-/// scheduled after that. It models a sequencer that dispatches on the calling thread when it already owns that
-/// thread but defers re-entrant work, which is the interleaving under which an operator that assigns its timer
-/// handle after scheduling cancels the successor timer its own callback just armed.
-/// <para>
-/// The clock is virtual and only moves when a test calls <see cref="Advance"/>, and queued work only runs when a
-/// test calls <see cref="RunPending"/>. Nothing here reads the wall clock, sleeps, or starts a real timer, so the
-/// tests built on it are decided entirely by the order of their own calls.
-/// </para>
-/// </summary>
+/// <summary>Runs the first item inline and queues subsequent work. Clock advancement and queue draining are explicit.</summary>
 /// <param name="advanceBeforeFirst">The amount the clock moves forward before the first item runs.</param>
 [System.Diagnostics.DebuggerDisplay("FirstInlineSequencer: Now = {Now}, Started = {_started}, Pending = {_pending.Count}")]
 public sealed class FirstInlineSequencer(TimeSpan advanceBeforeFirst) : ISequencer
 {
-    /// <summary>The work items queued after the first, still waiting to run.</summary>
+    /// <summary>The work items queued after the first, waiting to run.</summary>
     private readonly List<IWorkItem> _pending = [];
 
-    /// <summary>Whether the inline first item has already run.</summary>
+    /// <summary>Whether the inline first item has run.</summary>
     private bool _started;
 
     /// <summary>Gets the sequencer's notion of current time.</summary>

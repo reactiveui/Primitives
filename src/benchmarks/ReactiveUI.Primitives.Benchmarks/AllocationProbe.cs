@@ -10,13 +10,7 @@ using ReactiveUI.Primitives.Signals;
 
 namespace ReactiveUI.Primitives.Benchmarks;
 
-/// <summary>
-/// Harness-free allocation probe (<c>--alloc</c>). Measures the exact bytes allocated per operation
-/// with <see cref="GC.GetAllocatedBytesForCurrentThread"/>, reusing a single observer so the
-/// reported figure is the operator's own allocation -- not the per-op test observer that
-/// BenchmarkDotNet's <c>Allocated</c> column folds in. Run with:
-/// <c>dotnet run -c Release --project ... -- --alloc</c>.
-/// </summary>
+/// <summary>Measures per-operation allocation with a shared observer for the <c>--alloc</c> command.</summary>
 internal static class AllocationProbe
 {
     /// <summary>Shared single-character payload reused by reference/type-coercion probes.</summary>
@@ -91,7 +85,7 @@ internal static class AllocationProbe
         var failSource = Signal.Fail<int>(error, Sequencer.Immediate);
         var handles = new IDisposable[FanOut];
 
-        Console.WriteLine("Operator allocation — bytes/op, observer excluded (GC.GetAllocatedBytesForCurrentThread)");
+        Console.WriteLine("Operator allocation - bytes/op, observer excluded (GC.GetAllocatedBytesForCurrentThread)");
         Console.WriteLine(new string('-', SeparatorWidth));
 
         Section("Factories / sources");
@@ -107,7 +101,7 @@ internal static class AllocationProbe
         ProbePassThroughTerminal(observer, sparkObserver, intervalObserver, listObserver, arrayObserver);
 
         Section("Coverage-gap operators / factories");
-        ProbeCoverageGap(observer, listObserver, stringObserver, failSource);
+        ProbeOperatorsAndFactories(observer, listObserver, stringObserver, failSource);
 
         // Calm / Shift / DelayStart need time advancement; their allocation is captured by the
         // OperatorTimeSchedulerBenchmarks BDN "Allocated" column instead of this synchronous probe.
@@ -212,12 +206,12 @@ internal static class AllocationProbe
         Row("CollectArray (range)", () => Signal.Sequence(0, Count).CollectArray().Subscribe(arrayObserver).Dispose());
     }
 
-    /// <summary>Probes coverage-gap operator and factory allocation.</summary>
+    /// <summary>Measures operator and factory allocations per subscription.</summary>
     /// <param name="observer">The reused integer observer.</param>
     /// <param name="listObserver">The reused list observer.</param>
     /// <param name="stringObserver">The reused string observer.</param>
     /// <param name="failSource">The shared failing source.</param>
-    private static void ProbeCoverageGap(
+    private static void ProbeOperatorsAndFactories(
         IntSignalWitness observer,
         CountingSignalWitness<IList<int>> listObserver,
         CountingSignalWitness<string> stringObserver,

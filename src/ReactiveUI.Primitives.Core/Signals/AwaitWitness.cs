@@ -6,20 +6,20 @@ using System.Runtime.CompilerServices;
 
 namespace ReactiveUI.Primitives.Signals;
 
-/// <summary>Represents the AwaitWitness class.</summary>
-/// <typeparam name="T">The Type.</typeparam>
+/// <summary>Observer that discards values and runs a continuation on the first terminal notification.</summary>
+/// <typeparam name="T">The observed value type.</typeparam>
 [System.Diagnostics.DebuggerDisplay("AwaitWitness: Callback = {_callback}, Context = {_context}")]
 public sealed class AwaitWitness<T> : IObserver<T>
 {
-    /// <summary>Stores state for the signal implementation.</summary>
+    /// <summary>The context captured at construction, or <see langword="null"/> to run the continuation inline.</summary>
     private readonly SynchronizationContext? _context;
 
-    /// <summary>Stores state for the signal implementation.</summary>
+    /// <summary>The continuation run on completion or failure.</summary>
     private readonly Action _callback;
 
     /// <summary>Initializes a new instance of the <see cref="AwaitWitness{T}"/> class.</summary>
-    /// <param name="callback">The callback value.</param>
-    /// <param name="originalContext">The originalContext value.</param>
+    /// <param name="callback">The continuation to run on the terminal notification.</param>
+    /// <param name="originalContext">Whether to capture the current synchronization context and post the continuation to it.</param>
     public AwaitWitness(Action callback, bool originalContext)
     {
         if (originalContext)
@@ -30,34 +30,39 @@ public sealed class AwaitWitness<T> : IObserver<T>
         _callback = callback;
     }
 
-    /// <summary>Executes the OnCompleted operation.</summary>
+    /// <summary>Resumes the awaiting continuation on completion.</summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void OnCompleted() => InvokeOnOriginalContext();
 
-    /// <summary>Executes the OnError operation.</summary>
-    /// <param name="error">The error value.</param>
+    /// <summary>Resumes the awaiting continuation when the source fails.</summary>
+    /// <param name="error">The terminal error, which the continuation does not receive.</param>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     [System.Diagnostics.CodeAnalysis.SuppressMessage(
         "Design",
         "SST2318:Members should not have identical bodies",
-        Justification =
-            "OnCompleted and OnError are distinct IObserver<T> terminal notifications that intentionally both fire the "
-            + "witness by delegating to the shared InvokeOnOriginalContext helper. They are not a copy-paste of each "
-            + "other; having one call the other would misrepresent an error as a completion.")]
+        Justification = "Both terminal notifications resume the same continuation, and neither may delegate to the other.")]
     public void OnError(Exception error) => InvokeOnOriginalContext();
 
-    /// <summary>Executes the OnNext operation.</summary>
-    /// <param name="value">The value.</param>
+    /// <summary>Ignores values; only terminal notifications resume the continuation.</summary>
+    /// <param name="value">The ignored value.</param>
     public void OnNext(T value)
     {
     }
 
-    /// <summary>Executes the InvokeOnOriginalContext operation.</summary>
+    /// <summary>Posts a continuation to the captured context.</summary>
+    /// <param name="context">The context receiving the callback.</param>
+    /// <param name="callback">The callback to post.</param>
+    [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static void Post(SynchronizationContext context, Action callback) =>
+        context.Post(static state => ((Action?)state)?.Invoke(), callback);
+
+    /// <summary>Posts the continuation to its captured context, or invokes it directly when none was captured.</summary>
     private void InvokeOnOriginalContext()
     {
         if (_context is not null)
         {
-            _context.Post(static state => ((Action?)state)?.Invoke(), _callback);
+            Post(_context, _callback);
         }
         else
         {

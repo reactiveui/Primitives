@@ -7,13 +7,7 @@ using ReactiveUI.Primitives.Reactive.Concurrency;
 
 namespace ReactiveUI.Primitives.Extensions.Reactive.Tests;
 
-/// <summary>
-/// Verifies the seam that gives a System.Reactive scheduler the sequencer scheduling shape the shared Extensions
-/// source calls. This leaf recompiles its own copy of the seam, so the Reactive leaf's tests do not cover it.
-/// The file deliberately does not import <c>System.Reactive.Concurrency</c>: the <c>Scheduler</c> class in that
-/// namespace carries extension methods with the same signatures, and importing it would make every call below
-/// ambiguous. The scheduler types are therefore spelled out in full.
-/// </summary>
+/// <summary>Tests the scheduling overloads the seam adds to a System.Reactive scheduler.</summary>
 public class SequencerSchedulingExtensionsTests
 {
     /// <summary>State threaded through the closure-free stateful overloads.</summary>
@@ -25,11 +19,12 @@ public class SequencerSchedulingExtensionsTests
     /// <summary>How many times the recursive overload reschedules itself before it stops.</summary>
     private const int ExpectedRecursiveRuns = 3;
 
+    // Fully qualified: an unqualified IScheduler makes the seam's overloads ambiguous with System.Reactive's own.
     /// <summary>The scheduler the seam forwards to, typed as the interface the seam extends.</summary>
     private static readonly System.Reactive.Concurrency.IScheduler InlineScheduler =
         System.Reactive.Concurrency.ImmediateScheduler.Instance;
 
-    /// <summary>A due time that has already passed, so absolute scheduling runs inline.</summary>
+    /// <summary>A due time in the past, so absolute scheduling runs inline.</summary>
     private static readonly DateTimeOffset ElapsedDueTime = DateTimeOffset.UnixEpoch;
 
     /// <summary>The state both stateful overloads must hand back, once each.</summary>
@@ -112,10 +107,7 @@ public class SequencerSchedulingExtensionsTests
         public void Execute() => ExecuteCount++;
     }
 
-    /// <summary>
-    /// Counts how often the scheduler ran a plain action. Holding the count here lets the action overloads be
-    /// handed <see cref="Record"/> as a method group, so the callback closes over nothing.
-    /// </summary>
+    /// <summary>Counts action invocations through a method-group callback.</summary>
     private sealed class RunCounter
     {
         /// <summary>Gets the number of times the scheduler ran the action.</summary>

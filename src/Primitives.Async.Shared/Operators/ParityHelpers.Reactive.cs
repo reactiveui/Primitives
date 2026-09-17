@@ -18,7 +18,7 @@ namespace ReactiveUI.Primitives.Async;
 [SuppressMessage(
     "StyleCop.CSharp.OrderingRules",
     "SA1201:ElementsShouldAppearInTheCorrectOrder",
-    Justification = "C# 14 extension methods")]
+    Justification = "Extension block members cannot be reordered into the conventional element order.")]
 public static partial class SignalAsyncReactiveExtensions
 {
     /// <summary>Async-native parity helper operators for an observable source sequence.</summary>
@@ -35,7 +35,7 @@ public static partial class SignalAsyncReactiveExtensions
             return new AsRxVoidSignal<T>(source);
         }
 
-        /// <summary>Uses ObserveOn only when a context is provided.</summary>
+        /// <summary>Observes the source on the supplied context, handing back the source unchanged when no context is supplied.</summary>
         /// <param name="asyncContext">The target async context, or <see langword="null"/> to leave the sequence unchanged.</param>
         /// <returns>The source sequence, optionally observed on the provided context.</returns>
         public IObservableAsync<T> ObserveOnSafe(AsyncContext? asyncContext)
@@ -45,7 +45,7 @@ public static partial class SignalAsyncReactiveExtensions
             return asyncContext is null ? source : new WitnessOnSignal<T>(source, asyncContext, false);
         }
 
-        /// <summary>Uses ObserveOn only when a context is provided.</summary>
+        /// <summary>Observes the source on the supplied context, handing back the source unchanged when no context is supplied.</summary>
         /// <param name="asyncContext">The target async context, or <see langword="null"/> to leave the sequence unchanged.</param>
         /// <param name="forceYielding">Whether to force yielding when switching context.</param>
         /// <returns>The source sequence, optionally observed on the provided context.</returns>
@@ -56,7 +56,7 @@ public static partial class SignalAsyncReactiveExtensions
             return asyncContext is null ? source : new WitnessOnSignal<T>(source, asyncContext, forceYielding);
         }
 
-        /// <summary>Uses ObserveOn only when a scheduler is provided.</summary>
+        /// <summary>Observes the source on the supplied scheduler, handing back the source unchanged when no scheduler is supplied.</summary>
         /// <param name="taskScheduler">The target scheduler, or <see langword="null"/> to leave the sequence unchanged.</param>
         /// <returns>The source sequence, optionally observed on the provided scheduler.</returns>
         public IObservableAsync<T> ObserveOnSafe(TaskScheduler? taskScheduler)
@@ -68,7 +68,7 @@ public static partial class SignalAsyncReactiveExtensions
                 : new WitnessOnSignal<T>(source, AsyncContext.From(taskScheduler), false);
         }
 
-        /// <summary>Uses ObserveOn only when a scheduler is provided.</summary>
+        /// <summary>Observes the source on the supplied scheduler, handing back the source unchanged when no scheduler is supplied.</summary>
         /// <param name="taskScheduler">The target scheduler, or <see langword="null"/> to leave the sequence unchanged.</param>
         /// <param name="forceYielding">Whether to force yielding when switching context.</param>
         /// <returns>The source sequence, optionally observed on the provided scheduler.</returns>

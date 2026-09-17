@@ -11,139 +11,238 @@
 
 # ReactiveUI.Primitives
 
-ReactiveUI.Primitives is a small, fast library for reactive programming in .NET. Reactive programming means working
-with values that arrive over time, such as button clicks, timer ticks, or network replies, rather than values you
-already hold.
+ReactiveUI.Primitives is a small, fast library for values that arrive over time. A button click, a timer tick and a
+network reply are all values that arrive over time. You subscribe to a source, and the source pushes each value to you
+as it happens. The library builds on `IObservable<T>` and `IObserver<T>`, two interfaces that .NET already ships, so you
+keep the types your code already uses. It adds no runtime reflection and generates no code at run time, so it works
+under ahead-of-time compilation.
 
-If you know LINQ, you already know the shape. LINQ queries a collection you already hold and pulls values out of an
-`IEnumerable<T>`. Reactive programming queries values that arrive over time: an `IObservable<T>` pushes each value to
-you as it happens. The operators carry over, so `Select`, `Where`, and `Aggregate` keep their meaning here. This library
-also gives them the names `Map`, `Keep`, and `Fold`.
+**Full documentation lives at [reactiveui.net/documentation/primitives](https://www.reactiveui.net/documentation/primitives/).** This readme
+covers the whole surface in brief; the site carries the detailed guides, per-operator pages and runnable samples.
 
-It gives you that model without a runtime dependency on System.Reactive, R3, or R3Async. Those are the established
-reactive libraries for .NET, and this package stands in for them in the common cases.
+## Contents
 
-It builds on two interfaces that .NET already ships. `IObservable<T>` is a source you subscribe to. `IObserver<T>` is
-the subscriber that receives each value. The library renames a few common concepts for clarity. It also favours code
-paths that allocate little memory and run under ahead-of-time (AOT) compilation. AOT compiles the app to native code
-before it runs, so the app cannot generate new code while running.
+- [The problem it solves](#the-problem-it-solves)
+- [Your first signal](#your-first-signal)
+- [Core model](#core-model)
+- [Install](#install)
+- [Target frameworks](#target-frameworks)
+- [Operators](#operators)
+- [Extension helpers](#extension-helpers)
+- [Async operators](#async-operators)
+- [Subjects and stateful signals](#subjects-and-stateful-signals)
+- [Scheduling work](#scheduling-work)
+- [Disposing subscriptions](#disposing-subscriptions)
+- [Threading, errors and disposal rules](#threading-errors-and-disposal-rules)
+- [Why not System.Reactive or R3?](#why-not-systemreactive-or-r3)
+- [Observable event source generation](#observable-event-source-generation)
+- [Source-generator bridge behavior](#source-generator-bridge-behavior)
+- [Moving from System.Reactive](#moving-from-systemreactive)
+- [Moving from R3](#moving-from-r3)
+- [Moving from R3Async](#moving-from-r3async)
+- [Moving from ReactiveUI.Extensions](#moving-from-reactiveuiextensions)
+- [Benchmarks](#benchmarks)
+- [Repository layout](#repository-layout)
+- [For advanced users](#for-advanced-users)
+- [Contribute](#contribute)
+- [Code of Conduct](#code-of-conduct)
+- [License](#license)
 
-## Goals and design posture
+## The problem it solves
 
-ReactiveUI.Primitives aims to:
+You have a search box. You want to run a search when the user stops typing. You do not want to search on every
+keystroke, and you do not want to search a single letter.
 
-- Cover the Rx model over `IObservable<T>`: creating streams, subscribing, holding state, scheduling work, and
-  composing operators. A stream is a sequence of values delivered over time.
-- Rename a few concepts where a clearer name helps. A `Signal<T>` is a source you can both push values into and
-  subscribe to (Rx calls this a `Subject<T>`). `Map` transforms each value (Rx `Select`); `Keep` filters values
-  (Rx `Where`); `Spark` turns each notification into a value you can inspect.
-- Stay AOT-friendly. The production package uses no runtime reflection, no generated code, no expression compilation,
-  and no hidden dependency on System.Reactive, R3, or R3Async.
-- Allocate as little as possible on hot paths. For example, `Signal<T>` subscribes a single delegate directly, and the
-  common return, empty, and never sources reuse one shared instance.
-- Run in production across modern .NET and .NET Framework, with separate integration packages for Windows UI and other
-  platforms. A target framework (TFM) is the .NET version and platform a build targets, such as `net8.0`.
-- Support migration. The `.Reactive` package variants match System.Reactive's public surface, and source-generator
-  bridges connect to R3 or R3Async when your project already uses them.
+C# gives you an event for the typing. The rest you write yourself:
 
-## Why not System.Reactive or R3?
+```csharp
+// Search when the user stops typing for 300ms.
+private System.Timers.Timer? _timer;
 
-System.Reactive is the original Rx library for .NET, and the reason `IObservable<T>` exists. It is mature and widely
-used. Its weak point is performance: a typical operator chain allocates several objects per operator and per value, and
-that grows under heavy load.
+private void OnTextChanged(object? sender, EventArgs e)
+{
+    var text = box.Text;
 
-R3 is a newer library aimed at that weak point. It is fast. It reaches that speed partly by replacing `IObservable<T>`
-with its own `Observable<T>` type. That swap means existing code, and the wider ecosystem built on `IObservable<T>`,
-does not carry over without adaptation.
+    if (text.Length <= 2)
+    {
+        return;
+    }
 
-We wanted the speed without the break, so we kept `IObservable<T>`, the interface .NET already ships and most C# code
-already knows. Our benchmarks pointed at the cause: the interface was not the bottleneck. The cost lived in how the
-operators were implemented, not in the abstraction. So we kept the familiar contract and rebuilt the operators as
-low-allocation sinks (see [Why the operators are built this way](#why-the-operators-are-built-this-way)).
+    // Cancel the search we were about to run, start the wait again,
+    // and capture the text so the timer sees the value the user typed last.
+    _timer?.Stop();
+    _timer?.Dispose();
+    _timer = new System.Timers.Timer(300) { AutoReset = false };
+    _timer.Elapsed += (_, _) => RunSearch(text);
+    _timer.Start();
+}
 
-This keeps the change small for anyone already on `IObservable<T>`. You keep the contract and the mental model, and you
-gain the lower allocation profile. When you do need full System.Reactive or R3 behaviour, the `.Reactive` package
-variants and the R3/R3Async source-generator bridges cover those boundaries.
+// Then detach the handler and dispose the timer when the view goes away.
+```
 
-### Where we could not stay on the standard types
+With this library, you write the same rules as a chain:
 
-Keeping `IObservable<T>` and `IObserver<T>` was easy, because both ship in .NET itself. Two related types do not, so we
-had to make a call.
+```csharp
+using var search = Signal.FromEventPattern(
+        handler => box.TextChanged += handler,
+        handler => box.TextChanged -= handler)
+    .Map(_ => box.Text)
+    .Keep(text => text.Length > 2)
+    .Throttle(TimeSpan.FromMilliseconds(300))
+    .Subscribe(text => RunSearch(text));
+```
 
-The first is the scheduler. A scheduler decides when and on which thread work runs. .NET has no scheduler type of its
-own. The standard one, `IScheduler`, lives in System.Reactive, so using it would pull System.Reactive back in as a
-runtime dependency. That is the dependency we set out to avoid. So the lean library defines its own small scheduling
-contract, `ISequencer`.
+Each line does one job. `FromEventPattern` turns the event into a source. `Map` turns each value into another value.
+`Keep` drops the values you do not want. `Throttle` waits for a quiet period after the most recent value. `Subscribe`
+runs your code on what is left.
 
-The second is `Unit`. `Unit` is the type that means "a value carrying no information", used for streams that report that
-something happened but carry no data. .NET has no such type either, and the common `Unit` also lives in System.Reactive.
-So the lean library defines its own, `RxVoid`.
+`Subscribe` hands back an `IDisposable`. Disposing it detaches the event handler and cancels the pending wait. That is
+the whole cleanup.
 
-These two types are the only places the lean surface departs from the System.Reactive shape. The `.Reactive` package
-variants close the gap: they recompile the same source with `ISequencer` mapped to `IScheduler` and `RxVoid` mapped to
-`System.Reactive.Unit`, so code that already speaks System.Reactive sees the types it expects.
+> [!NOTE]
+> `Throttle` times the wait on the thread pool. It does not move the value to the UI thread. Pass a sequencer to
+> `Throttle`, or add `ObserveOn`, when the subscriber needs the UI thread.
 
-Disposal groups are a third seam, and one the shared types cannot close on their own: `MultipleDisposable` ships in the
-dependency-free `ReactiveUI.Disposables` package, so it cannot name `CompositeDisposable`. `ReactiveUI.Primitives.Reactive`
-adds `ContainerDisposable` for that - a `MultipleDisposable` that converts implicitly to a `CompositeDisposable` it owns
-and disposes. Hand one to `DisposeWith`, to a library that takes a `CompositeDisposable`, or to your own helper, and it
-just works; anything registered through the composite is disposed with the container.
+## Your first signal
 
-## Table of contents
-
-1. [Install](#install)
-2. [Agent Skills](#agent-skills)
-3. [Target frameworks and dependencies](#target-frameworks-and-dependencies)
-4. [Core model](#core-model)
-5. [Creation factories](#creation-factories)
-6. [Operators](#operators)
-7. [ReactiveUI.Primitives.Async](#reactiveuiprimitivesasync)
-8. [Extension helpers](#extension-helpers)
-9. [Stateful signals and subject-like types](#stateful-signals-and-subject-like-types)
-10. [Sequencers](#sequencers)
-11. [Threading, disposal, and error semantics](#threading-disposal-and-error-semantics)
-12. [Source-generator bridge behavior](#source-generator-bridge-behavior)
-13. [Migration guides](#systemreactive-to-reactiveuiprimitives-migration-guide)
-14. [Benchmarks and performance posture](#benchmarks-and-performance-posture)
-15. [Repository layout](#repository-layout)
-
-## Install
-
-All packages are published on [NuGet.org](https://www.nuget.org/packages?q=ReactiveUI.Primitives). Install the base
-package:
+**1. Install the package.**
 
 ```bash
 dotnet add package ReactiveUI.Primitives
 ```
 
-The library is split into a layered set of packages, so you can pull only the surface that matches your
-integration point. Every package below is produced by a packable project in the current solution and ships at the same
-version. Target frameworks vary by package; the exact matrices are documented under
-[Target frameworks and dependencies](#target-frameworks-and-dependencies).
+**2. Create a signal.** A `Signal<T>` is a source you can push values into. It is also a source you can subscribe to.
 
-| Package                                               | NuGet                        | Use when                                                                                                          |
-|-------------------------------------------------------|------------------------------|-------------------------------------------------------------------------------------------------------------------|
-| [ReactiveUI.Disposables][Disp]                        | [![DispB]][Disp]             | You only need the disposable primitives such as `Disposable`, `MultipleDisposable`, `Slot`, or `Pocket`.          |
-| [ReactiveUI.Primitives.Core][Core]                    | [![CoreB]][Core]             | The type-agnostic core shared by the lean and System.Reactive-flavoured leaves (usually a transitive dependency). |
-| [ReactiveUI.Primitives][Prim]                         | [![PrimB]][Prim]             | The default lean signal/operator/sequencer package, including the migrated `ReactiveUI.Extensions` helpers.       |
-| [ReactiveUI.Primitives.Reactive][Rx]                  | [![RxB]][Rx]                 | The Primitives and extension-helper APIs compiled against System.Reactive `Unit` and `IScheduler`.                |
-| [ReactiveUI.Primitives.Async.Core][AsyncCore]         | [![AsyncCoreB]][AsyncCore]   | The type-agnostic async core shared by the async leaves.                                                          |
-| [ReactiveUI.Primitives.Async][Async]                  | [![AsyncB]][Async]           | Native `IObservableAsync<T>` / `IObserverAsync<T>` signals.                                                       |
-| [ReactiveUI.Primitives.ObservableEvents][Events]      | [![EventsB]][Events]         | Optional analyzer package that exposes .NET events as provider-native `IObservable<T>` properties.                |
-| [ReactiveUI.Primitives.R3Bridge.Generator][R3Bridge]  | [![R3BridgeB]][R3Bridge]     | Optional analyzer package that generates R3 and R3Async bridge adapters.                                          |
-| [ReactiveUI.Primitives.Async.Reactive][AsyncRx]       | [![AsyncRxB]][AsyncRx]       | Async Primitives compiled against System.Reactive `Unit` and `IScheduler`.                                        |
-| [ReactiveUI.Primitives.Wpf][Wpf]                      | [![WpfB]][Wpf]               | WPF dispatcher sequencer integration.                                                                             |
-| [ReactiveUI.Primitives.Wpf.Reactive][WpfRx]           | [![WpfRxB]][WpfRx]           | WPF dispatcher scheduler integration for System.Reactive-first projects.                                          |
-| [ReactiveUI.Primitives.WinForms][WinForms]            | [![WinFormsB]][WinForms]     | Windows Forms control sequencer integration.                                                                      |
-| [ReactiveUI.Primitives.WinForms.Reactive][WinFormsRx] | [![WinFormsRxB]][WinFormsRx] | Windows Forms control scheduler integration for System.Reactive-first projects.                                   |
-| [ReactiveUI.Primitives.WinUI][WinUI]                  | [![WinUIB]][WinUI]           | WinUI dispatcher-queue sequencer integration.                                                                     |
-| [ReactiveUI.Primitives.WinUI.Reactive][WinUIRx]       | [![WinUIRxB]][WinUIRx]       | WinUI dispatcher-queue scheduler integration for System.Reactive-first projects.                                  |
-| [ReactiveUI.Primitives.Blazor][Blazor]                | [![BlazorB]][Blazor]         | Blazor renderer sequencer integration.                                                                            |
-| [ReactiveUI.Primitives.Blazor.Reactive][BlazorRx]     | [![BlazorRxB]][BlazorRx]     | Blazor renderer scheduler integration for System.Reactive-first projects.                                         |
-| [ReactiveUI.Primitives.Avalonia][Avalonia]            | [![AvaloniaB]][Avalonia]     | Avalonia UI-thread sequencer integration.                                                                         |
-| [ReactiveUI.Primitives.Avalonia.Reactive][AvaloniaRx] | [![AvaloniaRxB]][AvaloniaRx] | Avalonia UI-thread scheduler integration for System.Reactive-first projects.                                      |
-| [ReactiveUI.Primitives.Maui][Maui]                    | [![MauiB]][Maui]             | MAUI dispatcher sequencer integration.                                                                            |
-| [ReactiveUI.Primitives.Maui.Reactive][MauiRx]         | [![MauiRxB]][MauiRx]         | MAUI dispatcher scheduler integration for System.Reactive-first projects.                                         |
+```csharp
+using ReactiveUI.Primitives;
+using ReactiveUI.Primitives.Signals;
+
+var signal = new Signal<int>();
+```
+
+**3. Subscribe.** You give `Subscribe` up to three callbacks. The first takes each value. The second takes an error.
+The third runs when the signal finishes.
+
+```csharp
+using IDisposable subscription = signal.Subscribe(
+    value => Console.WriteLine($"next: {value}"),
+    error => Console.WriteLine($"error: {error.Message}"),
+    () => Console.WriteLine("completed"));
+```
+
+**4. Push values.** `OnNext` sends a value to every current subscriber. Each call reaches your first callback right
+away.
+
+```csharp
+signal.OnNext(1);   // prints next: 1
+signal.OnNext(2);   // prints next: 2
+```
+
+**5. Finish the signal.** `OnCompleted` ends it successfully. `OnError` ends it with an exception. A signal that ends
+sends nothing more.
+
+```csharp
+signal.OnCompleted();   // prints completed
+```
+
+**6. Dispose the subscription.** Disposing unsubscribes you. The `using` on step 3 does this at the end of the block.
+A subscription you never dispose keeps your callbacks alive.
+
+```csharp
+subscription.Dispose();
+```
+
+Collect several subscriptions in a `MultipleDisposable` and dispose them together:
+
+```csharp
+using ReactiveUI.Primitives.Disposables;
+
+var subscriptions = new MultipleDisposable();
+
+signal.Subscribe(value => Console.WriteLine(value)).DisposeWith(subscriptions);
+signal.Subscribe(value => Console.WriteLine(value * 10)).DisposeWith(subscriptions);
+
+subscriptions.Dispose();
+```
+
+## Core model
+
+**`IObservable<T>` is a source.** You call `Subscribe` on it. It pushes values to you.
+
+**`IObserver<T>` is a subscriber.** It has three methods. The source calls `OnNext` for each value, `OnError` once if
+something fails, and `OnCompleted` once when there is nothing more. `OnError` and `OnCompleted` both end the source. The
+source calls one of them, once. It sends no values after that.
+
+**A `Signal<T>` is both.** It implements `ISignal<T>`, which combines `IObserver<T>`, `IObservable<T>` and `IsDisposed`.
+So you push values into one end and subscribe at the other. `HasObservers` tells you whether anyone is subscribed.
+`IsDisposed` tells you whether the signal is disposed.
+
+**A witness is a lightweight observer wrapper.** The library builds one for you when you pass callbacks to `Subscribe`.
+You rarely write one by hand. Pass delegates or an `IObserver<T>` instead.
+
+**Subscribing hands you an `IDisposable`.** Dispose it to unsubscribe. Scheduled work hands you one too. Dispose that to
+cancel the work. `DisposeWith` adds a disposable to a `MultipleDisposable` so you can dispose a group in one call.
+
+> [!NOTE]
+> Another package can pull in System.Reactive, which declares its own `Subscribe` extension methods for
+> `IObservable<T>`. Both sets are then in scope and the call is ambiguous. Call `SubscribePrimitives` to pick this
+> library's implementation. It has the same callback overloads and the same behaviour as `Subscribe`.
+
+## Install
+
+Every package ships on [NuGet.org](https://www.nuget.org/packages?q=ReactiveUI.Primitives) at the same version. Start
+with the base package:
+
+```bash
+dotnet add package ReactiveUI.Primitives
+```
+
+Then import the namespaces you need:
+
+```csharp
+using ReactiveUI.Primitives;
+using ReactiveUI.Primitives.Signals;
+using ReactiveUI.Primitives.Disposables;
+using ReactiveUI.Primitives.Concurrency;
+using ReactiveUI.Primitives.Extensions;
+```
+
+Each package covers one integration point. Take the ones you need.
+
+| Package | NuGet | Use when |
+|---------|-------|----------|
+| [ReactiveUI.Disposables][Disp] | [![DispB]][Disp] | You want only the disposable types, such as `Disposable`, `MultipleDisposable`, `Slot` or `Pocket`. |
+| [ReactiveUI.Primitives.Core][Core] | [![CoreB]][Core] | The shared core behind the lean and System.Reactive packages. You usually get it as a dependency. |
+| [ReactiveUI.Primitives][Prim] | [![PrimB]][Prim] | The default package: signals, operators, sequencers and the extension helpers. |
+| [ReactiveUI.Primitives.Reactive][Rx] | [![RxB]][Rx] | You want the same API compiled against System.Reactive `Unit` and `IScheduler`. |
+| [ReactiveUI.Primitives.Async.Core][AsyncCore] | [![AsyncCoreB]][AsyncCore] | The shared core behind the async packages. |
+| [ReactiveUI.Primitives.Async][Async] | [![AsyncB]][Async] | You want native `IObservableAsync<T>` and `IObserverAsync<T>` signals. |
+| [ReactiveUI.Primitives.Async.Reactive][AsyncRx] | [![AsyncRxB]][AsyncRx] | You want the async API compiled against System.Reactive `Unit` and `IScheduler`. |
+| [ReactiveUI.Primitives.ObservableEvents][Events] | [![EventsB]][Events] | You want .NET events exposed as `IObservable<T>` properties. This package is an analyzer. |
+| [ReactiveUI.Primitives.R3Bridge.Generator][R3Bridge] | [![R3BridgeB]][R3Bridge] | You want generated R3 and R3Async bridge adapters. This package is an analyzer. |
+| [ReactiveUI.Primitives.Wpf][Wpf] | [![WpfB]][Wpf] | You want the WPF dispatcher as a sequencer. |
+| [ReactiveUI.Primitives.Wpf.Reactive][WpfRx] | [![WpfRxB]][WpfRx] | You want the WPF dispatcher as a System.Reactive scheduler. |
+| [ReactiveUI.Primitives.WinForms][WinForms] | [![WinFormsB]][WinForms] | You want a Windows Forms control as a sequencer. |
+| [ReactiveUI.Primitives.WinForms.Reactive][WinFormsRx] | [![WinFormsRxB]][WinFormsRx] | You want a Windows Forms control as a System.Reactive scheduler. |
+| [ReactiveUI.Primitives.WinUI][WinUI] | [![WinUIB]][WinUI] | You want the WinUI dispatcher queue as a sequencer. |
+| [ReactiveUI.Primitives.WinUI.Reactive][WinUIRx] | [![WinUIRxB]][WinUIRx] | You want the WinUI dispatcher queue as a System.Reactive scheduler. |
+| [ReactiveUI.Primitives.Blazor][Blazor] | [![BlazorB]][Blazor] | You want the Blazor renderer as a sequencer. |
+| [ReactiveUI.Primitives.Blazor.Reactive][BlazorRx] | [![BlazorRxB]][BlazorRx] | You want the Blazor renderer as a System.Reactive scheduler. |
+| [ReactiveUI.Primitives.Avalonia][Avalonia] | [![AvaloniaB]][Avalonia] | You want the Avalonia UI thread as a sequencer. |
+| [ReactiveUI.Primitives.Avalonia.Reactive][AvaloniaRx] | [![AvaloniaRxB]][AvaloniaRx] | You want the Avalonia UI thread as a System.Reactive scheduler. |
+| [ReactiveUI.Primitives.Maui][Maui] | [![MauiB]][Maui] | You want the MAUI dispatcher as a sequencer. |
+| [ReactiveUI.Primitives.Maui.Reactive][MauiRx] | [![MauiRxB]][MauiRx] | You want the MAUI dispatcher as a System.Reactive scheduler. |
+
+A sequencer decides when and on which thread work runs. `ISequencer` is this library's own scheduling contract.
+
+The R3 and R3Async bridge lives in its own analyzer package:
+
+```bash
+dotnet add package ReactiveUI.Primitives.R3Bridge.Generator
+```
+
+That generator adds no runtime dependency. It writes bridge code only when your project already references the R3 or
+R3Async types.
 
 [Disp]: https://www.nuget.org/packages/ReactiveUI.Disposables/
 
@@ -169,6 +268,10 @@ version. Target frameworks vary by package; the exact matrices are documented un
 
 [AsyncB]: https://img.shields.io/nuget/v/ReactiveUI.Primitives.Async.svg
 
+[AsyncRx]: https://www.nuget.org/packages/ReactiveUI.Primitives.Async.Reactive/
+
+[AsyncRxB]: https://img.shields.io/nuget/v/ReactiveUI.Primitives.Async.Reactive.svg
+
 [Events]: https://www.nuget.org/packages/ReactiveUI.Primitives.ObservableEvents/
 
 [EventsB]: https://img.shields.io/nuget/v/ReactiveUI.Primitives.ObservableEvents.svg
@@ -176,10 +279,6 @@ version. Target frameworks vary by package; the exact matrices are documented un
 [R3Bridge]: https://www.nuget.org/packages/ReactiveUI.Primitives.R3Bridge.Generator/
 
 [R3BridgeB]: https://img.shields.io/nuget/v/ReactiveUI.Primitives.R3Bridge.Generator.svg
-
-[AsyncRx]: https://www.nuget.org/packages/ReactiveUI.Primitives.Async.Reactive/
-
-[AsyncRxB]: https://img.shields.io/nuget/v/ReactiveUI.Primitives.Async.Reactive.svg
 
 [Wpf]: https://www.nuget.org/packages/ReactiveUI.Primitives.Wpf/
 
@@ -229,1025 +328,2084 @@ version. Target frameworks vary by package; the exact matrices are documented un
 
 [MauiRxB]: https://img.shields.io/nuget/v/ReactiveUI.Primitives.Maui.Reactive.svg
 
-### How the packages layer
-
-The base and async families use type-agnostic `.Core` projects, with a **lean** leaf binding the shared
-`RxVoid`/`ISequencer` source to lightweight implementations and a `.Reactive` leaf recompiling it against
-System.Reactive's `Unit`/`IScheduler`. Type-agnostic extension-helper sources are compiled into
-`ReactiveUI.Primitives.Core`, while the lean and System.Reactive helper surfaces ship from `ReactiveUI.Primitives` and
-`ReactiveUI.Primitives.Reactive`. The `src/ReactiveUI.Primitives.Extensions.Core` directory is source only; it is not a
-project or NuGet package. The platform packages also come in lean and `.Reactive` leaves. (Arrows point from a package
-to what it depends on.)
-
-```mermaid
-graph TD
-    SR["System.Reactive"]
-    Disp["ReactiveUI.Disposables"]
-    Core["ReactiveUI.Primitives.Core"]
-    Prim["ReactiveUI.Primitives<br/>(lean)"]
-    Rx["ReactiveUI.Primitives.Reactive"]
-    AsyncCore["...Async.Core"]
-    Async["...Async (lean)"]
-    AsyncRx["...Async.Reactive"]
-    Plat["Wpf / WinForms / WinUI / Blazor<br/>Avalonia / Maui"]
-    PlatRx["Wpf.Reactive / WinForms.Reactive / WinUI.Reactive<br/>Blazor.Reactive / Avalonia.Reactive / Maui.Reactive"]
-
-    Core --> Disp
-    Prim --> Core
-    Prim --> Disp
-    Rx --> Core
-    Rx --> SR
-    AsyncCore --> Core
-    Async --> Prim
-    Async --> AsyncCore
-    AsyncRx --> Rx
-    AsyncRx --> AsyncCore
-    Plat --> Prim
-    PlatRx --> Rx
-```
-
-`ReactiveUI.Primitives.Extensions` and `ReactiveUI.Primitives.Extensions.Reactive` are no longer separate projects or
-NuGet packages. Their implementations now ship from `ReactiveUI.Primitives` and `ReactiveUI.Primitives.Reactive`,
-respectively. No API code was removed: the former lean Extensions package already depended on
-`ReactiveUI.Primitives`, and the former Reactive Extensions package already depended on
-`ReactiveUI.Primitives.Reactive`. Replace only the package reference; the existing
-`ReactiveUI.Primitives.Extensions*` namespaces remain unchanged.
-
-Then import the namespaces you need:
-
-```csharp
-using ReactiveUI.Primitives;
-using ReactiveUI.Primitives.Async;
-using ReactiveUI.Primitives.Concurrency;
-using ReactiveUI.Primitives.Disposables;
-using ReactiveUI.Primitives.Extensions;
-using ReactiveUI.Primitives.Extensions.Reactive;
-using ReactiveUI.Primitives.Async.Signals;
-using ReactiveUI.Primitives.Async.Reactive;
-using ReactiveUI.Primitives.Reactive;
-using ReactiveUI.Primitives.Signals;
-```
-
-The package metadata is configured to include this README in the NuGet package via `PackageReadmeFile=README.md`. The
-base package also packs `Skill.md` at the package root and a Codex-ready copy at
-`.agents/skills/reactiveui-primitives/SKILL.md`.
-
-R3 and R3Async bridge generation lives in the standalone `ReactiveUI.Primitives.R3Bridge.Generator` analyzer package:
-
-```bash
-dotnet add package ReactiveUI.Primitives.R3Bridge.Generator
-```
-
-That generator does not add runtime R3 or R3Async dependencies to ReactiveUI.Primitives. It emits bridge code only when
-the consuming compilation already references the relevant external library symbols. System.Reactive interop is provided
-by the `.Reactive` package variants rather than by generated System.Reactive bridge methods.
-
-## Agent Skills
-
-The base `ReactiveUI.Primitives` NuGet package includes `Skill.md` at the package root and a Codex-ready copy at
-`.agents/skills/reactiveui-primitives/SKILL.md`. It is an agent-oriented guide for choosing the correct
-ReactiveUI.Primitives package, using Async, extension helpers, UI sequencers, bridge source generators, and migration from
-System.Reactive package variants, R3, or R3Async while assuming the libraries are consumed from NuGet packages.
-
-After package restore, locate the file in the local NuGet package cache:
-
-```powershell
-$version = "<version>"
-$skill = "$env:USERPROFILE\.nuget\packages\reactiveui.primitives\$version\.agents\skills\reactiveui-primitives\SKILL.md"
-```
-
-On macOS or Linux:
-
-```bash
-version="<version>"
-skill="$HOME/.nuget/packages/reactiveui.primitives/$version/.agents/skills/reactiveui-primitives/SKILL.md"
-```
-
-Install or link the packaged `SKILL.md` into the instruction location supported by the agent. `Skill.md` remains at the
-package root for agents or tools that expect a singular markdown guide rather than a skill folder.
-
-| Agent                                                                                          | Recommended project-local install                            | Notes                                                                                                                                                            |
-|------------------------------------------------------------------------------------------------|--------------------------------------------------------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| [OpenAI Codex](https://developers.openai.com/codex/skills)                                     | `.agents/skills/reactiveui-primitives/SKILL.md`              | Codex also supports user-level skills under `$HOME/.agents/skills`.                                                                                              |
-| [Claude Code](https://code.claude.com/docs/en/skills)                                          | `.claude/skills/reactiveui-primitives/SKILL.md`              | Claude Code also supports personal skills under `~/.claude/skills`.                                                                                              |
-| [Cline](https://docs.cline.bot/customization/skills)                                           | `.cline/skills/reactiveui-primitives/SKILL.md`               | Cline skills must be enabled in Cline's feature settings.                                                                                                        |
-| [GitHub Copilot](https://docs.github.com/en/copilot/concepts/prompting/response-customization) | `.github/instructions/reactiveui-primitives.instructions.md` | For repository-wide behavior, summarize or link the skill from `.github/copilot-instructions.md`.                                                                |
-| [Cursor](https://docs.cursor.com/en/context)                                                   | `.cursor/rules/reactiveui-primitives.mdc`                    | Cursor project rules are version-controlled under `.cursor/rules`; `CLAUDE.md` is authoritative in this repo, and `AGENTS.md` can point to it for compatibility. |
-| [Windsurf](https://docs.windsurf.com/windsurf/cascade/memories)                                | `.windsurf/rules/reactiveui-primitives.md`                   | Windsurf can consume repository guidance via markdown rules; `CLAUDE.md` is the canonical file in this repo.                                                     |
-| [Gemini CLI](https://google-gemini.github.io/gemini-cli/docs/cli/gemini-md.html)               | `GEMINI.md` or an imported file referenced from `GEMINI.md`  | Gemini CLI loads hierarchical context files and supports importing other markdown files with `@file.md`.                                                         |
-
-## Target frameworks and dependencies
-
-Most shared library packages use `$(LibraryTargetFrameworks)` from `src/Directory.Build.props` and currently target:
-
-- `net8.0`
-- `net9.0`
-- `net10.0`
-- `net11.0`
-- `net462`
-- `net472`
-- `net48`
-- `net481`
-
-Package TFM groups are:
-
-- `ReactiveUI.Disposables`, `ReactiveUI.Primitives.Core`, `ReactiveUI.Primitives.Async.Core`,
-  `ReactiveUI.Primitives.Async`, and `ReactiveUI.Primitives.Async.Reactive`: `$(LibraryTargetFrameworks)`.
-- `ReactiveUI.Primitives.ObservableEvents` and `ReactiveUI.Primitives.R3Bridge.Generator`: `netstandard2.0`.
-- `ReactiveUI.Primitives`: `$(LibraryTargetFrameworks)` plus `net10.0-android`, `net11.0-android`, and Apple platform
-  TFMs (`net10.0-ios`, `net11.0-ios`, `net10.0-tvos`, `net11.0-tvos`, `net10.0-macos`, `net11.0-macos`,
-  `net10.0-maccatalyst`, `net11.0-maccatalyst`) when building on Windows or macOS.
-- `ReactiveUI.Primitives.Reactive`: the same matrix as `ReactiveUI.Primitives`, compiled with System.Reactive `Unit` and
-  `IScheduler` aliases.
-- `ReactiveUI.Primitives.Wpf` and `ReactiveUI.Primitives.Wpf.Reactive`: `net8.0-windows`, `net9.0-windows`,
-  `net10.0-windows`, `net11.0-windows`, `net462`, `net472`, `net48`, `net481`.
-- `ReactiveUI.Primitives.WinForms` and `ReactiveUI.Primitives.WinForms.Reactive`: `net8.0-windows`,
-  `net9.0-windows`, `net10.0-windows`, `net11.0-windows`, `net462`, `net472`, `net48`, `net481`.
-- `ReactiveUI.Primitives.WinUI` and `ReactiveUI.Primitives.WinUI.Reactive`: `net8.0-windows10.0.19041.0`,
-  `net9.0-windows10.0.19041.0`, `net10.0-windows10.0.19041.0`, `net11.0-windows10.0.19041.0`.
-- `ReactiveUI.Primitives.Blazor` and `ReactiveUI.Primitives.Blazor.Reactive`: `net8.0`, `net9.0`, `net10.0`,
-  `net11.0`.
-- `ReactiveUI.Primitives.Avalonia` and `ReactiveUI.Primitives.Avalonia.Reactive`: `net8.0`, `net9.0`, `net10.0`,
-  `net11.0`.
-- `ReactiveUI.Primitives.Maui` and `ReactiveUI.Primitives.Maui.Reactive`: `net10.0`, `net11.0`.
-
-Runtime package dependencies are intentionally small. The default production packages do not depend on System.Reactive,
-R3, R3Async, or the optional R3 bridge generator. `ReactiveUI.Primitives` references `ReactiveUI.Disposables`,
-and `ReactiveUI.Primitives.Core`. `ReactiveUI.Primitives.Core` contains the type-agnostic implementation used by the
-extension-helper surfaces. `ReactiveUI.Disposables` references `System.ValueTuple` only for `net462`.
-
-The `.Reactive` leaf packages intentionally reference `System.Reactive` through `src/Directory.Build.props`. They
-recompile the shared Primitives source with `RxVoid` aliased to `System.Reactive.Unit`, `ISequencer` aliased to
-`System.Reactive.Concurrency.IScheduler`, and the shared source shifted into `.Reactive` namespaces.
-
-`ReactiveUI.Primitives`, `ReactiveUI.Primitives.Reactive`, `ReactiveUI.Primitives.Async.Core`,
-`ReactiveUI.Primitives.Async`, and `ReactiveUI.Primitives.Async.Reactive` add .NET Framework compatibility/support
-packages where required, such as
-`System.ValueTuple`, Microsoft.Bcl.TimeProvider, System.Threading.Channels, System.Runtime.CompilerServices.Unsafe,
-System.ComponentModel.Annotations, System.Buffers, System.Memory, and System.Collections.Immutable. Add the standalone
-`ReactiveUI.Primitives.R3Bridge.Generator` analyzer package to generate R3/R3Async bridge methods in consuming projects
-that already reference those external libraries.
-
-`ReactiveUI.Primitives.Blazor` and `ReactiveUI.Primitives.Blazor.Reactive` reference `Microsoft.AspNetCore.Components`.
-`ReactiveUI.Primitives.Avalonia` and `ReactiveUI.Primitives.Avalonia.Reactive` reference `Avalonia`.
-`ReactiveUI.Primitives.Maui` and `ReactiveUI.Primitives.Maui.Reactive` reference `Microsoft.Maui.Core` and
-Microsoft.Extensions infrastructure packages. `ReactiveUI.Primitives.WinUI` and `ReactiveUI.Primitives.WinUI.Reactive`
-reference `Microsoft.WindowsAppSDK`. The remaining shared package references are analyzer, SourceLink, versioning,
-ILLink,
-reference-assembly, or build-time support packages such as Blazor.Common.Analyzers, Microsoft.SourceLink.GitHub, MinVer,
-Roslynator.Analyzers, SonarAnalyzer.CSharp, StyleSharp.Analyzers, Microsoft.NET.ILLink.Tasks, and
-Microsoft.NETFramework.ReferenceAssemblies. Benchmark projects may reference System.Reactive,
-System.Reactive.Async 6.0.0-alpha.18, R3, and ReactiveUI.Extensions as comparison baselines, but those references are
-not
-production dependencies.
-
-## Core model
-
-### `Signal<T>`
-
-`Signal<T>` is the basic signal type: a source you can both push values into and subscribe to. It implements
-`ISignal<T>`, which combines `IObserver<T>`, `IObservable<T>`, and `IsDisposed`.
-
-Use it when code needs to push values into a stream and let observers subscribe:
-
-```csharp
-using ReactiveUI.Primitives;
-using ReactiveUI.Primitives.Signals;
-
-var signal = new Signal<int>();
-
-using IDisposable subscription = signal.Subscribe(
-    value => Console.WriteLine($"next: {value}"),
-    error => Console.WriteLine($"error: {error.Message}"),
-    () => Console.WriteLine("completed"));
-
-signal.OnNext(1);
-signal.OnNext(2);
-signal.OnCompleted();
-```
-
-Important behavior:
-
-- `OnNext(T)` sends a value to active subscribers.
-- `OnError(Exception)` terminates the signal with an error.
-- `OnCompleted()` terminates the signal successfully.
-- `Subscribe(...)` returns `IDisposable`; disposing the subscription unsubscribes.
-- `HasObservers` and `IsDisposed` expose basic lifecycle state.
-- The `Subscribe(Action<T>)` extension uses an optimized direct-action path for `Signal<T>` when possible.
-
-### Observers and witnesses
-
-ReactiveUI.Primitives keeps the standard `IObserver<T>` shape and provides helper observer implementations internally
-under the `Core` namespace.
-
-Common user-facing subscription overloads live in `SubscribeExtensions`:
-
-```csharp
-using ReactiveUI.Primitives;
-using ReactiveUI.Primitives.Signals;
-
-var signal = new Signal<string>();
-
-using var nextOnly = signal.Subscribe(value => Console.WriteLine(value));
-using var full = signal.Subscribe(
-    value => Console.WriteLine(value),
-    error => Console.Error.WriteLine(error),
-    () => Console.WriteLine("done"));
-```
-
-The library uses the term witness for lightweight observer wrappers. You normally use delegates or `IObserver<T>`
-directly rather than constructing witness types by hand.
-
-### Using Primitives alongside System.Reactive
-
-Packages such as DynamicData can bring in System.Reactive transitively. Importing both `System` and
-`ReactiveUI.Primitives` then exposes two sets of `Subscribe` extension methods for `IObservable<T>`.
-Use `SubscribePrimitives` to select the Primitives implementation without changing the observable:
-
-```csharp
-using var subscription = saveCommand.ThrownExceptions.SubscribePrimitives(
-    error => activity.AddItem(error.ToString()));
-```
-
-It has the same five callback overloads and behavior as `Subscribe`, including disposal and unhandled-error
-propagation. Existing `Subscribe` APIs remain available. An explicit static call also selects Primitives:
-
-```csharp
-using var subscription = SubscribeExtensions.Subscribe(
-    saveCommand.ThrownExceptions,
-    error => activity.AddItem(error.ToString()));
-```
-
-Putting `using ReactiveUI.Primitives;` inside the consuming namespace also gives its extension methods
-precedence over a global `using System;`. This applies per namespace; a global import alone does not
-resolve the conflict. Import only one set of LINQ operators when their signatures overlap.
-
-`SubscribeSafe` is not a drop-in rename: its single `Action<Exception>` overload handles terminal errors,
-not values emitted by an `IObservable<Exception>`. To handle exception values with `SubscribeSafe`, supply
-both `onNext` and `onError` explicitly.
-
-System.Reactive declares its own observer-taking `SubscribeSafe` in the `System` namespace, so that one
-overload is ambiguous under the same conditions as `Subscribe`. Use `SubscribeSafePrimitives(observer)` to
-select the Primitives implementation. The callback shapes of `SubscribeSafe` have no System.Reactive
-counterpart and stay callable under their own name.
-
-### Scheduling event handlers and drawing
-
-`ObserveOn` schedules downstream notifications. Moving work from an event handler into a subscriber
-after `ObserveOn` therefore changes when that work runs, even when the scheduler targets the UI thread.
-For paint events such as SkiaSharp's `PaintSurface`, draw synchronously while the event's surface is valid.
-Do not defer use of its canvas through `ObserveOn` or an `await`. Schedule a redraw request instead, and
-perform the drawing in the resulting paint callback.
-
-The `Signal.FromEventPattern<TEventHandler, TEventArgs>(conversion, addHandler, removeHandler)` overload
-lets a custom event handler perform synchronous work before invoking the notification callback. Each
-subscription owns its converted handler and detaches that same handler on disposal. Supplying the conversion
-also avoids deriving the handler reflectively, which is what makes this shape trim- and AOT-safe.
-
-Three siblings build on the same conversion. `FromEventPattern<TEventHandler, TSender, TEventArgs>` keeps the
-sender's static type instead of erasing it to `object`. `FromEvent<TEventHandler, TEventArgs>` emits the event
-argument on its own, for events that carry no sender, and `FromEvent<TEventArgs>(addHandler, removeHandler)`
-covers the plain `Action<TEventArgs>` case. Every one of them, and every `FromEventPattern` overload, accepts a
-trailing sequencer that attaches and detaches the handler as scheduled work rather than on the subscribing
-thread — the shape to use when an event may only be subscribed from the UI thread:
-
-```csharp
-using var painted = Signal.FromEventPattern<SKPaintSurfaceEventArgs>(
-        handler => view.SkiaElement.PaintSurface += handler,
-        handler => view.SkiaElement.PaintSurface -= handler,
-        RxSchedulers.MainThreadScheduler)
-    .SubscribePrimitives(pattern => Draw(pattern.EventArgs));
-```
-
-Disposing cancels a pending attach, so a subscription torn down before the sequencer ran it never leaves the
-handler on the event.
-
-`Throttle` (also called `Calm` or `Stabilize`) waits for a quiet period after the most recent value.
-By default its timer uses the thread pool; it does not marshal the result to the UI thread. Use
-`Throttle(duration, uiSequencer)` or put `ObserveOn(uiSequencer)` after `Throttle` when the subscriber
-requires the UI thread. Source completion flushes a pending value immediately, matching Rx debounce
-semantics; it does not wait for the remaining quiet period.
-
-### Disposables, handles, and slots
-
-Subscriptions and scheduled work return `IDisposable`. ReactiveUI.Primitives includes lightweight disposable primitives
-in `ReactiveUI.Primitives.Disposables`:
-
-| Type                                                       | Use                                                               |
-|------------------------------------------------------------|-------------------------------------------------------------------|
-| `Disposable.Create(Action)`                                | Create an `IDisposable` from a cleanup action.                    |
-| `Disposable.Empty`                                         | No-op disposable.                                                 |
-| `BooleanDisposable`                                        | Track simple disposed state.                                      |
-| `CancellationDisposable`                                   | Tie disposal to a `CancellationTokenSource`.                      |
-| `MultipleDisposable`                                       | Composite-disposable equivalent; add/remove multiple disposables. |
-| `CompositeDisposable`                                      | System.Reactive-compatible alias over `MultipleDisposable`.       |
-| `Pocket`                                                   | Named `MultipleDisposable` specialization.                        |
-| `SingleDisposable` / `AssignmentSlot`                      | Single-assignment disposable container.                           |
-| `SingleReplaceableDisposable` / `Slot`                     | Replaceable disposable container.                                 |
-| `Handle`, `Handle<T>`, `Handle<T1,T2>`, `Handle<T1,T2,T3>` | Lightweight handle wrappers for resource lifetimes.               |
-
-Example:
-
-```csharp
-using ReactiveUI.Primitives;
-using ReactiveUI.Primitives.Disposables;
-using ReactiveUI.Primitives.Signals;
-
-var subscriptions = new MultipleDisposable();
-var signal = new Signal<int>();
-
-signal.Subscribe(value => Console.WriteLine(value)).DisposeWith(subscriptions);
-signal.Subscribe(value => Console.WriteLine(value * 10)).DisposeWith(subscriptions);
-
-signal.OnNext(3);
-subscriptions.Dispose();
-```
-
-## Creation factories
-
-Creation APIs live on `ReactiveUI.Primitives.Signals.Signal`.
-
-| Factory                                                                                        | Purpose                                                                                                                                         |
-|------------------------------------------------------------------------------------------------|-------------------------------------------------------------------------------------------------------------------------------------------------|
-| `Signal.Create<T>(Func<IObserver<T>, IDisposable>)`                                            | Build a custom observable.                                                                                                                      |
-| `Signal.CreateSafe<T>(Func<IObserver<T>, IDisposable>)`                                        | Build a custom observable with safety wrapping.                                                                                                 |
-| `Signal.CreateWithState<T,TState>(...)`                                                        | Build a custom observable while passing state explicitly.                                                                                       |
-| `Signal.Lazy<T>(Func<IObservable<T>>)`                                                         | Create the source per subscription.                                                                                                             |
-| `Signal.Emit<T>(T)`                                                                            | Emit one value and complete. Specialized fast paths exist for `bool`, `int`, and `RxVoid`.                                                      |
-| `Signal.None<T>()`                                                                             | Complete without values.                                                                                                                        |
-| `Signal.Silent<T>()` / `Signal.Silent<T>(T witness)`                                           | Never emit and never complete.                                                                                                                  |
-| `Signal.Fail<T>(Exception)`                                                                    | Terminate with an error.                                                                                                                        |
-| `Signal.Sequence(int start, int count)`                                                        | Emit an integer range and complete.                                                                                                             |
-| `Signal.Loop<T>(T value)` / `Signal.Loop<T>(T value, int count)`                               | Repeat indefinitely or a fixed number of times.                                                                                                 |
-| `Signal.Unfold<TState,TResult>(...)` / `Signal.Iterate<TState,TResult>(...)`                   | Generate a finite sequence from state.                                                                                                          |
-| `Signal.Use<TResource,T>(...)`                                                                 | Tie a resource lifetime to a subscription.                                                                                                      |
-| `Signal.FromEventPattern(...)`                                                                 | Convert .NET events to `EventPattern<TEventArgs>` values.                                                                                       |
-| `Signal.FromEnumerable<T>(IEnumerable<T>)`                                                     | Convert an enumerable.                                                                                                                          |
-| `Signal.FromEnumerable<T>(IEnumerable<T>, CancellationToken)`                                  | Convert an enumerable and stop synchronous enumeration when cancelled.                                                                          |
-| `Signal.FromAsyncEnumerable<T>(IAsyncEnumerable<T>, CancellationToken)`                        | Convert an async enumerable on modern TFMs.                                                                                                     |
-| `Signal.FromTask<T>(Task<T>)`                                                                  | Convert an existing task to a signal.                                                                                                           |
-| `Signal.FromAsync<T>(Func<Task<T>>)`                                                           | Invoke a task factory per subscription.                                                                                                         |
-| `Signal.FromAsync<T>(Func<CancellationToken, Task<T>>)`                                        | Invoke a cancellable task factory per subscription; disposing that subscription cancels only that subscription's token.                         |
-| `Signal.FromAsync<T>(Func<CancellationToken, Task<T>>, CancellationToken)`                     | Link each subscription to an external token; external cancellation is forwarded as an observer error while subscribed.                          |
-| `Signal.After(TimeSpan, ISequencer?)`                                                          | Emit one `long` tick after a delay.                                                                                                             |
-| `Signal.Every(TimeSpan, ISequencer?)`                                                          | Emit increasing `long` ticks repeatedly.                                                                                                        |
-| `Signal.Pulse(...)`                                                                            | Alias of `Every`.                                                                                                                               |
-| `Signal.After(...)`                                                                            | One-shot and periodic timer overloads.                                                                                                          |
-| `Signal.Chain(...)`, `Signal.Blend(...)`, `Signal.Race(...)`                                   | Compose multiple sources.                                                                                                                       |
-| `Signal.Pair(...)`, `Signal.SyncLatest(...)`, `Signal.PairLatest(...)`, `Signal.ForkJoin(...)` | Pairwise combination helpers.                                                                                                                   |
-| `Signal.Scheduled<T>(ISequencer)` / `Signal.Scheduled<T>(ISequencer, IObserver<T>?)`           | Multicast signal that dispatches notifications on a sequencer, with an optional default observer active while no other subscribers are present. |
-| `Signal.Delayable<T>(Func<bool>, Func<IList<T>, IEnumerable<T>>)`                              | Multicast signal that buffers notifications while delayed and emits a de-duplicated batch when `Flush` is called.                               |
-
-Example:
-
-```csharp
-using ReactiveUI.Primitives;
-using ReactiveUI.Primitives.Signals;
-
-IObservable<int> values = Signal.Sequence(1, 5);
-
-using var subscription = values.Subscribe(
-    value => Console.WriteLine(value),
-    error => Console.Error.WriteLine(error),
-    () => Console.WriteLine("range completed"));
-```
-
-Custom source example:
-
-```csharp
-using ReactiveUI.Primitives.Disposables;
-using ReactiveUI.Primitives.Signals;
-
-IObservable<string> source = Signal.CreateSafe<string>(observer =>
-{
-    observer.OnNext("ready");
-    observer.OnCompleted();
-    return Disposable.Empty;
-});
-```
+## Target frameworks
+
+A target framework (TFM) is the .NET version and platform a build targets, such as `net8.0`. Most packages share one
+list: `net8.0`, `net9.0`, `net10.0`, `net11.0`, `net462`, `net472`, `net48` and `net481`. The repository calls that list
+`$(LibraryTargetFrameworks)` and sets it in `src/Directory.Build.props`.
+
+| Package | Target frameworks |
+|---------|-------------------|
+| `ReactiveUI.Disposables`, `ReactiveUI.Primitives.Core`, `ReactiveUI.Primitives.Async.Core`, `ReactiveUI.Primitives.Async`, `ReactiveUI.Primitives.Async.Reactive` | The shared list above. |
+| `ReactiveUI.Primitives`, `ReactiveUI.Primitives.Reactive` | The shared list, plus `net10.0-android` and `net11.0-android`, plus the Apple TFMs `net10.0-ios`, `net11.0-ios`, `net10.0-tvos`, `net11.0-tvos`, `net10.0-macos`, `net11.0-macos`, `net10.0-maccatalyst` and `net11.0-maccatalyst`. The mobile and Apple TFMs build on Windows or macOS. |
+| `ReactiveUI.Primitives.Wpf`, `ReactiveUI.Primitives.Wpf.Reactive`, `ReactiveUI.Primitives.WinForms`, `ReactiveUI.Primitives.WinForms.Reactive` | `net8.0-windows`, `net9.0-windows`, `net10.0-windows`, `net11.0-windows`, `net462`, `net472`, `net48`, `net481`. |
+| `ReactiveUI.Primitives.WinUI`, `ReactiveUI.Primitives.WinUI.Reactive` | `net8.0-windows10.0.19041.0`, `net9.0-windows10.0.19041.0`, `net10.0-windows10.0.19041.0`, `net11.0-windows10.0.19041.0`. |
+| `ReactiveUI.Primitives.Blazor`, `ReactiveUI.Primitives.Blazor.Reactive`, `ReactiveUI.Primitives.Avalonia`, `ReactiveUI.Primitives.Avalonia.Reactive` | `net8.0`, `net9.0`, `net10.0`, `net11.0`. |
+| `ReactiveUI.Primitives.Maui`, `ReactiveUI.Primitives.Maui.Reactive` | `net10.0`, `net11.0`. |
+| `ReactiveUI.Primitives.ObservableEvents`, `ReactiveUI.Primitives.R3Bridge.Generator` | `netstandard2.0`. |
+
+The dependency list is short by design. `ReactiveUI.Primitives` references `ReactiveUI.Disposables` and
+`ReactiveUI.Primitives.Core`. `ReactiveUI.Disposables` references `System.ValueTuple`, and only for `net462`. The
+`.Reactive` packages reference `System.Reactive`. The .NET Framework TFMs pull in
+support packages such as `System.ValueTuple`, `Microsoft.Bcl.TimeProvider`, `System.Threading.Channels`,
+`System.Runtime.CompilerServices.Unsafe`, `System.ComponentModel.Annotations`, `System.Buffers`, `System.Memory` and
+`System.Collections.Immutable`.
+
+The platform packages reference their platform. Blazor references `Microsoft.AspNetCore.Components`. Avalonia references
+`Avalonia`. MAUI references `Microsoft.Maui.Core` and the Microsoft.Extensions packages it needs. WinUI references
+`Microsoft.WindowsAppSDK`.
 
 ## Operators
 
-Operators are extension methods over `IObservable<T>`. Like a LINQ query over `IEnumerable<T>`, an operator takes a
-stream and returns a new stream, so you can chain them into a pipeline. ReactiveUI.Primitives ships its own names
-(`Map`, `Keep`, `Fold`, `Blend`, `SwitchTo`, and more). These names avoid call-resolution clashes with System.Reactive
-or R3. The familiar System.Reactive and LINQ names also work (see below), so you can write whichever reads best.
+A signal is a stream of values you can subscribe to. A signal hands you values one at a time. It ends in one of two
+ways: it completes, or it fails with an error. When you subscribe you get back an `IDisposable`. Dispose it to stop
+listening.
 
-### Why the operators are built this way
+A sequencer decides which thread runs your code. You pass one to an operator when you care where the work lands.
 
-Each operator is a purpose-built sink, not a wrapper around another observable. A wrapper chain allocates an observable
-and an observer for every operator, on every subscription, and each value then hops through the whole stack. A sink does
-the operator's work in one object and hands the result straight to the next stage. Fewer objects and fewer hops mean
-fewer allocations per value.
+A hub is an object that takes values in and hands them to every subscriber.
 
-That difference matters most under high throughput. Reactive pipelines often run where events never stop and volume is
-large: device and sensor telemetry (IoT), market data and payment flows in banking, and log or metric ingestion. At
-millions of events per second, per-value allocations create work for the garbage collector, and that work shows up as
-pauses. Keeping allocations low gives steadier latency and higher sustained throughput. This is why the library favours
-direct subscription and shared singletons, and why the dedicated names bind the compiler straight to these sink-based
-operators with no ambiguity against the System.Reactive or LINQ overloads.
+Most operators have a short name and a second name. Both names run the same code, so pick the one you like and use it
+everywhere. The last column of each table gives you the matching name from the libraries you may know.
 
-### System.Reactive / LINQ name layer
+`RxVoid` is this library's stand-in for "a value that carries no information".
 
-The everyday System.Reactive and LINQ names are first-class operators. Each builds the **same sink** as its
-Primitives-named counterpart, with identical behaviour and allocation profile. A sink is the small object that receives
-each value and does the operator's work. These names are not wrappers. Both name sets are fully supported and
-interchangeable, so pick whichever reads best.
+### Creation factories
 
-| LINQ / System.Reactive name | Primitives name | | LINQ / System.Reactive name | Primitives name |
-|-----------------------------|-----------------|-|-----------------------------|-----------------|
-| `Select`                    | `Map`           | | `Merge`                     | `Blend`         |
-| `SelectWith`                | `MapWith`       | | `Concat`                    | `Chain`         |
-| `Where`                     | `Keep`          | | `Amb`                       | `Race`          |
-| `WhereWith`                 | `KeepWith`      | | `Switch`                    | `SwitchTo`      |
-| `WhereNotNull`              | `KeepNotNull`   | | `Zip`                       | `Pair`          |
-| `Do`                        | `Tap`           | | `CombineLatest`             | `SyncLatest`    |
-| `DoWith`                    | `TapWith`       | | `WithLatestFrom`            | `Latch`         |
-| `Scan`                      | `Fold`          | | `SelectMany`                | `FlatMap`       |
-| `Aggregate`                 | `Reduce`        | | `Delay`                     | `Shift`         |
-| `DistinctUntilChanged`      | `Unique`        | | `Timeout`                   | `Expire`        |
-| `DistinctUntilChangedBy`    | `UniqueBy`      | | `Sample`                    | `Probe`         |
-| `IgnoreElements`            | `IgnoreValues`  | | `Retry`                     | `Reattempt`     |
-| `Materialize`               | `Spark`         | | `Dematerialize`             | `Unspark`       |
+These build a signal from something else: a number range, a collection, a task, an event, or your own code. Unless a
+row says otherwise, the method is `static` on `Signal`.
+
+| Operator | What it does | LINQ / System.Reactive name |
+|---|---|---|
+| `Signal.Emit(value)` | Emits one value, then completes. | `Observable.Return` |
+| `Signal.Emit(value, sequencer)` | Emits one value on the sequencer you name. | `Return(value, scheduler)` |
+| `Signal.Emit(RxVoid)`, `Signal.EmitRxVoid()` | Returns a shared signal that emits the unit value. | `Return(Unit.Default)` |
+| `Signal.Emit(bool)` | Returns one of two cached signals, one for true and one for false. | `Return(bool)` |
+| `Signal.Emit(int)` | Emits one int, then completes. | `Return(int)` |
+| `Signal.Return(value)`, `Signal.Return(value, sequencer)` | Another name for `Emit`. | `Observable.Return` |
+| `Signal.None<T>()` | Completes at once and emits nothing. | `Observable.Empty` |
+| `Signal.None<T>(sequencer)` | Completes on the sequencer and emits nothing. | `Empty(scheduler)` |
+| `Signal.None<T>(witness)`, `Signal.None<T>(sequencer, witness)` | Completes with no values and reads the element type from an unused argument. | `Empty<T>()` |
+| `Signal.Empty<T>()`, `Signal.Empty<T>(sequencer)` | Another name for `None`. | `Observable.Empty` |
+| `Signal.Silent<T>()`, `Signal.Silent<T>(witness)` | Emits nothing and never ends. | `Observable.Never` |
+| `Signal.Never<T>()` | Another name for `Silent`. | `Observable.Never` |
+| `Signal.Fail<T>(error)` | Fails with your error as soon as someone subscribes. | `Observable.Throw` |
+| `Signal.Fail<T>(error, sequencer)` | Fails on the sequencer you name. | `Throw(e, scheduler)` |
+| `Signal.Fail<T>(error, witness)`, `Signal.Fail<T>(error, sequencer, witness)` | Fails and reads the element type from an unused argument. | `Throw<T>(e)` |
+| `Signal.Throw<T>(error)`, `Signal.Throw<T>(error, sequencer)` | Another name for `Fail`. | `Observable.Throw` |
+| `Signal.Loop(value)` | Emits one value over and over and never ends. | `Observable.Repeat(value)` |
+| `Signal.Loop(value, count)` | Emits one value `count` times, then completes. | `Repeat(value, count)` |
+| `Signal.Repeat(value)`, `Signal.Repeat(value, repeatCount)` | Another name for `Loop`. | `Observable.Repeat` |
+| `Signal.Sequence(start, count)` | Emits `count` whole numbers in a row, then completes. | `Observable.Range` |
+| `Signal.Sequence(start, count, sequencer)` | Emits the same numbers on the sequencer you name. | `Range(..., scheduler)` |
+| `Signal.Range(start, count)`, `Signal.Range(start, count, sequencer)` | Another name for `Sequence`. | `Observable.Range` |
+| `Signal.Unfold(initialState, condition, iterate, resultSelector)` | Steps a state value forward and emits a projection of each step while the condition holds. | `Observable.Generate` |
+| `Signal.Iterate(initialState, condition, iterator, resultSelector)` | Another name for `Unfold`. | `Generate` |
+| `Signal.Generate(initialState, condition, iterate, resultSelector)` | A third name for `Unfold`. | `Observable.Generate` |
+| `Signal.Create<T>(subscribe)` | Builds a signal from your own subscribe function and keeps the subscription alive when a subscriber's `OnNext` throws. | `Observable.Create` |
+| `Signal.Create<T>(subscribe, isRequiredSubscribeOnCurrentThread)` | Builds the same signal and states that subscription must go through the current-thread sequencer. | `Observable.Create` |
+| `Signal.Create<T>(async subscribe)`, `Signal.Create<T>(async subscribe with token)` | Builds a signal from an async subscribe function. | `Observable.Create` (async) |
+| `Signal.CreateSafe<T>(subscribe)`, `Signal.CreateSafe<T>(subscribe, isRequiredSubscribeOnCurrentThread)` | Builds a signal that releases the subscription when a subscriber's `OnNext` throws. | `Observable.Create` |
+| `Signal.CreateWithState<T, TState>(state, subscribe)` | Builds a signal and threads a state object through, so your callback can be `static` and allocate nothing. | - |
+| `Signal.CreateWithState<T, TState>(state, subscribe, isRequiredSubscribeOnCurrentThread)` | Does the same with the current-thread flag. | - |
+| `Signal.Lazy<T>(observableFactory)` | Calls your factory once per subscriber, so each one gets a fresh source. | `Observable.Defer` |
+| `Signal.Defer<T>(observableFactory)` | Another name for `Lazy`. | `Observable.Defer` |
+| `Signal.Defer<T>(async observableFactory)`, `Signal.Defer<T>(async observableFactory with token)` | Builds the source asynchronously for each subscriber. | `Observable.Defer` (async) |
+| `Signal.If<T>(condition, thenSource)` | Picks your source or an empty one for each subscriber. | `Observable.If` |
+| `Signal.If<T>(condition, thenSource, elseSource)` | Picks one of two sources for each subscriber. | `Observable.If` |
+| `Signal.Case<TKey, T>(selector, sources)` | Picks a source out of a dictionary by key for each subscriber, and uses an empty one when the key is missing. | `Observable.Case` |
+| `Signal.Case<TKey, T>(selector, sources, defaultSource)` | Picks a source by key and falls back to the one you name. | `Observable.Case` |
+| `Signal.Use<TResource, T>(resourceFactory, signalFactory)` | Ties a resource to the subscription and disposes it when the subscription ends. | `Observable.Using` |
+| `Signal.Using<TResource, T>(resourceFactory, observableFactory)` | Another name for `Use`. | `Observable.Using` |
+| `Signal.FromEnumerable<T>(values)` | Emits each item of a collection in order, then completes. | `ToObservable()` |
+| `Signal.FromEnumerable<T>(values, cancellationToken)` | Emits the same items and stops when the token fires. | `ToObservable()` |
+| `Signal.FromAsyncEnumerable<T>(values)`, `Signal.FromAsyncEnumerable<T>(values, cancellationToken)` | Emits each item of an async stream. | `ToObservable()` |
+| `Signal.FromTask<T>(task)` | Emits the task's result, then completes. | `task.ToObservable()` |
+| `Signal.FromAsync<T>(taskFactory)` | Starts a task for each subscriber and emits its result. | `Observable.FromAsync` |
+| `Signal.FromAsync<T>(taskFactory with token)` | Starts a task whose token cancels when you dispose the subscription. | `Observable.FromAsync` |
+| `Signal.FromAsync<T>(taskFactory with token, cancellationToken)` | Starts a task and watches a token you supply. | `Observable.FromAsync` |
+| `Signal.FromTask(execution)` | Returns an `ITaskSignal<RxVoid>` and hands your work a cancellation source that disposal cancels. | - |
+| `Signal.FromTask(execution, sequencer)`, `Signal.FromTask(execution, sequencer, cts)` | Does the same on a sequencer, or with a cancellation source you own. | - |
+| `Signal.FromTask<TResult>(actionAsync)` and its sequencer and `cts` overloads | Does the same for work that returns a value. | - |
+| `Signal.FromEvent<TEventArgs>(addHandler, removeHandler)` | Turns an add and remove callback pair into a signal of the event's argument. | `Observable.FromEvent` |
+| `Signal.FromEvent<TEventHandler, TEventArgs>(conversion, addHandler, removeHandler)` | Does the same when the event uses its own delegate type. | `Observable.FromEvent` |
+| `Signal.FromEvent<TEventHandler, TEventArgs>(conversion, addHandler, removeHandler, sequencer)` | Attaches and detaches the handler on a sequencer. | `Observable.FromEvent` |
+| `Signal.FromEventPattern(addHandler, removeHandler)`, and the sequencer overload | Turns a plain `EventHandler` event into a signal of `EventPattern<EventArgs>`. | `Observable.FromEventPattern` |
+| `Signal.FromEventPattern<TEventArgs>(addHandler, removeHandler)`, and the sequencer overload | Does the same for an `EventHandler<TEventArgs>` event. | `FromEventPattern` |
+| `Signal.FromEventPattern<TEventHandler, TEventArgs>(addHandler, removeHandler)`, and the sequencer overload | Does the same for an event with its own delegate type. | `FromEventPattern` |
+| `Signal.FromEventPattern<TEventHandler, TEventArgs>(conversion, addHandler, removeHandler)`, and the sequencer overload | Does the same and takes an explicit conversion. | `FromEventPattern` |
+| `Signal.FromEventPattern<TEventHandler, TSender, TEventArgs>(conversion, addHandler, removeHandler)`, and the sequencer overload | Does the same and keeps the sender's type. | `FromEventPattern` |
+| `Signal.Start(action)`, `Signal.Start(action, sequencer)` | Runs an action on a sequencer and emits the unit value when it finishes. | `Observable.Start` |
+| `Signal.Start<T>(function)`, `Signal.Start<T>(function, sequencer)` | Runs a function on a sequencer and emits its result. | `Observable.Start` |
+| `Signal.After(dueTime)`, `Signal.After(dueTime, sequencer)` | Emits `0L` once after the delay, then completes. | `Observable.Timer` |
+| `Signal.After(DateTimeOffset)`, `Signal.After(DateTimeOffset, sequencer)` | Emits `0L` once at the time you name. | `Timer` |
+| `Signal.After(dueTime, period)`, `Signal.After(dueTime, period, sequencer)` | Emits a rising count after the delay, then once per period. | `Timer` |
+| `Signal.Timer(...)`, all six overloads | Another name for `After`. | `Observable.Timer` |
+| `Signal.Every(period)`, `Signal.Every(period, sequencer)` | Emits a rising count once per period, forever. | `Observable.Interval` |
+| `Signal.Interval(period)`, `Signal.Interval(period, sequencer)` | Another name for `Every`. | `Observable.Interval` |
+| `Signal.Pulse(period)`, `Signal.Pulse(period, sequencer)` | A third name for `Every`. | `Observable.Interval` |
+| `Signal.Blend<T>(params sources)` | Subscribes to every source at once and passes values along as they arrive. | `Observable.Merge` |
+| `Signal.Merge<T>(params sources)`, `Signal.Merge<T>(IEnumerable sources)` | Another name for `Blend`. | `Observable.Merge` |
+| `Signal.Chain<T>(params sources)` | Runs the sources one after another, each starting when the one before it completes. | `Observable.Concat` |
+| `Signal.Concat<T>(params sources)`, `Signal.Concat<T>(IEnumerable sources)` | Another name for `Chain`. | `Observable.Concat` |
+| `Signal.Race<T>(params sources)` | Subscribes to every source and keeps the first one to react. | `Observable.Amb` |
+| `Signal.Switch<T>(sources)` | Follows only the newest inner signal. | `Observable.Switch` |
+| `Signal.Pair<TLeft, TRight, TResult>(left, right, selector)` | Joins values by position: first with first, second with second. | `Observable.Zip` |
+| `Signal.SyncLatest<TLeft, TRight, TResult>(left, right, selector)` | Combines the latest value from each side whenever either one fires. | `Observable.CombineLatest` |
+| `Signal.PairLatest<TLeft, TRight, TResult>(left, right, selector)` | Another name for the static `SyncLatest`. | `CombineLatest` |
+| `Signal.ForkJoin<TLeft, TRight, TResult>(left, right, selector)` | Waits for both sides to complete, then emits one result built from their last values. | `Observable.ForkJoin` |
+| `Signal.OnErrorResumeNext<T>(first, second)`, and the params and collection overloads | Runs the sources in order and ignores an error from any of them. | `Observable.OnErrorResumeNext` |
+| `Signal.Recover<TSource>(params sources)` | Tries each source in turn and moves to the next one only when a source fails. | `Observable.Catch(params)` |
+| `Signal.Scheduled<T>(sequencer)` | Creates a hub that delivers its values on a sequencer. | `Subject` + `ObserveOn` |
+| `Signal.Scheduled<T>(sequencer, defaultObserver)` | Creates the same hub and names an observer to receive values when nobody else subscribes. | - |
+| `Signal.Serialized<T>()`, `Signal.Serialized<T>(signal)` | Creates a hub that takes calls from any thread and delivers them one at a time. | `Subject.Synchronize` |
+| `Signal.Delayable<T>(isDelayed, flushDistinct)` | Creates a hub that holds values back while it is delayed and emits one batch without duplicates when you call `Flush()`. | - |
+| `TaskSignal.Create<TResult>(observableFactory)`, and its sequencer and `cts` overloads | Creates a task-backed signal whose source is built from the signal itself. | - |
+| `IEnumerable<T>.ToSignal()`, `IEnumerable<T>.ToSignal(cancellationToken)` | Turns a collection into a signal that emits each item, then completes. | `ToObservable()` |
+| `IEnumerable<T>.ToObservable()`, and the sequencer and token overloads | Another name for `ToSignal`. | `ToObservable()` |
+| `Task<T>.ToSignal()` | Turns a task into a signal that emits its result. | `ToObservable()` |
+| `Task<T>.ToObservable()` | Another name for `Task<T>.ToSignal`. | `ToObservable()` |
+| `Observables.Return<T>(value)` | Emits one value inside the `Subscribe` call itself. | `Observable.Return(value, ImmediateScheduler)` |
+
+`Emit` gives you a signal with one value in it.
 
 ```csharp
-using ReactiveUI.Primitives;
-using ReactiveUI.Primitives.Signals;
-
-// Reads exactly like System.Reactive, and builds the identical sinks as Map/Keep/Fold.
-using var subscription = Signal.Sequence(1, 10)
-    .Where(value => value % 2 == 0)
-    .Select(value => value * value)
-    .Scan(0, (total, value) => total + value)
-    .Subscribe(Console.WriteLine);
+Signal.Emit(42).Subscribe(value => Console.WriteLine(value));
+// prints: 42
 ```
 
-> Caveat: because these names live in the `ReactiveUI.Primitives` namespace, a file that *also* imports
-`System.Reactive.Linq` will get ambiguous-call errors on shared names like `.Select`/`.Where`. Use the Primitives
-> names (`Map`/`Keep`) in those mixed files, or migrate the file fully off System.Reactive.
-
-### Transformation and filtering
-
-| System.Reactive-style concept     | ReactiveUI.Primitives API               |
-|-----------------------------------|-----------------------------------------|
-| `Select`                          | `Map`                                   | Prefer `Map` for the distinct Primitives style. |
-| stateful `Select` without closure | `MapWith`                               |
-| `Where`                           | `Keep`                                  |
-| stateful `Where` without closure  | `KeepWith`                              |
-| non-null filtering                | `KeepNotNull`                           |
-| fused `Where` + `Select`          | `Choose`                                | Chooser returns `(HasValue, Value)`; the explicit flag lets a non-nullable value type be skipped in one sink. |
-| `OfType` / `Cast`                 | `KeepType<TResult>` / `CastTo<TResult>` |
-| side effects                      | `Tap`, `TapWith`                        |
-| `Scan`                            | `Fold`                                  |
-| `Aggregate`                       | `Reduce`                                |
-| `Distinct`                        | `Distinct`                              |
-| `DistinctUntilChanged`            | `Unique`                                |
-| key-based distinct                | `DistinctBy`, `UniqueBy`                |
-| `Take` / `Skip`                   | `Take`, `Skip`                          |
-| `TakeWhile` / `SkipWhile`         | `TakeWhile`, `SkipWhile`                |
-| `IgnoreElements`                  | `IgnoreValues`                          |
-| `DefaultIfEmpty`                  | `DefaultIfEmpty`                        |
-
-Example:
+`None` completes without giving you a value.
 
 ```csharp
-using ReactiveUI.Primitives;
-using ReactiveUI.Primitives.Signals;
-
-IObservable<string> labels = Signal.Sequence(1, 10)
-    .Keep(value => value % 2 == 0)
-    .Map(value => $"even:{value}")
-    .Tap(label => Console.WriteLine($"observed {label}"));
-
-using var subscription = labels.Subscribe(Console.WriteLine);
+Signal.None<string>().Subscribe(
+    value => Console.WriteLine(value),
+    () => Console.WriteLine("done"));
+// prints: done
 ```
 
-### Composition
-
-| Concept                                        | API                                             |
-|------------------------------------------------|-------------------------------------------------|
-| sequential concatenation                       | `Chain`                                         |
-| concurrent merge                               | `Blend`                                         |
-| fused merge + adjacent distinct                | `BlendUnique`                                   |
-| first source wins                              | `Race`                                          |
-| latest inner source wins                       | `SwitchTo`                                      |
-| filter-null + project + switch to latest inner | `SwitchSelect`                                  |
-| pairwise zip                                   | `Pair`                                          |
-| latest-value combination                       | `SyncLatest`                                    |
-| System.Reactive-named latest combination       | `CombineLatest`                                 |
-| combine left emission with latest right value  | `Latch`                                         |
-| latest-fusion alias                            | `PairLatest`, `FuseLatest`                      |
-| last values after both complete                | `ForkJoin`                                      |
-| retry                                          | `Reattempt`                                     |
-| catch/rescue                                   | `Recover`, `Rescue`, `Resume`, `Signal.Recover` |
-| final action                                   | `Signal.OnCleanup`                              |
-
-Blend example:
+`Fail` hands every subscriber an error.
 
 ```csharp
-using ReactiveUI.Primitives;
-using ReactiveUI.Primitives.Signals;
-
-IObservable<int> low = Signal.Sequence(1, 3);
-IObservable<int> high = Signal.Sequence(100, 3);
-
-using var merged = Signal.Blend(low, high)
-    .Subscribe(value => Console.WriteLine(value));
-```
-
-SyncLatest example:
-
-```csharp
-using ReactiveUI.Primitives;
-using ReactiveUI.Primitives.Signals;
-
-var width = new StateSignal<int>(640);
-var height = new StateSignal<int>(480);
-
-using var area = Signal.SyncLatest(width, height, (w, h) => w * h)
-    .Subscribe(value => Console.WriteLine($"area={value}"));
-
-width.Value = 800;
-height.Value = 600;
-```
-
-`SyncLatest` and the System.Reactive-named `CombineLatest` overloads support multi-source projections up to 16 total
-sources. The `.Reactive` package variants expose the same overloads with `System.Reactive.Unit` and `IScheduler`
-conventions, which keeps migrated Rx code using familiar `CombineLatest` names while running on the Primitives
-implementation.
-
-`CombineLatest` also provides tuple results for 2–16 sources without a selector. Tuple members are named
-`First`, `Second`, `Third`, and so on, and values start flowing after every source has produced a value:
-
-```csharp
-using var dimensions = width.CombineLatest(height)
-    .SubscribePrimitives(size => Console.WriteLine($"{size.First} x {size.Second}"));
-```
-
-When the sources share an element type and are too many to name, or they only exist as a collection,
-`CombineLatest` also combines them into an `IList<T>`, with an optional selector over that list. The
-collection is enumerated once, when the operator is called, and every notification carries its own list:
-
-```csharp
-using var totals = gauges.CombineLatest(readings => Total(readings))
-    .SubscribePrimitives(total => Console.WriteLine($"total={total}"));
-```
-
-Listing two to sixteen same-typed sources inline still selects the tuple overload that names each of them;
-the list overload takes over past that arity, and whenever the sources arrive as an array or a sequence.
-
-Multi-source latest example:
-
-```csharp
-using ReactiveUI.Primitives;
-using ReactiveUI.Primitives.Signals;
-
-var first = new StateSignal<int>(1);
-var second = new StateSignal<int>(2);
-var third = new StateSignal<int>(3);
-
-using var total = first
-    .SyncLatest(second, third, static (a, b, c) => a + b + c)
-    .Subscribe(value => Console.WriteLine($"total={value}"));
-
-third.Value = 10;
-```
-
-The Rx-name `SelectMany` observable overloads keep concurrent merge semantics. Use `FlatMap` or `Bind` when you want the
-Primitives name, and use `SelectMany` when porting existing Rx code or keeping LINQ query syntax.
-
-Fused projection example (`Choose` and `SwitchSelect`):
-
-```csharp
-using ReactiveUI.Primitives;
-using ReactiveUI.Primitives.Signals;
-
-// Choose folds Where + Select into one sink. The explicit HasValue flag lets a
-// non-nullable value type be dropped without a nullable wrapper.
-using var evens = Signal.Sequence(1, 6)
-    .Choose(value => (value % 2 == 0, value * 10))
-    .Subscribe(value => Console.WriteLine($"even*10={value}"));
-
-// SwitchSelect folds WhereNotNull + Select + Switch: skips null keys, projects each
-// to an inner source, and mirrors only the latest inner.
-var key = new StateSignal<string?>(null);
-using var latest = key
-    .SwitchSelect(selectedKey => Signal.Sequence(selectedKey.Length, 3))
-    .Subscribe(value => Console.WriteLine($"latest={value}"));
-
-key.Value = "ab";
-key.Value = "abcd";
-```
-
-### Time, buffering, and async helpers
-
-| Concept                      | API                                                                    |
-|------------------------------|------------------------------------------------------------------------|
-| delayed subscription         | `DelayStart`                                                           |
-| delayed values               | `Shift`                                                                |
-| quiet-period sampling        | `Calm` / `Stabilize`                                                   |
-| periodic sampling            | `Probe`                                                                |
-| timeout                      | `Expire`                                                               |
-| schedule subscription        | `SubscribeOn`                                                          |
-| timestamp values             | `Timestamp`                                                            |
-| measure intervals            | `TimeInterval`                                                         |
-| fixed-size buffers           | `Buffer(count)`, `Buffer(count, skip)`                                 |
-| collect to list/array signal | `CollectList`, `CollectArray`, `ToList`, `ToArray`                     |
-| collect asynchronously       | `CollectListAsync`, `CollectArrayAsync`, `ToListAsync`, `ToArrayAsync` |
-| first/last value task        | `FirstAsync`, `FirstOrDefaultAsync`, `LastAsync`, `LastOrDefaultAsync` |
-
-Direct static helpers are available when a call site wants an explicit source argument instead of extension-method
-syntax:
-
-| Helper                                                                           | Purpose                                                                  |
-|----------------------------------------------------------------------------------|--------------------------------------------------------------------------|
-| `Signal.Expire(source, dueTime)` / `Signal.Expire(source, dueTime, sequencer)`   | Apply the Primitives timeout operator directly to a source.              |
-| `Signal.Timeout(source, dueTime)` / `Signal.Timeout(source, dueTime, sequencer)` | System.Reactive-name alias for the direct `Expire` helper.               |
-| `Signal.ToTask(source)` / `Signal.ToTask(source, cancellationToken)`             | Await source completion and return the final value, matching `ToTask()`. |
-| `Signal.RunAsync(source)` / `Signal.RunAsync(source, cancellationToken)`         | Subscribe immediately and return an awaitable signal for the run.        |
-
-After example:
-
-```csharp
-using ReactiveUI.Primitives;
-using ReactiveUI.Primitives.Concurrency;
-using ReactiveUI.Primitives.Signals;
-
-using var subscription = Signal.After(
-        dueTime: TimeSpan.FromMilliseconds(250),
-        period: TimeSpan.FromSeconds(1),
-        scheduler: ThreadPoolSequencer.Instance)
-    .Take(3)
+Signal.Fail<int>(new InvalidOperationException("no rows"))
     .Subscribe(
-        tick => Console.WriteLine($"tick {tick}"),
-        error => Console.Error.WriteLine(error),
-        () => Console.WriteLine("timer completed"));
+        value => Console.WriteLine(value),
+        error => Console.WriteLine(error.Message));
+// prints: no rows
 ```
 
-### Spark materialization
-
-`Spark<T>` represents value/error/completion notifications. Use `Spark` to convert stream events into values and
-`Unspark` to turn them back into observer notifications.
+`Sequence` counts up from a starting number.
 
 ```csharp
-using ReactiveUI.Primitives;
-using ReactiveUI.Primitives.Core;
-using ReactiveUI.Primitives.Signals;
-
-IObservable<Spark<int>> sparks = Signal.Sequence(1, 3).Spark();
-IObservable<int> values = sparks.Unspark();
+Signal.Sequence(5, 3).Subscribe(number => Console.Write(number + " "));
+// prints: 5 6 7
 ```
 
-## ReactiveUI.Primitives.Async
-
-`ReactiveUI.Primitives.Async` is the async counterpart to the base `ReactiveUI.Primitives` surface. Its observers
-deliver each notification through a `ValueTask` and accept a `CancellationToken`, so a producer can await the consumer.
-Use it when notification, disposal, or stream collection must run asynchronously. It keeps the Primitives vocabulary,
-generates the R3 and R3Async bridges, and offers System.Reactive-flavoured `.Reactive` variants.
-
-Core async contracts and data types:
-
-| API                               | Purpose                                                                                                             |
-|-----------------------------------|---------------------------------------------------------------------------------------------------------------------|
-| `IObservableAsync<T>`             | Async observable contract. `SubscribeAsync` receives an `IObserverAsync<T>` and returns an `IAsyncDisposable`.      |
-| `IObserverAsync<T>`               | Async observer contract with `OnNextAsync`, `OnErrorResumeAsync`, `OnCompletedAsync`, and inherited `DisposeAsync`. |
-| `WitnessAsync<T>`                 | Base observer type for implementing async observers with disposal, cancellation linking, and concurrency checks.    |
-| `ISignalAsync<T>`                 | Pushable async signal that combines `IObserverAsync<T>`, `IObservableAsync<T>`, and a `Values` observable.          |
-| `SignalAsync<T>`                  | Abstract base and static factory/operator host for async observables.                                               |
-| `ConnectableSignalAsync<T>`       | Async connectable sequence returned by multicast/publish operators.                                                 |
-| `Result`                          | Completion result that represents success or terminal failure.                                                      |
-| `Optional<T>`                     | Allocation-free optional value used by replay/latest async signals.                                                 |
-| `AsyncContext`                    | Dispatch abstraction over `SynchronizationContext`, `TaskScheduler`, or `ISequencer`.                               |
-| `ConcurrentWitnessCallsException` | Raised when a serial witness detects concurrent observer calls.                                                     |
-| `UnhandledExceptionHandler`       | Central handler for async fire-and-forget failures.                                                                 |
-
-Async signal factories live in two places. Use `ReactiveUI.Primitives.Async.Signals.Signal` when you need a mutable
-signal, and use `SignalAsync` when you need a sequence factory or operator:
-
-| Factory group       | APIs                                                                                                                                                                                                                                                                                |
-|---------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| Mutable signals     | `Signal.Create<T>()`, `Signal.Create<T>(SignalCreationOptions)`, `Signal.CreateBehavior<T>(startValue)`, `Signal.CreateBehavior<T>(startValue, BehaviorSignalCreationOptions)`, `Signal.CreateReplayLatest<T>()`, `Signal.CreateReplayLatest<T>(ReplayLatestSignalCreationOptions)` |
-| Signal options      | `SignalCreationOptions`, `BehaviorSignalCreationOptions`, `ReplayLatestSignalCreationOptions`, `PublishingOption`                                                                                                                                                                   |
-| Stateless factories | `SignalAsync.Emit`, `EmitRxVoid`, `None`, `Fail`, `Return`, `Empty`, `Never`, `Throw`                                                                                                                                                                                               |
-| Sequence factories  | `Sequence`, `Range`, `FromEnumerable`, `FromAsyncEnumerable`, `ToAsyncSignal`, `Create`, `CreateAsBackgroundJob`, `Defer`, `FromAsync`, `Use`, `Using`                                                                                                                              |
-| Time factories      | `After`, `Every`, `Pulse`, `Timer`, `Interval`                                                                                                                                                                                                                                      |
-| Async disposables   | `DisposableAsync.Empty`, `DisposableAsync.Create`, `DisposableAsyncSlot`, `SingleAssignmentDisposableAsync`, `SingleReplaceableDisposableAsync`, `MultipleDisposableAsync`                                                                                                          |
-
-Async operators follow the same naming style as the core package where that avoids collisions with System.Reactive/R3,
-while preserving familiar aliases for compatibility:
-
-| Category             | APIs                                                                                                                                                                                                                                                                                                                                                                               |
-|----------------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| Projection/filtering | `Map`, `MapWith`, `Keep`, `KeepWith`, `KeepNotNull`, `KeepType`, `CastTo`, `Select`, `Where`, `OfType`, `Cast`, `Tap`, `Do`, `Fold`, `Scan`, `ReduceAsync`, `AggregateAsync`, `Distinct`, `Unique`, `DistinctBy`, `UniqueBy`, `DistinctUntilChanged`, `DistinctUntilChangedBy`, `SkipWhileNull`, `WhereIsNotNull`, `WhereTrue`, `WhereFalse`, `Not`, `GetMin`, `GetMax`, `ForEach` |
-| Composition          | `Bind`, `FlatMap`, `SelectMany`, `Chain`, `Concat`, `Blend`, `Merge`, `SwitchTo`, `Switch`, `Pair`, `Zip`, `SyncLatest`, `PairLatest`, `CombineLatest`, `CombineLatestValuesAreAllTrue`, `CombineLatestValuesAreAllFalse`, `GroupBy`                                                                                                                                               |
-| Error/retry/recovery | `Reattempt`, `Retry`, `Recover`, `Rescue`, `Resume`, `Catch`, `OnErrorResumeAsFailure`                                                                                                                                                                                                                                                                                             |
-| Time/scheduling      | `Shift`, `Delay`, `Expire`, `Timeout`, `Throttle`, `ObserveOn`, `Yield`                                                                                                                                                                                                                                                                                                            |
-| Lifetime/multicast   | `Multicast`, `Publish`, `StatelessPublish`, `ReplayLatestPublish`, `StatelessReplayLatestPublish`, `RefCount`, `OnDispose`, `TakeUntil`, `TakeUntilOptions`, `CompletionSignalDelegate`, `Wrap`                                                                                                                                                                                    |
-| Sequence boundaries  | `Take`, `Skip`, `TakeWhile`, `SkipWhile`, `Lead`, `Prepend`, `StartWith`                                                                                                                                                                                                                                                                                                           |
-| Terminal helpers     | `FirstAsync`, `FirstOrDefaultAsync`, `LastAsync`, `LastOrDefaultAsync`, `SingleAsync`, `SingleOrDefaultAsync`, `AnyAsync`, `AllAsync`, `ContainsAsync`, `CountAsync`, `LongCountAsync`, `ToListAsync`, `CollectListAsync`, `CollectArrayAsync`, `ToDictionaryAsync`, `ToAsyncEnumerable`, `WaitCompletionAsync`, `ForEachAsync`, `SubscribeAsync`                                  |
-
-Basic async sequence example:
+`ToSignal` turns any collection into a signal.
 
 ```csharp
-using ReactiveUI.Primitives.Async;
-
-List<string> labels = await SignalAsync.Sequence(1, 12)
-    .Keep(static value => value % 2 == 0)
-    .Map(static value => $"even:{value}")
-    .ToListAsync();
+string[] names = ["ana", "bo", "cy"];
+names.ToSignal().Subscribe(name => Console.Write(name + " "));
+// prints: ana bo cy
 ```
 
-Mutable async signal example:
+`Create` lets you push values yourself. Return a disposable that cleans up when the subscriber leaves.
 
 ```csharp
-using ReactiveUI.Primitives.Async;
-using ReactiveUI.Primitives.Async.Signals;
+var countdown = Signal.Create<int>(observer =>
+{
+    observer.OnNext(3);
+    observer.OnNext(2);
+    observer.OnNext(1);
+    observer.OnCompleted();
+    return EmptyDisposable.Instance;
+});
 
-ISignalAsync<int> requests = Signal.Create<int>();
-
-await using IAsyncDisposable subscription = await requests.Values
-    .Map(static value => value * 2)
-    .SubscribeAsync(value => Console.WriteLine(value));
-
-await requests.OnNextAsync(21, CancellationToken.None);
-await requests.OnCompletedAsync(Result.Success);
+countdown.Subscribe(number => Console.Write(number + " "));
+// prints: 3 2 1
 ```
 
-Async context example:
+`Lazy` builds the source at subscribe time, so each subscriber gets its own.
 
 ```csharp
-using ReactiveUI.Primitives.Async;
+var stamp = Signal.Lazy(() => Signal.Emit(DateTime.UtcNow));
 
-AsyncContext context = AsyncContext.From(TaskScheduler.Default);
-
-await using IAsyncDisposable subscription = await SignalAsync.Sequence(1, 3)
-    .ObserveOn(context)
-    .SubscribeAsync(static value => Console.WriteLine(value));
+stamp.Subscribe(time => Console.WriteLine(time));
+stamp.Subscribe(time => Console.WriteLine(time));
+// prints: two different times, one per subscriber
 ```
 
-`ReactiveUI.Primitives.R3Bridge.Generator` also emits async bridge adapters. A consumer that references R3,
-`ReactiveUI.Primitives.Async`, and the generator can use generated
-`AsPrimitivesAsyncObservable<T>(this R3.Observable<T>)` and
-`AsR3Observable<T>(this IObservableAsync<T>)`; a consumer that references R3Async can use
-`AsPrimitivesAsyncObservable<T>(this R3Async.AsyncObservable<T>)` and
-`AsR3AsyncObservable<T>(this IObservableAsync<T>)`. System.Reactive-shaped async APIs are handled by
-`ReactiveUI.Primitives.Async.Reactive`, not by generated System.Reactive.Async adapters.
+`FromAsync` starts a task for each subscriber.
+
+```csharp
+var page = Signal.FromAsync(async token =>
+{
+    using var client = new HttpClient();
+    return await client.GetStringAsync("https://example.com", token);
+});
+
+page.Subscribe(body => Console.WriteLine(body.Length));
+// prints: the number of characters in the page
+```
+
+`FromEventPattern` turns a .NET event into a signal. Each value carries the sender and the event arguments.
+
+Every overload requires `TEventArgs` to derive from `EventArgs`, which binds the handler at compile time and keeps the
+factory free of reflection. For an argument type that does not derive from `EventArgs`, use `Signal.FromEvent`, which
+places no constraint on it.
+
+```csharp
+// chat.MessageReceived is an event EventHandler<MessageEventArgs>
+Signal.FromEventPattern<MessageEventArgs>(
+        handler => chat.MessageReceived += handler,
+        handler => chat.MessageReceived -= handler)
+    .Subscribe(pattern => Console.WriteLine(pattern.EventArgs.Text));
+// prints: the text of each message as it arrives
+```
+
+`After` fires once, later.
+
+```csharp
+Signal.After(TimeSpan.FromSeconds(2))
+    .Subscribe(tick => Console.WriteLine("two seconds later"));
+// prints: two seconds later
+```
+
+`Every` fires over and over on a timer.
+
+```csharp
+Signal.Every(TimeSpan.FromSeconds(1))
+    .Take(3)
+    .Subscribe(count => Console.Write(count + " "));
+// prints: 0 1 2
+```
+
+### Transformation
+
+These change each value into something else.
+
+| Operator | What it does | LINQ / System.Reactive name |
+|---|---|---|
+| `Map(selector)` | Runs your function on each value and emits the result. | `Select` |
+| `MapIndexed(selector)` | Runs your function on each value and its position, counting from zero. | `Select` (indexed) |
+| `MapWith(state, selector)` | Runs your function on each value and threads a state object through, so your lambda can be `static`. | - |
+| `Select(selector)` | Another name for `Map`. | `Select` |
+| `Select(selector with index)` | Another name for `MapIndexed`. | `Select` |
+| `SelectWith(state, selector)` | Another name for `MapWith`. | - |
+| `Spark()` | Turns values, errors and completion into `Spark<T>` records you can read as plain data. | `Materialize` |
+| `Materialize()` | Another name for `Spark`. | `Materialize` |
+| `Unspark()` | Turns `Spark<T>` records back into real values, errors and completion. | `Dematerialize` |
+| `Dematerialize()` | Another name for `Unspark`. | `Dematerialize` |
+| `CastTo<TResult>()` | Casts each value to the type you name and fails when one does not fit. | `Cast` |
+| `Cast<TResult>()` | Another name for `CastTo`. | `Cast` |
+| `Bind(selector)` | Turns each value into an inner signal and passes along everything those signals emit. | `SelectMany` |
+| `FlatMap(selector)` | Another name for `Bind`. | `SelectMany` |
+| `FlatMap(collectionSelector, resultSelector)` | Flattens the inner signals and pairs each inner value with the value it came from. | `SelectMany` |
+| `FlatMapValues(selector)` | Turns each value into a plain collection and emits every item. | `SelectMany` (enumerable) |
+| `SelectMany(selector)` | Another name for `FlatMap`. | `SelectMany` |
+| `SelectMany(other)` | Replaces each value with the same inner signal and merges the results. | `SelectMany` |
+| `SelectMany(enumerable selector)` | Another name for `FlatMapValues`. | `SelectMany` |
+| `SelectMany(collectionSelector, resultSelector)` | Another name for the two-selector `FlatMap`. | `SelectMany` |
+| `SwitchMap(selector)` | Turns each value into an inner signal and follows only the newest one. | `Select(...).Switch()` |
+| `SwitchSelect(selector)` | Works like `SwitchMap` and skips null source values instead of switching away. | `WhereNotNull().Select(...).Switch()` |
+| `Choose(chooser)` | Maps and filters in one pass, and emits `Value` only when `HasValue` is true. | `Select(...).Where(...)` |
+| `SwitchTo()` | Follows only the newest inner signal. | `Switch` |
+| `Switch()` | Another name for `SwitchTo`. | `Switch` |
+| `Timestamp()`, `Timestamp(sequencer)` | Attaches the clock's current time to each value as a `Moment<T>`. | `Timestamp` |
+| `TimeInterval()`, `TimeInterval(sequencer)` | Attaches the gap since the value before it. | `TimeInterval` |
+
+`Map` changes every value.
+
+```csharp
+Signal.Sequence(1, 4)
+    .Map(number => number * 10)
+    .Subscribe(value => Console.Write(value + " "));
+// prints: 10 20 30 40
+```
+
+`MapIndexed` gives you the position too.
+
+```csharp
+new[] { "red", "green", "blue" }.ToSignal()
+    .MapIndexed((colour, index) => $"{index}:{colour}")
+    .Subscribe(line => Console.Write(line + " "));
+// prints: 0:red 1:green 2:blue
+```
+
+`FlatMap` turns one value into many.
+
+```csharp
+new[] { 1, 2 }.ToSignal()
+    .FlatMap(number => new[] { number, number * 100 }.ToSignal())
+    .Subscribe(value => Console.Write(value + " "));
+// prints: 1 100 2 200
+```
+
+`SwitchMap` drops the old inner signal as soon as a new value arrives. Use it for searches and lookups.
+
+```csharp
+searchTerms
+    .SwitchMap(term => SearchAsync(term).ToSignal())
+    .Subscribe(results => Console.WriteLine(results.Count));
+// prints: results for the newest term only; older searches are dropped
+```
+
+`SwitchTo` does the same when you hold a signal of signals.
+
+```csharp
+var pages = new[] { Signal.Sequence(1, 2), Signal.Sequence(10, 2) }.ToSignal();
+
+pages.SwitchTo().Subscribe(value => Console.Write(value + " "));
+// prints: 1 2 10 11
+```
+
+### Filtering
+
+These decide which values get through.
+
+| Operator | What it does | LINQ / System.Reactive name |
+|---|---|---|
+| `Keep(predicate)` | Passes along only the values your test accepts. | `Where` |
+| `KeepWith(state, predicate)` | Works like `Keep` and threads a state object through, so your test can be `static`. | - |
+| `Where(predicate)` | Another name for `Keep`. | `Where` |
+| `WhereWith(state, predicate)` | Another name for `KeepWith`. | - |
+| `KeepNotNull()` | Drops nulls and hands back a stream that cannot be null. | `Where(x => x != null)` |
+| `WhereNotNull()` | Another name for `KeepNotNull`. | `WhereNotNull` |
+| `KeepType<TResult>()` | Keeps only the values of the type you name. | `OfType` |
+| `OfType<TResult>()` | Another name for `KeepType`. | `OfType` |
+| `Take(count)` | Emits at most `count` values, then completes. | `Take` |
+| `Skip(count)` | Drops the first `count` values. | `Skip` |
+| `TakeWhile(predicate)` | Emits values while your test holds, then completes. | `TakeWhile` |
+| `SkipWhile(predicate)` | Drops the leading values while your test holds, then passes the rest along. | `SkipWhile` |
+| `TakeUntil(other)` | Passes values along until `other` emits anything; `other` completing does not stop it. | `TakeUntil` |
+| `TakeUntil(cancellationToken)` | Passes values along until the token cancels, then completes. | `TakeUntil` |
+| `Distinct()`, `Distinct(comparer)` | Drops a value you have seen anywhere earlier in the stream. | `Distinct` |
+| `DistinctBy(keySelector)`, `DistinctBy(keySelector, comparer)` | Keeps only the first value for each key. | `DistinctBy` |
+| `Unique()`, `Unique(comparer)` | Drops a value only when it matches the one right before it. | `DistinctUntilChanged` |
+| `UniqueBy(keySelector)`, `UniqueBy(keySelector, comparer)` | Drops a value when its key matches the key right before it. | `DistinctUntilChangedBy` |
+| `DistinctUntilChanged()`, `DistinctUntilChanged(comparer)` | Another name for `Unique`. | `DistinctUntilChanged` |
+| `DistinctUntilChangedBy(keySelector)`, `DistinctUntilChangedBy(keySelector, comparer)` | Another name for `UniqueBy`. | `DistinctUntilChangedBy` |
+| `IgnoreValues()` | Drops every value and passes along only completion or an error. | `IgnoreElements` |
+| `IgnoreElements()` | Another name for `IgnoreValues`. | `IgnoreElements` |
+| `DefaultIfEmpty()` | Emits `default` when the source completes without a value. | `DefaultIfEmpty` |
+| `DefaultIfEmpty(defaultValue)` | Emits your fallback when the source completes without a value. | `DefaultIfEmpty` |
+
+`Keep` passes along the values your test accepts.
+
+```csharp
+Signal.Sequence(1, 6)
+    .Keep(number => number % 2 == 0)
+    .Subscribe(value => Console.Write(value + " "));
+// prints: 2 4 6
+```
+
+`KeepNotNull` removes nulls and fixes the type for you.
+
+```csharp
+new string?[] { "a", null, "b" }.ToSignal()
+    .KeepNotNull()
+    .Subscribe(text => Console.Write(text + " "));
+// prints: a b
+```
+
+`Take` stops after a set number of values.
+
+```csharp
+Signal.Sequence(1, 100)
+    .Take(3)
+    .Subscribe(value => Console.Write(value + " "));
+// prints: 1 2 3
+```
+
+`TakeUntil` stops on a token or another signal.
+
+```csharp
+using var cancel = new CancellationTokenSource(TimeSpan.FromSeconds(4));
+
+Signal.Every(TimeSpan.FromSeconds(1))
+    .TakeUntil(cancel.Token)
+    .Subscribe(count => Console.Write(count + " "));
+// prints: 0 1 2 then completes
+```
+
+`Unique` drops repeats that sit next to each other.
+
+```csharp
+new[] { 1, 1, 2, 2, 1 }.ToSignal()
+    .Unique()
+    .Subscribe(value => Console.Write(value + " "));
+// prints: 1 2 1
+```
+
+### Combination
+
+These put two or more signals together.
+
+| Operator | What it does | LINQ / System.Reactive name |
+|---|---|---|
+| `Lead(value)` | Emits one value before the source's own values. | `StartWith` / `Prepend` |
+| `Prepend(value)` | Another name for `Lead`. | `Prepend` |
+| `Prepend(params values)`, `Prepend(IEnumerable values)` | Emits several values before the source's own values. | `Prepend` |
+| `StartWith(params values)`, `StartWith(IEnumerable values)` | Another name for the multi-value `Prepend`. | `StartWith` |
+| `Append(value)` | Emits one extra value after the source completes. | `Append` |
+| `Chain(second)` | Runs `second` after this signal completes. | `Concat` |
+| `Concat(second)` | Another name for `Chain`. | `Concat` |
+| `Chain()` on a signal of signals | Runs the inner signals one at a time, in the order they arrive. | `Concat` |
+| `Concat()` on a signal of signals | Another name for the row above. | `Concat` |
+| `Chain()` on a signal of tasks | Awaits each task in order and emits its result. | `Concat` |
+| `Concat()` on a signal of tasks | Another name for the row above. | `Concat` |
+| `Blend()` on a signal of signals | Subscribes to every inner signal at once and passes values along as they arrive. | `Merge` |
+| `Merge()` on a signal of signals | Another name for `Blend`. | `Merge` |
+| `Merge(second)` | Runs this signal and one other at the same time. | `Merge` |
+| `Blend()` on a collection of signals | Runs a whole collection of signals at the same time. | `Merge` |
+| `Blend(maxConcurrent)` on a collection of signals | Runs the same collection with a cap on how many run at once. | `Merge(maxConcurrent)` |
+| `Merge()`, `Merge(maxConcurrent)` on a collection of signals | Another name for the two rows above. | `Merge` |
+| `LinqExtensions.BlendUnique(params sources)`, `LinqExtensions.BlendUnique(sources, comparer)` | Merges the sources and drops a value that matches the one passed along before it. | `Merge().DistinctUntilChanged()` |
+| `Race()` on a signal of signals | Keeps the inner signal that reacts first and drops the rest. | `Amb` |
+| `Amb()` on a signal of signals | Another name for `Race`. | `Amb` |
+| `Pair(right, selector)` | Joins values by position: first with first, second with second. | `Zip` |
+| `Zip(right, selector)` | Another name for `Pair`. | `Zip` |
+| `SyncLatest(right, selector)` | Combines the latest value from each side whenever either one fires, once both have produced a value. | `CombineLatest` |
+| `PairLatest(right, selector)` | Another name for the two-source `SyncLatest`. | `CombineLatest` |
+| `FuseLatest(right, selector)` | A third name for the two-source `SyncLatest`. | `CombineLatest` |
+| `CombineLatest(right, selector)` | A fourth name for the two-source `SyncLatest`. | `CombineLatest` |
+| `SyncLatest(...)` for 3 to 16 sources, 14 overloads | Combines the latest value from 3 to 16 signals through your selector. | `CombineLatest` |
+| `CombineLatest(...)` for 3 to 16 sources, 14 overloads | Another name for the row above. | `CombineLatest` |
+| `CombineLatest(source2)` through `CombineLatest(source2, ..., source16)`, 15 overloads | Combines the latest values and hands you a named tuple, so you write no selector. | `CombineLatest` (tuple) |
+| `CombineLatest()` on a collection of signals | Combines a collection of same-typed signals into one list per notification. | `CombineLatest` |
+| `CombineLatest(resultSelector)` on a collection of signals | Does the same and runs your function on the list. | `CombineLatest` |
+| `LinqExtensions.CombineLatest(new[] { a, b })` | Array form of the collection combine. Pass an array: listing the sources one by one binds to the tuple overload and gives you a tuple, not a list. | `CombineLatest` |
+| `Latch(right, selector)` | Emits once per left value and attaches whatever the right side produced last. | `WithLatestFrom` |
+| `WithLatestFrom(right, selector)` | Another name for `Latch`. | `WithLatestFrom` |
+| `ForkJoin(right, selector)` | Waits for both sides to complete, then emits one result from their final values. | `ForkJoin` |
+
+`Lead` puts a starting value in front.
+
+```csharp
+Signal.Sequence(2, 2)
+    .Lead(0)
+    .Subscribe(value => Console.Write(value + " "));
+// prints: 0 2 3
+```
+
+`Append` adds a value at the end.
+
+```csharp
+Signal.Sequence(1, 2)
+    .Append(99)
+    .Subscribe(value => Console.Write(value + " "));
+// prints: 1 2 99
+```
+
+`Chain` runs the second signal after the first one finishes.
+
+```csharp
+Signal.Sequence(1, 2)
+    .Chain(Signal.Sequence(10, 2))
+    .Subscribe(value => Console.Write(value + " "));
+// prints: 1 2 10 11
+```
+
+`Blend` runs signals at the same time and passes values along as they arrive.
+
+```csharp
+var fast = Signal.Every(TimeSpan.FromMilliseconds(100)).Map(_ => "fast");
+var slow = Signal.Every(TimeSpan.FromMilliseconds(250)).Map(_ => "slow");
+
+Signal.Blend(fast, slow).Take(4).Subscribe(label => Console.Write(label + " "));
+// prints: fast fast slow fast
+```
+
+`Pair` lines values up by position.
+
+```csharp
+new[] { "a", "b" }.ToSignal()
+    .Pair(Signal.Sequence(1, 2), (letter, number) => letter + number)
+    .Subscribe(text => Console.Write(text + " "));
+// prints: a1 b2
+```
+
+`SyncLatest` fires whenever either side changes, using the newest value from both.
+
+```csharp
+var names = new[] { "ana" }.ToSignal();
+var ages = new[] { 30, 31 }.ToSignal();
+
+names.SyncLatest(ages, (who, years) => $"{who} is {years}")
+    .Subscribe(line => Console.WriteLine(line));
+// prints: ana is 30
+//         ana is 31
+```
+
+`Latch` fires only on the left side and reads the right side's newest value.
+
+```csharp
+var clicks = Signal.Every(TimeSpan.FromSeconds(1));
+var temperatures = Signal.Every(TimeSpan.FromMilliseconds(200)).Map(tick => 20 + tick);
+
+clicks.Latch(temperatures, (_, reading) => reading)
+    .Take(2)
+    .Subscribe(reading => Console.WriteLine(reading));
+// prints: the newest temperature at each click
+```
+
+### Time
+
+These change when values arrive.
+
+| Operator | What it does | LINQ / System.Reactive name |
+|---|---|---|
+| `Shift(dueTime)`, `Shift(dueTime, sequencer)` | Holds every notification back by a fixed delay. | `Delay` |
+| `Delay(dueTime)`, `Delay(dueTime, sequencer)` | Another name for `Shift`. | `Delay` |
+| `Delay(DateTimeOffset)`, `Delay(DateTimeOffset, sequencer)` | Holds notifications until the time you name. | `Delay` |
+| `DelayStart(dueTime)`, `DelayStart(dueTime, sequencer)` | Waits before it subscribes to the source at all. | `DelaySubscription` |
+| `DelaySubscription(dueTime)`, `DelaySubscription(dueTime, sequencer)` | Another name for `DelayStart`. | `DelaySubscription` |
+| `DelaySubscription(DateTimeOffset)`, `DelaySubscription(DateTimeOffset, sequencer)` | Subscribes at the time you name. | `DelaySubscription` |
+| `Calm(dueTime)`, `Calm(dueTime, sequencer)` | Emits a value once nothing newer has arrived for the quiet period. | `Throttle` |
+| `Stabilize(dueTime)`, `Stabilize(dueTime, sequencer)` | Another name for `Calm`. | `Throttle` |
+| `Throttle(dueTime)`, `Throttle(dueTime, sequencer)` | A third name for `Calm`. | `Throttle` |
+| `EmitIfQuiet(dueTime)`, `EmitIfQuiet(dueTime, sequencer)` | Works like `Calm` and hands back the source unchanged when `dueTime` is zero or less. | `Throttle` |
+| `Probe(period)`, `Probe(period, sequencer)` | Emits the latest value once the period has passed since the value that started the timer. A quiet source sends nothing, and a steady source drifts away from a fixed schedule. A value still waiting when the source completes is sent before the completion. | `Sample` |
+| `Sample(interval)`, `Sample(interval, sequencer)` | Another name for `Probe`. | `Sample` |
+| `Buffer(timeSpan)`, `Buffer(timeSpan, sequencer)` | Gathers values into one batch per time window. | `Buffer` |
+| `Buffer(count)` | Gathers values into batches of a fixed size that do not overlap. | `Buffer` |
+| `Buffer(count, skip)` | Opens a fixed-size batch every `skip` values, so batches can overlap. | `Buffer` |
+| `Collect(timeSpan)`, `Collect(timeSpan, sequencer)` | Another name for the time-window `Buffer`. | `Buffer(TimeSpan)` |
+| `Expire(dueTime)`, `Expire(dueTime, sequencer)` | Fails with `TimeoutException` when no value arrives within the time you give. Each value restarts the clock, so a busy source never fails. | `Timeout` |
+| `Signal.Expire(source, dueTime)`, `Signal.Expire(source, dueTime, sequencer)` | Static form of `Expire`. | `Timeout` |
+| `Timeout(dueTime)` and its sequencer overload | Another name for `Expire`. Each value restarts the clock. | `Timeout` |
+| `Timeout(DateTimeOffset)` and its sequencer overload | Fails with `TimeoutException` if the sequence has not finished by that moment, whatever values arrive first. | `Timeout` |
+| `Signal.Timeout(source, dueTime)`, `Signal.Timeout(source, dueTime, sequencer)` | Static form of `Timeout`. | `Timeout` |
+
+`Shift` moves everything later by a fixed amount.
+
+```csharp
+Signal.Emit("late")
+    .Shift(TimeSpan.FromSeconds(1))
+    .Subscribe(text => Console.WriteLine(text));
+// prints: late, one second after you subscribe
+```
+
+`Calm` waits for quiet. Use it on a text box so you search once the typing stops.
+
+```csharp
+keystrokes
+    .Calm(TimeSpan.FromMilliseconds(300))
+    .Subscribe(term => Console.WriteLine(term));
+// prints: the search term once the user stops typing for 300 milliseconds
+```
+
+`Probe` takes the newest value on a schedule and ignores the rest.
+
+```csharp
+Signal.Every(TimeSpan.FromMilliseconds(100))
+    .Probe(TimeSpan.FromMilliseconds(500))
+    .Take(2)
+    .Subscribe(count => Console.Write(count + " "));
+// prints: 4 9
+```
+
+`Buffer` gathers values into batches.
+
+```csharp
+Signal.Sequence(1, 7)
+    .Buffer(3)
+    .Subscribe(batch => Console.Write($"[{string.Join(",", batch)}] "));
+// prints: [1,2,3] [4,5,6] [7]
+```
+
+`Expire` fails when the source takes too long.
+
+```csharp
+slowRequest
+    .Expire(TimeSpan.FromSeconds(5))
+    .Subscribe(
+        result => Console.WriteLine(result),
+        error => Console.WriteLine(error.GetType().Name));
+// prints: TimeoutException when the request takes more than 5 seconds
+```
+
+### Error handling
+
+These decide what happens when a signal fails.
+
+| Operator | What it does | LINQ / System.Reactive name |
+|---|---|---|
+| `Recover(handler)` | Switches to the replacement signal your handler builds when an error arrives. | `Catch` |
+| `Rescue(handler)` | Another name for `Recover`. | `Catch` |
+| `Recover<TException>(handler)` | Handles only the one exception type you name. | `Catch<TException>` |
+| `Catch<TException>(handler)` | Another name for the typed `Recover`. | `Catch` |
+| `Recover()` on a collection of signals | Tries each source in turn until one finishes without an error. | `Catch(params)` |
+| `Resume(fallback)` | Carries on with your fallback signal after an error. | `OnErrorResumeNext` |
+| `OnErrorResumeNext(second)` | Carries on with `second` when this signal completes or fails. Unlike `Resume`, it also moves on after a clean completion. | `OnErrorResumeNext` |
+| `Reattempt(retryCount)` | Subscribes again after an error, up to the number of extra tries you allow, then passes the last error along. The count is extra tries, so `Reattempt(2)` subscribes three times. | `Retry` |
+| `Retry(retryCount)` | Runs the source up to that many times in total, stopping at the first run that ends without an error. `Retry(3)` runs it three times. | `Retry` |
+| `Repeat()` | Subscribes again each time the source completes, forever. | `Repeat` |
+| `Repeat(repeatCount)` | Runs the source the number of times you name in total, starting each run when the one before it completes. `Repeat(3)` runs it three times, not four. | `Repeat` |
+| `Finally(finallyAction)` | Runs your cleanup action once when the subscription ends, whatever ends it. | `Finally` |
+| `OnCleanup(finallyAction)` | Another name for `Finally`. | `Finally` |
+| `Exception.Throw()` | Throws the exception and keeps its stack trace on older frameworks. | - |
+| `Exception?.Rethrow()` | Throws the exception when there is one, and does nothing when it is null. | - |
+
+`Recover` swaps in another signal when something fails.
+
+```csharp
+Signal.Fail<string>(new HttpRequestException("offline"))
+    .Recover(error => Signal.Emit("cached value"))
+    .Subscribe(text => Console.WriteLine(text));
+// prints: cached value
+```
+
+`Resume` carries straight on with a fallback.
+
+```csharp
+Signal.Fail<int>(new InvalidOperationException())
+    .Resume(Signal.Sequence(1, 2))
+    .Subscribe(value => Console.Write(value + " "));
+// prints: 1 2
+```
+
+`Reattempt` tries the whole source again.
+
+```csharp
+var attempts = 0;
+
+Signal.Lazy(() => ++attempts < 3
+        ? Signal.Fail<string>(new TimeoutException())
+        : Signal.Emit("ok"))
+    .Reattempt(3)
+    .Subscribe(text => Console.WriteLine($"{text} after {attempts} tries"));
+// prints: ok after 3 tries
+```
+
+`Finally` runs your cleanup however the subscription ends.
+
+```csharp
+Signal.Sequence(1, 2)
+    .Finally(() => Console.WriteLine("cleaned up"))
+    .Subscribe(value => Console.Write(value + " "));
+// prints: 1 2 cleaned up
+```
+
+### Aggregation and terminal operations
+
+These boil a whole signal down to one answer. The first group hands you another signal. The second group hands you a
+task or a plain value, so you leave signals behind.
+
+| Operator | What it does | LINQ / System.Reactive name |
+|---|---|---|
+| `Fold(seed, accumulator)` | Emits the running total after every value. | `Scan` |
+| `Scan(seed, accumulator)` | Another name for `Fold`. | `Scan` |
+| `Reduce(seed, accumulator)` | Emits one final total when the source completes. | `Aggregate` |
+| `Aggregate(seed, accumulator)` | Another name for `Reduce`. | `Aggregate` |
+| `Count()`, `Count(predicate)` | Emits how many values arrived, or how many matched. | `Count` |
+| `LongCount()`, `LongCount(predicate)` | Does the same as a 64-bit number. | `LongCount` |
+| `Any()`, `Any(predicate)` | Emits whether at least one value arrived, or matched. | `Any` |
+| `All(predicate)` | Emits whether every value matched. | `All` |
+| `Contains(value)`, `Contains(value, comparer)` | Emits whether that value ever arrived. | `Contains` |
+| `IsEmpty()` | Emits whether the source completed without a value. | `IsEmpty` |
+| `CollectList()` | Gathers every value and emits one list when the source completes. | `ToList` |
+| `CollectArray()` | Does the same and emits an array. | `ToArray` |
+| `ToList()` | Another name for `CollectList`. | `ToList` |
+| `ToArray()` | Another name for `CollectArray`. | `ToArray` |
+| `FirstAsync()`, `FirstAsync(cancellationToken)` | Returns a task for the first value, and fails when the source is empty. | `FirstAsync().ToTask()` |
+| `FirstOrDefaultAsync()` and its token, default-value and combined overloads | Returns a task for the first value, or your fallback when the source is empty. | `FirstOrDefaultAsync` |
+| `LastAsync()`, `LastAsync(cancellationToken)` | Returns a task for the final value. | `LastAsync().ToTask()` |
+| `LastOrDefaultAsync()` and its token, default-value and combined overloads | Returns a task for the final value, or your fallback when the source is empty. | `LastOrDefaultAsync` |
+| `ToTask()`, `ToTask(cancellationToken)` | Returns a task that gives you the last value once the source completes. | `ToTask()` |
+| `Signal.ToTask(source)`, `Signal.ToTask(source, cancellationToken)` | Static form of `ToTask`. | `ToTask` |
+| `CountAsync()` and its predicate and token overloads | Returns a task for the value count. | `Count().ToTask()` |
+| `AnyAsync()` and its predicate and token overloads | Returns a task for whether anything arrived or matched. | `Any().ToTask()` |
+| `CollectArrayAsync()` | Returns a task for every value as an array. | `ToArray().ToTask()` |
+| `CollectListAsync()` | Returns a task for every value as a list. | `ToList().ToTask()` |
+| `ToArrayAsync()` | Another name for `CollectArrayAsync`. | - |
+| `ToListAsync()` | Another name for `CollectListAsync`. | - |
+| `ToEnumerable()` | Blocks the calling thread until the source completes, then hands back the values. | `ToEnumerable` |
+| `GetAwaiter()`, `GetAwaiter(cancellationToken)` | Lets you `await` the signal for its last value. | `GetAwaiter` |
+| `Signal.RunAsync(source)`, `Signal.RunAsync(source, cancellationToken)` | Subscribes at once and returns an awaiter for the final value. | `RunAsync` |
+| `HandleCancellation(token)`, `HandleCancellation(action, token)` | Awaits the final value and returns `default` instead of failing when the token cancels. | - |
+| `FirstAsTaskHelper.FirstAsTask(source)` | Returns a task for the first value. | `FirstAsync().ToTask()` |
+| `FirstAsValueTaskHelper<T>.FirstAsValueTask(source)` | Does the same as a `ValueTask<T>` that allocates less. | - |
+
+`Fold` shows the running total as it grows.
+
+```csharp
+Signal.Sequence(1, 4)
+    .Fold(0, (total, number) => total + number)
+    .Subscribe(total => Console.Write(total + " "));
+// prints: 1 3 6 10
+```
+
+`Reduce` gives you the total once, at the end.
+
+```csharp
+Signal.Sequence(1, 4)
+    .Reduce(0, (total, number) => total + number)
+    .Subscribe(total => Console.WriteLine(total));
+// prints: 10
+```
+
+`Count` tells you how many values matched.
+
+```csharp
+new[] { "a", "bb", "ccc" }.ToSignal()
+    .Count(text => text.Length > 1)
+    .Subscribe(count => Console.WriteLine(count));
+// prints: 2
+```
+
+`CollectList` gathers everything into one list.
+
+```csharp
+Signal.Sequence(1, 3)
+    .CollectList()
+    .Subscribe(list => Console.WriteLine(string.Join(",", list)));
+// prints: 1,2,3
+```
+
+`FirstAsync` gives you a task for the first value.
+
+```csharp
+var first = await Signal.Sequence(7, 3).FirstAsync();
+Console.WriteLine(first);
+// prints: 7
+```
+
+You can `await` a signal directly for its last value.
+
+```csharp
+var last = await Signal.Sequence(1, 5);
+Console.WriteLine(last);
+// prints: 5
+```
+
+### Utility
+
+These cover subscribing, choosing threads, watching values go past, cleaning up, and sharing one subscription between
+several subscribers.
+
+A connectable signal waits for a `Connect()` call before it subscribes to its source. That lets several subscribers
+share one subscription instead of starting the work over each time.
+
+| Operator | What it does | LINQ / System.Reactive name |
+|---|---|---|
+| `Subscribe()` | Starts the signal and ignores its values. | `Subscribe()` |
+| `Subscribe(onNext)` | Runs your callback for each value, and rethrows a terminal error to the producer. | `Subscribe` |
+| `Subscribe(onNext, onCompleted)` | Adds a callback for completion. | `Subscribe` |
+| `Subscribe(onNext, onError)` | Adds a callback for errors. | `Subscribe` |
+| `Subscribe(onNext, onError, onCompleted)` | Takes all three callbacks. | `Subscribe` |
+| `SubscribePrimitives()` and its 4 overloads | Gives you the same five methods under a name that cannot clash with another library. | `Subscribe` |
+| `SubscribeSafe(observer)` | Subscribes and keeps your observer's exceptions away from the producer. | `SubscribeSafe` |
+| `SubscribeSafePrimitives(observer)` | Gives you the same method under a name that cannot clash. | `SubscribeSafe` |
+| `SubscribeSafe(onNext, onError)`, `SubscribeSafe(onNext, onError, onCompleted)`, `SubscribeSafe(onError)`, `SubscribeSafe(onError, onCompleted)` | Callback forms of `SubscribeSafe`. | `SubscribeSafe` |
+| `LinqExtensions.SubscribeSafe(source, ...)`, 14 static overloads | Lets a nullable source pick one overload without ambiguity; the `params` array is a marker and is never read. | `SubscribeSafe` |
+| `IObserver<T>.FastForEach(source)` | Pushes a whole collection into an observer and indexes arrays and lists directly. | - |
+| `ObserveOn(sequencer)` | Delivers notifications to subscribers on the sequencer you name. | `ObserveOn` |
+| `WitnessOn(sequencer)` | Another name for `ObserveOn`. | `ObserveOn` |
+| `SubscribeOn(sequencer)` | Runs the subscription itself on the sequencer you name. | `SubscribeOn` |
+| `Synchronize()`, `Synchronize(object gate)` | Delivers notifications one at a time behind a lock, which you can share with other signals. | `Synchronize` |
+| `Synchronize(Lock gate)` | The same, taking a `System.Threading.Lock`. Available on net9.0 and later only. | `Synchronize` |
+| `Serialize()` | Delivers notifications one at a time and holds no lock while your code runs, so a late arrival queues instead of blocking. | `Synchronize` (deadlock-safe) |
+| `Tap(onNext)` | Runs your action for each value and passes the value through unchanged. | `Do` |
+| `Tap(onNext, onError, onCompleted)` | Does the same and hooks errors and completion too. | `Do` |
+| `TapWith(state, onNext)` | Works like `Tap` and threads a state object through, so your lambda can be `static`. | `Do` |
+| `Do(onNext)` and its 3 overloads | Another name for `Tap`. | `Do` |
+| `DoWith(state, onNext)` | Another name for `TapWith`. | `Do` |
+| `AsObservable()` | Wraps the signal in a read-only view, so a caller cannot cast it back and push values in. | `AsObservable` |
+| `ToSignal()` on a signal | Hands back the same signal after a null check. | `AsObservable` |
+| `IDisposable.DisposeWith()` | Wraps a disposable so the wrapper disposes it exactly once. | - |
+| `IDisposable.DisposeWith(action)` | Does the same and runs your action just before disposal. | - |
+| `T.DisposeWith(MultipleDisposable)` | Hands the disposable to a group and returns it, so you chain it onto the line that creates it. | `DisposeWith` |
+| `ShareLive()` | Wraps the source in a connectable signal that starts when you call `Connect()`. | `Publish` |
+| `Publish()` | Another name for `ShareLive`. | `Publish` |
+| `Share()` | A third name for `ShareLive`. | `Publish` |
+| `Publish(selector)` | Shares the source for the length of one expression, so it is subscribed once. | `Publish(selector)` |
+| `ReplayLive()` | Wraps the source in a connectable signal that replays every past value to a late subscriber. | `Replay` |
+| `ReplayLive(bufferSize)` | Replays the last few values, up to the size you name. | `Replay(bufferSize)` |
+| `ReplayLive(bufferSize, window)` | Replays values limited by both count and age. | `Replay(n, window)` |
+| `Replay()`, `Replay(bufferSize)`, `Replay(bufferSize, window)` | Another name for the three `ReplayLive` overloads. | `Replay` |
+| `Multicast(hub)` | Pushes the source through a hub you supply. | `Multicast` |
+| `AutoShare()` | Connects on the first subscriber and disconnects when the last one leaves. | `RefCount` |
+| `RefCount()` | Another name for `AutoShare`. | `RefCount` |
+| `AutoConnect()` | Connects on the first subscriber and never disconnects. | `AutoConnect` |
+| `AutoConnect(subscriberCount)` | Waits for that many subscribers, then connects. | `AutoConnect(n)` |
+| `AutoConnect(subscriberCount, onConnect)` | Does the same and hands you the connection to dispose. | `AutoConnect(n, onConnect)` |
+| `ShareLatest()` | Shares one live subscription for as long as anyone listens, and drops it when the last one leaves. It does not replay: a late subscriber sees nothing until the next value, despite the name. | `Publish().RefCount()` |
+| `ToReadOnlyState(initialValue, selector)` | Turns a signal into an object with a current `Value` and a `Changed` signal. `Changed` sends the current value when you subscribe, then once per source value, including when your selector returns the same value again. | `ToProperty`, which notifies only on a real change |
+
+`Subscribe` starts the signal. Dispose the result to stop listening.
+
+```csharp
+using var subscription = Signal.Sequence(1, 3).Subscribe(
+    value => Console.Write(value + " "),
+    error => Console.WriteLine(error.Message),
+    () => Console.WriteLine("done"));
+// prints: 1 2 3 done
+```
+
+`Tap` watches values go past without changing them. It is handy for logging.
+
+```csharp
+Signal.Sequence(1, 3)
+    .Tap(value => Console.Write($"saw {value} "))
+    .Keep(value => value > 1)
+    .Subscribe(value => Console.Write($"kept {value} "));
+// prints: saw 1 saw 2 kept 2 saw 3 kept 3
+```
+
+`ObserveOn` moves delivery onto the thread you want.
+
+```csharp
+downloads
+    .ObserveOn(uiSequencer)
+    .Subscribe(file => label.Text = file.Name);
+// the label is set on the UI thread
+```
+
+`DisposeWith` collects subscriptions so you can stop them together.
+
+```csharp
+var subscriptions = new MultipleDisposable();
+
+Signal.Every(TimeSpan.FromSeconds(1))
+    .Subscribe(tick => Console.WriteLine(tick))
+    .DisposeWith(subscriptions);
+
+subscriptions.Dispose();
+// stops every subscription in the group at once
+```
+
+`ShareLatest` gives two subscribers one shared source instead of two.
+
+```csharp
+var shared = Signal.Every(TimeSpan.FromSeconds(1)).ShareLatest();
+
+shared.Subscribe(tick => Console.WriteLine("a " + tick));
+shared.Subscribe(tick => Console.WriteLine("b " + tick));
+// both subscribers see the same ticks from one timer
+```
+
+`ToReadOnlyState` gives you a value you can read at any moment, plus a signal of changes.
+
+```csharp
+using var name = people.ToReadOnlyState("unknown", person => person.Name);
+
+Console.WriteLine(name.Value);
+name.Changed.Subscribe(value => Console.WriteLine(value));
+// prints: unknown, then each new name as it changes
+```
 
 ## Extension helpers
 
-The `ReactiveUI.Primitives.Extensions` namespace migrates the non-async helper surface from `ReactiveUI.Extensions` onto
-`ReactiveUI.Primitives`. The lean implementation is based on the BCL `IObservable<T>` contract, uses `ISequencer` for
-scheduling, and does not reference System.Reactive, R3, or R3Async. The corresponding
-`ReactiveUI.Primitives.Extensions.Reactive` namespace ships from `ReactiveUI.Primitives.Reactive` and uses
-System.Reactive `Unit` and `IScheduler` conventions.
+`ReactiveUI.Primitives` ships a large set of extension helpers on top of the core operators. They live on a static class
+called `ReactiveExtensions`, they sit in the namespace `ReactiveUI.Primitives.Extensions`, and they ship inside the main
+`ReactiveUI.Primitives` package, so you get them with no extra reference.
 
-These namespaces previously shipped from separate `ReactiveUI.Primitives.Extensions` and
-`ReactiveUI.Primitives.Extensions.Reactive` packages. Their code has been consolidated into the base lean and Reactive
-packages; no helper implementation or public namespace was removed.
+A few words come up in every table. A **source** is a sequence of values you subscribe to. A **sequencer** decides which
+thread runs your code; you pass one in when you care where the work lands. A **subscription** is the `IDisposable` you
+get back when you subscribe; dispose it to stop listening. `RxVoid` is the stand-in for a value that carries no
+information.
 
-Core utility surface:
-
-| API                                | Purpose                                                                                                                                                  |
-|------------------------------------|----------------------------------------------------------------------------------------------------------------------------------------------------------|
-| `Heartbeat<T>` / `IHeartbeat<T>`   | Value plus heartbeat metadata from heartbeat operators.                                                                                                  |
-| `Stale<T>` / `IStale<T>`           | Value plus stale/fresh state from stale-detection operators.                                                                                             |
-| `Continuation`                     | Disposable continuation helper for bridging synchronous waits.                                                                                           |
-| `Observables.Return<T>(value)`     | Single-value observable factory.                                                                                                                         |
-| `ObserverExtensions.FastForEach`   | Pushes enumerable values into an observer with array/list fast paths.                                                                                    |
-| `ObservableSubscriptionExtensions` | Synchronous test/utility helpers: `SubscribeGetValue`, `SubscribeAndComplete`, `SubscribeGetError`, `WaitForValue`, `WaitForCompletion`, `WaitForError`. |
-
-Extension operators are grouped below by feature area:
-
-| Category                | APIs                                                                                                                                                                                                                                                                                                   |
-|-------------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| Filtering/projection    | `WhereIsNotNull`, `SkipWhileNull`, `Not`, `WhereTrue`, `WhereFalse`, `WhereSelect`, `SelectConstant`, `TrySelect`, `SelectManyThen`, `Pairwise`, `Partition`, `Filter`, `ForEach`, `Shuffle`, `LatestOrDefault`, `GetMin`, `GetMax`, `CombineLatestValuesAreAllTrue`, `CombineLatestValuesAreAllFalse` |
-| Error/retry             | `CatchIgnore`, `CatchAndReturn`, `CatchReturn`, `CatchReturnUnit`, `LogErrors`, `OnErrorRetry`, `RetryWithBackoff`, `RetryWithDelay`, `RetryForeverWithDelay`, `RetryWithFixedDelay`                                                                                                                   |
-| Time/scheduling         | `SyncTimer`, `ObserveOnIf`, `ScheduleSafe`, `Schedule`, `SampleLatest`, `DetectStale`, `Conflate`, `Heartbeat`, `ThrottleFirst`, `ThrottleUntilTrue`, `ThrottleOnScheduler`, `ThrottleDistinct`, `DebounceImmediate`, `DebounceUntil`, `WaitUntil`                                                     |
-| Buffer/collection       | `BufferUntil`, `BufferUntilIdle`, `BufferUntilInactive`, `FromArray`, `RunAll`, `FirstMatchFromCandidates`                                                                                                                                                                                             |
-| Async/sync interaction  | `SynchronizeSynchronous`, `SubscribeSynchronous`, `SynchronizeAsync`, `SubscribeAsync`, `SelectAsync`, `SelectAsyncSequential`, `SelectLatestAsync`, `SelectAsyncConcurrent`, `DropIfBusy`, `WithLimitedConcurrency`                                                                                   |
-| State/property/lifetime | `AsSignal`, `ToReadOnlyBehavior`, `ReplayLastOnSubscribe`, `SwitchIfEmpty`, `TakeUntil`, `Start`, `Using`, `While`, `ScanWithInitial`, `ToHotTask`, `ToHotValueTask`, `ToPropertyObservable`, `OnNext(params)`, `DoOnSubscribe`, `DoOnDispose`                                                         |
-
-Filtering and projection example:
+To use these helpers, add:
 
 ```csharp
-using ReactiveUI.Primitives;
-using ReactiveUI.Primitives.Extensions;
-using ReactiveUI.Primitives.Signals;
-
-IObservable<string> labels = Signal.Sequence(1, 10)
-    .WhereSelect(
-        static value => value % 2 == 0,
-        static value => $"even:{value}");
-
-using IDisposable subscription = labels.Subscribe(Console.WriteLine);
+using ReactiveUI.Primitives;            // Subscribe(onNext)
+using ReactiveUI.Primitives.Extensions; // the helpers below
+using ReactiveUI.Primitives.Signals;    // Signal<T>
 ```
 
-Scheduling example:
+### Creation
+
+These turn something that is not a sequence into one.
+
+| Member | What it does |
+|---|---|
+| `Observables.Return(value)` | Emits one value and completes, both inside the `Subscribe` call. |
+| `ReactiveExtensions.Start(function, sequencer)` | Runs the function once per subscriber, emits its result, then completes. |
+| `action.Start(sequencer)` | Runs the action once per subscriber, emits `RxVoid`, then completes. |
+| `condition.While(action)` | Runs the action over and over on the calling thread while the condition returns true. |
+| `condition.While(action, sequencer)` | Runs each round of the loop on the sequencer instead of the calling thread. |
+| `enumerable.FromArray()` | Emits each element of the collection in order. |
+| `enumerable.FromArray(sequencer)` | Emits each element of the collection on the sequencer. |
+| `resource.Using(action)` | Runs the action against the resource, emits `RxVoid`, completes, then disposes the resource. |
+| `resource.Using(action, sequencer)` | Same as above, with the action run on the sequencer. |
+| `resource.Using(function)` | Runs the function against the resource, emits its result, completes, then disposes the resource. |
+| `resource.Using(function, sequencer)` | Same as above, with the function run on the sequencer. |
+| `tasks.WithLimitedConcurrency(maxConcurrency)` | Runs the tasks with at most `maxConcurrency` in flight and emits results as they finish. |
+| `owner.ToPropertyObservable(propertyExpression)` | Emits the property value on subscribe, then again each time that property raises a change. |
+| `ReactiveExtensions.ToReadOnlyBehavior(initialValue)` | Returns a read side and a write side that share one latest value. |
+
+### Transformation
+
+These change each value into a different value.
+
+| Member | What it does |
+|---|---|
+| `source.AsSignal()` | Replaces every value with `RxVoid`, so only the timing survives. |
+| `source.SelectConstant(constant)` | Replaces every value with the constant you pass in. |
+| `source.TrySelect(selector)` | Runs the selector on each value and forwards only the results that are not null. |
+| `source.WhereSelect(predicate, selector)` | Keeps the values the predicate accepts and runs the selector on those, in one step. |
+| `source.SelectManyThen(first, second)` | Feeds each value through two sequence-returning selectors in a row. |
+| `source.ScanWithInitial(initial, accumulator)` | Emits the initial value, then the running total after each source value. |
+| `source.Pairwise()` | Emits each next-door pair as `(Previous, Current)`, so the first value alone emits nothing. |
+| `source.ForEach()` | Flattens a source of collections into one value at a time. |
+| `source.ForEach(sequencer)` | Flattens a source of collections and delivers the values on the sequencer. |
+| `source.Shuffle()` | Reorders each array in place at random and forwards that same array. |
+| `source.Not()` | Flips each boolean value. |
+| `source.SelectAsync(asyncSelector)` | Runs the async selector for each value and emits the results in source order. |
+| `source.SelectAsyncSequential(selector)` | Same as `SelectAsync`, under a name that states the ordering. |
+| `source.SelectLatestAsync(selector)` | Runs the async selector for each value and emits only the newest result. |
+| `source.SelectAsyncConcurrent(selector, maxConcurrency)` | Runs the async selector with a cap on parallel calls and emits results as they finish. |
+| `source.BufferUntil(startsWith, endsWith)` | Gathers characters between the two marker characters into a string, markers included. |
+| `source.ReplayLastOnSubscribe(initialValue)` | Emits the initial value to each new subscriber before the source values. Each subscriber gets its own subscription, so a late subscriber receives the initial value, not the newest one. The async operator of the same name shares one subscription and replays the newest value instead. |
+| `source.LatestOrDefault(defaultValue)` | Emits the default on subscribe, then each value that differs from the one before it. |
+
+### Filtering
+
+These drop values you do not want.
+
+| Member | What it does |
+|---|---|
+| `source.WhereIsNotNull()` | Drops null values and passes everything else through. The element type is unchanged, so a nullable source stays nullable downstream. The async operator of this name narrows `T?` to `T`. |
+| `source.WhereTrue()` | Keeps only the true values. |
+| `source.WhereFalse()` | Keeps only the false values. |
+| `source.SkipWhileNull()` | Drops nulls until the first non-null value, then forwards everything, nulls included. |
+| `source.TakeUntil(predicate)` | Forwards values up to and including the first match, then completes. |
+| `source.WaitUntil(predicate)` | Emits only the first matching value, then completes. |
+| `source.Filter(regexPattern)` | Keeps the strings that match the pattern, using a 30 second match timeout. |
+| `source.Filter(regex)` | Keeps the strings that match the regular expression you built yourself. |
+| `source.Partition(predicate)` | Splits the source into a true sequence and a false sequence that share one subscription. Over a cold source the first side to subscribe consumes it, so share the source first when both sides need it. |
+| `source.DropIfBusy(asyncAction)` | Runs the async action for a value and drops any value that arrives while it is running. |
+
+### Combination
+
+These mix several sources into one.
+
+| Member | What it does |
+|---|---|
+| `sources.CombineLatestValuesAreAllTrue()` | Emits true while the newest value of every source is true. |
+| `sources.CombineLatestValuesAreAllFalse()` | Emits true while the newest value of every source is false. |
+| `source.GetMax(sources)` | Emits the largest of the newest values, once every source has emitted. |
+| `source.GetMin(sources)` | Emits the smallest of the newest values, once every source has emitted. |
+| `source.SwitchIfEmpty(fallback)` | Switches to the fallback when the source completes without emitting anything. |
+| `source.SampleLatest(trigger)` | Emits the newest source value each time the trigger fires. |
+| `sources.RunAll()` | Runs the sources one after another, then emits `RxVoid` and completes. |
+| `candidates.FirstMatchFromCandidates(project, transform, predicate, fallback)` | Tries each candidate in order and emits the first match, or the fallback when none match. |
+
+### Time
+
+These change when a value reaches you.
+
+| Member | What it does |
+|---|---|
+| `source.ThrottleFirst(window)` | Emits the first value in each window and drops the rest of that window. |
+| `source.ThrottleFirst(window, sequencer)` | Same as above, with the sequencer supplying the clock. |
+| `source.ThrottleOnScheduler(timeSpan, sequencer)` | Emits the newest value once the gap since the last one reaches `timeSpan`. |
+| `source.ThrottleDistinct(throttle)` | Emits the newest value after the throttle window, and skips it when it repeats the last one emitted. |
+| `source.ThrottleDistinct(throttle, sequencer)` | Same as above, with the sequencer supplying the clock. |
+| `source.ThrottleUntilTrue(throttle, predicate)` | Emits a matching value right away and delays every other value by the throttle. |
+| `source.DebounceImmediate(dueTime)` | Emits the first value right away, then the newest value after each quiet stretch. |
+| `source.DebounceImmediate(dueTime, sequencer)` | Same as above, with the sequencer supplying the clock. |
+| `source.DebounceUntil(debounce, condition)` | Emits a matching value right away and delays every other value by the debounce time. |
+| `source.DebounceUntil(debounce, condition, sequencer)` | Same as above, with the sequencer supplying the clock. |
+| `source.Conflate(minimumUpdatePeriod, sequencer)` | Keeps emissions at least that far apart and holds back only the newest waiting value. |
+| `source.BufferUntilIdle(idleTime)` | Collects values into a list and emits the list once the source goes quiet. |
+| `source.BufferUntilIdle(idleTime, sequencer)` | Same as above, with the sequencer supplying the clock. |
+| `source.BufferUntilInactive(inactivityPeriod)` | Another name for `BufferUntilIdle`. |
+| `source.BufferUntilInactive(inactivityPeriod, sequencer)` | Another name for `BufferUntilIdle` with a sequencer. |
+| `source.DetectStale(stalenessPeriod, sequencer)` | Wraps each value as an update and emits a stale marker for each quiet stretch. |
+| `source.Heartbeat(heartbeatPeriod, sequencer)` | Wraps each value as an update and emits a heartbeat every period the source stays quiet. |
+| `timeSpan.SyncTimer()` | Returns a ticking clock that every caller using the same period shares. |
+| `timeSpan.SyncTimer(sequencer)` | Returns a shared ticking clock for that period and sequencer. |
+
+### Scheduling
+
+These choose which thread your code runs on, and when.
+
+| Member | What it does |
+|---|---|
+| `source.ObserveOnSafe(sequencer)` | Moves delivery onto the sequencer, or leaves the source untouched when you pass null. |
+| `source.ObserveOnIf(condition, sequencer)` | Moves delivery onto the sequencer when the boolean is true. |
+| `source.ObserveOnIf(condition, trueSequencer, falseSequencer)` | Picks one of two sequencers from the boolean. |
+| `source.ObserveOnIf(conditionSource, trueSequencer, falseSequencer)` | Picks one of two sequencers from the newest value of a boolean source. |
+| `source.ObserveOnIf(conditionSource, sequencer)` | Uses the sequencer while the boolean source says true, and runs inline otherwise. |
+| `source.Schedule(dueTime, sequencer)` | Emits each value on the sequencer after the delay, and forwards no end signal. |
+| `source.Schedule(absoluteDueTime, sequencer)` | Emits each value on the sequencer at that clock time, and forwards no end signal. |
+| `source.Schedule(dueTime, sequencer, action)` | Runs the action on each value after the delay, then emits it. |
+| `source.Schedule(absoluteDueTime, sequencer, action)` | Runs the action on each value at that clock time, then emits it. |
+| `source.Schedule(sequencer, function)` | Runs the function on each value on the sequencer and emits the result. |
+| `source.Schedule(dueTime, sequencer, function)` | Runs the function on each value after the delay and emits the result. |
+| `value.Schedule(dueTime, sequencer)` | Emits the single value on the sequencer after the delay, and never completes. |
+| `value.Schedule(absoluteDueTime, sequencer)` | Emits the single value on the sequencer at that clock time, and never completes. |
+| `value.Schedule(dueTime, sequencer, action)` | Runs the action on the value after the delay, then emits it. |
+| `value.Schedule(absoluteDueTime, sequencer, action)` | Runs the action on the value at that clock time, then emits it. |
+| `value.Schedule(sequencer, function)` | Runs the function on the value on the sequencer and emits the result. |
+| `value.Schedule(dueTime, sequencer, function)` | Runs the function on the value after the delay and emits the result. |
+| `sequencer.ScheduleSafe(action)` | Runs the action on the sequencer, or inline when the sequencer is null. |
+| `sequencer.ScheduleSafe(dueTime, action)` | Runs the action after the delay, using a plain timer when the sequencer is null. |
+
+### Error handling
+
+These decide what happens when a source fails.
+
+| Member | What it does |
+|---|---|
+| `source.CatchIgnore()` | Swallows any error and completes instead. |
+| `source.CatchIgnore(errorAction)` | Hands a matching error to your action and completes; other errors pass through. |
+| `source.CatchReturn(fallback)` | Replaces any error with the fallback value, then completes. |
+| `source.CatchAndReturn(fallback)` | Another name for `CatchReturn`. |
+| `source.CatchAndReturn(fallbackFactory)` | Builds the fallback value from a matching error, then completes. |
+| `source.CatchReturnUnit()` | Replaces any error with a single `RxVoid`, then completes. |
+| `source.OnErrorRetry()` | Subscribes to the source again after every error, forever. |
+| `source.OnErrorRetry(onError)` | Runs your handler for a matching error, then subscribes again, forever. |
+| `source.OnErrorRetry(onError, delay)` | Runs your handler, waits the delay, then subscribes again, forever. |
+| `source.OnErrorRetry(onError, retryCount)` | Runs your handler and subscribes again, up to that many times. |
+| `source.OnErrorRetry(onError, retryCount, delay)` | Runs your handler, waits the delay, and subscribes again, up to that many times. |
+| `source.OnErrorRetry(onError, retryCount, delay, delaySequencer)` | Same as above, with the sequencer timing the delay. |
+| `source.RetryWithBackoff(maxRetries, initialDelay)` | Subscribes again after each error and doubles the wait each time. |
+| `source.RetryWithBackoff(maxRetries, initialDelay, backoffFactor, maxDelay, sequencer)` | Same, with your own growth factor, an upper limit on the wait, and a sequencer. |
+| `source.RetryWithDelay(retryCount, delaySelector)` | Subscribes again after each error, asking your function for each wait. |
+| `source.RetryForeverWithDelay(delay)` | Subscribes again after each error, always waiting the same delay, forever. |
+| `source.RetryWithFixedDelay(retryCount, delay)` | Subscribes again after each error with a fixed wait, up to that many times. |
+
+### Side effects and diagnostics
+
+These run your code beside the sequence without changing the values.
+
+| Member | What it does |
+|---|---|
+| `source.LogErrors(logger)` | Hands the error to your logger, then still passes it on to your subscriber. |
+| `source.DoOnSubscribe(action)` | Runs the action each time someone subscribes, before the source is subscribed. |
+| `source.DoOnDispose(disposeAction)` | Runs the action once when the subscription is disposed. |
+| `observer.OnNext(events)` | Pushes several values to an observer in one call. |
+| `observer.FastForEach(collection)` | Pushes every element of a collection to an observer, indexing lists instead of enumerating them. |
+
+### Subscription
+
+These start listening, and some of them block until a result arrives.
+
+| Member | What it does |
+|---|---|
+| `source.SubscribeAsync(onNext)` | Queues values and runs your async handler on one value at a time. |
+| `source.SubscribeAsync(onNext, onCompleted)` | Same, and runs your completion handler once the queue drains. |
+| `source.SubscribeAsync(onNext, onError)` | Same, and runs your error handler on a source error or a handler failure. |
+| `source.SubscribeAsync(onNext, onError, onCompleted)` | Same, with both an error handler and a completion handler. |
+| `source.SubscribeSynchronous(onNext)` | Another name for `SubscribeAsync(onNext)`. |
+| `source.SubscribeSynchronous(onNext, onError)` | Another name for `SubscribeAsync(onNext, onError)`. |
+| `source.SubscribeSynchronous(onNext, onCompleted)` | Another name for `SubscribeAsync(onNext, onCompleted)`. |
+| `source.SubscribeSynchronous(onNext, onError, onCompleted)` | Another name for the three-handler `SubscribeAsync`. |
+| `source.SynchronizeAsync()` | Pairs each value with a handle, and the producer waits for that handle to be disposed. |
+| `source.SynchronizeSynchronous()` | Another name for `SynchronizeAsync`. |
+| `source.ToHotTask()` | Subscribes at once and gives you a `Task` for the first value. |
+| `source.ToHotValueTask()` | Subscribes at once and gives you a `ValueTask` for the first value, which you may read only once. |
+| `source.SubscribeAndComplete()` | Subscribes, throws the values away, and disposes the subscription. |
+| `source.SubscribeGetValue()` | Returns the last value the source emitted during the `Subscribe` call itself. |
+| `source.SubscribeGetError()` | Returns the error the source emitted during the `Subscribe` call itself, or null. |
+| `source.WaitForValue()` | Blocks up to 30 seconds and returns the last value before the source ended. |
+| `source.WaitForValue(timeout)` | Same, with your own timeout. |
+| `source.WaitForValue(sequencer)` | Same, with the subscribe call dispatched through the sequencer. |
+| `source.WaitForValue(sequencer, timeout)` | Same, with both a sequencer and your own timeout. |
+| `source.WaitForCompletion()` | Blocks up to 30 seconds for the source to end, and rethrows any error it carried. |
+| `source.WaitForCompletion(timeout)` | Same, with your own timeout. |
+| `source.WaitForCompletion(sequencer)` | Same, with the subscribe call dispatched through the sequencer. |
+| `source.WaitForCompletion(sequencer, timeout)` | Same, with both a sequencer and your own timeout. |
+| `source.WaitForError()` | Blocks up to 30 seconds and returns the error without throwing it. |
+| `source.WaitForError(timeout)` | Same, with your own timeout. |
+| `source.WaitForError(sequencer)` | Same, with the subscribe call dispatched through the sequencer. |
+| `source.WaitForError(sequencer, timeout)` | Same, with both a sequencer and your own timeout. |
+
+Every `WaitForValue`, `WaitForCompletion` and `WaitForError` helper throws a `TimeoutException` when the source does
+not end in time.
+
+### Types you can name
+
+You call the helpers above most of the time. These public types back them, and you can build or accept them yourself.
+
+| Type | What it is |
+|---|---|
+| `CurrentValueSubject<T>` | Takes values in, keeps the latest one, replays it to each new subscriber, and exposes it as `Value`. |
+| `ConcurrencyLimiter<T>` | The sequence behind `WithLimitedConcurrency`, which drains tasks with a cap on parallel work. |
+| `Continuation` | A one-at-a-time handoff that pairs an item with a release handle and waits for that handle. |
+| `Heartbeat<T>` and `IHeartbeat<T>` | The value `Heartbeat` emits, carrying either a tick or an update. |
+| `Stale<T>` and `IStale<T>` | The value `DetectStale` emits, carrying either a stale marker or an update. |
+| `SingleValueSignal<T>` | A sequence that emits one value and completes, both inside `Subscribe`. |
+| `ScanWithInitialObservable<TSource, TAccumulate>` | The sequence behind `ScanWithInitial`. |
+| `FirstAsTaskHelper` and `FirstAsValueTaskHelper<T>` | The helpers behind `ToHotTask` and `ToHotValueTask`. |
+| `ObserverArrayHelpers` | Pushes a value to an array of observers, and removes one observer from such an array. |
+| `TimerSinkState<T>` | The timer slot and ordered delivery queue that the timing operators share. |
+| `IDrainTarget` and `DrainNotificationKind` | The callback and the notification tag used to deliver queued values. |
+| `ReactiveUI.Primitives.Extensions.Operators.*` | One public class per helper, such as `PairwiseObservable<T>`, which you can build directly instead of calling the helper. |
+
+Reading `Stale<T>.Update` while `IsStale` is true throws. Check `IsStale` first.
+
+### Worked examples
+
+#### Pairwise
 
 ```csharp
-using ReactiveUI.Primitives.Concurrency;
-using ReactiveUI.Primitives.Extensions;
+Signal<int> source = new();
+source.Pairwise().Subscribe(pair => Console.WriteLine(pair));
 
-ISequencer sequencer = ThreadPoolSequencer.Instance;
-
-using IDisposable work = "ready"
-    .Schedule(TimeSpan.FromMilliseconds(50), sequencer)
-    .Subscribe(Console.WriteLine);
+source.OnNext(1);
+source.OnNext(2);
+source.OnNext(3);
+// prints: (1, 2)
+// prints: (2, 3)
 ```
 
-Async selector example over a BCL observable:
+#### WhereIsNotNull
 
 ```csharp
-using ReactiveUI.Primitives;
-using ReactiveUI.Primitives.Extensions;
-using ReactiveUI.Primitives.Signals;
+Signal<string?> source = new();
+source.WhereIsNotNull().Subscribe(name => Console.WriteLine(name));
 
-IObservable<string> names = Signal.Sequence(1, 3)
-    .SelectAsyncSequential(static async value =>
+source.OnNext("ada");
+source.OnNext(null);
+source.OnNext("grace");
+// prints: ada
+// prints: grace
+```
+
+#### Partition
+
+```csharp
+Signal<int> source = new();
+var (even, odd) = source.Partition(value => value % 2 == 0);
+
+even.Subscribe(value => Console.WriteLine($"even {value}"));
+odd.Subscribe(value => Console.WriteLine($"odd {value}"));
+
+source.OnNext(1);
+source.OnNext(2);
+// prints: odd 1
+// prints: even 2
+```
+
+Both sides share one subscription, so subscribe both before values flow. Over a cold source that produces its values during
+subscribe, the first side to subscribe consumes the sequence and the other side sees nothing. Share the source first when
+both sides need a cold one.
+
+#### ScanWithInitial
+
+```csharp
+Signal<int> source = new();
+source.ScanWithInitial(0, (total, value) => total + value)
+      .Subscribe(total => Console.WriteLine(total));
+
+source.OnNext(5);
+source.OnNext(3);
+// prints: 0
+// prints: 5
+// prints: 8
+```
+
+#### ThrottleFirst
+
+```csharp
+Signal<string> clicks = new();
+clicks.ThrottleFirst(TimeSpan.FromSeconds(1))
+      .Subscribe(label => Console.WriteLine(label));
+
+clicks.OnNext("first");   // arrives at 0.0s
+clicks.OnNext("second");  // arrives at 0.2s
+clicks.OnNext("third");   // arrives at 1.5s
+// prints: first
+// prints: third
+```
+
+#### SwitchIfEmpty
+
+```csharp
+Signal<string> source = new();
+source.SwitchIfEmpty(Observables.Return("no results"))
+      .Subscribe(text => Console.WriteLine(text));
+
+source.OnCompleted();
+// prints: no results
+```
+
+#### SampleLatest
+
+```csharp
+Signal<int> prices = new();
+Signal<object> tick = new();
+prices.SampleLatest(tick).Subscribe(price => Console.WriteLine(price));
+
+prices.OnNext(10);
+prices.OnNext(11);
+tick.OnNext(new object());
+// prints: 11
+```
+
+#### CatchAndReturn
+
+```csharp
+Signal<int> source = new();
+source.CatchAndReturn(-1).Subscribe(value => Console.WriteLine(value));
+
+source.OnNext(7);
+source.OnError(new InvalidOperationException("broken"));
+// prints: 7
+// prints: -1
+```
+
+#### CatchIgnore
+
+```csharp
+Signal<int> source = new();
+source.CatchIgnore<InvalidOperationException>(error => Console.WriteLine($"logged {error.Message}"))
+      .Subscribe(value => Console.WriteLine(value), () => Console.WriteLine("done"));
+
+source.OnNext(7);
+source.OnError(new InvalidOperationException("broken"));
+// prints: 7
+// prints: logged broken
+// prints: done
+```
+
+#### RetryWithBackoff
+
+```csharp
+// Scope lives in ReactiveUI.Primitives.Disposables
+var attempts = 0;
+IObservable<string> flaky = new AnonymousSignal<string>(observer =>
+{
+    attempts++;
+    observer.OnError(new InvalidOperationException("offline"));
+    return Scope.Empty;
+});
+flaky.RetryWithBackoff(3, TimeSpan.FromMilliseconds(100))
+     .Subscribe(_ => { }, error => Console.WriteLine($"gave up after {attempts} tries"));
+// prints: gave up after 4 tries, waiting 100ms, 200ms and 400ms in between
+```
+
+#### LogErrors
+
+```csharp
+Signal<int> source = new();
+source.LogErrors(error => Console.WriteLine($"log: {error.Message}"))
+      .Subscribe(value => Console.WriteLine(value), error => Console.WriteLine("subscriber saw it too"));
+
+source.OnError(new InvalidOperationException("broken"));
+// prints: log: broken
+// prints: subscriber saw it too
+```
+
+#### DropIfBusy
+
+```csharp
+Signal<int> jobs = new();
+jobs.DropIfBusy(async value =>
     {
-        await Task.Yield();
-        return $"item:{value}";
-    });
+        await Task.Delay(500);
+    })
+    .Subscribe(value => Console.WriteLine($"handled {value}"));
 
-using IDisposable subscription = names.Subscribe(Console.WriteLine);
+jobs.OnNext(1);   // starts work
+jobs.OnNext(2);   // dropped, work is still running
+// prints: handled 1
 ```
 
-These helpers are intended for applications that already use the operators from `ReactiveUI.Extensions` and want the
-same shapes without pulling System.Reactive or R3 into the lean production dependency graph.
-`Filter(string pattern)` creates a regex with a 30-second match timeout so ordinary filters remain stable under
-instrumented CI runs while still protecting against runaway patterns. Use `Filter(Regex regex)` when a caller-specified
-regex timeout or options set must be preserved exactly.
+#### SubscribeAsync
 
-## Stateful signals and subject-like types
+```csharp
+Signal<int> source = new();
+using var subscription = source.SubscribeAsync(async value =>
+{
+    await Task.Delay(10);
+    Console.WriteLine($"saved {value}");
+});
 
-ReactiveUI.Primitives uses explicit names instead of cloning every System.Reactive subject type name.
+source.OnNext(1);
+source.OnNext(2);
+// prints: saved 1
+// prints: saved 2
+```
 
-| System.Reactive type                             | ReactiveUI.Primitives equivalent         | Notes                                                                                                                                                   |
-|--------------------------------------------------|------------------------------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------|
-| `Subject<T>`                                     | `Signal<T>`                              | Push values, errors, and completion to subscribers.                                                                                                     |
-| `BehaviorSubject<T>`                             | `StateSignal<T>`                         | Stores the latest value, exposes a mutable `Value`, and emits changes through `Changed`.                                                                |
-| `ReplaySubject<T>`                               | `ReplaySignal<T>`                        | Replays buffered values by size and/or time window.                                                                                                     |
-| `AsyncSubject<T>`                                | `FinalSignal<T>`                         | Awaitable subject-like signal; also implements `IAwaitSignal<T>`.                                                                                       |
-| `ReactiveProperty<T>` / state holder             | `StateSignal<T>` plus `ReadOnlyState<T>` | Mutable state and read-only projected state.                                                                                                            |
-| `Subject<T>.ObserveOn(scheduler)`                | `ScheduledSignal<T>`                     | Multicast signal that dispatches its notifications on an `ISequencer`, with an optional default observer active while no other subscribers are present. |
-| `Buffer(boundary).SelectMany(distinct)` pipeline | `DelayableNotificationSignal<T>`         | Passes notifications through immediately while not delayed, buffers them while delayed, and emits a de-duplicated batch on `Flush`.                     |
+#### SelectLatestAsync
 
-State example:
+```csharp
+Signal<string> queries = new();
+queries.SelectLatestAsync(async text =>
+       {
+           await Task.Delay(100);
+           return $"results for {text}";
+       })
+       .Subscribe(text => Console.WriteLine(text));
+
+queries.OnNext("ca");
+queries.OnNext("cat");   // replaces the pending "ca" lookup
+// prints: results for cat
+```
+
+#### BufferUntilIdle
+
+```csharp
+Signal<char> keys = new();
+keys.BufferUntilIdle(TimeSpan.FromMilliseconds(300))
+    .Subscribe(batch => Console.WriteLine(string.Concat(batch)));
+
+keys.OnNext('h');
+keys.OnNext('i');
+// after 300ms of quiet
+// prints: hi
+```
+
+#### WaitForValue
+
+```csharp
+IObservable<int> answer = Observables.Return(42);
+
+var value = answer.WaitForValue(TimeSpan.FromSeconds(1));
+Console.WriteLine(value);
+// prints: 42
+```
+
+## Async operators
+
+`IObservableAsync<T>` is a stream of values you subscribe to with `await`. Every step returns a `ValueTask`, so the stream waits for your handler to finish before it sends the next value. Reach for it instead of `IObservable<T>` when your handlers do real async work, such as a database read or an HTTP call, and you want the producer to slow down for you rather than pile up callbacks.
+
+Two static classes carry most of this surface. `SignalAsync` creates streams. `SignalAsyncExtensions` adds every operator and terminal you call on a stream, so you write them as normal extension methods.
+
+### Creation factories
+
+These build a stream from scratch. You call them on `SignalAsync`, not on an existing stream.
+
+| Operator | What it does | Sync and async predicate forms |
+|---|---|---|
+| `SignalAsync.Emit(value)` | Emits one value, then completes. | - |
+| `SignalAsync.Return(value)` | Another name for `Emit`. | - |
+| `SignalAsync.Empty<T>()` | Completes at once without emitting anything. | - |
+| `SignalAsync.None<T>()` | Another name for `Empty`. | - |
+| `SignalAsync.Never<T>()` | Never emits and never completes. | - |
+| `SignalAsync.Throw<T>(error)` | Ends the stream at once with the exception you pass. | - |
+| `SignalAsync.Fail<T>(error)` | Another name for `Throw`. | - |
+| `SignalAsync.Range(start, count)` | Emits a run of consecutive ints. | - |
+| `SignalAsync.Sequence(start, count)` | Another name for `Range`. | - |
+| `SignalAsync.FromEnumerable(values)` | Emits each item of a collection, once per subscriber. | - |
+| `SignalAsync.FromAsyncEnumerable(values)` | Emits each item of an async sequence. | - |
+| `SignalAsync.FromAsync(factory)` | Runs an async function once per subscriber and emits its one result. | - |
+| `SignalAsync.Create(subscribeAsync)` | Builds a stream from subscribe logic you write by hand. | - |
+| `SignalAsync.CreateAsBackgroundJob(job)` | Runs your async job per subscriber and pushes values into the observer. | - |
+| `SignalAsync.Defer(factory)` | Builds a fresh stream for each subscriber at the moment it subscribes. | both |
+| `SignalAsync.Timer(dueTime)` | Emits `0` after a delay, and can then tick every period. | - |
+| `SignalAsync.After(dueTime)` | Another name for `Timer`. | - |
+| `SignalAsync.Every(period)` | Ticks forever, starting one period from now. | - |
+| `SignalAsync.Pulse(period)` | Another name for `Every`. | - |
+| `SignalAsync.Interval(period)` | Another name for `Every`. | - |
+| `SignalAsync.Blend(sources)` | Merges several streams into one. | - |
+| `SignalAsync.Chain(sources)` | Runs streams in order, each starting when the one before it ends. | - |
+| `SignalAsync.Start(function)` | Runs a plain function and emits what it returns. | - |
+| `SignalAsync.Use(resourceFactory, signalFactory)` | Makes a resource per subscriber and disposes it when the stream ends. | - |
+| `SignalAsync.Using(resourceFactory, signalFactory)` | Another name for `Use`. | - |
+| `ToAsyncSignal()` | Turns a collection, an async sequence or a `Task<T>` into a stream. | - |
+
+Signals are streams you push into yourself. You create them on `Signal`.
+
+| Operator | What it does | Sync and async predicate forms |
+|---|---|---|
+| `Signal.Create<T>()` | Makes a live signal that holds no value. | - |
+| `Signal.CreateBehavior(startValue)` | Makes a signal that holds a current value and hands it to each new subscriber. | - |
+| `Signal.CreateReplayLatest<T>()` | Makes a signal that replays only the newest value to late subscribers. | - |
+
+The `ReactiveUI.Primitives.Async` package adds factories for `RxVoid`, a value that means "something happened" and carries no data.
+
+| Operator | What it does | Sync and async predicate forms |
+|---|---|---|
+| `SignalAsync.EmitRxVoid()` | Emits one `RxVoid.Default`, then completes. | - |
+| `action.Start()` | Runs the action and emits `RxVoid.Default` when it finishes. | - |
+| `asyncFunction.FromAsync()` | Runs the async operation per subscriber and reports that it finished. | - |
+| `task.ToAsyncSignal()` | Turns a `Task` into a stream that ends when the task ends. | - |
+
+```csharp
+var names = SignalAsync.FromEnumerable(new[] { "ann", "bob" });
+await names.ForEachAsync(n => Console.WriteLine(n));
+// ann
+// bob
+```
+
+```csharp
+var ticks = SignalAsync.Interval(TimeSpan.FromSeconds(1));
+var firstThree = await ticks.Take(3).ToListAsync();
+// firstThree holds 1, 2, 3
+```
+
+### Transformation
+
+These change each value, or turn one value into a whole stream.
+
+| Operator | What it does | Sync and async predicate forms |
+|---|---|---|
+| `Map(selector)` | Runs each value through a function. | both |
+| `MapWith(state, selector)` | Maps each value, passing your state in so the function needs no closure. | - |
+| `Select(selector)` | Another name for `Map`. | both |
+| `Cast<TResult>()` | Casts every value, failing the stream on a bad cast. | - |
+| `CastTo<TResult>()` | Casts an untyped stream to `TResult`. | - |
+| `OfType<TResult>()` | Keeps only values of that type and drops the rest. | - |
+| `KeepType<TResult>()` | Another name for `OfType`, for an untyped stream. | - |
+| `FlatMap(selector)` | Turns each value into a stream and merges them all at once. | both |
+| `SelectMany(selector)` | Another name for `FlatMap`, with an overload that recombines the outer and inner value. | both |
+| `Bind(selector)` | Another name for `FlatMap`. | - |
+| `Scan(seed, accumulator)` | Adds each value to a running total and emits that total. | both |
+| `Fold(seed, accumulator)` | Another name for `Scan`. | both |
+| `ScanWithInitial(initial, accumulator)` | Runs a total like `Scan`, and emits the seed as soon as you subscribe. | both |
+| `Pairwise()` | Emits each value paired with the one before it. | - |
+| `GroupBy(keySelector)` | Splits the stream into one sub-stream per key. | - |
+| `ForEach()` | Flattens each emitted collection into single values, in order. | - |
+| `Not()` | Flips every `bool` value. | - |
+| `ToAsyncEnumerable(channelFactory)` | Turns the stream into a sequence you can `await foreach` over. | - |
+| `AsSignal()` | Drops the values and emits a bare `RxVoid` pulse instead. | - |
+
+```csharp
+var ids = SignalAsync.FromEnumerable(new[] { 1, 2 });
+var names = ids.Map(async (id, ct) => await LoadNameAsync(id, ct));
+await names.ForEachAsync(n => Console.WriteLine(n));
+// Ann
+// Bob
+```
+
+```csharp
+var users = SignalAsync.FromEnumerable(new[] { 1, 2 });
+var orders = users.FlatMap(id => SignalAsync.FromEnumerable(OrdersFor(id)));
+var all = await orders.ToListAsync();
+// all holds every order from user 1 and user 2
+```
+
+```csharp
+var amounts = SignalAsync.FromEnumerable(new[] { 10, 5, 1 });
+var running = await amounts.Scan(0, (total, next) => total + next).ToListAsync();
+// running holds 10, 15, 16
+```
+
+### Filtering
+
+These drop values you do not want, or stop the stream early.
+
+| Operator | What it does | Sync and async predicate forms |
+|---|---|---|
+| `Keep(predicate)` | Keeps only the values that match. | both |
+| `KeepWith(state, predicate)` | Filters values, passing your state in so the predicate needs no closure. | - |
+| `Where(predicate)` | Another name for `Keep`. | both |
+| `KeepNotNull()` | Drops nulls and makes the value type non-nullable. | - |
+| `WhereIsNotNull()` | Another name for `KeepNotNull`. | - |
+| `SkipWhileNull()` | Ignores nulls at the start, then forwards everything after that. | - |
+| `WhereTrue()` | Keeps only `true` values. | - |
+| `WhereFalse()` | Keeps only `false` values. | - |
+| `Distinct()` | Emits each value only the first time it ever appears. | - |
+| `DistinctBy(keySelector)` | Drops a value when its key has appeared before. | - |
+| `Unique()` | Another name for `DistinctUntilChanged`. | - |
+| `UniqueBy(keySelector)` | Another name for `DistinctUntilChangedBy`. | - |
+| `DistinctUntilChanged()` | Drops a value when it equals the one right before it. | - |
+| `DistinctUntilChangedBy(keySelector)` | Drops a value when its key equals the key right before it. | - |
+| `Take(count)` | Emits at most that many values, then completes. | - |
+| `Skip(count)` | Ignores that many values at the start. | - |
+| `TakeWhile(predicate)` | Emits while the predicate holds, then completes. | both |
+| `SkipWhile(predicate)` | Drops values until the predicate first fails, then forwards the rest. | both |
+| `WaitUntil(predicate)` | Emits the first matching value, then completes and shuts the source down. | - |
+| `Partition(predicate)` | Splits one stream into a matching branch and a non-matching branch. | - |
+| `DropIfBusy(asyncAction)` | Runs an async action one at a time and throws away values that arrive while it runs. | - |
+| `LatestOrDefault(defaultValue)` | Emits your default straight away, then only values that differ from the last one. | - |
+| `TakeUntil(other)` | Stops the stream when another stream, a task, a token or a predicate says so. | both |
+
+```csharp
+var evens = await SignalAsync.Range(1, 5).Keep(n => n % 2 == 0).ToListAsync();
+// evens holds 2, 4
+```
+
+```csharp
+var status = SignalAsync.FromEnumerable(new[] { "on", "on", "off", "on" });
+var changes = await status.DistinctUntilChanged().ToListAsync();
+// changes holds on, off, on
+```
+
+```csharp
+using var cts = new CancellationTokenSource(TimeSpan.FromMilliseconds(2500));
+var ticks = SignalAsync.Interval(TimeSpan.FromSeconds(1));
+var seen = await ticks.TakeUntil(cts.Token).ToListAsync();
+// seen holds 1, 2
+```
+
+### Combination
+
+These join two or more streams. Every selector here is a plain function, so there are no async forms.
+
+| Operator | What it does | Sync and async predicate forms |
+|---|---|---|
+| `SyncLatest(other, selector)` | Emits a fresh combined value whenever any source emits, once all of them have emitted once. | - |
+| `CombineLatest(other, selector)` | Another name for `SyncLatest`. | - |
+| `PairLatest(other, selector)` | `SyncLatest` for exactly two sources. | - |
+| `CombineLatestValuesAreAllTrue()` | Emits whether every source's newest value is `true`. | - |
+| `CombineLatestValuesAreAllFalse()` | Emits whether every source's newest value is `false`. | - |
+| `Zip(second)` | Pairs values by position, waiting for the slower source. | - |
+| `Pair(second, resultSelector)` | Another name for `Zip`. | - |
+| `Blend(other)` | Interleaves two streams into one as values arrive. | - |
+| `Merge(other)` | Another name for `Blend`, with an overload that caps how many inner streams run at once. | - |
+| `Chain(second)` | Runs the second stream only after the first one completes. | - |
+| `Concat(second)` | Another name for `Chain`. | - |
+| `SwitchTo()` | Follows only the newest inner stream and drops the one before it. | - |
+| `Switch()` | Another name for `SwitchTo`. | - |
+| `Lead(value)` | Emits one value ahead of the source's own values. | - |
+| `Prepend(value)` | Another name for `Lead`. | - |
+| `StartWith(values)` | Another name for `Lead`, taking one value, an array or a collection. | - |
+| `GetMin(sources)` | Emits the smallest of the newest values across all the sources. | - |
+| `GetMax(sources)` | Emits the largest of the newest values across all the sources. | - |
+
+`SyncLatest` and `CombineLatest` take 2 to 16 streams. They also work on a collection of same-typed streams, where they hand you a snapshot list.
+
+```csharp
+var first = Signal.CreateBehavior("ann");
+var last = Signal.CreateBehavior("lee");
+var full = first.SyncLatest(last, (f, l) => f + " " + l);
+
+await using var sub = await full.SubscribeAsync(name => Console.WriteLine(name));
+await last.OnNextAsync("king", CancellationToken.None);
+// ann lee
+// ann king
+```
+
+```csharp
+var clicks = SignalAsync.FromEnumerable(new[] { "click" });
+var keys = SignalAsync.FromEnumerable(new[] { "key" });
+var all = await clicks.Merge(keys).ToListAsync();
+// all holds click, key
+```
+
+```csharp
+var queries = Signal.Create<string>();
+var results = queries.Map(q => SignalAsync.FromAsync(ct => SearchAsync(q, ct))).SwitchTo();
+
+await using var sub = await results.SubscribeAsync(r => Console.WriteLine(r));
+await queries.OnNextAsync("ca", CancellationToken.None);
+await queries.OnNextAsync("cat", CancellationToken.None);
+// only the result for "cat" prints, because the "ca" search is dropped
+```
+
+### Time
+
+These move values around in time. `Delay`, `Throttle`, `ThrottleDistinct`, `DebounceUntil`, `Timeout`, `Timer` and `Interval` each take an optional `TimeProvider`, so a test can drive a fake clock. `Shift`, `Expire`, `After`, `Every` and `Pulse` always use the system clock.
+
+| Operator | What it does | Sync and async predicate forms |
+|---|---|---|
+| `Delay(delayInterval)` | Holds each value back by a fixed amount, and passes errors and completion straight through. | - |
+| `Shift(delayInterval)` | Another name for `Delay`. | - |
+| `Throttle(dueTime)` | Emits a value once the stream has been quiet for that long. | - |
+| `ThrottleDistinct(throttle)` | Waits for quiet like `Throttle`, and also drops repeats on both sides of the wait. | - |
+| `DebounceUntil(debounce, condition)` | Delays values, except matching ones, which go straight through and cancel the pending value. | - |
+| `Timeout(dueTime)` | Fails with `TimeoutException` when the gap between values grows too large. | - |
+| `Expire(dueTime)` | Another name for `Timeout`. | - |
+
+`Timeout` has an overload that switches to a fallback stream instead of failing.
+
+```csharp
+var keystrokes = Signal.Create<string>();
+var settled = keystrokes.Throttle(TimeSpan.FromMilliseconds(300));
+
+await using var sub = await settled.SubscribeAsync(text => Console.WriteLine(text));
+await keystrokes.OnNextAsync("ca", CancellationToken.None);
+await keystrokes.OnNextAsync("cat", CancellationToken.None);
+// cat
+```
+
+```csharp
+var slow = SignalAsync.Timer(TimeSpan.FromSeconds(10)).Map(_ => "done");
+await slow.Timeout(TimeSpan.FromSeconds(2)).WaitCompletionAsync();
+// throws TimeoutException after 2 seconds
+```
+
+### Error handling
+
+A stream can fail in two ways. A terminal failure ends it. A resumable error is reported and the stream carries on.
+
+| Operator | What it does | Sync and async predicate forms |
+|---|---|---|
+| `Catch(handler)` | Carries on with the stream your handler returns when the source fails. | - |
+| `Rescue(handler)` | Another name for `Catch`. | - |
+| `Recover(handler)` | Another name for `Catch`, where a throwing handler ends the stream with its own exception. | - |
+| `Resume(fallback)` | Switches to a fixed fallback stream when the source fails. | - |
+| `CatchAndIgnoreErrorResume(handler)` | Recovers from a failure and sends resumable errors to the global handler instead of downstream. | - |
+| `CatchIgnore()` | Swallows a failure and completes normally, with an overload that matches one exception type. | - |
+| `CatchAndReturn(fallback)` | Emits one fallback value and completes when the source fails. | - |
+| `Retry()`, `Retry(retryCount)` | Subscribes again every time the source fails, forever or for `retryCount` runs in total. | - |
+| `Reattempt(retryCount)` | Subscribes again after a failure, up to `retryCount` extra times on top of the first run. | - |
+| `OnErrorResumeAsFailure()` | Turns a resumable error into a terminal failure. | - |
+| `LogErrors(logger)` | Reports errors to your logger as they pass, and changes nothing. | - |
+
+```csharp
+var risky = SignalAsync.Throw<int>(new InvalidOperationException("boom"));
+var safe = risky.Catch(ex => SignalAsync.Emit(-1));
+var values = await safe.ToListAsync();
+// values holds -1
+```
+
+```csharp
+var load = SignalAsync.FromAsync(ct => LoadAsync(ct));
+var value = await load.Retry(3).FirstAsync();
+// LoadAsync runs three times in total, stopping at the first success
+```
+
+### Terminal operations
+
+These end the pipeline and hand you a `ValueTask` result, not a new stream, so you `await` them. Every predicate here is a plain function. No terminal operation takes an awaitable predicate.
+
+| Operator | What it does | Sync and async predicate forms |
+|---|---|---|
+| `SubscribeAsync(onNext)` | Starts the stream and returns the handle you dispose to stop it. | both |
+| `FirstAsync()` | Gives you the first value, or fails when the stream ends empty. | - |
+| `FirstOrDefaultAsync()` | Gives you the first value, or a default when nothing matches. | - |
+| `LastAsync()` | Gives you the final value once the stream ends. | - |
+| `LastOrDefaultAsync()` | Gives you the final value, or a default when nothing matches. | - |
+| `SingleAsync()` | Expects exactly one value and fails otherwise. | - |
+| `SingleOrDefaultAsync()` | Expects at most one value and gives you a default when there is none. | - |
+| `CountAsync()` | Counts the values once the stream ends. | - |
+| `LongCountAsync()` | Counts the values as a 64-bit number. | - |
+| `AnyAsync()` | Tells you whether at least one value appears. | - |
+| `AllAsync(predicate)` | Tells you whether every value matches. | - |
+| `ContainsAsync(value)` | Tells you whether that value ever appears. | - |
+| `AggregateAsync(seed, accumulator)` | Folds the whole stream into one value, and can project the result. | both |
+| `ReduceAsync(seed, accumulator)` | Another name for `AggregateAsync`. | both |
+| `ToListAsync()` | Collects every value into a list, in arrival order. | - |
+| `CollectListAsync()` | Another name for `ToListAsync`. | - |
+| `CollectArrayAsync()` | Collects every value into an array. | - |
+| `ToDictionaryAsync(keySelector)` | Indexes the values by a key you pick. | - |
+| `ForEachAsync(onNext)` | Runs your callback for every value and completes when the stream ends. | both |
+| `WaitCompletionAsync()` | Ignores the values and completes when the stream ends, failing if it failed. | - |
+
+`FirstAsync`, `LastAsync`, `SingleAsync`, `CountAsync` and their `OrDefault` partners all take an optional predicate and an optional `CancellationToken`.
+
+```csharp
+var ticks = SignalAsync.Interval(TimeSpan.FromSeconds(1));
+await using var sub = await ticks.SubscribeAsync(t => Console.WriteLine(t));
+// 1
+// 2
+// the stream stops when sub is disposed
+```
+
+```csharp
+var values = await SignalAsync.Range(1, 3).ToListAsync();
+// values holds 1, 2, 3
+```
+
+```csharp
+var firstEven = await SignalAsync.Range(1, 10).FirstAsync(n => n % 2 == 0);
+// firstEven is 2
+```
+
+### Utility
+
+These add side effects, share one subscription between subscribers, or move work onto another thread.
+
+| Operator | What it does | Sync and async predicate forms |
+|---|---|---|
+| `Do(onNext)` | Runs a side effect for each value, error and completion, and changes nothing. | both |
+| `Tap(onNext)` | Another name for `Do`. | both |
+| `DoOnSubscribe(action)` | Runs an action every time someone subscribes, before the source is wired up. | both |
+| `OnDispose(disposeAction)` | Runs an action when the subscription is torn down. | both |
+| `Multicast(signal)` | Shares one upstream subscription through a signal you supply. | - |
+| `Publish()` | Shares one subscription with every subscriber, and can seed them with a starting value. | - |
+| `ReplayLatestPublish()` | Shares one subscription and replays the newest value to late subscribers. | - |
+| `StatelessPublish()` | Shares one subscription and keeps nothing between connections. | - |
+| `StatelessReplayLatestPublish()` | Replays the newest value inside a connection and keeps nothing across connections. | - |
+| `RefCount()` | Connects on the first subscriber and disconnects when the last one leaves. | - |
+| `ReplayLastOnSubscribe(initialValue)` | Shares one subscription and replays the newest value, in a single call. | - |
+| `Wrap()` | Wraps your observer so it receives one notification at a time, receives nothing after disposal, and cannot fault the producer. | - |
+| `AsObserverAsync()` | Exposes a signal as a plain observer, so callers can only write to it. | - |
+| `MapValues(mapper)` | Returns a signal whose read side runs through the pipeline you give it. | - |
+| `TryGetValue(out value)` | Reads an `Optional<T>` with the try pattern. | - |
+| `ToDisposableAsync()` | Adapts a plain `IDisposable` to the async disposable subscriptions use. | - |
+| `UnhandledExceptionHandler.Register(handler)` | Installs the process-wide sink for exceptions no operator can deliver downstream. | - |
+| `DisposableAsync.Create(action)` | Builds an async disposable, with a state overload that avoids a closure. | - |
+
+A connectable stream sits still until you call `ConnectAsync` or add `RefCount`. That is how you stop a shared source from running once per subscriber.
+
+These move callbacks onto a context you choose. They ship in the `ReactiveUI.Primitives.Async` package.
+
+| Operator | What it does | Sync and async predicate forms |
+|---|---|---|
+| `WitnessOn(target)` | Moves observer callbacks onto an async context, a synchronization context, a task scheduler or a sequencer. | - |
+| `ObserveOnSafe(target)` | Works like `WitnessOn`, and leaves the stream alone when the target is null. | - |
+| `ObserveOnIf(condition, target)` | Switches context only when the condition is true. | - |
+| `Yield()` | Yields before each value, so a fast producer cannot starve the consumer. | - |
+| `IsSameAsCurrentAsyncContext()` | Tells you whether that context is the one running right now. | - |
+
+```csharp
+var values = await SignalAsync.Range(1, 2)
+    .Tap(n => Console.WriteLine("saw " + n))
+    .ToListAsync();
+// saw 1
+// saw 2
+```
+
+```csharp
+var shared = SignalAsync.Interval(TimeSpan.FromSeconds(1)).Publish().RefCount();
+
+await using var a = await shared.SubscribeAsync(t => Console.WriteLine("a " + t));
+await using var b = await shared.SubscribeAsync(t => Console.WriteLine("b " + t));
+// a 1
+// b 1
+// one timer feeds both subscribers
+```
+
+## Subjects and stateful signals
+
+Some types are both a source and a sink. You push values into them, and subscribers read those values out.
+This document calls such a type a **signal**. A **subscriber** is code that receives the values a signal sends.
+Every signal below lives in the `ReactiveUI.Primitives.Signals` namespace unless a row says otherwise.
+
+A signal sends three kinds of notification. `OnNext` carries a value. `OnError` carries an exception and ends the
+signal. `OnCompleted` ends the signal with no error. The last two are **terminal**, because nothing follows them.
+
+| Type | What it is | When you reach for it |
+|---|---|---|
+| `Signal<T>` | The plain signal. It passes each value straight to the current subscribers. `SubscribeAction(Action<T>)` subscribes with a plain action. | You want a simple hub. One piece of code pushes values, several pieces listen. |
+| `BehaviorSignal<T>` | Keeps the most recent value and replays it to each new subscriber. Exposes `Value` and `TryGetValue`. | A late subscriber must see the current value at once, not wait for the next one. |
+| `StateSignal<T>` | Holds a value you can read and write through `Value`. Writing sends the value to subscribers. Also offers `Changed`, `Refresh()`, `TryGetValue` and `ToReadOnlyState(selector)`, which returns a `ProjectedReadOnlyState<T, TResult>`. | You are modelling a piece of state, such as a property on a view model. |
+| `ReplaySignal<T>` | Buffers past values and replays them to each new subscriber. You bound the buffer by count, by age, or by both. | A new subscriber needs recent history, not just the latest value. |
+| `SerializedSignal<T>` | Wraps another signal. Producers on any number of threads deliver one at a time. | Several threads push into the same signal. |
+| `CurrentValueSignal<T>` | Reads a value that something else owns. It emits on subscribe and again on every change. Observable only. | You are bridging a value that already has its own change notification, such as a control property. |
+| `AsyncSignal<T>` | Records the latest value and replays it when the signal completes. Offers `IsCompleted`, `Value`, `GetAwaiter`, `GetResult` and `RemoveObserver`, so you can await it. | You want one final answer, and you want to `await` it. |
+| `ScheduledSignal<T>` | Sends its notifications through an `ISequencer`. | Subscribers must run on a particular thread, such as a UI thread. |
+| `DelayableNotificationSignal<T>` | Passes values through while a test you supply says "not delayed". It buffers them while that test says "delayed", then `Flush()` emits the batch with duplicates removed. Build one with `Signal.Delayable`. | You want to hold back a burst of notifications and release it as one batch. |
+| `PrioritySemaphoreSignal<T>` | Forwards at most `MaximumCount` values at a time and releases the rest in priority order. `MaximumCount` is settable, and `Release()` frees one slot. `T` must implement `IComparable<T>`. | You need to cap how much work is in flight and run the most important item first. |
+| `CommandSignal<TResult>` | An action you can run, exposed as a signal. Offers `CanRun`, `IsRunning` (a `StateSignal<bool>`), `Results`, `Faults` and `ExecuteAsync([CancellationToken])`, which returns a `CommandExecution<TResult>`. | A button or a menu item runs an operation, and the screen tracks whether it may run and whether it is running. |
+| `ITaskSignal<T>` | What `Signal.FromTask` hands back. It carries the task's result as a signal, and adds `CancellationTokenSource`, `IsCancellationRequested`, `Source` and `GetOperationCanceled(observer)`. Observable only. | You started work through `Signal.FromTask` and need to cancel it or read why it stopped. |
+| `ReadOnlyState<T>` | A read-only view of a latest value, built from a source and an initial value. Offers `Value` and `Changed`. | You want to hand out state that callers can read but not write. |
+| `CurrentValueSubject<T>` | Keeps the latest value and replays it to new subscribers. Lives in `ReactiveUI.Primitives.Extensions`. | You want a latest-value signal from the extensions surface. |
+
+### Worked examples
+
+These five cover most day-to-day work.
+
+`Signal<T>` sends each value to whoever is listening at the time. A subscriber that arrives later misses what it
+missed.
 
 ```csharp
 using ReactiveUI.Primitives;
 using ReactiveUI.Primitives.Signals;
 
+var ticks = new Signal<int>();
+
+using var subscription = ticks.Subscribe(value => Console.WriteLine(value));
+
+ticks.OnNext(1);
+ticks.OnNext(2);
+ticks.OnCompleted();
+```
+
+`BehaviorSignal<T>` hands the current value to every new subscriber. You give it a starting value.
+
+```csharp
+var temperature = new BehaviorSignal<double>(21.5);
+
+temperature.OnNext(26.2);
+
+// Prints 26.2 straight away, then every later value.
+using var subscription = temperature.Subscribe(value => Console.WriteLine(value));
+
+Console.WriteLine(temperature.Value); // 26.2
+```
+
+`StateSignal<T>` is the one to use for state you own. You set `Value`, and subscribers see the new value. Every
+assignment notifies, even when you assign the value it already holds.
+
+```csharp
 var temperature = new StateSignal<double>(21.5);
-ReadOnlyState<string> status = temperature.ToReadOnlyState(value =>
-    value >= 25.0 ? "warm" : "normal");
+var status = temperature.ToReadOnlyState(value => value >= 25.0 ? "warm" : "normal");
 
-using var stateSubscription = status.Changed.Subscribe(Console.WriteLine);
+using var subscription = status.Changed.Subscribe(Console.WriteLine);
 
-temperature.Value = 26.2;
-temperature.Refresh();
+temperature.Value = 26.2; // prints "warm"
+temperature.Refresh();    // sends the current value again
 ```
 
-Replay example:
+`ReplaySignal<T>` keeps a buffer. Give it a buffer size and a window. Pass `TimeSpan.MaxValue` when you do not
+want to drop values by age.
 
 ```csharp
-using ReactiveUI.Primitives;
-using ReactiveUI.Primitives.Signals;
+var history = new ReplaySignal<string>(bufferSize: 2, window: TimeSpan.MaxValue);
 
-var history = new ReplaySignal<string>(bufferSize: 2);
 history.OnNext("A");
 history.OnNext("B");
 history.OnNext("C");
 
-using var subscription = history.Subscribe(Console.WriteLine); // replays B, C
+// Replays B and C, then sends later values.
+using var subscription = history.Subscribe(Console.WriteLine);
 ```
 
-Delayable example:
+`SerializedSignal<T>` is what you wrap around a signal that several threads push into. It delivers one notification
+at a time. The parameterless constructor wraps a new `Signal<T>` for you.
 
 ```csharp
-using ReactiveUI.Primitives.Signals;
+var readings = new SerializedSignal<int>();
 
-var delayed = true;
-var notifications = Signal.Delayable<string>(() => delayed, items => items.Distinct());
+using var subscription = readings.Subscribe(value => Console.WriteLine(value));
 
-using var subscription = notifications.Subscribe(Console.WriteLine);
-
-notifications.OnNext("A");
-notifications.OnNext("A"); // buffered while delayed
-delayed = false;
-notifications.Flush();     // emits the de-duplicated batch: A
+Parallel.For(0, 100, readings.OnNext);
 ```
 
-Error and completion example:
+### The async subject family
+
+The `ReactiveUI.Primitives.Async` package ships signals that deliver through `ValueTask` instead of a plain method
+call. They live in the `ReactiveUI.Primitives.Async` namespace.
+
+You pick between them on two questions. First, do your producers push one at a time, or do several threads push at
+once? Choose a `Serial` type for one at a time, and a `Concurrent` type when several threads push. Second, does a
+new subscriber need the latest value? Choose a `ReplayLatest` type when it does.
+
+That gives you `SerialSignalAsync`, `ConcurrentSignalAsync`, `SerialReplayLatestSignalAsync` and
+`ConcurrentReplayLatestSignalAsync`. Each one has a `Stateless` variant: `SerialStatelessSignalAsync`,
+`ConcurrentStatelessSignalAsync`, `SerialStatelessReplayLatestSignalAsync` and
+`ConcurrentStatelessReplayLatestSignalAsync`.
+
+## Scheduling work
+
+An `ISequencer` decides when scheduled work runs and which thread runs it. You hand one to any operator or signal
+that deals with time or threads. Sequencers live in the `ReactiveUI.Primitives.Concurrency` namespace.
+
+The library defines its own scheduling interface for three reasons. The core package depends on no UI framework and
+no other reactive library, so it stays small. A sequencer measures time with a monotonic timestamp, so a clock
+change cannot disturb scheduled work. A test can swap in a sequencer that controls time, so a time-based test needs
+no real waiting.
+
+An `ISequencer` schedules an `IWorkItem` to run now or at a timestamp. `SequencerExtensions` adds the `Schedule`
+conveniences that take an action, with or without a delay.
+
+| Sequencer | What it does |
+|---|---|
+| `Sequencer.CurrentThread` | Queues work on the calling thread and runs it in order. Also available as `CurrentThreadSequencer.Instance`. |
+| `Sequencer.Immediate` | Runs the work right away on the calling thread. Also available as `ImmediateSequencer.Instance`. |
+| `Sequencer.Default` | The default choice for background work. It is `TaskPoolSequencer.Default`. |
+| `TaskPoolSequencer` | Runs work through a `TaskFactory`. Use `TaskPoolSequencer.Instance`, or pass your own factory. |
+| `ThreadPoolSequencer` | Runs work on the thread pool. Use `ThreadPoolSequencer.Instance`. |
+| `SynchronizationContextSequencer` | Posts work to a `SynchronizationContext`. Use `SynchronizationContextSequencer.Current`, or pass a context. |
+| `WasmSequencer` | Runs work on a browser's single-threaded event loop. Use `WasmSequencer.Default`. |
+| `VirtualClock` | Controls time in a test, using `DateTimeOffset` and `TimeSpan`. You advance the clock, so nothing sleeps. |
+| `VirtualTimeSequencer<TAbsolute, TRelative>` | Controls time in a test using your own clock types. |
+
+Use a virtual sequencer for a time-based test. Do not sleep a real thread.
+
+### Platform sequencers
+
+Each UI framework gets its own package, so the core package pulls in none of them.
+
+| Sequencer | Framework | Package |
+|---|---|---|
+| `DispatcherSequencer` | WPF | `ReactiveUI.Primitives.Wpf` |
+| `ControlSequencer` | Windows Forms | `ReactiveUI.Primitives.WinForms` |
+| `DispatcherQueueSequencer` | WinUI | `ReactiveUI.Primitives.WinUI` |
+| `AvaloniaScheduler` | Avalonia | `ReactiveUI.Primitives.Avalonia` |
+| `MauiDispatcherSequencer` | MAUI | `ReactiveUI.Primitives.Maui` |
+| `BlazorRendererSequencer` | Blazor | `ReactiveUI.Primitives.Blazor` |
+| `HandlerSequencer` | Android | `ReactiveUI.Primitives`, on the Android targets |
+| `NSRunloopSequencer` | Apple platforms | `ReactiveUI.Primitives`, on the Apple targets |
+
+`ObserveOn` moves notifications onto a sequencer. Values arrive on that sequencer's thread, so you can touch the
+screen from your subscriber.
 
 ```csharp
 using ReactiveUI.Primitives;
+using ReactiveUI.Primitives.Concurrency;
 using ReactiveUI.Primitives.Signals;
 
-IObservable<int> failed = Signal.Fail<int>(new InvalidOperationException("not available"));
+var readings = new Signal<double>();
+var uiSequencer = new DispatcherSequencer(Dispatcher.CurrentDispatcher);
 
-using var subscription = failed.Subscribe(
-    value => Console.WriteLine(value),
-    error => Console.WriteLine($"failed: {error.Message}"),
-    () => Console.WriteLine("completed"));
+using var subscription = readings
+    .ObserveOn(uiSequencer)
+    .Subscribe(value => Console.WriteLine(value));
 ```
 
-## Sequencers
+`WasmSequencer`, `DispatcherQueueSequencer`, `MauiDispatcherSequencer` and `BlazorRendererSequencer` behave the
+same way through their own framework. Each one batches ready work into a single posted drain, so a burst of values
+costs one trip to the UI thread rather than one trip per value.
 
-A sequencer decides when and on which thread scheduled work runs. Rx calls this a scheduler. Sequencers live in
-`ReactiveUI.Primitives.Concurrency` and implement `ISequencer`. The core `ReactiveUI.Primitives` package does not
-reference WPF, Windows Forms, WinUI, Blazor, Avalonia, or MAUI. The optional integration packages supply the UI-thread
-sequencers.
+## Disposing subscriptions
 
-| Sequencer                                                     | Purpose                                                                                |
-|---------------------------------------------------------------|----------------------------------------------------------------------------------------|
-| `Sequencer.Immediate` / `ImmediateSequencer.Instance`         | Execute work immediately.                                                              |
-| `Sequencer.CurrentThread` / `CurrentThreadSequencer.Instance` | Queue recursive/current-thread work deterministically.                                 |
-| `ThreadPoolSequencer.Instance`                                | Schedule work through the thread pool.                                                 |
-| `TaskPoolSequencer.Instance`                                  | Schedule work through tasks.                                                           |
-| `SynchronizationContextSequencer`                             | Schedule through a `SynchronizationContext`.                                           |
-| `DispatcherSequencer`                                         | Schedule onto a WPF dispatcher from `ReactiveUI.Primitives.Wpf`.                       |
-| `ControlSequencer`                                            | Schedule onto a Windows Forms control from `ReactiveUI.Primitives.WinForms`.           |
-| `DispatcherQueueSequencer`                                    | Schedule onto a WinUI dispatcher queue from `ReactiveUI.Primitives.WinUI`.             |
-| `BlazorRendererSequencer`                                     | Schedule component work through Blazor's renderer from `ReactiveUI.Primitives.Blazor`. |
-| `AvaloniaScheduler`                                           | Schedule onto an Avalonia dispatcher from `ReactiveUI.Primitives.Avalonia`.             |
-| `MauiDispatcherSequencer`                                     | Schedule onto an MAUI dispatcher from `ReactiveUI.Primitives.Maui`.                    |
-| `VirtualClock`                                                | Virtual-time scheduling for deterministic tests.                                       |
+`Subscribe` returns an `IDisposable`. Dispose it and your subscriber detaches. No later notification reaches it.
+The signal itself keeps running, and its other subscribers keep receiving values.
 
-WPF, Windows Forms, WinUI, Blazor, and MAUI sequencers derive from `DispatchSequencerBase`. That shared base batches
-ready work into a single posted dispatcher drain, preserves FIFO order, skips cancelled work lazily, and routes delayed
-UI work through the shared `ThreadPoolSequencer` timing queue before marshaling back to the UI thread. Platform packages
-only provide the final dispatcher-specific post primitive. `AvaloniaScheduler` provides the same coalesced dispatcher
-drain behavior and uses dispatcher-bound timers for delayed work, so both posted and delayed callbacks stay associated
-with the selected Avalonia dispatcher and priority.
+A `using` statement is enough for a subscription that lives as long as the enclosing method. For anything longer,
+keep the handle in a field, or collect it with one of the types below.
 
-`AvaloniaScheduler.Instance` uses `Dispatcher.UIThread` at `DispatcherPriority.Background`. To bind scheduling to a
-specific dispatcher or priority, construct `new AvaloniaScheduler(dispatcher)` or
-`new AvaloniaScheduler(dispatcher, priority)`. The lean type is
-`ReactiveUI.Primitives.Concurrency.AvaloniaScheduler`; the System.Reactive-compatible type is
-`ReactiveUI.Primitives.Reactive.Concurrency.AvaloniaScheduler` from
-`ReactiveUI.Primitives.Avalonia.Reactive`.
+The disposable primitives ship in the `ReactiveUI.Disposables` package, in the `ReactiveUI.Primitives.Disposables`
+namespace. Note that the namespace and the package name differ.
 
-Scheduling APIs include absolute, relative, recursive, and action-based overloads:
+| Type | What it does |
+|---|---|
+| `Scope` | A set of factory methods. `Scope.Empty` does nothing. `Scope.Create(action)` runs your action on dispose. `Scope.Create(state, action)` does the same without capturing a closure. `Scope.Combine(...)` joins several into one. |
+| `DisposableSet` | A group of disposables that holds its first entries inline. It is a `record struct`, so an owner can hold several disposables without allocating a container. |
+| `MultipleDisposable` | A group you can add to and remove from. It implements `ICollection<IDisposable>`. Disposing it disposes everything inside. |
+| `Pocket` | The same collection behaviour as `MultipleDisposable`, built on `DisposableSet`. |
+| `DisposableBag` | An add-only group for the "collect now, dispose once" case. It disposes each entry exactly once, in the order you added them. |
+| `Slot` | Holds one disposable. Assigning a new one disposes the one it replaces. |
+| `SingleDisposable` | Holds one disposable that you assign once. |
+| `MutableDisposable` | Exposes a settable `Disposable` property. Setting it disposes the previous value. |
+| `ActionDisposable` | Runs an `Action` the first time you dispose it. |
+| `BooleanDisposable` | Sets `IsDisposed` to true and nothing else. Use it as a cheap "should I stop?" flag. |
+| `CancellationDisposable` | Cancels a `CancellationTokenSource` on dispose and exposes its `Token`. |
+| `EmptyDisposable` | Does nothing. Use the shared `EmptyDisposable.Instance`. |
+
+The single-value slots come in two families, and they run a constructor-supplied action at opposite points. Read this
+before you swap one for the other.
+
+| Slot | What it does on dispose |
+|---|---|
+| `SingleDisposable`, `AssignmentSlot` | Runs the action, then disposes the value it holds. |
+| `SingleReplaceableDisposable`, `Slot` | Disposes the value it holds, then runs the action. |
+
+Either way the action runs exactly once, whether or not a value was ever assigned, and a value handed to a slot after
+disposal is disposed on arrival without running the action again.
+
+`DisposeWith` adds a subscription to a `MultipleDisposable` and gives the subscription straight back, so you can
+chain it onto the call that created it. Dispose the group and every subscription in it detaches.
 
 ```csharp
-using ReactiveUI.Primitives.Concurrency;
+using ReactiveUI.Primitives;
+using ReactiveUI.Primitives.Disposables;
+using ReactiveUI.Primitives.Signals;
 
-IDisposable scheduled = ThreadPoolSequencer.Instance.Schedule(
-    TimeSpan.FromMilliseconds(100),
-    () => Console.WriteLine("scheduled work"));
+var temperature = new StateSignal<double>(21.5);
+var pressure = new StateSignal<double>(1013.0);
 
-scheduled.Dispose();
+using var subscriptions = new MultipleDisposable();
+
+temperature.Changed
+    .Subscribe(value => Console.WriteLine($"temperature {value}"))
+    .DisposeWith(subscriptions);
+
+pressure.Changed
+    .Subscribe(value => Console.WriteLine($"pressure {value}"))
+    .DisposeWith(subscriptions);
+
+// Leaving the scope disposes both subscriptions.
 ```
 
-For hot convenience-call paths, prefer the stateful overload with a static callback to avoid closure capture:
+A warning about the `record struct` types, which include `DisposableSet`. Hold one in a field and use it in place.
+Copying one gives you a second, separate set, and disposing the copy leaves the original untouched.
 
-```csharp
-sequencer.Schedule(observer, static target => target.OnCompleted());
-```
+## Threading, errors and disposal rules
 
-Use virtual clocks for deterministic time-sensitive tests rather than sleeping a real thread.
+These are the rules to keep in mind. They decide what your code sees when something goes wrong.
 
-## Threading, disposal, and error semantics
+**A signal delivers to one subscriber at a time, and holds no lock while your code runs.** A signal locks only
+long enough to update its own state, such as its subscriber list or its buffer. It releases that lock before it
+calls you. So your subscriber can push into another signal, take its own lock, or block, without deadlocking the
+signal that called it.
 
-ReactiveUI.Primitives follows the BCL observer contract and keeps ownership explicit:
+**Ordering across threads is a choice you make.** `Signal<T>` does not order concurrent producers. Two threads that
+call `OnNext` at the same time reach your subscriber at the same time. Wrap it in `SerializedSignal<T>` when you
+need one notification at a time. `ReplaySignal<T>` orders its notifications the same way, so each subscriber sees
+its replay first and every later value once, in the order they were sent.
 
-- `OnNext` is delivered synchronously on the thread that invokes it unless an operator or sequencer explicitly schedules
-  work elsewhere.
-- Time-based factories and operators use `ISequencer` overloads where deterministic or UI-thread dispatch matters. Use
-  `VirtualClock` for tests; avoid sleeping real threads.
-- A subscription is an `IDisposable`. Disposing a subscription removes that observer and prevents later notifications to
-  that subscription. Disposing a composite (`MultipleDisposable`, `Pocket`, `Slot`, etc.) cascades to contained
-  disposables according to the container contract.
-- Terminal notifications are single-assignment: `OnCompleted` and `OnError` end a signal, and later values are ignored
-  by terminated sources.
-- `OnError(Exception)` requires a non-null exception and propagates the terminal error to current subscribers. Operators
-  such as `Recover`, `Rescue`, `Resume`, `Reattempt`, and `Signal.Recover` are the explicit recovery points.
-- Observer callback exceptions are guarded by the operator/source that owns the callback. Prefer `CreateSafe` for custom
-  sources unless you are deliberately implementing lower-level observer semantics.
-- The default lean packages have no runtime dependency on System.Reactive, R3, or R3Async. The `.Reactive` variants
-  intentionally reference System.Reactive, and bridge generators only emit R3/R3Async boundary adapters when a consuming
-  project already references those packages.
+**When your subscriber throws, the exception travels back to the code that pushed the value.** A signal does not
+catch it. The call to `OnNext` throws, and the subscribers after yours in the list never see that value. So catch
+exceptions inside your subscriber, and keep the work there short.
 
-## Observable-event source generation
+**When you push to a disposed signal, you get an `ObjectDisposedException`.** This covers `OnNext`, `OnError`,
+`OnCompleted` and `Subscribe`. Reading `Value` on a disposed `BehaviorSignal<T>` or `StateSignal<T>` throws the
+same exception, and `TryGetValue` returns false instead. `CurrentValueSubject<T>` is the exception to the rule: it
+ignores a value pushed after disposal.
 
-`ReactiveUI.Primitives.ObservableEvents` is a standalone incremental source-generator package. It has no runtime
-dependency on a particular observable implementation; it inspects the consuming compilation and emits adapters for
-the first compatible provider it finds:
+**A terminal notification ends the signal for good.** After `OnCompleted` or `OnError`, the signal drops every
+later value. A subscriber that arrives after that point receives the terminal notification at once, rather than
+waiting for something that never comes.
+
+**`OnError` needs a real exception.** Pass `null` and you get an `ArgumentNullException`.
+
+**A value-only subscriber rethrows a terminal error to the producer.** `Subscribe(onNext)` has nowhere to deliver
+an error, so the error surfaces on the thread that called `OnError`. Pass an error handler,
+`Subscribe(onNext, onError)`, whenever the signal can fail.
+
+**Disposing a group disposes what is inside it.** Disposing a `MultipleDisposable`, `Pocket`, `DisposableBag` or
+`Slot` disposes the disposables it holds. Disposing any of them twice is safe, and each entry is disposed once.
+Adding to a group that is already disposed disposes the incoming disposable straight away, so a subscription can
+never outlive the group you handed it to.
+
+## Why not System.Reactive or R3?
+
+System.Reactive is the original Rx library for .NET. It is the reason `IObservable<T>` exists. It is mature and widely
+used. Its weak point is speed. A typical operator chain allocates several objects per operator and per value. That cost
+grows under heavy load.
+
+R3 is a newer library aimed at that weak point. R3 is fast. It reaches that speed partly by replacing `IObservable<T>`
+with its own `Observable<T>` type. That swap breaks existing code. It also breaks the wider ecosystem built on
+`IObservable<T>`.
+
+We wanted the speed without the break. So we kept `IObservable<T>`, the interface .NET already ships. Our benchmarks
+told us the interface was not the bottleneck. The cost lived in how the operators were written. So we kept the familiar
+contract and rebuilt the operators as low-allocation sinks. See
+[Why the operators are built this way](#why-the-operators-are-built-this-way).
+
+This keeps your change small if you already use `IObservable<T>`. You keep the contract and the mental model. You gain
+the lower allocation profile. When you need full System.Reactive or R3 behaviour, the `.Reactive` package variants and
+the R3 source-generator bridges cover those boundaries.
+
+### Two ways to build an operator
+
+System.Reactive and R3 build operators from a small set of general parts. `Synchronize` shows the idea well. It is one
+operator, and you compose it with any other operator when you need values delivered one at a time. That design keeps the
+library small. It also reads well in a chain.
+
+This library takes the other path. Each operator has its own sink. A sink that needs to deliver one value at a time
+builds that in. You get more types as a result. You also get a sink that does its own job with no general layer between
+it and your code.
+
+Neither path is wrong. They trade different things. The composed path costs less surface area. The dedicated path costs
+more classes and pays you back in speed and allocations. We chose speed, and we accepted the extra classes to get it.
+
+### Reflection, and why some signatures are narrower
+
+Several System.Reactive entry points use reflection at run time. `Observable.FromEventPattern` builds the handler with
+`Delegate.CreateDelegate` when you pass no conversion, and the overloads taking a target object and an event name look
+the event up by name. .NET marks that last group as incompatible with trimming.
+
+Reflection of that kind does not survive trimming or ahead-of-time compilation. Every package here sets
+`IsAotCompatible`, so where a signature is narrower than its System.Reactive counterpart, that is usually why.
+`Signal.FromEventPattern` requires `TEventArgs` to derive from `EventArgs`, which binds `EventHandler<TEventArgs>` at
+compile time. There is no event-name overload. `Signal.FromEvent` places no constraint on the argument type.
+
+### Where we could not stay on the standard types
+
+Keeping `IObservable<T>` and `IObserver<T>` was easy. Both ship in .NET itself. Two related types do not, so we had to
+make a call.
+
+The first is the scheduler. A scheduler decides when and on which thread work runs. .NET has no scheduler type of its
+own. The standard one, `IScheduler`, lives in System.Reactive. Using it would pull System.Reactive back in as a runtime
+dependency, and that is the dependency we set out to avoid. So the lean library defines its own small scheduling
+contract, `ISequencer`.
+
+The second is `Unit`. `Unit` means "a value carrying no information". You use it for streams that report that something
+happened but carry no data. .NET has no such type. The common `Unit` also lives in System.Reactive. So the lean library
+defines its own, `RxVoid`.
+
+These two types are the only places the lean surface departs from the System.Reactive shape. The `.Reactive` package
+variants close that gap. They recompile the same source with `ISequencer` mapped to `IScheduler` and `RxVoid` mapped to
+`System.Reactive.Unit`. Code that already speaks System.Reactive sees the types it expects.
+
+Disposal groups are a third seam, and the shared types cannot close it on their own. `MultipleDisposable` ships in the
+dependency-free `ReactiveUI.Disposables` package, so it cannot name `CompositeDisposable`.
+`ReactiveUI.Primitives.Reactive` adds `ContainerDisposable` for that job. A `ContainerDisposable` is a
+`MultipleDisposable` that converts implicitly to a `CompositeDisposable` it owns and disposes. Hand one to `DisposeWith`,
+to a library that takes a `CompositeDisposable`, or to your own helper, and it works. Anything you register through the
+composite is disposed with the container.
+
+## Observable event source generation
+
+A source generator is a compiler component that writes extra C# code into your project at build time.
+`ReactiveUI.Primitives.ObservableEvents` is a source generator that turns .NET events into observables. It depends on no
+particular observable implementation. It inspects your project and emits adapters for the first provider it finds:
 
 - `ReactiveUI.Primitives.Signals.Signal` and `RxVoid` for lean Primitives projects.
 - `ReactiveUI.Primitives.Reactive.Signals.Signal` and `System.Reactive.Unit` for `.Reactive` projects.
-- `System.Reactive.Linq.Observable` and `System.Reactive.Unit` for standalone System.Reactive projects that do not
-  reference any ReactiveUI.Primitives package.
+- `System.Reactive.Linq.Observable` and `System.Reactive.Unit` for System.Reactive projects that reference no
+  ReactiveUI.Primitives package.
 
-Install it alongside the observable provider already used by the application:
+Install it alongside the observable provider your application already uses:
 
 ```bash
 dotnet add package ReactiveUI.Primitives.ObservableEvents
 ```
 
-Instance generation is activated by calling `Events()` once for an event host. The generator replaces the marker
-result with a strongly typed wrapper whose properties subscribe and unsubscribe from the corresponding public events:
+To generate instance events, call `Events()` once on the object that declares them. The generator replaces that call
+with a strongly typed wrapper. Each property on the wrapper subscribes and unsubscribes from the matching public event:
 
 ```csharp
 using ReactiveUI.Primitives.ObservableEvents;
@@ -1255,9 +2413,9 @@ using ReactiveUI.Primitives.ObservableEvents;
 IObservable<EventArgs> changes = viewModel.Events().Changed;
 ```
 
-Request public static events with an assembly attribute. Static observable properties are generated on `RxEvents` in
-the event host's namespace. Their names use length-prefixed host and event identifiers so type, nesting, and event-name
-boundaries cannot collide:
+To generate public static events, add an assembly attribute. The generator writes static observable properties on
+`RxEvents` in the namespace of the type that declares the events. Property names prefix each host and event identifier
+with its length, so type, nesting, and event-name boundaries cannot collide:
 
 ```csharp
 [assembly: ReactiveUI.Primitives.ObservableEvents.GenerateStaticEventObservables(typeof(AppEvents))]
@@ -1265,72 +2423,64 @@ boundaries cannot collide:
 IObservable<string> messages = RxEvents.T9AppEvents7Message;
 ```
 
-Delegate payloads use `RxVoid` or `Unit` for no parameters, the sole parameter for one parameter, the event-args
-parameter for conventional `(object sender, TEventArgs args)` events, and a named tuple for other multi-parameter
-delegates. Delegates returning `void`, `Task`, or `ValueTask` are supported. Unsupported signatures produce `RXOE003`;
-missing providers and empty requests produce `RXOE001` and `RXOE002` respectively.
+The value type of each observable follows the delegate. A delegate with no parameters gives `RxVoid` or `Unit`. One
+parameter gives that parameter. A conventional `(object sender, TEventArgs args)` event gives the event-args parameter.
+Any other multi-parameter delegate gives a named tuple. Delegates that return `void`, `Task`, or `ValueTask` all work.
+An unsupported signature reports `RXOE003`. A missing provider reports `RXOE001`. An empty request reports `RXOE002`.
 
 ## Source-generator bridge behavior
 
-A source generator is a compiler component that writes extra C# code into your project at build time. R3 and R3Async
-bridge generation is opt-in through the standalone analyzer package:
+R3 and R3Async bridge generation is opt-in. Install the standalone analyzer package:
 
 ```bash
 dotnet add package ReactiveUI.Primitives.R3Bridge.Generator
 ```
 
-The package ships one analyzer assembly:
+The package ships one analyzer assembly, `ReactiveUI.Primitives.R3Bridge.Generator.dll`. Neither
+`ReactiveUI.Primitives` nor `ReactiveUI.Primitives.Async` contains it, and neither depends on it. Add the generator
+package only to projects that need generated R3 or R3Async bridge methods.
 
-- `ReactiveUI.Primitives.R3Bridge.Generator.dll`
-
-The generator is no longer embedded in `ReactiveUI.Primitives` or `ReactiveUI.Primitives.Async`, and those runtime
-packages do not depend on it. Add the generator package only to projects that need generated R3 or R3Async bridge
-methods.
-
-That assembly currently contains two conditional generators:
+The assembly holds two generators:
 
 - `R3BridgeGenerator` for R3 `Observable<T>` boundaries and R3-to-Primitives.Async adapters.
 - `R3AsyncBridgeGenerator` for R3Async `AsyncObservable<T>` boundaries.
 
-The generator stamps the consuming assembly with an assembly metadata attribute:
+The generator stamps your assembly with an assembly metadata attribute:
 
 ```csharp
 [assembly: System.Reflection.AssemblyMetadata("ReactiveUI.Primitives.R3Bridge.Generator", "0.1.0")]
 ```
 
-It does not generate a custom marker attribute type. This avoids duplicate generated type identities across
-project-reference and `InternalsVisibleTo` builds, including the CS0436 warning path seen when two compilations both
-generate the same internal marker type.
+It generates no custom marker attribute type. That keeps generated type identities unique across project-reference and
+`InternalsVisibleTo` builds. It also avoids the CS0436 warning you get when two compilations generate the same internal
+marker type.
 
-Bridge extension methods are emitted only when the consumer project already references the relevant external library
-symbols:
+The generator emits bridge extension methods only when your project already references the matching external symbols:
 
-- R3 bridge checks for `R3.Observable<T>`, `R3.Observer<T>`, and `R3.Result`.
-- R3-to-Primitives.Async bridge checks for the same R3 symbols plus
+- The R3 bridge checks for `R3.Observable<T>`, `R3.Observer<T>`, and `R3.Result`.
+- The R3-to-Primitives.Async bridge checks for the same R3 symbols plus
   `ReactiveUI.Primitives.Async.IObservableAsync<T>`.
-- R3Async bridge checks for `R3Async.AsyncObservable<T>`, `R3Async.AsyncObserver<T>`, `R3Async.Result`, and
+- The R3Async bridge checks for `R3Async.AsyncObservable<T>`, `R3Async.AsyncObserver<T>`, `R3Async.Result`, and
   `ReactiveUI.Primitives.Async.IObservableAsync<T>`.
 
-Generated bridge namespace:
-
-- `ReactiveUI.Primitives.R3Bridge`
+Generated code lands in the `ReactiveUI.Primitives.R3Bridge` namespace.
 
 Generated R3 bridge methods:
 
 - `AsPrimitivesSignal<T>(this R3.Observable<T> source)`
 - `AsR3Observable<T>(this System.IObservable<T> source)`
-- `AsPrimitivesAsyncObservable<T>(this R3.Observable<T> source)` when `ReactiveUI.Primitives.Async` is referenced
-- `AsR3Observable<T>(this ReactiveUI.Primitives.Async.IObservableAsync<T> source)` when `ReactiveUI.Primitives.Async` is
-  referenced
+- `AsPrimitivesAsyncObservable<T>(this R3.Observable<T> source)` when you reference `ReactiveUI.Primitives.Async`
+- `AsR3Observable<T>(this ReactiveUI.Primitives.Async.IObservableAsync<T> source)` when you reference
+  `ReactiveUI.Primitives.Async`
 
 Generated R3Async bridge methods:
 
-- `AsPrimitivesAsyncObservable<T>(this R3Async.AsyncObservable<T> source)` when R3Async and
-  `ReactiveUI.Primitives.Async` are referenced
-- `AsR3AsyncObservable<T>(this ReactiveUI.Primitives.Async.IObservableAsync<T> source)` when R3Async and
-  `ReactiveUI.Primitives.Async` are referenced
+- `AsPrimitivesAsyncObservable<T>(this R3Async.AsyncObservable<T> source)` when you reference R3Async and
+  `ReactiveUI.Primitives.Async`
+- `AsR3AsyncObservable<T>(this ReactiveUI.Primitives.Async.IObservableAsync<T> source)` when you reference R3Async and
+  `ReactiveUI.Primitives.Async`
 
-R3 bridge example, when the consuming project references R3 and the generator package:
+Use the R3 bridge when your project references R3 and the generator package:
 
 ```bash
 dotnet add package ReactiveUI.Primitives
@@ -1348,8 +2498,7 @@ IObservable<int> primitivesSource = r3Source.AsPrimitivesSignal();
 R3.Observable<int> r3Again = Signal.Sequence(1, 3).AsR3Observable();
 ```
 
-R3 async bridge example, when the consuming project references R3, `ReactiveUI.Primitives.Async`, and the generator
-package:
+Use the R3 async bridge when your project references R3, `ReactiveUI.Primitives.Async`, and the generator package:
 
 ```bash
 dotnet add package ReactiveUI.Primitives.Async
@@ -1366,8 +2515,7 @@ IObservableAsync<int> primitivesAsync = r3Source.AsPrimitivesAsyncObservable();
 R3.Observable<int> r3Again = primitivesAsync.AsR3Observable();
 ```
 
-R3Async bridge example, when the consuming project references R3Async, `ReactiveUI.Primitives.Async`, and the generator
-package:
+Use the R3Async bridge when your project references R3Async, `ReactiveUI.Primitives.Async`, and the generator package:
 
 ```bash
 dotnet add package ReactiveUI.Primitives.Async
@@ -1384,37 +2532,37 @@ IObservableAsync<int> primitivesAsync = r3AsyncSource.AsPrimitivesAsyncObservabl
 R3Async.AsyncObservable<int> r3AsyncAgain = primitivesAsync.AsR3AsyncObservable();
 ```
 
-The R3 snippets are intentionally shown as migration shapes because they require the consuming application to reference
-R3 or R3Async and opt into `ReactiveUI.Primitives.R3Bridge.Generator`. ReactiveUI.Primitives itself remains free of R3
-and R3Async runtime dependencies. System.Reactive interop lives in the `.Reactive` package variants, which recompile the
-same Primitives APIs against System.Reactive `Unit` and `IScheduler`.
+These R3 snippets are migration shapes. They work only when your application references R3 or R3Async and opts into
+`ReactiveUI.Primitives.R3Bridge.Generator`. ReactiveUI.Primitives itself carries no R3 or R3Async runtime dependency.
+System.Reactive interop lives in the `.Reactive` package variants, which recompile the same Primitives APIs against
+System.Reactive `Unit` and `IScheduler`.
 
-## System.Reactive to ReactiveUI.Primitives migration guide
+## Moving from System.Reactive
 
-ReactiveUI.Primitives is not a byte-for-byte clone of System.Reactive. It keeps the standard `IObservable<T>` contracts
-but favors a smaller runtime, explicit state types, and Primitives naming. Migrate one vertical slice at a time:
-factories first, then subject/state types, then operators and schedulers.
+ReactiveUI.Primitives is not a clone of System.Reactive. It keeps the standard `IObservable<T>` contracts. It favours a
+smaller runtime, explicit state types, and Primitives naming. Migrate one slice at a time: factories first, then
+subject and state types, then operators and schedulers.
 
-When a project must keep System.Reactive `Unit` or `IScheduler` in its public surface, use
-`ReactiveUI.Primitives.Reactive` or `ReactiveUI.Primitives.Async.Reactive`. The former
-`ReactiveUI.Primitives.Extensions.Reactive` helpers are included in `ReactiveUI.Primitives.Reactive`. When the goal is
-to migrate away from those public System.Reactive types, use the lean packages and the mappings below.
+Your project may need to keep System.Reactive `Unit` or `IScheduler` in its public surface. Use
+`ReactiveUI.Primitives.Reactive` or `ReactiveUI.Primitives.Async.Reactive` for that. `ReactiveUI.Primitives.Reactive`
+includes the helpers from `ReactiveUI.Primitives.Extensions.Reactive`. To drop those public System.Reactive types
+instead, use the lean packages and the mappings below.
 
-### Migration track: existing `xyz` project
+### Track 1: move an existing project
 
-Use this track when the project should eventually stop exposing System.Reactive types and use the lean
-ReactiveUI.Primitives package family.
+Take this track when the project should stop exposing System.Reactive types and move to the lean ReactiveUI.Primitives
+package family.
 
-1. Inventory references and public API. Mark each project that exposes `System.Reactive.Unit`, `IScheduler`,
+1. List your references and public API. Mark every project that exposes `System.Reactive.Unit`, `IScheduler`,
    `IObservable<T>` extension methods, UI schedulers, `Subject<T>` types, or ReactiveUI.Extensions helpers.
-2. Add the lean packages needed by the existing project:
+2. Add the lean packages the project needs:
 
 ```bash
 dotnet add xyz/xyz.csproj package ReactiveUI.Primitives
 dotnet add xyz/xyz.csproj package ReactiveUI.Primitives.Async
 ```
 
-3. Add only the matching UI integration package when the project owns UI-thread dispatch:
+3. Add a UI integration package only when the project owns UI-thread dispatch:
 
 ```bash
 dotnet add xyz/xyz.csproj package ReactiveUI.Primitives.Wpf
@@ -1425,30 +2573,31 @@ dotnet add xyz/xyz.csproj package ReactiveUI.Primitives.Avalonia
 dotnet add xyz/xyz.csproj package ReactiveUI.Primitives.Maui
 ```
 
-4. Convert boundary types deliberately: `System.Reactive.Unit` to `RxVoid`, `IScheduler` to `ISequencer`, Rx subjects to
-   `Signal<T>`, `StateSignal<T>`, `ReplaySignal<T>`, or `FinalSignal<T>`, and composite disposable types to
-   `MultipleDisposable`, `Pocket`, `Slot`, or `AssignmentSlot`.
-5. Keep code compiling during the first pass by using the Rx-name compatibility layer (`Select`, `Where`, `Aggregate`,
-   `Scan`, `Merge`, `Concat`, `CombineLatest`, `SelectMany`, and related aliases). Then move hot paths to Primitives
-   names (`Map`, `Keep`, `Reduce`, `Fold`, `Blend`, `Chain`, `SyncLatest`, `FlatMap`) where that makes the code clearer.
-6. Replace scheduler construction and tests: use `Sequencer.Immediate`, `Sequencer.CurrentThread`,
-   `ThreadPoolSequencer.Instance`, `TaskPoolSequencer.Instance`, UI sequencers, and `VirtualClock`.
-7. Remove `System.Reactive` and `ReactiveUI.Extensions` package references only after the project builds without
-   `System.Reactive.Linq`, `System.Reactive.Subjects`, `System.Reactive.Disposables`, or
+4. Convert boundary types one at a time. `System.Reactive.Unit` becomes `RxVoid`. `IScheduler` becomes `ISequencer`. Rx
+   subjects become `Signal<T>`, `StateSignal<T>`, `ReplaySignal<T>`, or `AsyncSignal<T>`. Composite disposable types
+   become `MultipleDisposable`, `Pocket`, `Slot`, or `AssignmentSlot`.
+5. Keep the code compiling on the first pass with the Rx-name compatibility layer: `Select`, `Where`, `Aggregate`,
+   `Scan`, `Merge`, `Concat`, `CombineLatest`, `SelectMany`, and related aliases. Then move hot paths to the Primitives
+   names `Map`, `Keep`, `Reduce`, `Fold`, `Blend`, `Chain`, `SyncLatest`, and `FlatMap` where they read better.
+6. Replace scheduler construction and test scheduling. Use `Sequencer.Immediate`, `Sequencer.CurrentThread`,
+   `ThreadPoolSequencer.Instance`, `TaskPoolSequencer.Instance`, a UI sequencer, or `VirtualClock`.
+7. Remove the `System.Reactive` and `ReactiveUI.Extensions` package references last. Wait until the project builds
+   without `System.Reactive.Linq`, `System.Reactive.Subjects`, `System.Reactive.Disposables`, and
    `System.Reactive.Concurrency` imports.
-8. Run tests and package/API approval checks. For time-sensitive tests, use virtual time rather than real sleeps.
+8. Run the tests and the package and API approval checks. For time-sensitive tests, use virtual time instead of real
+   sleeps.
 
-### Migration track: new `xyz.Reactive` project
+### Track 2: add a new `xyz.Reactive` project
 
-Use this track when an existing Rx-based source base must remain source-compatible for consumers while the repository
-moves implementation work onto ReactiveUI.Primitives. The pattern is to keep or create a `xyz` lean package and add a
-new `xyz.Reactive` package that references the `.Reactive` Primitives range.
+Take this track when your consumers need source compatibility with Rx while your implementation moves to
+ReactiveUI.Primitives. Keep or create a lean `xyz` package. Add an `xyz.Reactive` package that references the
+`.Reactive` Primitives range.
 
-1. Move shared implementation files into a shared source folder that can be linked by both projects.
-2. In shared source, use the neutral identifiers `RxVoid` and `ISequencer`. In the lean project they bind to
-   ReactiveUI.Primitives types; in the `.Reactive` project they bind to `System.Reactive.Unit` and
+1. Move shared implementation files into a source folder that both projects link.
+2. In that shared source, use the neutral names `RxVoid` and `ISequencer`. The lean project binds them to
+   ReactiveUI.Primitives types. The `.Reactive` project binds them to `System.Reactive.Unit` and
    `System.Reactive.Concurrency.IScheduler`.
-3. Gate namespaces when the public namespace must differ:
+3. Gate the namespace when the public namespace must differ:
 
 ```csharp
 #if REACTIVE_SHIM
@@ -1465,7 +2614,7 @@ dotnet add xyz.Reactive/xyz.Reactive.csproj package ReactiveUI.Primitives.Reacti
 dotnet add xyz.Reactive/xyz.Reactive.csproj package ReactiveUI.Primitives.Async.Reactive
 ```
 
-5. Add the matching reactive UI package only when the project exposes UI scheduling:
+5. Add a reactive UI package only when the project exposes UI scheduling:
 
 ```bash
 dotnet add xyz.Reactive/xyz.Reactive.csproj package ReactiveUI.Primitives.Wpf.Reactive
@@ -1476,8 +2625,8 @@ dotnet add xyz.Reactive/xyz.Reactive.csproj package ReactiveUI.Primitives.Avalon
 dotnet add xyz.Reactive/xyz.Reactive.csproj package ReactiveUI.Primitives.Maui.Reactive
 ```
 
-6. Configure the reactive project to define `REACTIVE_SHIM` and alias the System.Reactive types if your repository does
-   not already centralize this in `Directory.Build.props`:
+6. Define `REACTIVE_SHIM` in the reactive project and alias the System.Reactive types. Skip this step if your
+   `Directory.Build.props` already does it:
 
 ```xml
 <PropertyGroup>
@@ -1489,34 +2638,41 @@ dotnet add xyz.Reactive/xyz.Reactive.csproj package ReactiveUI.Primitives.Maui.R
 </ItemGroup>
 ```
 
-7. Prefer zero source changes in the first `xyz.Reactive` pass: keep Rx names such as `Select`, `Where`, `SelectMany`,
+7. Change no source in the first `xyz.Reactive` pass. Keep the Rx names `Select`, `Where`, `SelectMany`,
    `CombineLatest`, `Merge`, `Concat`, `Throttle`, and `WithLatestFrom` where compatibility matters. The `.Reactive`
-   Primitives packages supply those names over the Primitives implementation.
-8. Build both packages side by side. `xyz` should have no System.Reactive runtime dependency; `xyz.Reactive` should keep
-   System.Reactive-facing APIs for existing consumers.
+   packages supply those names over the Primitives implementation.
+8. Build both packages side by side. `xyz` should carry no System.Reactive runtime dependency. `xyz.Reactive` should
+   keep its System.Reactive-facing APIs for existing consumers.
 
 ### Factory mapping
 
 | System.Reactive                     | ReactiveUI.Primitives                                                            | Notes                                                          |
 |-------------------------------------|----------------------------------------------------------------------------------|----------------------------------------------------------------|
-| `Observable.Return(value)`          | `Signal.Emit(value)`                                                             | Emits one value and completes.                                 |
-| `Observable.Empty<T>()`             | `Signal.None<T>()`                                                               | Completes immediately.                                         |
-| `Observable.Never<T>()`             | `Signal.Silent<T>()` or `Signal.Silent<T>(witness)`                              | Non-terminating signal; witness overload helps type inference. |
-| `Observable.Throw<T>(ex)`           | `Signal.Fail<T>(ex)`                                                             | Emits terminal error.                                          |
-| `Observable.Range(start, count)`    | `Signal.Sequence(start, count)`                                                  | Optional scheduler overload exists.                            |
-| `Observable.Repeat(value)`          | `Signal.Loop(value)`                                                             | Indefinite repeat.                                             |
-| `Observable.Repeat(value, count)`   | `Signal.Loop(value, count)`                                                      | Fixed repeat.                                                  |
-| `Observable.Defer(factory)`         | `Signal.Lazy(factory)`                                                           | Create source per subscription.                                |
+| `Observable.Return(value)`          | `Signal.Emit(value)` or `Signal.Return(value)`                                   | Emits one value and completes.                                 |
+| `Observable.Empty<T>()`             | `Signal.None<T>()` or `Signal.Empty<T>()`                                        | Completes immediately.                                         |
+| `Observable.Never<T>()`             | `Signal.Silent<T>()`, `Signal.Silent<T>(witness)`, or `Signal.Never<T>()`        | Non-terminating signal; witness overload helps type inference. |
+| `Observable.Throw<T>(ex)`           | `Signal.Fail<T>(ex)` or `Signal.Throw<T>(ex)`                                    | Emits terminal error.                                          |
+| `Observable.Range(start, count)`    | `Signal.Sequence(start, count)` or `Signal.Range(start, count)`                  | Optional scheduler overload exists.                            |
+| `Observable.Repeat(value)`          | `Signal.Loop(value)` or `Signal.Repeat(value)`                                   | Indefinite repeat.                                             |
+| `Observable.Repeat(value, count)`   | `Signal.Loop(value, count)` or `Signal.Repeat(value, count)`                     | Fixed repeat.                                                  |
+| `Observable.Defer(factory)`         | `Signal.Lazy(factory)` or `Signal.Defer(factory)`                                | Create source per subscription.                                |
 | `Observable.FromAsync(...)`         | `Signal.FromAsync(...)`                                                          | Invoke a task factory per subscription.                        |
 | `Observable.Create<T>(...)`         | `Signal.Create<T>(...)` or `Signal.CreateSafe<T>(...)`                           | Prefer `CreateSafe` for general custom sources.                |
-| `Observable.Using(...)`             | `Signal.Use(...)`                                                                | Resource scoped to subscription.                               |
-| `Observable.Timer(dueTime)`         | `Signal.After(dueTime)`                                                          | Emits `long` tick `0`.                                         |
-| `Observable.Timer(dueTime, period)` | `Signal.After(dueTime, period)`                                                  | Periodic `long` ticks.                                         |
-| `Observable.Interval(period)`       | `Signal.Pulse(period)` , `Signal.Every(period)`  or `Signal.Interval(period)`    | Repeating ticks.                                               |
+| `Observable.Using(...)`             | `Signal.Use(...)` or `Signal.Using(...)`                                         | Resource scoped to subscription.                               |
+| `Observable.Timer(dueTime)`         | `Signal.After(dueTime)` or `Signal.Timer(dueTime)`                               | Emits `long` tick `0`. `Timer` also takes a `DateTimeOffset`.  |
+| `Observable.Timer(dueTime, period)` | `Signal.After(dueTime, period)` or `Signal.Timer(dueTime, period)`               | Periodic `long` ticks.                                         |
+| `Observable.Interval(period)`       | `Signal.Pulse(period)`, `Signal.Every(period)`, or `Signal.Interval(period)`     | Repeating ticks.                                               |
 | `ToObservable()` from enumerable    | `Signal.FromEnumerable(values)`, `values.ToSignal()`, or `values.ToObservable()` | Cancellation-token overloads are available.                    |
 | task conversion                     | `Signal.FromTask(task)`                                                          | Function-based task signals also exist.                        |
+| `Observable.Generate(...)`          | `Signal.Generate(state, condition, iterate, selector)`                           | Unfolds a state into a sequence.                               |
+| `Observable.If(condition, then)`    | `Signal.If(condition, then)` or `Signal.If(condition, then, else)`               | Chooses a source per subscription.                             |
+| `Observable.Case(selector, map)`    | `Signal.Case(selector, sources)` or `Signal.Case(selector, sources, default)`    | Chooses a source by key per subscription.                      |
+| `Observable.Concat(sources)`        | `Signal.Concat(sources)`                                                         | Subscribes to each source in turn.                             |
+| `Observable.Merge(sources)`         | `Signal.Merge(sources)`                                                          | Subscribes to every source at once.                            |
+| `Observable.Switch(sources)`        | `Signal.Switch(sources)`                                                         | Follows the most recent inner source.                          |
+| `Observable.OnErrorResumeNext(...)` | `Signal.OnErrorResumeNext(sources)`                                              | Continues with the next source after an error.                 |
 
-### Subject/state mapping
+### Subject and state mapping
 
 | System.Reactive                    | ReactiveUI.Primitives             | Migration detail                                                 |
 |------------------------------------|-----------------------------------|------------------------------------------------------------------|
@@ -1526,7 +2682,7 @@ dotnet add xyz.Reactive/xyz.Reactive.csproj package ReactiveUI.Primitives.Maui.R
 | `new ReplaySubject<T>()`           | `new ReplaySignal<T>()`           | Unbounded replay.                                                |
 | `new ReplaySubject<T>(bufferSize)` | `new ReplaySignal<T>(bufferSize)` | Size-limited replay.                                             |
 | `new ReplaySubject<T>(window)`     | `new ReplaySignal<T>(window)`     | Time-window replay.                                              |
-| `new AsyncSubject<T>()`            | `new FinalSignal<T>()`            | Awaitable final-value signal shape.                              |
+| `new AsyncSubject<T>()`            | `new AsyncSignal<T>()`            | Awaitable final-value signal shape.                              |
 
 ### Operator mapping
 
@@ -1571,8 +2727,8 @@ dotnet add xyz.Reactive/xyz.Reactive.csproj package ReactiveUI.Primitives.Maui.R
 
 | System.Reactive              | ReactiveUI.Primitives                   |
 |------------------------------|-----------------------------------------|
-| `Disposable.Create`          | `Disposable.Create`                     |
-| `Disposable.Empty`           | `Disposable.Empty`                      |
+| `Disposable.Create`          | `Scope.Create`                          |
+| `Disposable.Empty`           | `Scope.Empty` or `EmptyDisposable.Instance` |
 | `BooleanDisposable`          | `BooleanDisposable`                     |
 | `CancellationDisposable`     | `CancellationDisposable`                |
 | `CompositeDisposable`        | `MultipleDisposable` or `Pocket`        |
@@ -1597,36 +2753,62 @@ dotnet add xyz.Reactive/xyz.Reactive.csproj package ReactiveUI.Primitives.Maui.R
 | MAUI dispatcher scheduling         | `MauiDispatcherSequencer` from `ReactiveUI.Primitives.Maui`    |
 | `TestScheduler` / virtual time     | `VirtualClock`                                                 |
 
-### Testing migration
+### Migrating your tests
 
-System.Reactive test code commonly uses `TestScheduler` and marble helpers. ReactiveUI.Primitives currently exposes
-virtual-time primitives rather than cloning the full Rx testing API. Prefer repository-native tests that:
+System.Reactive test code leans on `TestScheduler` and marble helpers. ReactiveUI.Primitives exposes virtual-time
+primitives instead of cloning the full Rx testing API. Write tests that:
 
 - Use `VirtualClock` for deterministic scheduling.
-- Assert values collected through `Subscribe` delegates.
+- Assert on values collected through `Subscribe` delegates.
 - Dispose subscriptions explicitly.
-- Use `CollectArrayAsync`, `CollectListAsync`, or `FirstAsync` when a task-shaped assertion is clearer.
+- Use `CollectArrayAsync`, `CollectListAsync`, or `FirstAsync` when a task-shaped assertion reads better.
 
-## R3Async to ReactiveUI.Primitives.Async migration guide
+### Migration checklist
 
-`ReactiveUI.Primitives.Async` is the native async-observable package. Use it when observer work is asynchronous,
-subscription/disposal needs `ValueTask`, or cancellation must flow through each notification. It differs from R3Async by
-using
-`ReactiveUI.Primitives.Result` for completion.
+1. Replace subject construction with `Signal<T>`, `StateSignal<T>`, or `ReplaySignal<T>`, based on the behaviour you
+   need.
+2. Replace factories: `Observable.Return/Empty/Throw/Timer/Interval` becomes `Signal.Emit/None/Fail/After/Pulse`.
+3. Replace hot-path operators with Primitives names: `Select -> Map`, `Where -> Keep`, `SelectMany -> FlatMap`,
+   `Do -> Tap`, `Scan -> Fold`, `Aggregate -> Reduce`, `Amb -> Race`.
+4. Replace composite and serial disposables with `MultipleDisposable` or `Pocket`, and `SingleReplaceableDisposable` or
+   `Slot`.
+5. Keep System.Reactive, R3, or R3Async at application boundaries only where you need them. Use the `.Reactive` package
+   variants for System.Reactive public-surface compatibility, and the generated bridge methods for R3 and R3Async
+   boundaries.
+6. Run build, tests, pack, and `git diff --check` before you merge or publish.
 
-There is no generated System.Reactive.Async bridge in the current package set. Use
-`ReactiveUI.Primitives.Async.Reactive` when you need async Primitives APIs compiled against System.Reactive `Unit` and
-`IScheduler`, and keep any other async-observable adapter code at package or API edges.
+## Moving from R3
+
+R3 uses its own `Observable<T>` type and its own observer model. ReactiveUI.Primitives stays on the BCL
+`IObservable<T>` shape so it interoperates at runtime.
+
+| R3 concept            | ReactiveUI.Primitives equivalent                                                                                                                                                                       |
+|-----------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `R3.Observable<T>`    | BCL `IObservable<T>` from ReactiveUI.Primitives factories/operators.                                                                                                                                   |
+| R3 subject            | `Signal<T>` / `StateSignal<T>` / `ReplaySignal<T>` depending on state/replay needs.                                                                                                                    |
+| R3 `Select` / `Where` | `Map` / `Keep`.                                                                                                                                                                                        |
+| R3 time operators     | `Signal.After`, `Signal.Pulse`, `Calm`, `Probe`, `Shift`, scheduler overloads.                                                                                                                         |
+| R3 bridge             | Generated `AsPrimitivesSignal` / `AsR3Observable`; async bridge methods add `AsPrimitivesAsyncObservable` / `AsR3Observable` when R3 and `ReactiveUI.Primitives.Async` are referenced by the consumer. |
+
+Use the generated bridge at boundaries only. Inside new code, prefer native ReactiveUI.Primitives operators.
+
+## Moving from R3Async
+
+`ReactiveUI.Primitives.Async` is the native async-observable package. Use it when your observer work is asynchronous,
+when subscription and disposal need `ValueTask`, or when cancellation must flow through each notification. It differs
+from R3Async in one main way: it uses `ReactiveUI.Primitives.Result` for completion.
+
+The package set has no generated System.Reactive.Async bridge. Use `ReactiveUI.Primitives.Async.Reactive` when you need
+async Primitives APIs compiled against System.Reactive `Unit` and `IScheduler`. Keep any other async-observable adapter
+code at package or API edges.
 
 | R3Async                            | ReactiveUI.Primitives.Async                      | Migration detail                                                                                     |
 |------------------------------------|--------------------------------------------------|------------------------------------------------------------------------------------------------------|
 | `R3Async.AsyncObservable<T>`       | `IObservableAsync<T>` / `SignalAsync<T>`         | Use generated `AsPrimitivesAsyncObservable()` at external boundaries.                                |
-| `R3Async.AsyncObserver<T>`         | `IObserverAsync<T>` / `WitnessAsync<T>`          | Use `WitnessAsync<T>` for custom observers that need disposal, cancellation, and concurrency checks. |
+| `R3Async.AsyncObserver<T>`         | `IObserverAsync<T>` / `IWitnessAsync<T>`         | Implement `IWitnessAsync<T>` and hold a `WitnessAsyncState` field for custom observers that need disposal, cancellation and concurrency checks. |
 | `R3Async.Result`                   | `ReactiveUI.Primitives.Result`                   | Both carry success/failure; bridge adapters convert between them.                                    |
 | `OnErrorResumeAsync`               | `OnErrorResumeAsync`                             | Same error-resume concept; Primitives passes the active `CancellationToken`.                         |
 | `OnCompletedAsync(R3Async.Result)` | `OnCompletedAsync(ReactiveUI.Primitives.Result)` | Completion remains result-based.                                                                     |
-
-R3Async bridge example:
 
 ```csharp
 using ReactiveUI.Primitives.Async;
@@ -1637,30 +2819,15 @@ IObservableAsync<int> native = r3AsyncSource.AsPrimitivesAsyncObservable();
 R3Async.AsyncObservable<int> external = native.AsR3AsyncObservable();
 ```
 
-Keep R3Async bridge conversions at package or API edges. Inside the application or library, prefer `SignalAsync`
+Keep R3Async bridge conversions at package or API edges. Inside your application or library, use `SignalAsync`
 factories, `IObservableAsync<T>` operators, and `IObserverAsync<T>` observers directly.
 
-## R3 migration notes
+## Moving from ReactiveUI.Extensions
 
-R3 uses its own `Observable<T>` type and observer model. ReactiveUI.Primitives stays on the BCL `IObservable<T>` shape
-for runtime interoperability.
-
-| R3 concept            | ReactiveUI.Primitives equivalent                                                                                                                                                                       |
-|-----------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| `R3.Observable<T>`    | BCL `IObservable<T>` from ReactiveUI.Primitives factories/operators.                                                                                                                                   |
-| R3 subject            | `Signal<T>` / `StateSignal<T>` / `ReplaySignal<T>` depending on state/replay needs.                                                                                                                    |
-| R3 `Select` / `Where` | `Map` / `Keep`.                                                                                                                                                                                        |
-| R3 time operators     | `Signal.After`, `Signal.Pulse`, `Calm`, `Probe`, `Shift`, scheduler overloads.                                                                                                                         |
-| R3 bridge             | Generated `AsPrimitivesSignal` / `AsR3Observable`; async bridge methods add `AsPrimitivesAsyncObservable` / `AsR3Observable` when R3 and `ReactiveUI.Primitives.Async` are referenced by the consumer. |
-
-Use the generated bridge only at boundaries. Prefer native ReactiveUI.Primitives operators inside new code.
-
-## ReactiveUI.Extensions migration notes
-
-`ReactiveUI.Primitives` is the migration target for the non-async helpers that previously lived in
-`ReactiveUI.Extensions`. The helpers remain in the `ReactiveUI.Primitives.Extensions` namespace and intentionally keep
-their names where those names already describe the behavior and do not collide with the core Primitives vocabulary.
-Scheduling overloads use `ISequencer` instead of System.Reactive schedulers.
+`ReactiveUI.Primitives` is the migration target for the non-async helpers from `ReactiveUI.Extensions`. The helpers live
+in the `ReactiveUI.Primitives.Extensions` namespace. They keep their names where those names describe the behaviour and
+do not collide with the core Primitives vocabulary. Scheduling overloads take `ISequencer` instead of a System.Reactive
+scheduler.
 
 | ReactiveUI.Extensions usage                                                             | ReactiveUI.Primitives usage                                                                  |
 |-----------------------------------------------------------------------------------------|----------------------------------------------------------------------------------------------|
@@ -1671,299 +2838,63 @@ Scheduling overloads use `ISequencer` instead of System.Reactive schedulers.
 | `SubscribeAsync`, `SelectAsync`, `SelectLatestAsync`, `DropIfBusy`                      | Same BCL observable helper names for Task/ValueTask interop.                                 |
 | `RunAll`, `BufferUntil`, `FirstMatchFromCandidates`, `ToHotTask`, `ToHotValueTask`      | Same helper names; backed by ReactiveUI.Primitives runtime utilities.                        |
 
-For async-native streams, prefer `ReactiveUI.Primitives.Async` and its `IObservableAsync<T>` operators. For existing BCL
-observable helpers, migrate to `ReactiveUI.Primitives`; existing `ReactiveUI.Primitives.Extensions` imports remain valid.
+For async-native streams, prefer `ReactiveUI.Primitives.Async` and its `IObservableAsync<T>` operators. For BCL
+observable helpers, migrate to `ReactiveUI.Primitives`. Your existing `ReactiveUI.Primitives.Extensions` imports keep
+working.
 
-## Benchmarks and performance posture
+## Benchmarks
 
-Benchmarks live in `src/benchmarks/ReactiveUI.Primitives.Benchmarks`. The benchmark project may reference
-System.Reactive, System.Reactive.Async 6.0.0-alpha.18, R3, and ReactiveUI.Extensions to compare throughput and
-allocation behavior; the production packages must not.
+The benchmarks live in `src/benchmarks/ReactiveUI.Primitives.Benchmarks`. They measure two things per scenario: how long
+a call takes, and how many bytes it allocates. Each scenario runs the ReactiveUI.Primitives version against the closest
+System.Reactive, R3, and ReactiveUI.Extensions version of the same work. The benchmark project references
+System.Reactive, System.Reactive.Async 6.0.0-alpha.18, R3, and ReactiveUI.Extensions so it can compare them. The
+production packages reference none of those.
 
-The latest complete BenchmarkDotNet run finished on 2026-06-08 at 19:39:12 Europe/London with .NET SDK
-11.0.100-preview.4.26230.115 and .NET runtime 10.0.8 on Windows 11. It executed 617 benchmarks with no failed benchmark
-process in 01:16:58:
+Run the full suite:
 
 ```powershell
 dotnet run --project src/benchmarks/ReactiveUI.Primitives.Benchmarks/ReactiveUI.Primitives.Benchmarks.csproj --framework net10.0 --configuration Release --no-restore -- --filter "*" --join --launchCount 1 --warmupCount 1 --iterationCount 3
 ```
 
-Latest artifact paths:
+Narrow the run with the `--filter` argument. BenchmarkDotNet writes the results to `BenchmarkDotNet.Artifacts/results`
+as a GitHub-markdown report, an HTML report, and a CSV file. Read the CSV when you want to compare a run against an
+earlier one.
 
-- `BenchmarkDotNet.Artifacts/BenchmarkRun-20260608-182233.log`
-- `BenchmarkDotNet.Artifacts/run-full-benchmarks-20260608-182212.outer.log`
-- `BenchmarkDotNet.Artifacts/results/BenchmarkRun-joined-2026-06-08-19-39-12-report-github.md`
-- `BenchmarkDotNet.Artifacts/results/BenchmarkRun-joined-2026-06-08-19-39-12-report.html`
-- `BenchmarkDotNet.Artifacts/results/BenchmarkRun-joined-2026-06-08-19-39-12-report.csv`
+The run of 2026-06-08 executed 617 benchmarks on .NET 10.0.8 under Windows 11, with no failed benchmark process. Those
+617 rows cover 238 ReactiveUI.Primitives and ReactiveUI.Primitives.Async cases, 157 System.Reactive cases, 132 R3 cases,
+and 90 ReactiveUI.Extensions cases. Across that run, ReactiveUI.Primitives is faster than System.Reactive in 151 of 157
+comparisons, faster than R3 in 131 of 132 comparisons, and faster than ReactiveUI.Extensions 4.0.0 in 58 of 90
+comparisons.
 
-The joined run exports 617 raw BenchmarkDotNet rows: 238 ReactiveUI.Primitives or ReactiveUI.Primitives.Async cases, 157
-System.Reactive cases, 132 R3 cases, and 90 ReactiveUI.Extensions cases. The current table includes the async
-replay-latest subscription scenario and subject multicast fan-out scenarios that were not present in the previous
-610-row run.
+These rows show the shape of the results. Each cell reads `Mean / Allocated`, and `NA` means no alternative exists for
+that scenario. The last four rows are places where an alternative matches or beats ReactiveUI.Primitives.
 
-The table below groups `ReactiveUI.Primitives` and `ReactiveUI.Primitives.Async` into the `ReactiveUI.Primitives`
-column, aligns each primitive benchmark with any System.Reactive, R3, or ReactiveUI.Extensions alternative from the same
-benchmark scenario, and uses `NA` where no alternative exists. It contains 238 alphabetically ordered scenario rows.
-Cells use `Mean / Allocated`, and long `scenario` parameter values from BenchmarkDotNet are restored to their full
-names.
+| Scenario                     |    ReactiveUI.Primitives |          System.Reactive |                      R3 |    ReactiveUI.Extensions |
+|------------------------------|-------------------------:|-------------------------:|------------------------:|-------------------------:|
+| `FirstAsync`                 |         5.9440 ns / 56 B |   2,582.4415 ns / 2792 B |      77.0095 ns / 208 B |                       NA |
+| `CombineLatest`              |       41.1023 ns / 192 B |   3,327.7110 ns / 2824 B |     689.0555 ns / 344 B |                       NA |
+| `ObserveOnImmediate`         |        27.0528 ns / 96 B | 17,127.3834 ns / 11307 B |     993.3502 ns / 432 B |                       NA |
+| `DelayRange`                 |      165.0811 ns / 536 B |  6,285.0703 ns / 39584 B |  2,091.7877 ns / 2200 B |                       NA |
+| `SubscribeDispose64`         |   3,743.0097 ns / 4360 B |  4,234.4889 ns / 38472 B |  3,772.4909 ns / 6728 B |                       NA |
+| `ThrottleOnScheduler`        |   1,835.5199 ns / 2400 B |                       NA |                      NA | 30,618.2012 ns / 16366 B |
+| `SignalMulticast4`           |    3,417.1940 ns / 600 B |    3,268.6291 ns / 728 B |   7,277.5419 ns / 608 B |                       NA |
+| `SubjectSubscribeDispose8`   |      352.1052 ns / 704 B |     318.3937 ns / 1288 B |     493.2540 ns / 904 B |                       NA |
+| `ReadOnlyStateProjection`    |      103.6957 ns / 224 B |       96.4655 ns / 328 B |     177.4105 ns / 312 B |                       NA |
+| `CombineLatestValuesAreAllTrue` |   209.2835 ns / 936 B |      373.2756 ns / 648 B |                      NA |     230.6682 ns / 1176 B |
 
-External-baseline posture from this run: ReactiveUI.Primitives is faster than System.Reactive in 151/157 measured
-comparisons, faster than R3 in 131/132 measured comparisons, and faster than ReactiveUI.Extensions 4.0.0 in 58/90
-measured comparisons. Rows that are not faster remain listed for direct comparison.
-
-| Scenario                                          |    ReactiveUI.Primitives |          System.Reactive |                      R3 |    ReactiveUI.Extensions |
-|---------------------------------------------------|-------------------------:|-------------------------:|------------------------:|-------------------------:|
-| `After`                                           |      161.4435 ns / 584 B |    934.2132 ns / 25056 B |     273.3047 ns / 552 B |                       NA |
-| `AggregateAnyCount (Operator core GC profile)`    |      197.3247 ns / 824 B |   5,651.5205 ns / 5856 B |    670.9280 ns / 1280 B |                       NA |
-| `AggregateAnyCount (Operator map keep)`           |      209.1845 ns / 824 B |   5,801.8443 ns / 5856 B |    612.6859 ns / 1280 B |                       NA |
-| `All`                                             |        19.2005 ns / 96 B |   2,664.6337 ns / 2520 B |      89.5099 ns / 192 B |                       NA |
-| `AllContains`                                     |       29.5381 ns / 192 B |   5,262.9316 ns / 5048 B |     213.4439 ns / 392 B |                       NA |
-| `AllRange`                                        |        20.3476 ns / 96 B |   2,605.7495 ns / 2520 B |      90.4437 ns / 192 B |                       NA |
-| `AsSignal`                                        |       41.0844 ns / 112 B |   2,688.2408 ns / 2536 B |     194.0944 ns / 160 B |   2,646.8338 ns / 2488 B |
-| `AutoConnect`                                     |      141.0078 ns / 408 B |   2,760.6903 ns / 2736 B |                      NA |                       NA |
-| `AutoConnectSubscribe`                            |      143.5240 ns / 408 B |   2,837.9738 ns / 2736 B |                      NA |                       NA |
-| `BehaviorEmit`                                    |   15,580.1615 ns / 160 B |                       NA |                      NA |                       NA |
-| `BufferRange`                                     |       70.1760 ns / 304 B |   1,463.5930 ns / 1656 B |     118.6141 ns / 360 B |                       NA |
-| `BufferUntil`                                     |       48.1740 ns / 264 B |                       NA |                      NA |       45.4763 ns / 264 B |
-| `BufferUntilIdle`                                 |   2,070.5617 ns / 6504 B |                       NA |                      NA | 28,683.3995 ns / 21207 B |
-| `BufferUntilInactive`                             |   2,101.6589 ns / 6504 B |                       NA |                      NA | 28,331.4789 ns / 21206 B |
-| `CastTo`                                          |       95.6295 ns / 200 B |   1,507.3750 ns / 1568 B |     168.6829 ns / 216 B |                       NA |
-| `CatchAndReturn`                                  |       20.4972 ns / 128 B |      195.6230 ns / 368 B |     129.3629 ns / 264 B |       68.4632 ns / 184 B |
-| `CatchIgnore`                                     |       19.7715 ns / 128 B |      177.7583 ns / 344 B |     123.2607 ns / 240 B |       64.5144 ns / 184 B |
-| `CatchReturn`                                     |       14.7025 ns / 128 B |      185.6928 ns / 368 B |     127.5877 ns / 264 B |       63.3613 ns / 184 B |
-| `CatchReturnUnit`                                 |        10.5709 ns / 88 B |                       NA |                      NA |       61.0721 ns / 144 B |
-| `CollectArray (Terminal collection GC profile)`   |       39.4273 ns / 360 B |   2,932.9110 ns / 3144 B |     184.3065 ns / 784 B |                       NA |
-| `CollectArray (Terminal collection)`              |       37.4360 ns / 360 B |   2,742.8235 ns / 3144 B |     180.8473 ns / 784 B |                       NA |
-| `CollectArrayAsync`                               |       35.0986 ns / 384 B |   2,838.6592 ns / 3384 B |     169.3271 ns / 784 B |                       NA |
-| `CollectList (Terminal collection GC profile)`    |       76.1907 ns / 392 B |   2,682.1894 ns / 2992 B |     177.1869 ns / 632 B |                       NA |
-| `CollectList (Terminal collection)`               |       72.8729 ns / 392 B |   2,645.8995 ns / 2992 B |     167.3003 ns / 632 B |                       NA |
-| `CollectListAsync`                                |       47.9789 ns / 352 B |   1,498.7641 ns / 2056 B |     124.4369 ns / 480 B |                       NA |
-| `CombineLatest`                                   |       41.1023 ns / 192 B |   3,327.7110 ns / 2824 B |     689.0555 ns / 344 B |                       NA |
-| `CombineLatestRanges`                             |       41.6113 ns / 192 B |   3,203.0270 ns / 2824 B |     676.1603 ns / 344 B |                       NA |
-| `CombineLatestValuesAreAllFalse`                  |      214.4874 ns / 936 B |      363.2088 ns / 648 B |                      NA |     232.9241 ns / 1176 B |
-| `CombineLatestValuesAreAllTrue`                   |      209.2835 ns / 936 B |      373.2756 ns / 648 B |                      NA |     230.6682 ns / 1176 B |
-| `CommandExecuteAsync`                             |       36.1038 ns / 152 B |     725.3990 ns / 1089 B |     115.4143 ns / 296 B |                       NA |
-| `CommandResultSubscribeAsync`                     |       63.7978 ns / 224 B |       41.2514 ns / 136 B |      70.1836 ns / 160 B |                       NA |
-| `CompletedSpark`                                  |          0.0000 ns / 0 B |          0.0083 ns / 0 B |         0.0167 ns / 0 B |                       NA |
-| `CompletedTaskBridge`                             |        10.4882 ns / 88 B |      867.1664 ns / 793 B |       45.4824 ns / 88 B |                       NA |
-| `Concat`                                          |       75.7136 ns / 256 B |   2,931.5501 ns / 2856 B |     260.7747 ns / 360 B |                       NA |
-| `ConcatRanges`                                    |       76.5450 ns / 256 B |   2,961.9462 ns / 2856 B |     255.5487 ns / 360 B |                       NA |
-| `Conflate`                                        |   4,146.7812 ns / 2312 B |                       NA |                      NA | 35,228.6641 ns / 16970 B |
-| `Contains`                                        |        10.9311 ns / 96 B |   2,733.3856 ns / 2528 B |      99.1364 ns / 200 B |                       NA |
-| `ContainsRange`                                   |        10.1873 ns / 96 B |   2,670.6758 ns / 2528 B |      94.0961 ns / 200 B |                       NA |
-| `Continuation.Dispose`                            |       25.3797 ns / 192 B |                       NA |                      NA |       25.5549 ns / 192 B |
-| `Continuation.Lock`                               |    1,260.4535 ns / 464 B |                       NA |                      NA |    1,190.6156 ns / 464 B |
-| `Continuation.LockValueTask`                      |    1,175.4602 ns / 464 B |                       NA |                      NA |    1,208.8696 ns / 464 B |
-| `CountPredicate (Terminal collection GC profile)` |        37.8831 ns / 96 B |   2,621.1035 ns / 2520 B |      98.5233 ns / 200 B |                       NA |
-| `CountPredicate (Terminal collection)`            |        20.0000 ns / 96 B |   2,647.6879 ns / 2520 B |      99.6155 ns / 200 B |                       NA |
-| `CreateSafeSubscribe`                             |       38.6123 ns / 112 B |                       NA |                      NA |                       NA |
-| `CreateSubscribe`                                 |       38.9402 ns / 112 B |       49.9716 ns / 168 B |      67.1235 ns / 152 B |                       NA |
-| `CreateWithState`                                 |       61.2168 ns / 192 B |       87.3642 ns / 256 B |     120.9910 ns / 240 B |                       NA |
-| `CurrentThreadSchedule`                           |         8.3874 ns / 88 B |        18.1439 ns / 88 B |       32.2492 ns / 56 B |                       NA |
-| `DebounceImmediate`                               |   1,754.9197 ns / 4064 B |                       NA |                      NA | 30,137.8438 ns / 18054 B |
-| `DebounceUntil`                                   |    1,221.7361 ns / 776 B |                       NA |                      NA |   7,788.1093 ns / 6126 B |
-| `DefaultIfEmptyEmpty`                             |         5.5498 ns / 64 B |       68.9009 ns / 144 B |      67.3876 ns / 136 B |                       NA |
-| `DeferSubscribe`                                  |       82.5640 ns / 240 B |   1,447.0622 ns / 1512 B |     122.1637 ns / 152 B |                       NA |
-| `DelayRange`                                      |      165.0811 ns / 536 B |  6,285.0703 ns / 39584 B |  2,091.7877 ns / 2200 B |                       NA |
-| `DelayStartRange`                                 |      164.0063 ns / 536 B |  2,503.0134 ns / 26456 B |     338.4165 ns / 552 B |                       NA |
-| `DematerializeRange`                              |       71.9757 ns / 184 B |   1,473.7932 ns / 1528 B |     205.2736 ns / 208 B |                       NA |
-| `DetectStale`                                     |      208.3042 ns / 600 B |                       NA |                      NA |    938.7462 ns / 25128 B |
-| `DisposableCollectionDispose`                     |       68.9755 ns / 424 B |      103.6309 ns / 512 B |      86.0407 ns / 480 B |                       NA |
-| `DoOnDispose`                                     |       76.8536 ns / 232 B |                       NA |                      NA |       80.8925 ns / 232 B |
-| `DoOnSubscribe`                                   |       76.4659 ns / 192 B |                       NA |                      NA |       77.0226 ns / 192 B |
-| `DropIfBusy`                                      |      387.0132 ns / 240 B |                       NA |                      NA |      378.0149 ns / 240 B |
-| `Emit1024`                                        |    1,581.4852 ns / 192 B |    1,750.5569 ns / 136 B |   2,029.8888 ns / 160 B |                       NA |
-| `Empty`                                           |         3.0465 ns / 40 B |        48.0018 ns / 96 B |       30.6985 ns / 56 B |                       NA |
-| `EmptySubscribe`                                  |         2.9831 ns / 40 B |        52.8440 ns / 96 B |       34.6125 ns / 56 B |                       NA |
-| `Every`                                           |     526.0310 ns / 1192 B |  2,858.5448 ns / 34001 B |     337.4532 ns / 552 B |                       NA |
-| `FastForEach`                                     |        52.5630 ns / 40 B |                       NA |                      NA |        52.4816 ns / 40 B |
-| `Filter`                                          |      128.6757 ns / 120 B |      787.8662 ns / 984 B |                      NA |      123.8859 ns / 120 B |
-| `FirstAsync`                                      |         5.9440 ns / 56 B |   2,582.4415 ns / 2792 B |      77.0095 ns / 208 B |                       NA |
-| `FirstMatchFromCandidates`                        |       48.3142 ns / 216 B |                       NA |                      NA |       40.4904 ns / 216 B |
-| `FirstOrDefaultAsync`                             |         6.0260 ns / 56 B |   1,410.5826 ns / 1768 B |      66.3999 ns / 208 B |                       NA |
-| `FlatMap`                                         |      737.5430 ns / 728 B |   3,836.4955 ns / 3872 B |  1,104.8553 ns / 1040 B |                       NA |
-| `FlatMapRange`                                    |      723.2042 ns / 728 B |   3,745.7840 ns / 3872 B |  1,090.7939 ns / 1040 B |                       NA |
-| `Fold (Operator stateful filter GC profile)`      |    1,963.0732 ns / 144 B |                       NA |                      NA |                       NA |
-| `Fold (Operator stateful filter)`                 |       97.7211 ns / 144 B |   2,642.7624 ns / 2520 B |                      NA |                       NA |
-| `ForEach`                                         |       75.0722 ns / 160 B |      157.6810 ns / 200 B |                      NA |       78.4165 ns / 160 B |
-| `ForkJoin`                                        |       25.3112 ns / 192 B |   3,744.3144 ns / 3136 B |   1,155.6442 ns / 504 B |                       NA |
-| `ForkJoinRanges`                                  |       21.9770 ns / 192 B |   3,497.1976 ns / 3136 B |     968.2838 ns / 504 B |                       NA |
-| `FromArray`                                       |        61.7537 ns / 72 B |   2,471.6468 ns / 2504 B |       79.5506 ns / 88 B |        60.1525 ns / 72 B |
-| `FromAsyncEnumerableSubscribeAsync`               |    1,126.3758 ns / 600 B |   1,623.9187 ns / 1838 B |  1,272.2635 ns / 1023 B |                       NA |
-| `FromEnumerable`                                  |        53.6114 ns / 40 B |   2,548.2366 ns / 2504 B |       78.8076 ns / 88 B |                       NA |
-| `FromEnumerableSubscribe`                         |        54.1935 ns / 40 B |   2,552.4211 ns / 2504 B |       78.3198 ns / 88 B |                       NA |
-| `FromEventPattern`                                |      121.1161 ns / 624 B |   1,735.8404 ns / 2422 B |                      NA |                       NA |
-| `GetMax`                                          |      114.3242 ns / 408 B |      182.2547 ns / 328 B |                      NA |     216.9035 ns / 1152 B |
-| `GetMin`                                          |      112.0888 ns / 408 B |      183.0003 ns / 328 B |                      NA |     218.7370 ns / 1152 B |
-| `Heartbeat`                                       |      291.0539 ns / 800 B |                       NA |                      NA |  2,565.3634 ns / 26096 B |
-| `HistorySubscribe`                                |      345.0974 ns / 352 B |      707.3779 ns / 696 B |     423.2712 ns / 688 B |                       NA |
-| `IgnoreValuesRange`                               |       28.7628 ns / 128 B |   1,424.1602 ns / 1504 B |      78.7061 ns / 160 B |                       NA |
-| `Iterate`                                         |         11.8113 ns / 0 B |   2,363.1381 ns / 2768 B |                      NA |                       NA |
-| `KeepNotNull`                                     |      106.0897 ns / 192 B |   1,546.9787 ns / 1624 B |     231.1263 ns / 312 B |                       NA |
-| `KeepType`                                        |      103.0512 ns / 192 B |   1,515.3027 ns / 1568 B |     193.8181 ns / 216 B |                       NA |
-| `KeepWith`                                        |       52.2025 ns / 136 B |   1,468.1596 ns / 1608 B |     129.0034 ns / 280 B |                       NA |
-| `LastOrDefaultAsync`                              |       12.7311 ns / 192 B |   1,421.3154 ns / 1872 B |      75.4668 ns / 208 B |                       NA |
-| `LatestOrDefault`                                 |       54.2813 ns / 136 B |                       NA |                      NA |       53.2314 ns / 136 B |
-| `LogErrors`                                       |       70.2575 ns / 224 B |                       NA |                      NA |       68.4577 ns / 224 B |
-| `LongCountPredicate`                              |       20.3864 ns / 104 B |   2,559.9402 ns / 2536 B |     109.9617 ns / 272 B |                       NA |
-| `MapKeep`                                         |      133.9801 ns / 208 B |   2,770.7661 ns / 2584 B |     319.2388 ns / 272 B |                       NA |
-| `MapWith`                                         |       46.4196 ns / 136 B |   1,461.4366 ns / 1608 B |     137.8286 ns / 248 B |                       NA |
-| `MaterializeRange`                                |       46.3840 ns / 120 B |   1,487.8726 ns / 1880 B |     100.6545 ns / 136 B |                       NA |
-| `Merge`                                           |       78.0824 ns / 256 B |   4,071.0686 ns / 3952 B |     718.8251 ns / 352 B |                       NA |
-| `MergeRanges`                                     |       76.2008 ns / 256 B |   4,001.1660 ns / 3952 B |     702.6162 ns / 352 B |                       NA |
-| `MulticastConnect`                                |      149.9700 ns / 368 B |   2,745.4174 ns / 2696 B |     392.8761 ns / 368 B |                       NA |
-| `NeverSubscribeDispose`                           |          0.0180 ns / 0 B |         5.1627 ns / 40 B |       19.4681 ns / 56 B |                       NA |
-| `Not`                                             |       27.1375 ns / 120 B |     857.5258 ns / 1040 B |      91.8254 ns / 152 B |       28.2047 ns / 120 B |
-| `ObserveOnIf`                                     |       67.2485 ns / 104 B |                       NA |                      NA |       65.0702 ns / 104 B |
-| `ObserveOnImmediate`                              |        27.0528 ns / 96 B | 17,127.3834 ns / 11307 B |     993.3502 ns / 432 B |                       NA |
-| `ObserveOnSafe`                                   |       65.0889 ns / 104 B |                       NA |                      NA |       65.1163 ns / 104 B |
-| `OnCleanup`                                       |      139.4753 ns / 504 B |   1,500.6293 ns / 1528 B |     141.2798 ns / 216 B |                       NA |
-| `OnErrorRetry`                                    |      134.0780 ns / 424 B |                       NA |                      NA |      133.8272 ns / 424 B |
-| `OnNext`                                          |        51.8824 ns / 40 B |                       NA |                      NA |        51.7027 ns / 40 B |
-| `Pairwise`                                        |      512.4518 ns / 160 B |   3,585.0555 ns / 5120 B |                      NA |      520.0611 ns / 160 B |
-| `Partition`                                       |      275.7950 ns / 440 B |                       NA |                      NA |      263.9068 ns / 440 B |
-| `Publish`                                         |      150.2879 ns / 368 B |   2,773.0882 ns / 2696 B |     418.1471 ns / 368 B |                       NA |
-| `PublishLiveConnect`                              |      153.5308 ns / 368 B |   3,153.5601 ns / 2696 B |     438.2998 ns / 368 B |                       NA |
-| `Race`                                            |       39.9629 ns / 192 B |   1,584.4902 ns / 1760 B |     303.8675 ns / 360 B |                       NA |
-| `RaceRanges`                                      |       41.2323 ns / 192 B |   1,567.0142 ns / 1760 B |     274.3877 ns / 360 B |                       NA |
-| `Range`                                           |        53.4398 ns / 96 B |   2,740.4466 ns / 2472 B |       94.6010 ns / 80 B |                       NA |
-| `RangeMapKeep`                                    |      152.2807 ns / 208 B |   2,722.9541 ns / 2584 B |     303.9360 ns / 272 B |                       NA |
-| `RangeSubscribe`                                  |        53.7344 ns / 96 B |   2,687.8141 ns / 2472 B |       75.1094 ns / 80 B |                       NA |
-| `ReadOnlyStateProjection`                         |      103.6957 ns / 224 B |       96.4655 ns / 328 B |     177.4105 ns / 312 B |                       NA |
-| `ReattemptRange`                                  |       88.9289 ns / 432 B |   1,510.6942 ns / 1664 B |                      NA |                       NA |
-| `Recover`                                         |       97.4338 ns / 336 B |   1,504.3451 ns / 1560 B |     163.6832 ns / 264 B |                       NA |
-| `Reduce (Operator stateful filter GC profile)`    |      624.4331 ns / 144 B |                       NA |                      NA |                       NA |
-| `Reduce (Operator stateful filter)`               |       45.3575 ns / 144 B |   2,781.7262 ns / 2520 B |                      NA |                       NA |
-| `RefCount`                                        |      211.3754 ns / 488 B |                       NA |     570.7335 ns / 488 B |                       NA |
-| `RefCountSubscribe`                               |      187.9160 ns / 488 B |                       NA |     597.1460 ns / 488 B |                       NA |
-| `Repeat`                                          |          8.8482 ns / 0 B |   2,586.2862 ns / 2408 B |       76.6422 ns / 80 B |                       NA |
-| `RepeatSubscribe`                                 |          7.3905 ns / 0 B |   2,537.4997 ns / 2408 B |       73.8453 ns / 80 B |                       NA |
-| `Replay (Connectable GC profile)`                 |      639.9297 ns / 512 B |   3,954.6961 ns / 3408 B |    912.8537 ns / 1360 B |                       NA |
-| `Replay (Subject GC profile)`                     |      352.6527 ns / 352 B |      725.4187 ns / 696 B |     426.9037 ns / 688 B |                       NA |
-| `ReplayEmit`                                      |   16,608.7830 ns / 352 B |                       NA |                      NA |                       NA |
-| `ReplayLastOnSubscribe`                           |       64.3566 ns / 104 B |                       NA |                      NA |       64.9676 ns / 104 B |
-| `ReplayLatestSubscribeDisposeAsync`               |   2,729.7429 ns / 4736 B |                       NA |                      NA |                       NA |
-| `ReplayLiveLateSubscribe`                         |      634.1315 ns / 512 B |   3,933.9536 ns / 3408 B |    946.8956 ns / 1360 B |                       NA |
-| `Resume`                                          |       90.3509 ns / 336 B |   1,607.4910 ns / 1720 B |                      NA |                       NA |
-| `RetryForeverWithDelay`                           |      126.4210 ns / 352 B |                       NA |                      NA |      125.3468 ns / 352 B |
-| `RetryWithBackoff`                                |      126.0700 ns / 336 B |                       NA |                      NA |      127.8376 ns / 336 B |
-| `RetryWithDelay`                                  |      113.8488 ns / 264 B |                       NA |                      NA |      111.5882 ns / 264 B |
-| `RetryWithFixedDelay`                             |      127.4925 ns / 336 B |                       NA |                      NA |      135.5845 ns / 336 B |
-| `Return (Factory GC profile)`                     |          0.6648 ns / 0 B |       54.5551 ns / 120 B |       34.2715 ns / 80 B |                       NA |
-| `Return (Reactive extensions)`                    |         5.4016 ns / 64 B |       51.9597 ns / 120 B |       29.6606 ns / 56 B |         4.8531 ns / 64 B |
-| `ReturnSubscribe`                                 |          0.2305 ns / 0 B |       51.1068 ns / 120 B |       31.9637 ns / 80 B |                       NA |
-| `RunAll`                                          |       21.7965 ns / 136 B |                       NA |                      NA |       24.1500 ns / 136 B |
-| `SafeWitness`                                     |       17.4100 ns / 136 B |       15.8467 ns / 136 B |      24.8238 ns / 128 B |                       NA |
-| `SampleLatest (Operator time scheduler)`          |      260.1148 ns / 784 B |  2,328.9173 ns / 26264 B |     360.7133 ns / 664 B |                       NA |
-| `SampleLatest (Reactive extensions)`              |    1,005.8374 ns / 488 B |                       NA |                      NA |    1,054.2662 ns / 840 B |
-| `ScanWithInitial`                                 |      500.3109 ns / 200 B |   2,538.0716 ns / 2560 B |                      NA |      510.5500 ns / 200 B |
-| `Schedule`                                        |       32.4787 ns / 216 B |                       NA |                      NA |      765.7171 ns / 677 B |
-| `ScheduleSafe`                                    |       23.9532 ns / 144 B |                       NA |                      NA |    1,510.3594 ns / 597 B |
-| `SelectAsync`                                     |   1,277.8845 ns / 2104 B | 28,626.1719 ns / 32266 B |                      NA |   1,240.8623 ns / 2104 B |
-| `SelectAsyncConcurrent`                           |   1,154.4372 ns / 2120 B |                       NA |                      NA |   1,180.0831 ns / 2120 B |
-| `SelectAsyncSequential`                           |   1,190.9455 ns / 2104 B |                       NA |                      NA |   1,274.9363 ns / 2104 B |
-| `SelectConstant`                                  |       56.2966 ns / 136 B |   2,540.6148 ns / 2544 B |     184.1691 ns / 160 B |       54.6658 ns / 136 B |
-| `SelectLatestAsync`                               |   1,675.4246 ns / 2032 B |                       NA |                      NA |   1,653.0930 ns / 2032 B |
-| `SelectManyThen`                                  |       31.9010 ns / 224 B |      354.3868 ns / 752 B |                      NA |       31.3855 ns / 224 B |
-| `SequenceCountAsync`                              |      813.8323 ns / 704 B |                       NA |                      NA |      798.8903 ns / 704 B |
-| `SequenceMapKeepToListAsync`                      |   2,001.8091 ns / 1600 B |                       NA |                      NA |   1,950.6413 ns / 1600 B |
-| `Share`                                           |      197.9768 ns / 488 B |   2,925.1001 ns / 2880 B |     560.0629 ns / 488 B |                       NA |
-| `ShareLiveSubscribe`                              |      190.3772 ns / 488 B |   2,960.3324 ns / 2880 B |     544.7921 ns / 488 B |                       NA |
-| `Shuffle`                                         |       145.1861 ns / 96 B |                       NA |                      NA |       146.1696 ns / 96 B |
-| `SignalBroadcastAsync`                            |   6,400.1401 ns / 2256 B |                       NA |                      NA |   6,840.4302 ns / 2320 B |
-| `SignalEmit`                                      |    1,598.2307 ns / 192 B |                       NA |                      NA |                       NA |
-| `SignalFanOutChurn`                               | 40,048.2300 ns / 41256 B |                       NA |                      NA |                       NA |
-| `SignalMulticast4`                                |    3,417.1940 ns / 600 B |    3,268.6291 ns / 728 B |   7,277.5419 ns / 608 B |                       NA |
-| `SignalMulticast8`                                |   6,441.3053 ns / 1072 B |   6,053.3424 ns / 1656 B | 13,045.9407 ns / 1120 B |                       NA |
-| `SignalSubscribeDisposeChurn`                     | 39,876.6439 ns / 41112 B |                       NA |                      NA |                       NA |
-| `Skip (Operator stateful filter GC profile)`      |    1,735.5486 ns / 136 B |                       NA |                      NA |                       NA |
-| `Skip (Operator stateful filter)`                 |       86.5946 ns / 136 B |   2,658.2239 ns / 2512 B |                      NA |                       NA |
-| `SkipWhile (Operator stateful filter GC profile)` |    1,800.1429 ns / 144 B |                       NA |                      NA |                       NA |
-| `SkipWhile (Operator stateful filter)`            |       94.1695 ns / 144 B |   2,700.6545 ns / 2520 B |                      NA |                       NA |
-| `SkipWhileNull`                                   |       22.9011 ns / 112 B |      644.6796 ns / 944 B |                      NA |       22.1427 ns / 112 B |
-| `Start`                                           |        23.0806 ns / 96 B |                       NA |                      NA |      936.0223 ns / 535 B |
-| `StartSubscribe`                                  |       47.5984 ns / 208 B |      860.5110 ns / 751 B |      66.4836 ns / 160 B |                       NA |
-| `StartWithAppend`                                 |       35.9490 ns / 168 B |   1,030.8613 ns / 1283 B |     157.9538 ns / 288 B |                       NA |
-| `StartWithAppendDefaultIfEmpty`                   |       36.0423 ns / 168 B |     994.2108 ns / 1283 B |     151.1573 ns / 288 B |                       NA |
-| `State1024`                                       |   15,860.3556 ns / 160 B |   16,763.4572 ns / 200 B |  16,556.1635 ns / 192 B |                       NA |
-| `StateEmit`                                       |   15,824.8088 ns / 160 B |                       NA |                      NA |                       NA |
-| `StateSignal1024`                                 |   16,183.5083 ns / 160 B |   17,070.4020 ns / 200 B |  16,583.5164 ns / 192 B |                       NA |
-| `StateSignal32`                                   |      546.1293 ns / 160 B |      605.4201 ns / 200 B |     630.1873 ns / 192 B |                       NA |
-| `StateSignalUpdates`                              |      557.0397 ns / 160 B |      583.7040 ns / 200 B |     622.1236 ns / 192 B |                       NA |
-| `SubjectEmit1024`                                 |    1,590.1508 ns / 192 B |    1,761.6808 ns / 136 B |   2,091.8153 ns / 160 B |                       NA |
-| `SubjectEmit32`                                   |       94.0824 ns / 192 B |       99.2329 ns / 136 B |     124.9866 ns / 160 B |                       NA |
-| `SubjectSubscribeDispose64`                       |   3,557.3485 ns / 4360 B |  3,994.1933 ns / 38472 B |  3,825.6100 ns / 6728 B |                       NA |
-| `SubjectSubscribeDispose8`                        |      352.1052 ns / 704 B |     318.3937 ns / 1288 B |     493.2540 ns / 904 B |                       NA |
-| `SubscribeAndComplete`                            |          0.2067 ns / 0 B |                       NA |                      NA |          0.2286 ns / 0 B |
-| `SubscribeAsync`                                  |      967.6081 ns / 544 B |                       NA |                      NA |      996.4746 ns / 544 B |
-| `SubscribeDispose64`                              |   3,743.0097 ns / 4360 B |  4,234.4889 ns / 38472 B |  3,772.4909 ns / 6728 B |                       NA |
-| `SubscribeGetError`                               |         6.0310 ns / 48 B |                       NA |                      NA |       50.6131 ns / 104 B |
-| `SubscribeGetValue`                               |        15.8250 ns / 56 B |                       NA |                      NA |        15.8805 ns / 56 B |
-| `SubscribeOnImmediate`                            |      102.0478 ns / 416 B |   2,089.6776 ns / 2257 B |     134.4352 ns / 200 B |                       NA |
-| `SubscribeSynchronous`                            |    1,030.9847 ns / 544 B |                       NA |                      NA |      999.5322 ns / 544 B |
-| `Switch`                                          |       84.3075 ns / 312 B |   2,342.9420 ns / 2360 B |     797.3904 ns / 448 B |                       NA |
-| `SwitchIfEmpty`                                   |       65.5825 ns / 224 B |                       NA |                      NA |      109.1341 ns / 280 B |
-| `SwitchRanges`                                    |       84.5506 ns / 312 B |   2,248.5388 ns / 2360 B |     765.5251 ns / 448 B |                       NA |
-| `SynchronizeAsync`                                |     796.1634 ns / 1280 B |                       NA |                      NA |     818.4586 ns / 1280 B |
-| `SynchronizeSynchronous`                          |     818.4827 ns / 1280 B |                       NA |                      NA |     793.0097 ns / 1280 B |
-| `SyncTimer`                                       |   2,513.3305 ns / 1080 B |                       NA |                      NA | 12,247.8994 ns / 26240 B |
-| `TakeRange`                                       |       65.3818 ns / 200 B |   1,487.1980 ns / 1552 B |      99.5176 ns / 160 B |                       NA |
-| `TakeUntil`                                       |      518.1361 ns / 192 B |   2,618.4101 ns / 2520 B |                      NA |      508.4543 ns / 192 B |
-| `TakeWhile (Operator stateful filter GC profile)` |    1,668.5275 ns / 144 B |                       NA |                      NA |                       NA |
-| `TakeWhile (Operator stateful filter)`            |      100.4530 ns / 144 B |   2,649.6499 ns / 2520 B |                      NA |                       NA |
-| `TapRange`                                        |       62.0108 ns / 200 B |   1,460.5331 ns / 1520 B |     130.6363 ns / 216 B |                       NA |
-| `TapWith`                                         |       38.1821 ns / 136 B |   1,479.6060 ns / 1608 B |     147.0685 ns / 304 B |                       NA |
-| `TaskSignalSubscribe`                             |       37.9094 ns / 240 B |      731.7046 ns / 886 B |      40.2932 ns / 160 B |                       NA |
-| `ThrottleBurst`                                   |     598.0057 ns / 1184 B |  2,818.8936 ns / 36480 B |  1,717.3992 ns / 1512 B |                       NA |
-| `ThrottleDistinct`                                |   1,787.3767 ns / 4232 B |                       NA |                      NA | 28,694.7072 ns / 18678 B |
-| `ThrottleFirst`                                   |    1,119.1755 ns / 224 B |                       NA |                      NA |    1,143.5209 ns / 224 B |
-| `ThrottleOnScheduler`                             |   1,835.5199 ns / 2400 B |                       NA |                      NA | 30,618.2012 ns / 16366 B |
-| `ThrottleUntilTrue`                               |   4,465.7651 ns / 1633 B |                       NA |                      NA |   5,547.6550 ns / 1385 B |
-| `Throw`                                           |       63.0356 ns / 120 B |      129.4794 ns / 240 B |      98.1077 ns / 200 B |                       NA |
-| `ThrowSubscribe`                                  |       63.0707 ns / 120 B |      115.1738 ns / 240 B |      98.3755 ns / 200 B |                       NA |
-| `TimeIntervalRange`                               |       26.6122 ns / 120 B |   2,009.7466 ns / 1616 B |     480.1429 ns / 160 B |                       NA |
-| `TimeoutIdle`                                     |      311.1149 ns / 808 B |  1,442.3126 ns / 29776 B |     441.6512 ns / 784 B |                       NA |
-| `TimestampRange`                                  |       40.2701 ns / 120 B |   1,796.7855 ns / 1512 B |     360.3219 ns / 152 B |                       NA |
-| `ToHotTask`                                       |       35.2807 ns / 112 B |       91.3744 ns / 240 B |                      NA |       33.2869 ns / 112 B |
-| `ToHotValueTask`                                  |        26.8257 ns / 72 B |                       NA |                      NA |        26.8298 ns / 72 B |
-| `ToPropertyObservable`                            |  26,227.7832 ns / 4941 B |                       NA |                      NA |  26,438.4603 ns / 4941 B |
-| `ToReadOnlyBehavior`                              |       58.7424 ns / 192 B |                       NA |                      NA |       58.4042 ns / 192 B |
-| `ToTask`                                          |       14.9083 ns / 192 B |   2,635.3250 ns / 2824 B |      95.4554 ns / 208 B |                       NA |
-| `TrySelect`                                       |      104.2941 ns / 120 B |                       NA |                      NA |      103.1948 ns / 120 B |
-| `UnfoldSubscribe`                                 |         10.4787 ns / 0 B |   2,327.2008 ns / 2768 B |      98.2107 ns / 152 B |                       NA |
-| `Unique (Operator stateful filter GC profile)`    |    1,900.0763 ns / 144 B |                       NA |                      NA |                       NA |
-| `Unique (Operator stateful filter)`               |      109.5600 ns / 144 B |   2,694.3320 ns / 2520 B |                      NA |                       NA |
-| `UniqueBy (Operator stateful filter GC profile)`  |    1,957.1433 ns / 152 B |                       NA |                      NA |                       NA |
-| `UniqueBy (Operator stateful filter)`             |      103.9614 ns / 152 B |   2,661.1942 ns / 2568 B |                      NA |                       NA |
-| `UseSubscribe`                                    |       43.0683 ns / 144 B |       88.4371 ns / 168 B |      76.1832 ns / 176 B |                       NA |
-| `Using`                                           |         6.0721 ns / 56 B |                       NA |                      NA |         6.2145 ns / 56 B |
-| `WaitForCompletion`                               |        22.0032 ns / 96 B |                       NA |                      NA |        22.5720 ns / 96 B |
-| `WaitForError`                                    |        25.0017 ns / 96 B |                       NA |                      NA |       65.9992 ns / 152 B |
-| `WaitForValue`                                    |       30.4019 ns / 104 B |                       NA |                      NA |       30.6159 ns / 104 B |
-| `WaitUntil`                                       |      518.4325 ns / 224 B |     835.7113 ns / 1080 B |                      NA |      543.8398 ns / 224 B |
-| `WhereFalse`                                      |       21.3931 ns / 120 B |     758.8829 ns / 1040 B |      88.0082 ns / 184 B |       19.7443 ns / 120 B |
-| `WhereIsNotNull`                                  |       20.9544 ns / 104 B |      621.3007 ns / 904 B |     100.0026 ns / 264 B |       21.2683 ns / 104 B |
-| `WhereSelect`                                     |       80.1184 ns / 152 B |   2,631.6110 ns / 2616 B |     174.5875 ns / 240 B |       77.8284 ns / 152 B |
-| `WhereTrue`                                       |       20.9512 ns / 120 B |     766.8200 ns / 1040 B |      83.7375 ns / 184 B |       21.0377 ns / 120 B |
-| `While`                                           |      122.1943 ns / 280 B |                       NA |                      NA |      123.8769 ns / 280 B |
-| `WithLatest`                                      |       40.6575 ns / 192 B |   3,589.8584 ns / 2824 B |     396.8615 ns / 248 B |                       NA |
-| `WithLatestRanges`                                |       40.9675 ns / 192 B |   3,514.5040 ns / 2824 B |     269.3590 ns / 248 B |                       NA |
-| `WithLimitedConcurrency`                          |   2,505.1640 ns / 5448 B |                       NA |                      NA |   2,486.2790 ns / 5448 B |
-| `Zip (Operator core GC profile)`                  |       43.2304 ns / 192 B |   3,821.7608 ns / 2976 B |     781.9091 ns / 656 B |                       NA |
-| `Zip (Operator zip)`                              |       37.2355 ns / 192 B |   3,337.3608 ns / 2976 B |     753.2998 ns / 656 B |                       NA |
-
-BenchmarkDotNet emitted `ZeroMeasurement` warnings for several singleton or empty-method-scale paths, including
-`Return`, `CompletedSpark`, `Never`-style subscriptions, and `SubscribeAndComplete`. Those warnings mean the measured
-duration is indistinguishable from empty method overhead; the benchmark run still completed and exported all 617 rows.
+Some scenarios measure too fast to time. BenchmarkDotNet reports a `ZeroMeasurement` warning for them, including
+`Return`, `CompletedSpark`, `Never`-style subscriptions, and `SubscribeAndComplete`. That warning means the measured
+duration matches the overhead of an empty method. Compare the `Allocated` column for those scenarios instead of the
+mean.
 
 ## Repository layout
 
 | Path                                              | Purpose                                                                                      |
 |---------------------------------------------------|----------------------------------------------------------------------------------------------|
-| `src/ReactiveUI.Primitives.slnx`                  | Current solution entrypoint.                                                                 |
+| `src/ReactiveUI.Primitives.slnx`                  | Solution entrypoint.                                                                         |
 | `src/ReactiveUI.Disposables`                      | Disposable primitives shared by the package family.                                          |
 | `src/ReactiveUI.Primitives.Core`                  | Type-agnostic core shared by lean and System.Reactive-flavoured Primitives leaves.           |
-| `src/ReactiveUI.Primitives`                       | Default lean signal/operator/sequencer package, extension helpers, and platform sequencers. |
+| `src/ReactiveUI.Primitives`                       | Default lean signal/operator/sequencer package, extension helpers, and platform sequencers.  |
 | `src/ReactiveUI.Primitives.Reactive`              | System.Reactive-flavoured Primitives leaf including the Reactive extension helpers.          |
 | `src/ReactiveUI.Primitives.Async.Core`            | Type-agnostic async core shared by async leaves.                                             |
 | `src/ReactiveUI.Primitives.Async`                 | Lean async observable/signal package built on `IObservableAsync<T>` and `IObserverAsync<T>`. |
@@ -1977,7 +2908,7 @@ duration is indistinguishable from empty method overhead; the benchmark run stil
 | `src/ReactiveUI.Primitives.WinUI.Reactive`        | Optional WinUI dispatcher queue scheduler integration library for System.Reactive consumers. |
 | `src/ReactiveUI.Primitives.Blazor`                | Optional Blazor renderer integration library.                                                |
 | `src/ReactiveUI.Primitives.Blazor.Reactive`       | Optional Blazor renderer scheduler integration library for System.Reactive consumers.        |
-| `src/ReactiveUI.Primitives.Avalonia`              | Optional Avalonia dispatcher sequencer integration library.                                   |
+| `src/ReactiveUI.Primitives.Avalonia`              | Optional Avalonia dispatcher sequencer integration library.                                  |
 | `src/ReactiveUI.Primitives.Avalonia.Reactive`     | Optional Avalonia dispatcher scheduler integration library for System.Reactive consumers.    |
 | `src/ReactiveUI.Primitives.Maui`                  | Optional MAUI dispatcher integration library.                                                |
 | `src/ReactiveUI.Primitives.Maui.Reactive`         | Optional MAUI dispatcher scheduler integration library for System.Reactive consumers.        |
@@ -1989,24 +2920,308 @@ duration is indistinguishable from empty method overhead; the benchmark run stil
 | `src/tests`                                       | Microsoft Testing Platform/TUnit-style test projects.                                        |
 | `src/benchmarks/ReactiveUI.Primitives.Benchmarks` | BenchmarkDotNet comparison harness.                                                          |
 
-## Practical migration checklist
+## For advanced users
 
-1. Replace subject construction with `Signal<T>`, `StateSignal<T>`, or `ReplaySignal<T>` depending on current behavior.
-2. Replace factories: `Observable.Return/Empty/Throw/Timer/Interval` to `Signal.Emit/None/Fail/After/Pulse`.
-3. Replace hot-path operators with Primitives names: `Select -> Map`, `Where -> Keep`, `SelectMany -> FlatMap`,
-   `Do -> Tap`, `Scan -> Fold`, `Aggregate -> Reduce`, `Amb -> Race`.
-4. Replace composite/serial disposables with `MultipleDisposable`/`Pocket` and `SingleReplaceableDisposable`/`Slot`.
-5. Keep System.Reactive, R3, or R3Async at application boundaries only when required; use `.Reactive` package variants
-   for System.Reactive public-surface compatibility and generated bridge methods for R3/R3Async boundaries.
-6. Run build, tests, pack, and `git diff --check` before publishing or merging.
+This section lists the types the extension methods build for you, so you can construct them yourself and skip the
+indirection. It assumes you know the library and want the concrete type, the embedded struct or the contract to
+implement.
+
+### Constructing operator types directly
+
+Most operators have a concrete public type behind them in `ReactiveUI.Primitives.Advanced`. The constructor arguments
+mirror the operator arguments, so `source.Map(selector)` and `new MapSignal<TSource, TResult>(source, selector)` build
+the same thing.
+
+| Type | Operator it backs |
+|------|-------------------|
+| `MapSignal` | `Map` / `Select` |
+| `MapIndexedSignal` | `Map` with the element index |
+| `MapWithSignal` | `Map` with caller state |
+| `KeepSignal` | `Keep` / `Where` |
+| `KeepWithSignal` | `Keep` with caller state |
+| `TapSignal` | `Tap` / `Do` |
+| `TapWithSignal` | `Tap` with caller state |
+| `CastSignal` | `Cast` |
+| `SelectManySignal` | `SelectMany` |
+| `SelectManyEnumerableSignal` | `SelectMany` over an enumerable |
+| `SelectManyResultSignal` | `SelectMany` with a result selector |
+| `SwitchMapSignal` | `SwitchMap` |
+| `SwitchSignal` | `Switch` |
+| `MergeSignal` | `Merge` |
+| `BlendSignal` | `Blend` |
+| `EnumerableBlendSignal` | `Blend` over an enumerable of sources |
+| `MaxConcurrentEnumerableBlendSignal` | `Blend` with a concurrency limit |
+| `ChainSignal` | `Concat` |
+| `TaskChainSignal` | `Concat` over tasks |
+| `RaceSignal` | `Race` / `Amb` |
+| `IgnoreValuesSignal` | `IgnoreValues` |
+| `FinallySignal` | `Finally` |
+| `RecoverSignal` | `Recover` / `Catch` |
+| `ResumeSignal` | `Resume` |
+| `OnErrorResumeNextSignal` | `OnErrorResumeNext` |
+| `ExpireSignal` | `Expire` / `Timeout` |
+| `RepeatSourceSignal` | `Repeat` over a source |
+| `BufferSignal` | `Buffer` |
+| `CollectSignal` | `Collect` |
+| `EmitIfQuietSignal` | `EmitIfQuiet` |
+| `SerializeSignal` | `Serialize` |
+| `SynchronizeSignal` | `Synchronize` |
+| `SynchronizeGateSignal` | `Synchronize` over a gate you own |
+| `SynchronizeObjectSignal` | `Synchronize` over an object you own |
+| `SparkSignal` | `Spark` / `Materialize` |
+| `UnsparkSignal` | `Unspark` / `Dematerialize` |
+| `TimeIntervalSignal` | `TimeInterval` |
+| `LeadSignal<T>` | `Lead` |
+| `IsEmptySignal` | `IsEmpty` |
+| `ForkJoinSignal` | `ForkJoin` |
+| `PairSignal` | `Pair` |
+| `SyncLatestSignal` | `SyncLatest` |
+| `RangeZipSignal` | `Zip` over a range, fused |
+| `RangeCombineLatestSignal` | `CombineLatest` over a range, fused |
+| `RangeWithLatestSignal` | `Latch` over a range, fused |
+| `RangeForkJoinSignal` | `ForkJoin` over a range, fused |
+| `RangeSyncLatestSignal` | `SyncLatest` over a range, fused |
+| `PublishSelectorSignal` | `Publish` with a selector |
+| `AutoConnectSignal` | `AutoConnect` |
+| `AutoShareSignal` | `AutoShare` |
+| `ConnectableSignal<T>` | `Publish` and its `Connect` handle |
+| `CreateSignal<T>`, `CreateSignal<T, TState>` | `Signal.Create` |
+| `CreateSafeSignal<T>` | `Signal.CreateSafe` |
+| `DeferSignal<T>` | `Signal.Lazy` / `Signal.Defer` |
+| `CatchSignal<T>` | `Catch` |
+| `WitnessOnSignal<T>` | `WitnessOn` / `ObserveOn` |
+| `SelectManyThenCoordinator<TSource, TMid, TResult>` | `SelectManyThen`, both projection stages in one sink |
+| `CalmCoordinator<T>` | `Calm` / `Throttle` |
+| `ReattemptCoordinator<T>` | `Reattempt` |
+| `LatchCoordinator<TLeft, TRight, TResult>` | `Latch` |
+| `CombineLatestCoordinator<TLeft, TRight, TResult>` | `CombineLatest` |
+
+Sources carry concrete types too: `AnonymousSignal<T>` behind `Signal.Create`, plus `ReturnSignal<T>`,
+`EmptySignal<T>`, `ThrowSignal<T>`, `RangeSignal`, `RepeatSignal<T>`, `UnfoldSignal<TState, TResult>`,
+`FromEnumerableSignal<T>`, `AsyncEnumerableSignal<T>`, `UseSignal<TResource, T>`, `EverySignal`, `AfterSignal`,
+`StartSignal`, `FromAsyncSignal<T>` and `FromEventPatternSignal`. The constant fast paths
+`ImmediateReturnSignal<T>`, `ImmutableEmptySignal<T>` and `ImmutableNeverSignal<T>` allocate nothing.
+
+Each operator is one sink. An operator never builds its behaviour by chaining other operators, so a value passes
+through one layer per operator you wrote and no more. Where an operator has two jobs, such as a stop condition and a
+cancellation token, one sink watches both.
+
+Every fused operator type is public and takes its sources through the constructor, so you can build one directly
+instead of calling the operator.
+
+```csharp
+IObservable<int> viaOperator = source.Unique();
+IObservable<int> viaType = new UniqueSignal<int>(source, EqualityComparer<int>.Default);
+```
+
+### Helper, option and collection types
+
+These sit beside the operators. You call them directly rather than through a chain.
+
+| Type | Namespace | What it is |
+|---|---|---|
+| `ExceptionExtensions` | `ReactiveUI.Primitives` | `Throw()` on an exception rethrows it and keeps the stack trace from the original throw site. |
+| `SubscribeExtensions` | `ReactiveUI.Primitives` | `Rethrow()` on a nullable exception, which does nothing when there is none, plus subscribe helpers on a source. |
+| `ObserverExtensions` | `ReactiveUI.Primitives.Extensions` | Helpers on an `IObserver<T>`. |
+| `OptionalExtensions` | `ReactiveUI.Primitives.Async` | Helpers on an `Optional<T>`. |
+| `SignalExtensions` | `ReactiveUI.Primitives.Async` | Operators on an `ISignalAsync<T>`, including the cancellation-handling helpers. |
+| `StateSignalExtensions` | `ReactiveUI.Primitives.Signals` | Builds a `StateSignal<T>` or a read-only state from a source. |
+| `ConnectableSignalExtensions`, `ConnectableSignalRxNameExtensions` | `ReactiveUI.Primitives` | Operators over a `ConnectableSignal<T>` and over a plain source, under both naming schemes. |
+| `DisposableAsyncExtensions` | `ReactiveUI.Primitives.Async.Disposables` | Helpers over `IAsyncDisposable`. |
+| `SignalCreationOptions`, `BehaviorSignalCreationOptions`, `ReplayLatestSignalCreationOptions` | `ReactiveUI.Primitives.Async.Signals` | Records you pass to `Signal.Create`. Each carries `IsStateless` and a `PublishingOption`, and offers a `Default`. |
+| `PublishingOption` | `ReactiveUI.Primitives.Async.Signals` | Chooses how an async signal publishes to its subscribers. |
+| `SparkKind` | `ReactiveUI.Primitives.Core` | Which notification a `Spark` carries. |
+| `Broadcaster<T>` | `ReactiveUI.Primitives.Signals` | The struct behind a signal's subscriber list. `Add`, `Remove`, `Next`, `Error`, `Completed` and `HasObservers`. Hold it as a field. |
+| `CopyOnWriteList<T>` | `ReactiveUI.Primitives.Advanced` | An immutable list that returns a new instance from `Add` and `Remove`. `Empty` starts one. |
+| `SinkTerminal`, `SinkSubscription`, `SinkDelivery` | `ReactiveUI.Primitives.Advanced` | The static helpers a synchronous sink calls: forward a terminal notification, assign or dispose the upstream subscription, and forward a value while disposing the sink if the observer throws. |
+| `AsyncContext`, `AsyncContextExtensions` | `ReactiveUI.Primitives.Async` | The ambient context an async signal flows through its operators. |
+| `ScheduledItem<TAbsolute>`, `ScheduledItem<TAbsolute, TValue>` | `ReactiveUI.Primitives.Concurrency` | One queued item of work with its `DueTime`, ordered by a comparer. The virtual-time sequencers hold these. |
+
+Every operator also has a public type behind it, named after the operator: `MapSignal<TSource, TResult>` for `Map`,
+`SkipWitness<T>` for the sink `Skip` installs, and so on. The tables above name the ones worth reaching for; the rest
+follow the same convention and you can construct any of them directly.
+
+### Embedded state types
+
+`DeliveryGateState`, `SerializedDelivery<T>`, `SerializedBroadcaster<T>`, `CurrentValueDelivery<T>`,
+`WitnessAsyncState`, `DisposableSet` and `DispatchSequencerState` are record structs. You hold one as a non-readonly
+field and call it in place. That is what keeps a sink allocation-free.
+
+```csharp
+public sealed class MySink<T>(IObserver<T> observer)
+{
+    // Non-readonly field, called in place.
+    private SerializedDelivery<T> _delivery = new();
+
+    public void OnNext(T value) => _delivery.OnNext(observer, value, new PendingDrain(this));
+}
+```
+
+A copy is a separate gate, queue or set, and the copy silently loses notifications. Three ways to make one by accident:
+
+```csharp
+private readonly SerializedDelivery<T> _delivery = new();  // every call runs against a fresh copy
+var delivery = _delivery;                                  // a separate queue
+void Post(SerializedDelivery<T> delivery)                  // takes a copy; declare the parameter as ref
+```
+
+Nothing throws when you copy one. The queue you post to and the queue you flush are different queues, so the posted
+values never reach the observer and a terminal notification never arrives. Keep the field non-readonly, pass it by
+`ref`, and never assign it to a local.
+
+### Building your own sink
+
+- **`DeliveryGate`** - static class. It serializes deliveries to one downstream observer without holding a lock while
+  the observer runs, so an observer that blocks on another producer's thread cannot deadlock it. Enter, deliver and
+  exit on one thread, with no `await` in between.
+- **`DeliveryGateState`** - the mutable state of one gate. Hold it as a non-readonly field and pass it by `ref` to
+  every `DeliveryGate` call.
+- **`SerializedDelivery<T>`** - allocation-free serialized delivery to one observer. `OnNext` delivers directly when
+  nothing else is delivering, and the `Post` methods queue without delivering so you can fix the order under your own
+  lock and call `Flush` after you release it.
+- **`IDrainTarget`** - in `ReactiveUI.Primitives.Extensions`, a single `Drain()` method the gate calls to deliver
+  queued notifications. Implement it on a struct so delivery allocates nothing.
+- **`SerializedWitness<T>`** - the class form of `SerializedDelivery<T>`. It wraps an `IObserver<T>` so notifications
+  from any number of threads reach it one at a time.
+- **`SerializedBroadcaster<T>`** - the subscriber list a subject fans out to. Add, remove and post under your own lock
+  so every subscriber sees the same order.
+- **`SerializedBroadcast<T>`** - the batch a post returns. Call `Flush()` after you release the lock; the default value
+  flushes nothing.
+- **`CurrentValueDelivery<T>`** - serialized delivery of a value you re-read on each change. It conflates to the latest
+  value under contention and skips a repeat when you supply a comparer.
+- **`ICurrentValueReader<T>`** - supplies `Read()` for `CurrentValueDelivery<T>`. Implement it on a struct wrapping the
+  owner so the read needs no delegate.
+- **`CurrentValueWitness<T>`** - the class form of `CurrentValueDelivery<T>`. Attach your change hook, call `Start()`,
+  then call `Changed()` from any thread.
+- **`WitnessSubscription`** - one call that links a downstream async witness's teardown, subscribes the witness to its
+  source, and returns the witness as the subscription handle. Disposing that handle tears down the source subscription
+  too.
+- **`TaskResultCompletionSource<T>`** - coordinates the terminal task result for an async terminal operator and
+  disposes the owning subscription when the wait exits.
+
+Take the gate, deliver, then exit. A delivery that throws releases the gate through `Reset`:
+
+```csharp
+private DeliveryGateState _gate;
+
+public void Deliver(T value)
+{
+    if (DeliveryGate.TryEnter(ref _gate))
+    {
+        try
+        {
+            observer.OnNext(value);
+        }
+        catch
+        {
+            DeliveryGate.Reset(ref _gate);
+            throw;
+        }
+
+        DeliveryGate.Exit(ref _gate, new PendingDrain(this));
+        return;
+    }
+
+    Enqueue(value);
+    DeliveryGate.Signal(ref _gate, new PendingDrain(this));
+}
+
+private readonly struct PendingDrain(MySink owner) : IDrainTarget
+{
+    public void Drain() => owner.DeliverQueued();
+}
+```
+
+A subject posts under its own lock and flushes after it releases it, so no observer runs while you hold the lock:
+
+```csharp
+private readonly Lock _lock = new();
+private SerializedBroadcaster<T> _subscribers;
+
+public void OnNext(T value)
+{
+    SerializedBroadcast<T> batch;
+
+    lock (_lock)
+    {
+        batch = _subscribers.PostNext(value);
+    }
+
+    batch.Flush();
+}
+```
+
+Always flush the batch. A subscriber claimed by the post delivers nothing else until you do.
+
+### Marker interfaces
+
+Implement these on your own signal to let the operators take a faster path.
+
+- **`IInlineSignal<T>`** - adds a delegate-based `Subscribe(onNext, onError, onCompleted)`, so a subscriber reaches
+  your signal without allocating an observer.
+- **`IRequireCurrentThread<T>`** - declares that you must be subscribed on the calling thread, which lets an operator
+  skip a scheduling hop.
+- **`IAsyncEnumerableBackedSignal<T>`** - exposes the underlying `IAsyncEnumerable<T>` and its token, so a consumer can
+  enumerate you directly.
+- **`IAggregator<T, TResult, TSelf>`** - the struct-based accumulator contract behind allocation-free counting.
+  `CountAggregator<T>`, `LongCountAggregator<T>` and the `DistinctBy` variants implement it.
+
+### Async witness contracts
+
+You write a custom async operator sink by implementing `IWitnessAsync<T>`. Hold a `WitnessAsyncState` as a non-readonly
+field and return it by `ref` from an explicit `IWitnessState.Witness`. Forward the three `IObserverAsync<T>` members and
+`DisposeAsync` to `WitnessAsync`, then write only the three `Core` hooks. `WitnessAsync` runs the gating, cancellation
+linking and disposal: it drops a notification when the witness is disposed or cancelled, or when another thread holds
+the gate, and it keeps a hook failure away from the producer.
+
+```csharp
+public sealed class MyWitness<T>(IObserverAsync<T> downstream) : IWitnessAsync<T>
+{
+    private WitnessAsyncState _witness;
+
+    ref WitnessAsyncState IWitnessState.Witness => ref _witness;
+
+    public ValueTask OnNextAsync(T value, CancellationToken cancellationToken) =>
+        WitnessAsync.OnNextAsync(this, value, cancellationToken);
+
+    public ValueTask OnErrorResumeAsync(Exception error, CancellationToken cancellationToken) =>
+        WitnessAsync.OnErrorResumeAsync(this, error, cancellationToken);
+
+    public ValueTask OnCompletedAsync(Result result) => WitnessAsync.OnCompletedAsync(this, result);
+
+    public ValueTask DisposeAsync() => WitnessAsync.DisposeStateAsync(this);
+
+    ValueTask IWitnessAsync<T>.OnNextAsyncCore(T value, CancellationToken cancellationToken) =>
+        downstream.OnNextAsync(value, cancellationToken);
+
+    ValueTask IWitnessAsync<T>.OnErrorResumeAsyncCore(Exception error, CancellationToken cancellationToken) =>
+        downstream.OnErrorResumeAsync(error, cancellationToken);
+
+    ValueTask IWitnessAsync<T>.OnCompletedAsyncCore(Result result) => downstream.OnCompletedAsync(result);
+}
+```
+
+Two calls that overlap from different threads are dropped and reported as `ConcurrentWitnessCallsException`. A
+reentrant call on the thread already inside the witness runs.
+
+### Writing a sequencer for a new dispatcher
+
+A sequencer schedules `IWorkItem`s through `ISequencer`, either at once or at an absolute monotonic timestamp. To wrap
+a dispatcher the library does not ship, implement `ISequencer` and embed a `DispatchSequencerState` as a non-readonly
+field. Construct the state with your owning sequencer, a `Func<Action, bool>` that posts a callback to the dispatcher,
+and the drain callback the dispatcher runs. The state queues ready work and keeps at most one drain pending, so a burst
+of posts coalesces into one trip through the dispatcher.
+
+Every type listed here also exists under `ReactiveUI.Primitives.Reactive.*` in the `ReactiveUI.Primitives.Reactive`
+package, compiled against System.Reactive `Unit` and `IScheduler`.
 
 ## Contribute
 
 ReactiveUI.Primitives is developed under an OSI-approved open source license, making it freely usable and distributable,
-even for commercial use. We ❤ the people who are involved in this project, and we'd love to have you on board,
+even for commercial use. We love the people who are involved in this project, and we would love to have you on board,
 especially if you are just getting started or have never contributed to open-source before.
 
-So here's to you, lovely person who wants to join us. This is how you can support us:
+So here is to you, lovely person who wants to join us. This is how you can support us:
 
 - [Answering questions on GitHub Discussions](https://github.com/reactiveui/Primitives/discussions)
 - [Passing on knowledge and teaching the next generation of developers](https://ericsink.com/entries/dont_use_rxui.html)

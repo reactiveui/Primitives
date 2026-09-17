@@ -9,22 +9,18 @@ using ReactiveUI.Primitives.Async.Disposables;
 namespace ReactiveUI.Primitives.Async;
 
 /// <summary>Provides factory methods for creating asynchronous observable sequences.</summary>
-/// <remarks>The SignalAsync class offers static methods to construct and manipulate asynchronous observables.
-/// Use these methods to create sequences that emit values, errors, or completion notifications in an asynchronous
-/// manner.</remarks>
 public static partial class SignalAsync
 {
     /// <summary>Creates an observable sequence that terminates immediately with the specified exception.</summary>
     /// <typeparam name="T">The type of the elements in the observable sequence.</typeparam>
     /// <param name="error">The exception to be propagated to observers as an error notification. Cannot be null.</param>
     /// <returns>An observable sequence of type <typeparamref name="T"/> that signals the specified exception upon subscription.</returns>
-    /// <exception cref="ArgumentExceptionHelper">Thrown if <paramref name="error"/> is null.</exception>
-    /// <remarks>Use this method to create an observable sequence that fails immediately, which can be useful
-    /// for testing error handling or representing error conditions in reactive workflows.</remarks>
+    /// <exception cref="ArgumentNullException"><paramref name="error"/> is <see langword="null"/>.</exception>
+    /// <remarks>The exception arrives as a terminal completion, not thrown from the subscribe call.</remarks>
     [SuppressMessage(
         "Design",
         "SST2307:Generic method type parameters should be inferable from the parameters",
-        Justification = "Public factory API — caller specifies T explicitly: SignalAsync.Throw<int>(ex).")]
+        Justification = "The element type cannot be inferred from an exception; the caller states it: SignalAsync.Fail<int>(ex).")]
     public static IObservableAsync<T> Fail<T>(Exception error)
     {
         ArgumentExceptionHelper.ThrowIfNull(error);
@@ -41,16 +37,13 @@ public static partial class SignalAsync
     [SuppressMessage(
         "Design",
         "SST2307:Generic method type parameters should be inferable from the parameters",
-        Justification = "Public factory API — caller specifies T explicitly: SignalAsync.Throw<int>(ex).")]
+        Justification = "The element type cannot be inferred from an exception; the caller states it: SignalAsync.Throw<int>(ex).")]
     public static IObservableAsync<T> Throw<T>(Exception error) =>
         new ThrowSignalAsync<T>(error ?? throw new ArgumentNullException(nameof(error)));
 
     /// <summary>Represents an asynchronous observable sequence that immediately terminates with the specified exception.</summary>
     /// <typeparam name="T">The type of elements in the observable sequence.</typeparam>
     /// <param name="error">The exception that will be signaled to observers as the terminal error.</param>
-    /// <remarks>Use this type to create an observable sequence that fails immediately upon subscription,
-    /// propagating the provided exception to subscribers. This can be useful for representing error conditions in
-    /// asynchronous observable scenarios.</remarks>
     internal sealed class ThrowSignalAsync<T>(Exception error) : IObservableAsync<T>
     {
         /// <inheritdoc/>

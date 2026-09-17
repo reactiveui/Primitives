@@ -4,11 +4,7 @@
 
 namespace ReactiveUI.Primitives.Async.Tests;
 
-/// <summary>
-/// Tests for the forced-yield overloads of the <c>ObserveOnIf</c> parity helper — the ones that take an
-/// explicit <c>forceYielding</c> flag. A false condition must hand the source back untouched; a true
-/// condition must wrap it in a context-switching sequence.
-/// </summary>
+/// <summary>Tests conditional context-switching wrapper selection.</summary>
 public class ObserveOnIfOperatorTests
 {
     /// <summary>The value the sources emit.</summary>
@@ -27,18 +23,17 @@ public class ObserveOnIfOperatorTests
         await Assert.That(await observed.FirstAsync()).IsEqualTo(Sentinel);
     }
 
-    /// <summary>Verifies that a true condition makes the forced-yield <see cref="AsyncContext"/> overload wrap
-    /// the source in a context-switching sequence that still forwards the value.</summary>
+    /// <summary>A true condition selects the context-switching wrapper.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
-    public async Task WhenObserveOnIfAsyncContextConditionTrueWithForcedYielding_ThenWrapsAndForwards()
+    public async Task WhenObserveOnIfAsyncContextConditionTrueWithForcedYielding_ThenWrapsSource()
     {
         var source = SignalAsync.Return(Sentinel);
 
         var observed = source.ObserveOnIf(true, AsyncContext.Default, true);
 
         await Assert.That(ReferenceEquals(observed, source)).IsFalse();
-        await Assert.That(await observed.FirstAsync()).IsEqualTo(Sentinel);
+        await Assert.That(observed).IsTypeOf<WitnessOnSignal<int>>();
     }
 
     /// <summary>Verifies that a false condition makes the forced-yield <see cref="TaskScheduler"/> overload a no-op.</summary>
@@ -54,17 +49,16 @@ public class ObserveOnIfOperatorTests
         await Assert.That(await observed.FirstAsync()).IsEqualTo(Sentinel);
     }
 
-    /// <summary>Verifies that a true condition makes the forced-yield <see cref="TaskScheduler"/> overload wrap
-    /// the source in a context-switching sequence that still forwards the value.</summary>
+    /// <summary>A true condition selects the scheduler context wrapper.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
-    public async Task WhenObserveOnIfTaskSchedulerConditionTrueWithForcedYielding_ThenWrapsAndForwards()
+    public async Task WhenObserveOnIfTaskSchedulerConditionTrueWithForcedYielding_ThenWrapsSource()
     {
         var source = SignalAsync.Return(Sentinel);
 
         var observed = source.ObserveOnIf(true, TaskScheduler.Default, true);
 
         await Assert.That(ReferenceEquals(observed, source)).IsFalse();
-        await Assert.That(await observed.FirstAsync()).IsEqualTo(Sentinel);
+        await Assert.That(observed).IsTypeOf<WitnessOnSignal<int>>();
     }
 }

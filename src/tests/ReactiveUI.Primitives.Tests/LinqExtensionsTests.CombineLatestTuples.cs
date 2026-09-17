@@ -273,11 +273,7 @@ public partial class LinqExtensionsTests
         await Assert.That(source2.HasObservers).IsFalse();
     }
 
-    /// <summary>
-    /// Verifies a fully generic call passing an untyped null selector still binds to the selector overload.
-    /// That call shape fits both the arity-2 selector overload and the arity-3 tuple overload, so it is only
-    /// unambiguous while the tuple overloads keep their lower overload resolution priority.
-    /// </summary>
+    /// <summary>Verifies a fully generic call passing an untyped null selector binds to the selector overload.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
     [RequiresAssemblyFiles("Builds metadata references from loaded assembly locations.")]

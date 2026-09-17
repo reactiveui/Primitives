@@ -9,14 +9,14 @@ namespace ReactiveUI.Primitives.Advanced;
 /// <summary>Sink that forwards the first occurrence of each value.</summary>
 /// <typeparam name="T">The value type.</typeparam>
 /// <param name="observer">The downstream observer.</param>
-/// <param name="seen">The set used to track already-observed values.</param>
+/// <param name="seen">The set that records which values have been observed.</param>
 [System.Diagnostics.DebuggerDisplay("DistinctWitness: Seen = {_seen.Count}, Subscription = {_subscription}")]
 public sealed class DistinctWitness<T>(IObserver<T> observer, HashSet<T> seen) : IObserver<T>, IDisposable
 {
     /// <summary>The downstream observer.</summary>
     private readonly IObserver<T> _observer = observer;
 
-    /// <summary>The set of values already observed.</summary>
+    /// <summary>The set of values observed so far.</summary>
     private readonly HashSet<T> _seen = seen;
 
     /// <summary>The upstream subscription.</summary>
@@ -30,15 +30,7 @@ public sealed class DistinctWitness<T>(IObserver<T> observer, HashSet<T> seen) :
             return;
         }
 
-        try
-        {
-            _observer.OnNext(value);
-        }
-        catch
-        {
-            Dispose();
-            throw;
-        }
+        SinkDelivery.Next(_observer, value, this);
     }
 
     /// <inheritdoc/>
@@ -49,7 +41,7 @@ public sealed class DistinctWitness<T>(IObserver<T> observer, HashSet<T> seen) :
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void OnCompleted() => SinkTerminal.Complete(_observer, this);
 
-    /// <summary>Assigns the upstream subscription, disposing it if one is already held.</summary>
+    /// <summary>Assigns the upstream subscription, disposing the incoming one when this sink holds a subscription or has been disposed.</summary>
     /// <param name="subscription">The upstream subscription.</param>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void SetSubscription(IDisposable subscription) => SinkSubscription.Set(ref _subscription, subscription);

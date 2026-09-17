@@ -11,10 +11,8 @@ namespace ReactiveUI.Primitives.Extensions.Operators;
 #endif
 
 /// <summary>
-/// Resource-bound factory observable that runs a <see cref="Func{T, TResult}"/>
-/// against a captured <see cref="IDisposable"/> resource, emits the result,
-/// completes, and finally disposes the resource. Replaces the legacy
-/// <c>Observable.Using(() =&gt; obj, id =&gt; Observable.Start(() =&gt; func(id)))</c> pattern.
+/// Resource-bound factory observable that runs a <see cref="Func{T, TResult}"/> against a captured
+/// <see cref="IDisposable"/> resource, emits the result, completes, and disposes the resource.
 /// </summary>
 /// <typeparam name="T">The disposable resource type.</typeparam>
 /// <typeparam name="TResult">The result type emitted to the downstream observer.</typeparam>
@@ -48,10 +46,7 @@ internal sealed class UsingFuncObservable<T, TResult>(
             });
     }
 
-    /// <summary>
-    /// Invokes the function against the resource, signals the produced value
-    /// followed by completion, then disposes the resource.
-    /// </summary>
+    /// <summary>Invokes the function against the resource, signals the produced value followed by completion, then disposes the resource.</summary>
     /// <param name="observer">The downstream observer.</param>
     /// <param name="resource">The resource to use and dispose.</param>
     /// <param name="function">The function invoked against the resource.</param>
@@ -59,7 +54,7 @@ internal sealed class UsingFuncObservable<T, TResult>(
         "Design",
         "SST1429:Handle, rethrow, or narrow this catch; an empty catch of the base exception hides failures",
         Justification =
-            "A secondary dispose failure during error handling is intentionally swallowed so the primary exception sent to the observer wins; this assembly has no unhandled-exception sink.")]
+            "A secondary dispose failure is swallowed so the primary exception reaching the observer wins.")]
     private static void Run(IObserver<TResult> observer, T resource, Func<T, TResult> function)
     {
         TResult result;
@@ -75,7 +70,7 @@ internal sealed class UsingFuncObservable<T, TResult>(
             }
             catch
             {
-                // Swallow secondary dispose failure; the primary exception is what callers care about.
+                // Secondary disposal errors do not replace the original failure.
             }
 
             observer.OnError(error);

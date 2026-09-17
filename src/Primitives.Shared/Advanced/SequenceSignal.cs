@@ -15,7 +15,7 @@ public sealed class SequenceSignal : IRequireCurrentThread<int>
     /// <summary>Initializes a new instance of the <see cref="SequenceSignal"/> class.</summary>
     /// <param name="start">The first value to emit.</param>
     /// <param name="count">The number of values to emit.</param>
-    /// <param name="scheduler">The scheduler used to emit values.</param>
+    /// <param name="scheduler">The sequencer that emits the values.</param>
     public SequenceSignal(int start, int count, ISequencer scheduler)
     {
         Start = start;
@@ -29,7 +29,7 @@ public sealed class SequenceSignal : IRequireCurrentThread<int>
     /// <summary>Gets the number of values to emit.</summary>
     private int Count { get; }
 
-    /// <summary>Gets the scheduler used to emit values.</summary>
+    /// <summary>Gets the sequencer that emits the values.</summary>
     private ISequencer Scheduler { get; }
 
     /// <inheritdoc/>

@@ -3,7 +3,6 @@
 // See the LICENSE file in the project root for full license information.
 
 using System.Runtime.CompilerServices;
-using System.Runtime.ExceptionServices;
 
 namespace ReactiveUI.Primitives.Concurrency;
 
@@ -15,16 +14,28 @@ public sealed class TaskPoolSequencer : ISequencer
     /// <summary>Task factory used to schedule asynchronous work.</summary>
     private readonly TaskFactory _taskFactory;
 
+    /// <summary>Schedules delayed dispatch callbacks.</summary>
+    private readonly ISequencer _delaySequencer;
+
     /// <summary>Initializes a new instance of the <see cref="TaskPoolSequencer"/> class.</summary>
     /// <param name="taskFactory">The task factory.</param>
     /// <exception cref="ArgumentNullException"><paramref name="taskFactory"/> is <see langword="null"/>.</exception>
-    public TaskPoolSequencer(TaskFactory taskFactory) =>
-        _taskFactory = taskFactory ?? throw new ArgumentNullException(nameof(taskFactory));
+    public TaskPoolSequencer(TaskFactory taskFactory)
+        : this(taskFactory, ThreadPoolSequencer.Instance)
+    {
+    }
 
-    /// <summary>Gets the instance.</summary>
-    /// <value>
-    /// The instance.
-    /// </value>
+    /// <summary>Initializes a new instance of the <see cref="TaskPoolSequencer"/> class.</summary>
+    /// <param name="taskFactory">The factory dispatching ready work.</param>
+    /// <param name="delaySequencer">The scheduler delivering delayed callbacks.</param>
+    /// <exception cref="ArgumentNullException">The task factory is null.</exception>
+    internal TaskPoolSequencer(TaskFactory taskFactory, ISequencer delaySequencer)
+    {
+        _taskFactory = taskFactory ?? throw new ArgumentNullException(nameof(taskFactory));
+        _delaySequencer = delaySequencer;
+    }
+
+    /// <summary>Gets the shared sequencer backed by <see cref="Task.Factory"/>.</summary>
     public static TaskPoolSequencer Instance { get; } = new(Task.Factory);
 
     /// <summary>Gets the default task-pool scheduler.</summary>
@@ -34,10 +45,10 @@ public sealed class TaskPoolSequencer : ISequencer
     public Action<Exception>? UnhandledExceptionHandler { get; set; }
 
     /// <summary>Gets the scheduler's notion of current time.</summary>
-    public DateTimeOffset Now => Sequencer.Now;
+    public DateTimeOffset Now => _delaySequencer.Now;
 
     /// <summary>Gets the scheduler's monotonic timestamp.</summary>
-    public long Timestamp => Sequencer.Timestamp;
+    public long Timestamp => _delaySequencer.Timestamp;
 
     /// <summary>Gets the debugger display text.</summary>
     [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
@@ -51,12 +62,7 @@ public sealed class TaskPoolSequencer : ISequencer
     {
         ArgumentExceptionHelper.ThrowIfNull(item);
 
-        _ = _taskFactory.StartNew(
-            static state => ((DispatchState)state!).Run(),
-            new DispatchState(this, item),
-            _taskFactory.CancellationToken,
-            _taskFactory.CreationOptions,
-            _taskFactory.Scheduler ?? TaskScheduler.Default);
+        Queue(new(this, item));
     }
 
     /// <summary>Schedules a work item to be executed through the task factory at a monotonic timestamp.</summary>
@@ -73,12 +79,12 @@ public sealed class TaskPoolSequencer : ISequencer
             return;
         }
 
-        ThreadPoolSequencer.Instance.Schedule(new DelayedDispatchWorkItem(this, item), dueTimestamp);
+        _delaySequencer.Schedule(new DelayedDispatchWorkItem(this, item), dueTimestamp);
     }
 
     /// <summary>Executes a work item and routes unhandled exceptions.</summary>
     /// <param name="item">Work item to execute.</param>
-    private void Execute(IWorkItem item)
+    internal void Execute(IWorkItem item)
     {
         if (Sequencer.IsCancelled(item))
         {
@@ -98,9 +104,20 @@ public sealed class TaskPoolSequencer : ISequencer
                 return;
             }
 
-            ExceptionDispatchInfo.Capture(ex).Throw();
+            throw;
         }
     }
+
+    /// <summary>Queues a callback on the task factory's scheduler.</summary>
+    /// <param name="state">The callback state.</param>
+    [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
+    private void Queue(DispatchState state) =>
+        _ = _taskFactory.StartNew(
+            static value => ((DispatchState)value!).Run(),
+            state,
+            _taskFactory.CancellationToken,
+            _taskFactory.CreationOptions,
+            _taskFactory.Scheduler ?? TaskScheduler.Default);
 
     /// <summary>Task factory dispatch state.</summary>
     /// <param name="owner">Owning sequencer.</param>

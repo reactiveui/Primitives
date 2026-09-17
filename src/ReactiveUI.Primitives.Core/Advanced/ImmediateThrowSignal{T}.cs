@@ -7,8 +7,8 @@ using ReactiveUI.Primitives.Disposables;
 
 namespace ReactiveUI.Primitives.Advanced;
 
-/// <summary>Represents the immediate Throw signal fast path.</summary>
-/// <typeparam name="T">The T type.</typeparam>
+/// <summary>Signal that delivers a terminal error synchronously inside <c>Subscribe</c>.</summary>
+/// <typeparam name="T">The value type.</typeparam>
 [System.Diagnostics.DebuggerDisplay("ImmediateThrowSignal: Error = {_error}")]
 public sealed class ImmediateThrowSignal<T> : IRequireCurrentThread<T>, IInlineSignal<T>
 {
@@ -19,14 +19,15 @@ public sealed class ImmediateThrowSignal<T> : IRequireCurrentThread<T>, IInlineS
     /// <param name="error">The terminal error.</param>
     public ImmediateThrowSignal(Exception error) => _error = error;
 
-    /// <summary>Executes the IsRequiredSubscribeOnCurrentThread operation.</summary>
-    /// <returns>The result.</returns>
+    /// <summary>Indicates whether subscription has to happen on the calling thread.</summary>
+    /// <returns>Always <see langword="false"/>.</returns>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public bool IsRequiredSubscribeOnCurrentThread() => false;
 
-    /// <summary>Executes the Subscribe operation.</summary>
-    /// <param name="observer">The observer value.</param>
-    /// <returns>The result.</returns>
+    /// <summary>Faults <paramref name="observer"/> with the stored error before returning.</summary>
+    /// <param name="observer">The observer to fault.</param>
+    /// <returns>An empty disposable; the signal has finished by the time this returns.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="observer"/> is <see langword="null"/>.</exception>
     public IDisposable Subscribe(IObserver<T> observer)
     {
         ArgumentExceptionHelper.ThrowIfNull(observer);
@@ -35,11 +36,11 @@ public sealed class ImmediateThrowSignal<T> : IRequireCurrentThread<T>, IInlineS
         return EmptyDisposable.Instance;
     }
 
-    /// <summary>Executes the Subscribe operation.</summary>
-    /// <param name="onNext">The onNext value.</param>
-    /// <param name="onError">The onError value.</param>
-    /// <param name="onCompleted">The onCompleted value.</param>
-    /// <returns>The result.</returns>
+    /// <summary>Invokes <paramref name="onError"/> with the stored error before returning.</summary>
+    /// <param name="onNext">The unused value callback.</param>
+    /// <param name="onError">Invoked with the stored error.</param>
+    /// <param name="onCompleted">The unused completion callback.</param>
+    /// <returns>An empty disposable; the signal has finished by the time this returns.</returns>
     public IDisposable Subscribe(Action<T> onNext, Action<Exception> onError, Action onCompleted)
     {
         onError(_error);

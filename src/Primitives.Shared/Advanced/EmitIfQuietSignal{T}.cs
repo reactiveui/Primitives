@@ -16,7 +16,7 @@ public sealed class EmitIfQuietSignal<T> : IObservable<T>
     /// <summary>Initializes a new instance of the <see cref="EmitIfQuietSignal{T}"/> class.</summary>
     /// <param name="source">The source observable.</param>
     /// <param name="dueTime">The quiet period before emitting the latest value.</param>
-    /// <param name="sequencer">The sequencer used to schedule delayed emissions.</param>
+    /// <param name="sequencer">The sequencer that schedules delayed emissions.</param>
     /// <exception cref="ArgumentNullException"><paramref name="source"/> or <paramref name="sequencer"/> is <see langword="null"/>.</exception>
     public EmitIfQuietSignal(IObservable<T> source, TimeSpan dueTime, ISequencer sequencer)
     {
@@ -31,7 +31,7 @@ public sealed class EmitIfQuietSignal<T> : IObservable<T>
     /// <summary>Gets the quiet period before emitting the latest value.</summary>
     private TimeSpan DueTime { get; }
 
-    /// <summary>Gets the sequencer used to schedule delayed emissions.</summary>
+    /// <summary>Gets the sequencer that schedules delayed emissions.</summary>
     private ISequencer Sequencer { get; }
 
     /// <inheritdoc/>

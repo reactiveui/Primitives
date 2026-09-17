@@ -31,21 +31,21 @@ public partial class UsingActionObservableTests
     [Test]
     public async Task WhenSchedulerPathActionThrows_ThenForwardsErrorAndDisposes()
     {
+        VirtualClock scheduler = new();
         CountingDisposable resource = new();
         TaskCompletionSource<Exception> faulted = new(TaskCreationOptions.RunContinuationsAsynchronously);
         InvalidOperationException expected = new("scheduler action failed");
 
-        using var sub = resource.Using(_ => throw expected, TaskPoolSequencer.Default)
+        using var sub = resource.Using(_ => throw expected, scheduler)
             .Subscribe(static _ => { }, ex => faulted.TrySetResult(ex));
+        scheduler.Start();
 
-        var caught = await faulted.Task.WaitAsync(GuardTimeout);
+        var caught = await faulted.Task;
         await Assert.That(caught).IsSameReferenceAs(expected);
         await Assert.That(resource.DisposeCount).IsEqualTo(1);
     }
 
-    /// <summary>Disposable that delegates the side-effect of <c>Dispose</c> to a caller-supplied
-    /// <see cref="Action"/>. Used by tests that intentionally exercise the secondary-failure
-    /// swallow branch of <c>UsingActionObservable</c> by passing a throwing hook.</summary>
+    /// <summary>Invokes a supplied disposal action, including actions that throw.</summary>
     private sealed class HookDisposable : IDisposable
     {
         /// <summary>Per-dispose hook invoked from <see cref="Dispose"/>.</summary>

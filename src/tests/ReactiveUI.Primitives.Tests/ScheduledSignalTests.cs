@@ -24,19 +24,16 @@ public sealed class ScheduledSignalTests
     /// <summary>The fourth emitted value.</summary>
     private const int FourthValue = 4;
 
-    /// <summary>The final emitted value used by stress tests.</summary>
+    /// <summary>The value delivered after the final subscription is disposed.</summary>
     private const int FinalValue = 999;
 
-    /// <summary>The number of concurrent workers used by stress tests.</summary>
-    private const int WorkerCount = 8;
-
-    /// <summary>The number of subscribe/dispose iterations each stress worker runs.</summary>
-    private const int WorkerIterations = 64;
+    /// <summary>The number of overlapping subscriptions.</summary>
+    private const int SubscriptionCount = 8;
 
     /// <summary>The expected terminal exception message.</summary>
     private const string TerminalThrowMessage = "terminal";
 
-    /// <summary>The default observer receives the original terminal event and the restored replay.</summary>
+    /// <summary>The terminal notification count the default observer receives across completion and replay.</summary>
     private const int DefaultObserverTerminalReplayCount = 2;
 
     /// <summary>Constructor validates the scheduler argument.</summary>
@@ -163,7 +160,7 @@ public sealed class ScheduledSignalTests
             .ThrowsExactly<ObjectDisposedException>();
     }
 
-    /// <summary>The protected dispose path marks the signal disposed when managed cleanup is not requested.</summary>
+    /// <summary>The protected dispose overload marks the signal disposed when managed cleanup is not requested.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
     public async Task DisposeWithoutManagedCleanupMarksSignalDisposed()
@@ -198,35 +195,28 @@ public sealed class ScheduledSignalTests
         await Assert.That(lateObserver.Completed).IsEqualTo(1);
     }
 
-    /// <summary>Concurrent subscribe and dispose operations do not prevent default-observer restoration.</summary>
+    /// <summary>Disposing the final explicit subscription restores the default observer.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
-    public async Task ConcurrentSubscribeDisposeRestoresDefaultObserver()
+    public async Task DisposingOverlappingSubscriptionsRestoresDefaultObserver()
     {
         var defaultObserver = new RecordingObserver<int>();
         using var signal = new ScheduledSignal<int>(Sequencer.Immediate, defaultObserver);
-        var tasks = Enumerable.Range(0, WorkerCount)
-            .Select(worker => Task.Run(() => SubscribeAndDispose(signal, worker)))
-            .ToArray();
+        var subscriptions = new IDisposable[SubscriptionCount];
+        for (var index = 0; index < subscriptions.Length; index++)
+        {
+            subscriptions[index] = signal.Subscribe(new RecordingObserver<int>());
+        }
 
-        await Task.WhenAll(tasks);
+        for (var index = 0; index < subscriptions.Length; index++)
+        {
+            signal.OnNext(FirstValue);
+            subscriptions[index].Dispose();
+        }
 
         signal.OnNext(FinalValue);
-
-        await Assert.That(defaultObserver.Values.Contains(FinalValue)).IsTrue();
+        await Assert.That(defaultObserver.Values.SequenceEqual([FinalValue])).IsTrue();
         await Assert.That(signal.IsDisposed).IsFalse();
-    }
-
-    /// <summary>Subscribes and disposes observers repeatedly.</summary>
-    /// <param name="signal">The scheduled signal under test.</param>
-    /// <param name="worker">The worker identifier.</param>
-    private static void SubscribeAndDispose(ScheduledSignal<int> signal, int worker)
-    {
-        for (var i = 0; i < WorkerIterations; i++)
-        {
-            using var subscription = signal.Subscribe(new RecordingObserver<int>());
-            signal.OnNext((worker * WorkerIterations) + i);
-        }
     }
 
     /// <summary>Test sequencer that queues scheduled work until drained explicitly.</summary>

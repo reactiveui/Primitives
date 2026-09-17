@@ -14,82 +14,55 @@ public sealed class AsyncEnumerableSignalTests
     private static readonly int[] SourceValues = [1, 2, 3];
 
     /// <summary>Verifies a value buffered while disposal tears down the observer is not delivered.</summary>
-    /// <param name="token">The test cancellation token.</param>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
-    [Timeout(30_000)]
-    public async Task DisposeDuringMoveNextSuppressesBufferedOnNext(CancellationToken token)
+    public async Task DisposeDuringMoveNextSuppressesBufferedOnNext()
     {
         GatedAsyncEnumerable source = new();
-        AsyncEnumerableSignal<int> signal = new(source, CancellationToken.None);
         RecordingWitness<int> observer = new();
-
-        var subscription = signal.Subscribe(observer);
-
-        // Wait until the pump is parked inside MoveNextAsync with a value ready to emit.
-        await source.MoveNextEntered.Task.WaitAsync(token);
-
-        // Dispose mid-flight, then let the buffered MoveNextAsync complete with a value.
+        AsyncEnumerableSignal<int>.Subscription subscription = new(observer, source, CancellationToken.None);
+        var pump = subscription.PumpAsync();
+        await source.MoveNextEntered.Task;
         subscription.Dispose();
         source.ReleaseMoveNext(true);
-
-        // Wait for the pump to drain so any (incorrect) emission would already have happened.
-        await source.Disposed.Task.WaitAsync(token);
+        await pump;
 
         await Assert.That(observer.Values).IsEmpty();
         await Assert.That(observer.Completed).IsEqualTo(0);
         await Assert.That(observer.Errors).IsEmpty();
     }
 
-    /// <summary>Verifies the enumerator is disposed exactly once when disposal races the pump.</summary>
-    /// <param name="token">The test cancellation token.</param>
+    /// <summary>Disposal before the last move completes releases the enumerator once.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
-    [Timeout(30_000)]
-    public async Task DisposeAfterCompletionDisposesEnumeratorExactlyOnce(CancellationToken token)
+    public async Task DisposeBeforeCompletionDisposesEnumeratorExactlyOnce()
     {
         GatedAsyncEnumerable source = new();
-        AsyncEnumerableSignal<int> signal = new(source, CancellationToken.None);
         RecordingWitness<int> observer = new();
-
-        var subscription = signal.Subscribe(observer);
-
-        await source.MoveNextEntered.Task.WaitAsync(token);
-
-        // Dispose while parked, then end the sequence; both disposal and the pump's finally run.
+        AsyncEnumerableSignal<int>.Subscription subscription = new(observer, source, CancellationToken.None);
+        var pump = subscription.PumpAsync();
+        await source.MoveNextEntered.Task;
         subscription.Dispose();
         source.ReleaseMoveNext(false);
-
-        await source.Disposed.Task.WaitAsync(token);
-
-        // Dispose again to confirm the idempotent disposer never reaches the enumerator twice.
+        await pump;
         subscription.Dispose();
 
         await Assert.That(source.DisposeCount).IsEqualTo(1);
     }
 
     /// <summary>Verifies disposal disposes a non-cooperative enumerator without waiting on its <c>MoveNextAsync</c>.</summary>
-    /// <param name="token">The test cancellation token.</param>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
-    [Timeout(30_000)]
-    public async Task DisposeDisposesNonCooperativeEnumeratorWithoutHanging(CancellationToken token)
+    public async Task DisposeDisposesNonCooperativeEnumeratorWithoutWaitingForMoveNext()
     {
         NeverCompletingAsyncEnumerable source = new();
-        AsyncEnumerableSignal<int> signal = new(source, CancellationToken.None);
         RecordingWitness<int> observer = new();
-
-        var subscription = signal.Subscribe(observer);
-
-        // Wait until the pump is parked inside the MoveNextAsync that never completes.
-        await source.MoveNextEntered.Task.WaitAsync(token);
-
-        // Disposal must dispose the enumerator promptly even though MoveNextAsync ignores cancellation.
+        AsyncEnumerableSignal<int>.Subscription subscription = new(observer, source, CancellationToken.None);
+        var pump = subscription.PumpAsync();
+        await source.MoveNextEntered.Task;
         subscription.Dispose();
-
-        await source.Disposed.Task.WaitAsync(token);
-
-        // Dispose again to confirm the second call never reaches the enumerator.
+        await source.Disposed.Task;
+        await pump;
         subscription.Dispose();
 
         await Assert.That(source.DisposeCount).IsEqualTo(1);
@@ -98,19 +71,86 @@ public sealed class AsyncEnumerableSignalTests
         await Assert.That(observer.Errors).IsEmpty();
     }
 
-    /// <summary>Verifies a normally completing sequence delivers all values then completes.</summary>
-    /// <param name="token">The test cancellation token.</param>
+    /// <summary>A failure raised after disposal escapes the pump instead of reaching the observer.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
-    [Timeout(30_000)]
-    public async Task CompletesNormallyAndDeliversAllValues(CancellationToken token)
+    public async Task FailureAfterDisposalEscapesThePump()
+    {
+        GatedAsyncEnumerable source = new();
+        RecordingWitness<int> observer = new();
+        AsyncEnumerableSignal<int>.Subscription subscription = new(observer, source, CancellationToken.None);
+        var pump = subscription.PumpAsync();
+        await source.MoveNextEntered.Task;
+        subscription.Dispose();
+
+        source.FailMoveNext(new InvalidOperationException("late failure"));
+
+        await Assert.That(async () => await pump).ThrowsExactly<InvalidOperationException>();
+        await Assert.That(observer.Errors).IsEmpty();
+        await Assert.That(source.DisposeCount).IsEqualTo(1);
+    }
+
+    /// <summary>The pump waits for an enumerator whose disposal completes asynchronously.</summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    [Test]
+    public async Task PumpAwaitsAsynchronousEnumeratorDisposal()
+    {
+        AsyncDisposingEnumerable source = new();
+        RecordingWitness<int> observer = new();
+        AsyncEnumerableSignal<int>.Subscription subscription = new(observer, source, CancellationToken.None);
+
+        var pump = subscription.PumpAsync();
+        await Assert.That(pump.IsCompleted).IsFalse();
+        source.CompleteDisposal();
+        await pump;
+
+        await Assert.That(observer.Completed).IsEqualTo(1);
+    }
+
+    /// <summary>An observer that throws while receiving the pump failure faults the pump after the enumerator is released.</summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    [Test]
+    public async Task ObserverFailingOnErrorFaultsThePumpAfterReleasingTheEnumerator()
+    {
+        GatedAsyncEnumerable source = new();
+        source.FailMoveNext(new InvalidOperationException("source failure"));
+        AsyncEnumerableSignal<int>.Subscription subscription = new(
+            new ThrowingWitness<int>(throwOnError: true),
+            source,
+            CancellationToken.None);
+
+        var thrown = await Assert.That(async () => await subscription.PumpAsync()).ThrowsExactly<InvalidOperationException>();
+
+        await Assert.That(thrown!.Message).IsEqualTo("observer-error");
+        await Assert.That(source.DisposeCount).IsEqualTo(1);
+    }
+
+    /// <summary>A source that cannot create its enumerator reports the failure and leaves nothing to release.</summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    [Test]
+    public async Task EnumeratorCreationFailureIsForwardedToTheObserver()
+    {
+        RecordingWitness<int> observer = new();
+        AsyncEnumerableSignal<int>.Subscription subscription = new(observer, new FailingAsyncEnumerable(), CancellationToken.None);
+
+        await subscription.PumpAsync();
+
+        await Assert.That(observer.Errors).Count().IsEqualTo(1);
+        await Assert.That(observer.Errors[0]).IsTypeOf<InvalidOperationException>();
+        await Assert.That(observer.Completed).IsEqualTo(0);
+    }
+
+    /// <summary>Verifies a normally completing sequence delivers all values then completes.</summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    [Test]
+    public async Task CompletesNormallyAndDeliversAllValues()
     {
         AsyncEnumerableSignal<int> signal = new(new CountingAsyncEnumerable(SourceValues), CancellationToken.None);
         RecordingWitness<int> observer = new();
 
         _ = signal.Subscribe(observer);
 
-        await observer.CompletedSignal.Task.WaitAsync(token);
+        await observer.CompletedSignal.Task;
 
         await Assert.That(observer.Values.SequenceEqual(SourceValues)).IsTrue();
         await Assert.That(observer.Completed).IsEqualTo(1);
@@ -142,6 +182,11 @@ public sealed class AsyncEnumerableSignalTests
         /// <param name="result">The value returned by <c>MoveNextAsync</c>.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void ReleaseMoveNext(bool result) => _moveNextGate.TrySetResult(result);
+
+        /// <summary>Fails the gated <c>MoveNextAsync</c> with the given error.</summary>
+        /// <param name="error">The error raised by <c>MoveNextAsync</c>.</param>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void FailMoveNext(Exception error) => _moveNextGate.TrySetException(error);
 
         /// <inheritdoc/>
         public IAsyncEnumerator<int> GetAsyncEnumerator(CancellationToken cancellationToken = default) => this;
@@ -205,6 +250,39 @@ public sealed class AsyncEnumerableSignalTests
             _ = _never.TrySetResult(false);
             return default;
         }
+    }
+
+    /// <summary>An empty async enumerable whose disposal completes when the test releases it.</summary>
+    private sealed class AsyncDisposingEnumerable : IAsyncEnumerable<int>, IAsyncEnumerator<int>
+    {
+        /// <summary>The gate released to complete disposal.</summary>
+        private readonly TaskCompletionSource _disposeGate = new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        /// <summary>Gets the current value.</summary>
+        public int Current => 0;
+
+        /// <summary>Completes the pending disposal.</summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void CompleteDisposal() => _disposeGate.TrySetResult();
+
+        /// <inheritdoc/>
+        public IAsyncEnumerator<int> GetAsyncEnumerator(CancellationToken cancellationToken = default) => this;
+
+        /// <inheritdoc/>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public ValueTask<bool> MoveNextAsync() => new(false);
+
+        /// <inheritdoc/>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public ValueTask DisposeAsync() => new(_disposeGate.Task);
+    }
+
+    /// <summary>An async enumerable that fails to create its enumerator.</summary>
+    private sealed class FailingAsyncEnumerable : IAsyncEnumerable<int>
+    {
+        /// <inheritdoc/>
+        public IAsyncEnumerator<int> GetAsyncEnumerator(CancellationToken cancellationToken = default) =>
+            throw new InvalidOperationException("enumerator unavailable");
     }
 
     /// <summary>An async enumerable that yields a fixed set of values.</summary>

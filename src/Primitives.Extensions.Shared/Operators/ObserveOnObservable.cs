@@ -10,14 +10,7 @@ namespace ReactiveUI.Primitives.Extensions.Reactive.Operators;
 namespace ReactiveUI.Primitives.Extensions.Operators;
 #endif
 
-/// <summary>
-/// Marshals every source notification onto the supplied <see cref="ISequencer"/>, preserving order.
-/// Replaces the <c>System.Reactive.Linq.Observable.ObserveOn</c> delegation behind the sync
-/// <c>ObserveOnSafe</c> / <c>ObserveOnIf</c> helpers with our own queue-and-single-drain marshaller:
-/// notifications are enqueued and a single drain pass is scheduled per burst (rather than one
-/// scheduled action per item). The shared queue / gate / drain machinery lives in
-/// <see cref="ScheduledDrainState{T}"/>; this sink only carries the forward-everything drain handling.
-/// </summary>
+/// <summary>Delivers source notifications in order on the supplied sequencer, scheduling one drain per burst.</summary>
 /// <typeparam name="T">The element type of the source sequence.</typeparam>
 /// <param name="source">The source observable.</param>
 /// <param name="scheduler">The scheduler every notification is delivered on.</param>
@@ -30,8 +23,6 @@ internal sealed class ObserveOnObservable<T>(IObservable<T> source, ISequencer s
         InvalidOperationExceptionHelper.ThrowIfNull(scheduler);
         ArgumentExceptionHelper.ThrowIfNull(observer);
 
-        // The immediate scheduler runs scheduled work inline on the calling thread, so the
-        // queue-and-drain machinery would be pure overhead: forward straight through.
         if (ReferenceEquals(scheduler, Sequencer.Immediate))
         {
             return source.Subscribe(observer);
@@ -42,11 +33,7 @@ internal sealed class ObserveOnObservable<T>(IObservable<T> source, ISequencer s
         return sink;
     }
 
-    /// <summary>
-    /// Single observer that queues upstream notifications and drains them on the scheduler thread in
-    /// FIFO order. Terminal notifications travel through the same queue so they never overtake
-    /// still-queued values.
-    /// </summary>
+    /// <summary>Queues values and terminal notifications together for ordered delivery on the scheduler.</summary>
     private sealed class ObserveOnSink : IObserver<T>, IDisposable, IDrainTarget
     {
         /// <summary>The downstream observer.</summary>
@@ -55,7 +42,7 @@ internal sealed class ObserveOnObservable<T>(IObservable<T> source, ISequencer s
         /// <summary>The gate protecting the queue and terminal state.</summary>
         private readonly Lock _gate = new();
 
-        /// <summary>Shared queue / scheduled-drain machinery.</summary>
+        /// <summary>The notification queue and scheduled-drain bookkeeping shared with the drain loop.</summary>
         private readonly ScheduledDrainState<T> _state;
 
         /// <summary>Initializes a new instance of the <see cref="ObserveOnSink"/> class.</summary>
@@ -115,7 +102,6 @@ internal sealed class ObserveOnObservable<T>(IObservable<T> source, ISequencer s
 
                     default:
                         {
-                            // DrainNotificationKind has only three values; the discard arm absorbs Completed.
                             _state.Terminate();
                             _downstream.OnCompleted();
                             return;

@@ -7,7 +7,7 @@ using ReactiveUI.Primitives.Async.Signals;
 namespace ReactiveUI.Primitives.Async.Tests;
 
 /// <summary>BehaviorSignal and ReplayLatest tests for <see cref="SignalTests"/>.</summary>
-[System.Diagnostics.DebuggerDisplay("SignalTests: WaitTimeout = {WaitTimeout}")]
+[System.Diagnostics.DebuggerDisplay("SignalTests")]
 public partial class SignalTests
 {
     /// <summary>Tests behavior Signal with start value emits latest first to new subscriber.</summary>
@@ -29,7 +29,7 @@ public partial class SignalTests
             },
             null);
 
-        await firstReceived.Task.WaitAsync(WaitTimeout);
+        await firstReceived.Task;
 
         await Assert.That(items).Count().IsGreaterThanOrEqualTo(1);
         await Assert.That(items[0]).IsEqualTo(StartValue);
@@ -59,7 +59,7 @@ public partial class SignalTests
             },
             null);
 
-        await firstReceived.Task.WaitAsync(WaitTimeout);
+        await firstReceived.Task;
 
         await Assert.That(items).Count().IsGreaterThanOrEqualTo(1);
         await Assert.That(items[0]).IsEqualTo(StartValue);
@@ -88,7 +88,7 @@ public partial class SignalTests
             },
             null);
 
-        await firstReceived.Task.WaitAsync(WaitTimeout);
+        await firstReceived.Task;
 
         await Assert.That(items).Count().IsGreaterThanOrEqualTo(1);
         await Assert.That(items[0]).IsEqualTo(LatestValue);
@@ -120,7 +120,7 @@ public partial class SignalTests
             },
             null);
 
-        await firstReceived.Task.WaitAsync(WaitTimeout);
+        await firstReceived.Task;
 
         await Assert.That(items).Count().IsGreaterThanOrEqualTo(1);
         await Assert.That(items[0]).IsEqualTo(PushedValue);
@@ -145,7 +145,7 @@ public partial class SignalTests
             },
             null);
 
-        await firstReceived.Task.WaitAsync(WaitTimeout);
+        await firstReceived.Task;
 
         await Assert.That(items).Count().IsGreaterThanOrEqualTo(1);
         await Assert.That(items[0]).IsEqualTo("initial");
@@ -173,7 +173,7 @@ public partial class SignalTests
             },
             null);
 
-        await firstReceived.Task.WaitAsync(WaitTimeout);
+        await firstReceived.Task;
 
         await Assert.That(items).Count().IsGreaterThanOrEqualTo(1);
         await Assert.That(items[0]).IsEqualTo(PushedValue);
@@ -205,7 +205,7 @@ public partial class SignalTests
             },
             null);
 
-        await firstReceived.Task.WaitAsync(WaitTimeout);
+        await firstReceived.Task;
 
         await Assert.That(items).Count().IsGreaterThanOrEqualTo(1);
         await Assert.That(items[0]).IsEqualTo(PushedValue);
@@ -396,7 +396,7 @@ public partial class SignalTests
             },
             null);
 
-        await firstReceived.Task.WaitAsync(WaitTimeout);
+        await firstReceived.Task;
 
         await Assert.That(items).Count().IsGreaterThanOrEqualTo(1);
         await Assert.That(items[0]).IsEqualTo(StartValue);
@@ -658,7 +658,7 @@ public partial class SignalTests
         const int LinkedCtsValue = 11;
         await signal.OnNextAsync(LinkedCtsValue, cts.Token);
 
-        var received = await tcs.Task.WaitAsync(WaitTimeout);
+        var received = await tcs.Task;
         await Assert.That(received).IsEqualTo(LinkedCtsValue);
     }
 
@@ -683,7 +683,7 @@ public partial class SignalTests
         using CancellationTokenSource cts = new();
         await signal.OnErrorResumeAsync(expected, cts.Token);
 
-        var received = await tcs.Task.WaitAsync(WaitTimeout);
+        var received = await tcs.Task;
         await Assert.That(received).IsSameReferenceAs(expected);
     }
 
@@ -706,7 +706,7 @@ public partial class SignalTests
         const int LinkedCtsValue = 17;
         await signal.OnNextAsync(LinkedCtsValue, cts.Token);
 
-        var received = await tcs.Task.WaitAsync(WaitTimeout);
+        var received = await tcs.Task;
         await Assert.That(received).IsEqualTo(LinkedCtsValue);
     }
 
@@ -731,7 +731,7 @@ public partial class SignalTests
         using CancellationTokenSource cts = new();
         await signal.OnErrorResumeAsync(expected, cts.Token);
 
-        var received = await tcs.Task.WaitAsync(WaitTimeout);
+        var received = await tcs.Task;
         await Assert.That(received).IsSameReferenceAs(expected);
     }
 
@@ -797,7 +797,7 @@ public partial class SignalTests
         await Assert.That(sub).IsNotNull();
     }
 
-    /// <summary>Exercises the <c>_isDisposed</c> idempotency guard on <c>BaseReplayLatestSignalAsync.DisposeAsync</c> — a second dispose is a no-op.</summary>
+    /// <summary>Exercises the <c>_isDisposed</c> idempotency guard on <c>BaseReplayLatestSignalAsync.DisposeAsync</c> - a second dispose is a no-op.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenReplayLatestSignalDisposedTwice_ThenIdempotent()

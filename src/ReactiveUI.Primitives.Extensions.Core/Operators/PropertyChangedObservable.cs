@@ -6,19 +6,12 @@ using System.ComponentModel;
 
 namespace ReactiveUI.Primitives.Extensions.Operators;
 
-/// <summary>
-/// Fused replacement for
-/// <c>Observable.FromEventPattern(...).Where(name match).Select(getter).StartWith(getter)</c>.
-/// Subscribes directly to <see cref="INotifyPropertyChanged.PropertyChanged"/>, holds the
-/// compiled getter once at construction (the original chain compiled it twice per
-/// subscription), and emits the current value on subscribe followed by the getter
-/// result for each matching property change — all through a single sink.
-/// </summary>
+/// <summary>Emits the current property value on subscription, then invokes the shared getter for matching property changes.</summary>
 /// <typeparam name="T">The owning type that raises <see cref="INotifyPropertyChanged.PropertyChanged"/>.</typeparam>
 /// <typeparam name="TProperty">The property element type.</typeparam>
 /// <param name="source">The owning instance.</param>
 /// <param name="propertyName">The property name to filter by.</param>
-/// <param name="getter">The compiled property getter (compiled once at construction).</param>
+/// <param name="getter">Reads the property value from the owning instance.</param>
 public sealed class PropertyChangedObservable<T, TProperty>(
     T source,
     string propertyName,
@@ -40,11 +33,7 @@ public sealed class PropertyChangedObservable<T, TProperty>(
         return sink;
     }
 
-    /// <summary>
-    /// Sink that holds the bound <see cref="PropertyChangedEventHandler"/> and detaches
-    /// it on dispose. Filters by property name inline and pulls the value through the
-    /// pre-compiled getter.
-    /// </summary>
+    /// <summary>Sink that owns the bound <see cref="PropertyChangedEventHandler"/>, filters it by property name, and detaches it on dispose.</summary>
     private sealed class PropertyChangedSink : IDisposable
     {
         /// <summary>The downstream observer receiving filtered property values.</summary>
@@ -56,17 +45,17 @@ public sealed class PropertyChangedObservable<T, TProperty>(
         /// <summary>The property name to filter on.</summary>
         private readonly string _propertyName;
 
-        /// <summary>The pre-compiled property getter.</summary>
+        /// <summary>Reads the property value from the owning instance.</summary>
         private readonly Func<T, TProperty> _getter;
 
-        /// <summary>Disposed flag (0 = active, 1 = disposed). Updated lock-free.</summary>
+        /// <summary>Disposal latch: 0 while the handler is attached, 1 once detached.</summary>
         private int _disposed;
 
         /// <summary>Initializes a new instance of the <see cref="PropertyChangedSink"/> class.</summary>
         /// <param name="downstream">The downstream observer.</param>
         /// <param name="source">The owning instance.</param>
         /// <param name="propertyName">The property name to filter on.</param>
-        /// <param name="getter">The pre-compiled property getter.</param>
+        /// <param name="getter">Reads the property value from the owning instance.</param>
         public PropertyChangedSink(
             IObserver<TProperty> downstream,
             T source,
@@ -94,7 +83,7 @@ public sealed class PropertyChangedObservable<T, TProperty>(
             _source.PropertyChanged -= Handler;
         }
 
-        /// <summary>Bound <see cref="INotifyPropertyChanged.PropertyChanged"/> handler — filters by property name then forwards the pre-compiled getter result downstream.</summary>
+        /// <summary>Forwards a freshly read value for the watched property, turning a getter failure into an error that also detaches the handler.</summary>
         /// <param name="sender">Event sender (unused).</param>
         /// <param name="e">Event payload carrying the changed property name.</param>
         private void OnPropertyChanged(object? sender, PropertyChangedEventArgs e)

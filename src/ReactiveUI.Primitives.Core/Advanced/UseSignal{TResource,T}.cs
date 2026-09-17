@@ -7,21 +7,22 @@ using ReactiveUI.Primitives.Disposables;
 
 namespace ReactiveUI.Primitives.Advanced;
 
-/// <summary>Resource-scoped signal.</summary>
-/// <typeparam name="TResource">Resource type.</typeparam>
-/// <typeparam name="T">Value type.</typeparam>
-/// <param name="resourceFactory">Resource factory.</param>
-/// <param name="signalFactory">Signal factory.</param>
+/// <summary>Creates a resource per subscription and disposes it when the sequence terminates or the subscription is disposed.</summary>
+/// <typeparam name="TResource">The resource type, disposed with the subscription.</typeparam>
+/// <typeparam name="T">The value type.</typeparam>
+/// <param name="resourceFactory">Creates the resource, once per subscription.</param>
+/// <param name="signalFactory">Creates the signal that consumes the resource.</param>
+/// <remarks>A failure from either factory is delivered to the observer.</remarks>
 [System.Diagnostics.DebuggerDisplay("UseSignal: ResourceFactory = {_resourceFactory}, SignalFactory = {_signalFactory}")]
 public sealed class UseSignal<TResource, T>(
     Func<TResource> resourceFactory,
     Func<TResource, IObservable<T>> signalFactory) : IObservable<T>
     where TResource : IDisposable
 {
-    /// <summary>Resource factory.</summary>
+    /// <summary>Creates the resource, once per subscription.</summary>
     private readonly Func<TResource> _resourceFactory = resourceFactory;
 
-    /// <summary>Signal factory.</summary>
+    /// <summary>Creates the signal that consumes the resource.</summary>
     private readonly Func<TResource, IObservable<T>> _signalFactory = signalFactory;
 
     /// <inheritdoc/>
@@ -74,24 +75,19 @@ public sealed class UseSignal<TResource, T>(
         /// <summary>Non-zero once stopped.</summary>
         private int _stopped;
 
-        /// <summary>Assigns the inner subscription.</summary>
+        /// <summary>Publishes the single inner subscription, disposing it if the sink has already stopped.</summary>
         /// <param name="subscription">Inner subscription.</param>
         public void SetSubscription(IDisposable subscription)
         {
             ArgumentExceptionHelper.ThrowIfNull(subscription);
 
-            if (Interlocked.CompareExchange(ref _subscription, subscription, null) is not null)
-            {
-                subscription.Dispose();
-                return;
-            }
-
+            Volatile.Write(ref _subscription, subscription);
             if (Volatile.Read(ref _stopped) == 0)
             {
                 return;
             }
 
-            Interlocked.Exchange(ref _subscription, null)?.Dispose();
+            DisposeSubscription();
         }
 
         /// <inheritdoc/>
@@ -166,12 +162,16 @@ public sealed class UseSignal<TResource, T>(
             Release();
         }
 
-        /// <summary>Releases owned resources.</summary>
+        /// <summary>Detaches the observer, then disposes the inner subscription and the resource.</summary>
         private void Release()
         {
             _observer = EmptyWitness<T>.Instance;
-            Interlocked.Exchange(ref _subscription, null)?.Dispose();
+            DisposeSubscription();
             _resource?.Dispose();
         }
+
+        /// <summary>Disposes the inner subscription at most once.</summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private void DisposeSubscription() => Interlocked.Exchange(ref _subscription, null)?.Dispose();
     }
 }

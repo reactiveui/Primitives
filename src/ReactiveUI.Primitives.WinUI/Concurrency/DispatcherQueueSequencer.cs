@@ -9,10 +9,14 @@ using ReactiveUI.Primitives.Advanced;
 namespace ReactiveUI.Primitives.Concurrency;
 
 /// <summary>WinUI dispatcher queue sequencer that coalesces scheduled work through a <see cref="DispatcherQueue"/>.</summary>
+/// <remarks>Callbacks run in posted dispatcher queue batches without inline reentrancy; cancellation suppresses unstarted work.</remarks>
 /// <seealso cref="ISequencer" />
 [System.Diagnostics.DebuggerDisplay("{DebuggerDisplay,nq}")]
 public sealed class DispatcherQueueSequencer : ISequencer
 {
+    /// <summary>Optional callback for enqueueing native drain delegates.</summary>
+    private readonly Func<DispatcherQueuePriority, DispatcherQueueHandler, bool>? _tryEnqueue;
+
     /// <summary>Coalescing dispatch engine.</summary>
     private DispatchSequencerState _state;
 
@@ -20,8 +24,7 @@ public sealed class DispatcherQueueSequencer : ISequencer
     [System.Diagnostics.CodeAnalysis.SuppressMessage(
         "Maintainability",
         "SST1422:Move this field into the method that uses it",
-        Justification =
-            "Persistent lazy cache: the dispatcher queue handler is built once and reused across every post, so it cannot be a method local.")]
+        Justification = "The handler delegate is cached across every post, so it cannot be a method local.")]
     private DispatcherQueueHandler? _handler;
 
     /// <summary>Initializes a new instance of the <see cref="DispatcherQueueSequencer"/> class.</summary>
@@ -43,6 +46,21 @@ public sealed class DispatcherQueueSequencer : ISequencer
         _state = new(this, Post, RunDrain, ScheduleDelayed);
     }
 
+    /// <summary>Initializes a new instance of the <see cref="DispatcherQueueSequencer"/> class.</summary>
+    /// <param name="priority">Priority passed to the enqueue callback.</param>
+    /// <param name="tryEnqueue">Attempts to enqueue each drain.</param>
+    /// <param name="scheduleDelayed">Schedules delayed work.</param>
+    internal DispatcherQueueSequencer(
+        DispatcherQueuePriority priority,
+        Func<DispatcherQueuePriority, DispatcherQueueHandler, bool> tryEnqueue,
+        Action<IWorkItem, long> scheduleDelayed)
+    {
+        DispatcherQueue = null!;
+        Priority = priority;
+        _tryEnqueue = tryEnqueue;
+        _state = new(this, Post, RunDrain, scheduleDelayed);
+    }
+
     /// <summary>Gets the dispatcher queue used to marshal work to the UI thread.</summary>
     public DispatcherQueue DispatcherQueue { get; }
 
@@ -57,7 +75,7 @@ public sealed class DispatcherQueueSequencer : ISequencer
 
     /// <summary>Gets the debugger display text.</summary>
     [System.Diagnostics.DebuggerBrowsable(System.Diagnostics.DebuggerBrowsableState.Never)]
-    private string DebuggerDisplay => ToString() ?? string.Empty;
+    internal string DebuggerDisplay => ToString() ?? string.Empty;
 
     /// <inheritdoc/>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -70,11 +88,11 @@ public sealed class DispatcherQueueSequencer : ISequencer
     /// <summary>Marshals the cached drain callback through the dispatcher queue.</summary>
     /// <param name="drain">The drain callback.</param>
     /// <returns><see langword="true"/> when the drain was enqueued.</returns>
-    /// <exception cref="InvalidOperationException">The dispatcher queue is no longer accepting work.</exception>
+    /// <exception cref="InvalidOperationException">The dispatcher queue rejected the work.</exception>
     private bool Post(Action drain)
     {
         _handler ??= drain.Invoke;
-        if (DispatcherQueue.TryEnqueue(Priority, _handler))
+        if (_tryEnqueue is null ? TryEnqueue(_handler) : _tryEnqueue(Priority, _handler))
         {
             return true;
         }
@@ -82,9 +100,17 @@ public sealed class DispatcherQueueSequencer : ISequencer
         throw new InvalidOperationException("The dispatcher queue is no longer accepting work.");
     }
 
+    /// <summary>Attempts a native dispatcher queue post.</summary>
+    /// <param name="handler">The callback to enqueue.</param>
+    /// <returns>Whether the dispatcher accepted the callback.</returns>
+    [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private bool TryEnqueue(DispatcherQueueHandler handler) => DispatcherQueue.TryEnqueue(Priority, handler);
+
     /// <summary>Runs delayed work on a dispatcher queue timer so it executes directly on the dispatcher thread.</summary>
     /// <param name="item">Work item to execute at the due time.</param>
     /// <param name="dueTimestamp">Absolute monotonic timestamp at which to execute the item.</param>
+    [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
     private void ScheduleDelayed(IWorkItem item, long dueTimestamp)
     {
         var timer = DispatcherQueue.CreateTimer();
@@ -98,7 +124,7 @@ public sealed class DispatcherQueueSequencer : ISequencer
         timer.Start();
     }
 
-    /// <summary>Forwards the cached drain callback to the engine.</summary>
+    /// <summary>Runs one queued batch on the coalescing engine.</summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private void RunDrain() => _state.RunDrain();
 }

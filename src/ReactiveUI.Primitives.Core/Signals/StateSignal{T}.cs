@@ -3,6 +3,7 @@
 // See the LICENSE file in the project root for full license information.
 
 using System.Runtime.CompilerServices;
+using ReactiveUI.Primitives.Advanced;
 
 namespace ReactiveUI.Primitives.Signals;
 
@@ -21,7 +22,7 @@ public sealed class StateSignal<T> : ISignal<T>, IWitnessRemovable<T>
     /// <summary>Gets the observable stream of current and subsequent values.</summary>
     public IObservable<T> Changed => this;
 
-    /// <summary>Gets or sets the current value. Setting the value notifies observers even when equal to the previous value.</summary>
+    /// <summary>Gets or sets the current value, notifying observers on every assignment even when the value is unchanged.</summary>
     public T Value
     {
         get => _state.GetValue();
@@ -36,7 +37,7 @@ public sealed class StateSignal<T> : ISignal<T>, IWitnessRemovable<T>
 
     /// <summary>Gets the debugger display text.</summary>
     [System.Diagnostics.DebuggerBrowsable(System.Diagnostics.DebuggerBrowsableState.Never)]
-    private string DebuggerDisplay => ToString() ?? string.Empty;
+    private string? DebuggerDisplay => ToString();
 
     /// <summary>Tries to get the current value, returning <see langword="false"/> when disposed.</summary>
     /// <param name="value">The current value, or <see langword="default"/> when disposed.</param>
@@ -82,6 +83,12 @@ public sealed class StateSignal<T> : ISignal<T>, IWitnessRemovable<T>
 
         return ProjectedReadOnlyState<T, TResult>.Create(this, selector);
     }
+
+    /// <summary>Sets the current value and posts it to every subscriber without delivering it.</summary>
+    /// <param name="value">The value to post.</param>
+    /// <returns>The batch to flush once any lock the caller holds is released.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    internal SerializedBroadcast<T> Post(T value) => _state.Post(value);
 
     /// <inheritdoc/>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]

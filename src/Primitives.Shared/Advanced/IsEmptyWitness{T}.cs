@@ -15,7 +15,7 @@ namespace ReactiveUI.Primitives.Advanced;
 [System.Diagnostics.DebuggerDisplay("IsEmptyWitness: Stopped = {_stopped}, Subscription = {Subscription}")]
 public sealed class IsEmptyWitness<T> : IObserver<T>, IDisposable
 {
-    /// <summary>Stores the stopped flag for interlocked/ref helper calls.</summary>
+    /// <summary>Non-zero once the result has been emitted or the sink disposed.</summary>
     private int _stopped;
 
     /// <summary>Initializes a new instance of the <see cref="IsEmptyWitness{T}"/> class.</summary>

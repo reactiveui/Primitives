@@ -7,12 +7,7 @@ using ReactiveUI.Primitives.Disposables;
 
 namespace ReactiveUI.Primitives.Tests;
 
-/// <summary>
-/// Verifies the three wrappers <see cref="Witness.Safe{T}(IObserver{T})"/> can hand back: the delegate
-/// witness made safe in place, the cancel-owning safe wrapper, and the cancel-free safe wrapper. All three
-/// promise the same thing — one terminal signal reaches the wrapped observer, nothing reaches it afterwards,
-/// and a throwing value callback stops the witness for good.
-/// </summary>
+/// <summary>Tests that safe witnesses stop after one terminal signal or a throwing value callback.</summary>
 public class SafeWitnessTests
 {
     /// <summary>The first value pushed at a witness.</summary>
@@ -21,11 +16,7 @@ public class SafeWitnessTests
     /// <summary>A value pushed after the witness has terminated; it must never be delivered.</summary>
     private const int LateValue = 2;
 
-    /// <summary>
-    /// The cancel-owning wrapper forwards the first fault, disposes its cancellation resource once, and drops
-    /// every later notification. Faulting first (rather than completing first) is the path that leaves the
-    /// wrapped observer holding an error it must not see twice.
-    /// </summary>
+    /// <summary>The cancel-owning wrapper forwards the first fault, disposes its cancel resource once, then drops everything after.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
     public async Task CancelOwningSafeWitnessForwardsTheFirstFaultThenGoesQuiet()
@@ -47,10 +38,7 @@ public class SafeWitnessTests
         await Assert.That(cancelled).IsEqualTo(1);
     }
 
-    /// <summary>
-    /// A delegate witness passed to <see cref="Witness.Safe{T}(IObserver{T})"/> is made safe in place rather
-    /// than wrapped. It must still forward the first fault exactly once and ignore everything after it.
-    /// </summary>
+    /// <summary>A delegate witness made safe by <see cref="Witness.Safe{T}(IObserver{T})"/> forwards the first fault exactly once, then ignores the rest.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
     public async Task DelegateWitnessMadeSafeForwardsTheFirstFaultThenGoesQuiet()
@@ -72,10 +60,7 @@ public class SafeWitnessTests
         await Assert.That(values.Count).IsEqualTo(0);
     }
 
-    /// <summary>
-    /// When a safe delegate witness's value callback throws, the witness latches stopped: the exception
-    /// surfaces to the caller once, and the next value is dropped instead of re-entering the broken callback.
-    /// </summary>
+    /// <summary>A throwing value callback stops the safe delegate witness: the exception surfaces once and the next value is dropped.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
     public async Task DelegateWitnessMadeSafeStopsAfterItsValueCallbackThrows()
@@ -96,10 +81,7 @@ public class SafeWitnessTests
         await Assert.That(calls).IsEqualTo(1);
     }
 
-    /// <summary>
-    /// The cancel-free wrapper (a plain observer made safe without a cancellation resource) forwards values,
-    /// completes exactly once, and drops notifications that arrive after the completion.
-    /// </summary>
+    /// <summary>The cancel-free wrapper forwards values, completes exactly once, and drops notifications after the completion.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
     public async Task CancelFreeSafeWitnessForwardsValuesThenCompletesExactlyOnce()
@@ -138,10 +120,7 @@ public class SafeWitnessTests
         await Assert.That(observer.Values.Count).IsEqualTo(0);
     }
 
-    /// <summary>
-    /// A throwing value callback stops the cancel-free wrapper: the exception surfaces once and the next value
-    /// is dropped rather than handed to the observer that already failed.
-    /// </summary>
+    /// <summary>A throwing observer stops the cancel-free wrapper: the exception surfaces once and the next value is dropped.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
     public async Task CancelFreeSafeWitnessStopsAfterTheObserverThrows()

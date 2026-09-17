@@ -13,62 +13,54 @@ namespace ReactiveUI.Primitives.Signals;
 /// <summary>Provides static factory and operator methods for signals.</summary>
 public static partial class Signal
 {
-    /// <summary>Empty Signals. Returns only onError on specified scheduler.</summary>
-    /// <typeparam name="T">The type.</typeparam>
-    /// <param name="error">The error.</param>
-    /// <param name="scheduler">The scheduler.</param>
-    /// <returns>An Signals.</returns>
+    /// <summary>Creates a signal that emits no values and fails with the supplied error on the supplied scheduler.</summary>
+    /// <typeparam name="T">The element type.</typeparam>
+    /// <param name="error">The error the signal terminates with.</param>
+    /// <param name="scheduler">The scheduler the error is emitted on.</param>
+    /// <returns>A signal that terminates with <paramref name="error"/>.</returns>
     [System.Diagnostics.CodeAnalysis.SuppressMessage(
         "Design",
         "SST2307:Generic method type parameters should be inferable from the parameters",
-        Justification =
-            "The type parameter defines the element type for this Rx-style factory and cannot be inferred from the arguments.")]
+        Justification = "The element type cannot be inferred from the arguments.")]
     public static IObservable<T> Fail<T>(Exception error, ISequencer scheduler) => scheduler == Sequencer.Immediate
         ? new ImmediateThrowSignal<T>(error)
         : new ThrowSignal<T>(error, scheduler);
 
-    /// <summary>Empty Signals. Returns only onError.</summary>
-    /// <typeparam name="T">The type.</typeparam>
-    /// <param name="error">The error.</param>
-    /// <returns>An Signals.</returns>
+    /// <summary>Creates a signal that emits no values and fails with the supplied error on subscription.</summary>
+    /// <typeparam name="T">The element type.</typeparam>
+    /// <param name="error">The error the signal terminates with.</param>
+    /// <returns>A signal that terminates with <paramref name="error"/>.</returns>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     [System.Diagnostics.CodeAnalysis.SuppressMessage(
         "Design",
         "SST2307:Generic method type parameters should be inferable from the parameters",
-        Justification =
-            "The type parameter defines the element type for this Rx-style factory and cannot be inferred from the arguments.")]
+        Justification = "The element type cannot be inferred from the arguments.")]
     public static IObservable<T> Fail<T>(Exception error) =>
         new ImmediateThrowSignal<T>(error);
 
-    /// <summary>Empty Signals. Returns only onError. witness if for Type inference.</summary>
-    /// <typeparam name="T">The type.</typeparam>
-    /// <param name="error">The error.</param>
-    /// <param name="witness">The witness.</param>
-    /// <returns>An Signals.</returns>
+    /// <summary>Creates a signal that emits no values and fails with the supplied error on subscription.</summary>
+    /// <typeparam name="T">The element type.</typeparam>
+    /// <param name="error">The error the signal terminates with.</param>
+    /// <param name="witness">An unobserved value whose type fixes <typeparamref name="T"/>.</param>
+    /// <returns>A signal that terminates with <paramref name="error"/>.</returns>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     [System.Diagnostics.CodeAnalysis.SuppressMessage(
         "Design",
         "SST2318:Members should not have identical bodies",
-        Justification =
-            "The witness parameter exists only so callers can let T be inferred; it is unused, so the body "
-            + "intentionally mirrors the witness-less Fail overload. They are distinct Rx-parity overloads that build "
-            + "the signal directly rather than forwarding.")]
+        Justification = "The witness parameter only fixes the element type, so this overload builds the same signal.")]
     public static IObservable<T> Fail<T>(Exception error, T witness) =>
         new ImmediateThrowSignal<T>(error);
 
-    /// <summary>Empty Signals. Returns only onError on specified scheduler. witness if for Type inference.</summary>
-    /// <typeparam name="T">The type.</typeparam>
-    /// <param name="error">The error.</param>
-    /// <param name="scheduler">The scheduler.</param>
-    /// <param name="witness">The witness.</param>
-    /// <returns>An Signals.</returns>
+    /// <summary>Creates a signal that emits no values and fails with the supplied error on the supplied scheduler.</summary>
+    /// <typeparam name="T">The element type.</typeparam>
+    /// <param name="error">The error the signal terminates with.</param>
+    /// <param name="scheduler">The scheduler the error is emitted on.</param>
+    /// <param name="witness">An unobserved value whose type fixes <typeparamref name="T"/>.</param>
+    /// <returns>A signal that terminates with <paramref name="error"/>.</returns>
     [System.Diagnostics.CodeAnalysis.SuppressMessage(
         "Design",
         "SST2318:Members should not have identical bodies",
-        Justification =
-            "The witness parameter exists only so callers can let T be inferred; it is unused, so the body "
-            + "intentionally mirrors the scheduler Fail overload. They are distinct Rx-parity overloads that build "
-            + "the signal directly rather than forwarding.")]
+        Justification = "The witness parameter only fixes the element type, so this overload builds the same signal.")]
     public static IObservable<T> Fail<T>(Exception error, ISequencer scheduler, T witness) =>
         scheduler == Sequencer.Immediate
             ? new ImmediateThrowSignal<T>(error)

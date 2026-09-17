@@ -2,22 +2,47 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Reactive;
 using System.Reactive.Linq;
 using System.Reactive.Subjects;
 using ReactiveUI.Primitives.Disposables;
+using ReactiveUI.Primitives.Extensions.Operators;
 
 namespace ReactiveUI.Primitives.Extensions.Tests.Operators;
 
-/// <summary>Edge-case coverage for <c>RunAll</c> backed by <c>RunAllObservable</c> —
-/// empty-list short-circuit, sequential walk through synchronous and asynchronous
-/// sources, error propagation, and disposal mid-walk.</summary>
+/// <summary>Tests sequential source execution, empty input, errors, and disposal during execution.</summary>
 public class RunAllObservableTests
 {
     /// <summary>Synthetic error message attached to source errors.</summary>
     private const string SourceErrorMessage = "source error";
 
-    /// <summary>Guard timeout so a hung rendezvous fails this test rather than stalling the run.</summary>
-    private static readonly TimeSpan GuardTimeout = TimeSpan.FromSeconds(5);
+    /// <summary>Verifies disposal prevents a pending run from reporting completion.</summary>
+    /// <returns>A task representing the asynchronous test operation.</returns>
+    [Test]
+    public async Task RunCompletionAfterDisposalIsIgnored()
+    {
+        List<RxVoid> values = [];
+        var completed = false;
+        RunAllObservable.Sink sink = new(Observer.Create<RxVoid>(values.Add, () => completed = true), []);
+        sink.Dispose();
+        sink.CompleteRun();
+        await Assert.That(values).IsEmpty();
+        await Assert.That(completed).IsFalse();
+    }
+
+    /// <summary>Verifies repeated run completion emits exactly one value and terminal notification.</summary>
+    /// <returns>A task representing the asynchronous test operation.</returns>
+    [Test]
+    public async Task RunCompletionIsDeliveredOnce()
+    {
+        List<RxVoid> values = [];
+        var completed = 0;
+        using RunAllObservable.Sink sink = new(Observer.Create<RxVoid>(values.Add, () => completed++), []);
+        sink.CompleteRun();
+        sink.CompleteRun();
+        await Assert.That(values).IsCollectionEqualTo([RxVoid.Default]);
+        await Assert.That(completed).IsEqualTo(1);
+    }
 
     /// <summary>Verifies that an empty list emits <see cref = "RxVoid"/> and completes immediately.</summary>
     /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
@@ -75,7 +100,7 @@ public class RunAllObservableTests
         subjectA.OnCompleted();
         await Assert.That(subjectB.HasObservers).IsTrue();
         subjectB.OnCompleted();
-        var done = await completed.Task.WaitAsync(GuardTimeout);
+        var done = await completed.Task;
         await Assert.That(done).IsTrue();
     }
 
@@ -111,16 +136,12 @@ public class RunAllObservableTests
             () => completed = true);
         sub.Dispose();
 
-        // Second dispose hits the Interlocked.Exchange null-loser branch in Sink.Dispose —
-        // the first call swapped in null and disposed the previous subscription, so the
-        // second call sees null and the `?.Dispose()` no-op fires.
         sub.Dispose();
         subjectA.OnCompleted();
         await Assert.That(completed).IsFalse();
         await Assert.That(subjectB.HasObservers).IsFalse();
     }
 
-    /// <summary>Returns <c>[0, 1, …, count-1]</c> for collection-equality assertions.</summary>
     /// <summary>Verifies that <c>OnNext</c>, <c>OnError</c> and a duplicate <c>OnCompleted</c>
     /// arriving from a candidate after <c>RunAll</c> has already completed are silently dropped.</summary>
     /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
@@ -144,10 +165,7 @@ public class RunAllObservableTests
         await Assert.That(caught).IsNull();
     }
 
-    /// <summary>Exercises <c>RunAll.RunNext</c>'s post-loop <c>_done</c> guard — a source
-    /// that synchronously errors during <c>Subscribe</c> sets <c>_done = true</c> inline,
-    /// the <c>while (!_done ...)</c> loop bails, and the post-loop check returns without
-    /// emitting <c>RxVoid.Default</c>.</summary>
+    /// <summary>Verifies synchronous source errors suppress the final value and completion.</summary>
     /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenRunAllSourceSyncErrors_ThenPostLoopDoneGuardSuppressesFinalEmit()
@@ -165,6 +183,28 @@ public class RunAllObservableTests
         await Assert.That(completed).IsFalse();
     }
 
+    /// <summary>Verifies disposal from inside a synchronously completing source stops the walk without completing.</summary>
+    /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
+    [Test]
+    public async Task RunDisposedDuringSynchronousCompletionStopsWithoutCompleting()
+    {
+        List<RxVoid> values = [];
+        var completed = false;
+        RunAllObservable.Sink? sink = null;
+        IObservable<RxVoid>[] sources =
+        [
+            new SyncCompletingObservable<RxVoid>(() => sink!.Dispose()),
+            Observable.Return(RxVoid.Default),
+        ];
+        sink = new(Observer.Create<RxVoid>(values.Add, () => completed = true), sources);
+        using var owned = sink;
+
+        sink.RunNext();
+
+        await Assert.That(values).IsEmpty();
+        await Assert.That(completed).IsFalse();
+    }
+
     /// <summary>Builds a zero-based index sequence of the given length.</summary>
     /// <param name = "count">The exclusive upper bound.</param>
     /// <returns>A new array of zero-based indices.</returns>
@@ -177,6 +217,20 @@ public class RunAllObservableTests
         }
 
         return output;
+    }
+
+    /// <summary>Observable that completes synchronously and then runs a callback before its subscribe call returns.</summary>
+    /// <typeparam name = "T">The element type.</typeparam>
+    /// <param name = "afterCompletion">The callback run after completion.</param>
+    private sealed class SyncCompletingObservable<T>(Action afterCompletion) : IObservable<T>
+    {
+        /// <inheritdoc/>
+        public IDisposable Subscribe(IObserver<T> observer)
+        {
+            observer.OnCompleted();
+            afterCompletion();
+            return EmptyDisposable.Instance;
+        }
     }
 
     /// <summary>Synchronously-erroring observable used to drive the sync-error path of <c>RunAll.RunNext</c>.</summary>

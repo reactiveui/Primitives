@@ -10,11 +10,7 @@ using RxScheduler = System.Reactive.Concurrency.Scheduler;
 
 namespace ReactiveUI.Primitives.Reactive.Concurrency;
 
-/// <summary>
-/// Gives <see cref="IScheduler"/> the <c>ISequencer</c> scheduling shape the shared Primitives source expects,
-/// by forwarding to <see cref="System.Reactive.Concurrency.Scheduler"/>. Kept internal: it is the seam the leaf
-/// uses to invoke schedulers, not public surface.
-/// </summary>
+/// <summary>Adapts IScheduler to the scheduling operations used by shared Primitives source.</summary>
 internal static class SequencerSchedulingExtensions
 {
     /// <summary>Scheduling operators that give an <see cref="IScheduler"/> the shared-source sequencer shape.</summary>

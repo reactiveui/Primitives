@@ -46,9 +46,6 @@ public class FilteringOperatorTests
     /// <summary>Hoisted source array used by tests (was inline literal).</summary>
     private static readonly string[] SequenceAbcAbADefDe = ["abc", "ab", "a", "def", "de"];
 
-    /// <summary>Maximum time a test waits for a forwarded error to arrive.</summary>
-    private static readonly TimeSpan WaitTimeout = TimeSpan.FromSeconds(5);
-
     /// <summary>Tests sync Where filters elements.</summary>
     /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
@@ -383,7 +380,7 @@ public class FilteringOperatorTests
             });
         InvalidOperationException expected = new("skip-while-error");
         await signal.OnErrorResumeAsync(expected, CancellationToken.None);
-        await errorTcs.Task.WaitAsync(WaitTimeout);
+        await errorTcs.Task;
         await Assert.That(caught).IsSameReferenceAs(expected);
     }
 
@@ -407,11 +404,11 @@ public class FilteringOperatorTests
             });
         InvalidOperationException expected = new("take-while-error");
         await signal.OnErrorResumeAsync(expected, CancellationToken.None);
-        await errorTcs.Task.WaitAsync(WaitTimeout);
+        await errorTcs.Task;
         await Assert.That(caught).IsSameReferenceAs(expected);
     }
 
-    /// <summary>Verifies the async-predicate <c>SkipWhile</c> sync-completed predicate path —
+    /// <summary>Verifies the async-predicate <c>SkipWhile</c> sync-completed predicate path -
     /// returning <see langword="true"/> drops the value, returning <see langword="false"/> latches
     /// the gate and forwards.</summary>
     /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
@@ -426,7 +423,7 @@ public class FilteringOperatorTests
         await Assert.That(result).IsCollectionEqualTo([ThirdElement, FourthElement, FifthElement]);
     }
 
-    /// <summary>Verifies the async-predicate <c>TakeWhile</c> sync-completed predicate path —
+    /// <summary>Verifies the async-predicate <c>TakeWhile</c> sync-completed predicate path -
     /// returning <see langword="true"/> forwards, returning <see langword="false"/> terminates.</summary>
     /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
@@ -458,7 +455,7 @@ public class FilteringOperatorTests
             });
         InvalidOperationException expected = new("skip-while-async-error");
         await signal.OnErrorResumeAsync(expected, CancellationToken.None);
-        await errorTcs.Task.WaitAsync(WaitTimeout);
+        await errorTcs.Task;
         await Assert.That(caught).IsSameReferenceAs(expected);
     }
 
@@ -480,11 +477,11 @@ public class FilteringOperatorTests
             });
         InvalidOperationException expected = new("take-while-async-error");
         await signal.OnErrorResumeAsync(expected, CancellationToken.None);
-        await errorTcs.Task.WaitAsync(WaitTimeout);
+        await errorTcs.Task;
         await Assert.That(caught).IsSameReferenceAs(expected);
     }
 
-    /// <summary>Exercises the <c>DistinctWitness.OnErrorResumeAsyncCore</c> forwarding —
+    /// <summary>Exercises the <c>DistinctWitness.OnErrorResumeAsyncCore</c> forwarding -
     /// upstream resumable errors propagate verbatim to the downstream observer.</summary>
     /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
@@ -501,7 +498,7 @@ public class FilteringOperatorTests
         });
         InvalidOperationException expected = new("distinct-error");
         await signal.OnErrorResumeAsync(expected, CancellationToken.None);
-        await errorTcs.Task.WaitAsync(WaitTimeout);
+        await errorTcs.Task;
         await Assert.That(caught).IsSameReferenceAs(expected);
     }
 
@@ -523,7 +520,7 @@ public class FilteringOperatorTests
             });
         InvalidOperationException expected = new("distinct-by-error");
         await signal.OnErrorResumeAsync(expected, CancellationToken.None);
-        await errorTcs.Task.WaitAsync(WaitTimeout);
+        await errorTcs.Task;
         await Assert.That(caught).IsSameReferenceAs(expected);
     }
 
@@ -545,7 +542,7 @@ public class FilteringOperatorTests
             });
         InvalidOperationException expected = new("distinct-until-changed-error");
         await signal.OnErrorResumeAsync(expected, CancellationToken.None);
-        await errorTcs.Task.WaitAsync(WaitTimeout);
+        await errorTcs.Task;
         await Assert.That(caught).IsSameReferenceAs(expected);
     }
 
@@ -567,11 +564,11 @@ public class FilteringOperatorTests
             });
         InvalidOperationException expected = new("distinct-until-changed-by-error");
         await signal.OnErrorResumeAsync(expected, CancellationToken.None);
-        await errorTcs.Task.WaitAsync(WaitTimeout);
+        await errorTcs.Task;
         await Assert.That(caught).IsSameReferenceAs(expected);
     }
 
-    /// <summary>Exercises the <c>WhereSyncWitness.OnErrorResumeAsyncCore</c> forwarding —
+    /// <summary>Exercises the <c>WhereSyncWitness.OnErrorResumeAsyncCore</c> forwarding -
     /// the synchronous-predicate overload forwards upstream resumable errors.</summary>
     /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
@@ -590,11 +587,11 @@ public class FilteringOperatorTests
             });
         InvalidOperationException expected = new("where-sync-error");
         await signal.OnErrorResumeAsync(expected, CancellationToken.None);
-        await errorTcs.Task.WaitAsync(WaitTimeout);
+        await errorTcs.Task;
         await Assert.That(caught).IsSameReferenceAs(expected);
     }
 
-    /// <summary>Exercises the <c>SkipWitness.OnErrorResumeAsyncCore</c> forwarding —
+    /// <summary>Exercises the <c>SkipWitness.OnErrorResumeAsyncCore</c> forwarding -
     /// upstream resumable errors propagate verbatim through the Skip observer.</summary>
     /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
@@ -611,7 +608,7 @@ public class FilteringOperatorTests
         });
         InvalidOperationException expected = new("skip-error");
         await signal.OnErrorResumeAsync(expected, CancellationToken.None);
-        await errorTcs.Task.WaitAsync(WaitTimeout);
+        await errorTcs.Task;
         await Assert.That(caught).IsSameReferenceAs(expected);
     }
 
@@ -633,7 +630,7 @@ public class FilteringOperatorTests
         });
         InvalidOperationException expected = new("take-error");
         await signal.OnErrorResumeAsync(expected, CancellationToken.None);
-        await errorTcs.Task.WaitAsync(WaitTimeout);
+        await errorTcs.Task;
         await Assert.That(caught).IsSameReferenceAs(expected);
     }
 
@@ -655,7 +652,7 @@ public class FilteringOperatorTests
             });
         InvalidOperationException expected = new("cast-error");
         await signal.OnErrorResumeAsync(expected, CancellationToken.None);
-        await errorTcs.Task.WaitAsync(WaitTimeout);
+        await errorTcs.Task;
         await Assert.That(caught).IsSameReferenceAs(expected);
     }
 
@@ -677,11 +674,11 @@ public class FilteringOperatorTests
             });
         InvalidOperationException expected = new("of-type-error");
         await signal.OnErrorResumeAsync(expected, CancellationToken.None);
-        await errorTcs.Task.WaitAsync(WaitTimeout);
+        await errorTcs.Task;
         await Assert.That(caught).IsSameReferenceAs(expected);
     }
 
-    /// <summary>Exercises the <c>SelectSyncWitness.OnErrorResumeAsyncCore</c> forwarding —
+    /// <summary>Exercises the <c>SelectSyncWitness.OnErrorResumeAsyncCore</c> forwarding -
     /// upstream resumable errors propagate verbatim through the synchronous Select observer.</summary>
     /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
@@ -700,11 +697,11 @@ public class FilteringOperatorTests
             });
         InvalidOperationException expected = new("select-sync-error");
         await signal.OnErrorResumeAsync(expected, CancellationToken.None);
-        await errorTcs.Task.WaitAsync(WaitTimeout);
+        await errorTcs.Task;
         await Assert.That(caught).IsSameReferenceAs(expected);
     }
 
-    /// <summary>Exercises the <c>SelectAsyncWitness.OnErrorResumeAsyncCore</c> forwarding —
+    /// <summary>Exercises the <c>SelectAsyncWitness.OnErrorResumeAsyncCore</c> forwarding -
     /// the async-selector overload forwards upstream resumable errors.</summary>
     /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
@@ -723,11 +720,11 @@ public class FilteringOperatorTests
             });
         InvalidOperationException expected = new("select-async-error");
         await signal.OnErrorResumeAsync(expected, CancellationToken.None);
-        await errorTcs.Task.WaitAsync(WaitTimeout);
+        await errorTcs.Task;
         await Assert.That(caught).IsSameReferenceAs(expected);
     }
 
-    /// <summary>Exercises the <c>WhereAsyncWitness.OnErrorResumeAsyncCore</c> forwarding —
+    /// <summary>Exercises the <c>WhereAsyncWitness.OnErrorResumeAsyncCore</c> forwarding -
     /// the async-predicate overload forwards upstream resumable errors.</summary>
     /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
@@ -746,7 +743,7 @@ public class FilteringOperatorTests
             });
         InvalidOperationException expected = new("where-async-error");
         await signal.OnErrorResumeAsync(expected, CancellationToken.None);
-        await errorTcs.Task.WaitAsync(WaitTimeout);
+        await errorTcs.Task;
         await Assert.That(caught).IsSameReferenceAs(expected);
     }
 }

@@ -4,13 +4,9 @@
 
 namespace ReactiveUI.Primitives.Extensions;
 
-/// <summary>
-/// Implemented by sinks that drive a <c>ScheduledDrainState&lt;T&gt;</c>. The state helper invokes
-/// <see cref="Drain"/> once per scheduled burst via a static scheduler callback, so passing the sink
-/// as an <see cref="IDrainTarget"/> keeps the scheduled action allocation-free (no captured closure).
-/// </summary>
+/// <summary>Receives the callback that delivers queued notifications, from a delivery gate or a scheduled drain.</summary>
 public interface IDrainTarget
 {
-    /// <summary>Drains the queued notifications on the scheduler thread.</summary>
+    /// <summary>Delivers every queued notification that has not been delivered yet.</summary>
     void Drain();
 }

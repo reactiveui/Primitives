@@ -50,7 +50,7 @@ public sealed class DiagnosticInfoTests
         await Assert.That(diagnostic.GetMessage()).Contains(HostDisplayName);
     }
 
-    /// <summary>Verifies a diagnostic with nowhere to point still reports rather than throwing.</summary>
+    /// <summary>Verifies a diagnostic with nowhere to point reports rather than throwing.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
     public async Task DiagnosticInfoReportsWithoutALocation()

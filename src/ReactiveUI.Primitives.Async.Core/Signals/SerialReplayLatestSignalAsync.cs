@@ -6,17 +6,11 @@ using System.Runtime.CompilerServices;
 
 namespace ReactiveUI.Primitives.Async.Signals;
 
-/// <summary>
-/// Represents an asynchronous Signal that replays only the latest value to new subscribers and ensures that
-/// notifications are delivered to observers in a serial, thread-safe manner.
-/// </summary>
+/// <summary>An asynchronous Signal that replays its latest value to each new subscriber and notifies observers serially.</summary>
 /// <typeparam name="T">The type of the elements processed by the Signal.</typeparam>
 /// <param name="startValue">An optional initial value to be emitted to new subscribers before any other values are published.</param>
-/// <remarks>This Signal is designed for scenarios where only the most recent value is relevant to subscribers.
-/// When a new observer subscribes, it immediately receives the latest value (if any) and then all subsequent
-/// notifications. All observer notifications are performed asynchronously and in a serial order, ensuring thread
-/// safety. This type is suitable for use cases where replaying only the latest value is desired, such as event streams
-/// or state broadcasts.</remarks>
+/// <remarks>A signal created without a start value replays nothing until one is published, and each notification
+/// finishes before the next observer is called.</remarks>
 [System.Diagnostics.DebuggerDisplay("SerialReplayLatestSignalAsync: LastValue = {_state.LastValue}, IsDisposed = {_state.IsDisposed}")]
 public sealed class SerialReplayLatestSignalAsync<T>(Optional<T> startValue) : ISignalAsync<T>
 {

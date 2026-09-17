@@ -23,11 +23,8 @@ public static partial class SignalAsyncExtensions
         /// <param name="src2">Source observable 2 whose latest value is combined.</param>
         /// <param name="selector">Projects the latest value of every source into a result.</param>
         /// <returns>An observable sequence of projected results.</returns>
-        /// <remarks>
-        /// The returned sequence does not produce a value until every source has emitted at least
-        /// once. After that, each new value from any source produces a fresh projection using the
-        /// most recent value from each. Completion / failure of any source propagates downstream.
-        /// </remarks>
+        /// <remarks>Emits after both sources have a value, then on either source's updates.
+        /// Successful completion waits for both sources; a failure terminates immediately.</remarks>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public IObservableAsync<TResult> SyncLatest<T2, TResult>(
             IObservableAsync<T2> src2,

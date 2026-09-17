@@ -3,10 +3,11 @@
 // See the LICENSE file in the project root for full license information.
 
 using System.Runtime.CompilerServices;
+using ReactiveUI.Primitives.Advanced;
 
 namespace ReactiveUI.Primitives.Extensions.Operators;
 
-/// <summary>Emits (previous, current) pairs from a sequence.</summary>
+/// <summary>Emits each adjacent pair of source values as <c>(Previous, Current)</c>, so the first value produces nothing on its own.</summary>
 /// <typeparam name="T">The type of elements in the source sequence.</typeparam>
 /// <param name="source">The source observable.</param>
 public sealed class PairwiseObservable<T>(IObservable<T> source) : IObservable<(T Previous, T Current)>
@@ -20,12 +21,16 @@ public sealed class PairwiseObservable<T>(IObservable<T> source) : IObservable<(
         return source.Subscribe(new PairwiseWitness(observer));
     }
 
-    /// <summary>The observer for the pairwise operator.</summary>
+    /// <summary>Observer that holds the last value under a gate and pairs it with the next one.</summary>
     /// <param name="downstream">The downstream observer.</param>
+    /// <remarks>Deliveries are serialized, and no lock is held while the observer runs.</remarks>
     private sealed class PairwiseWitness(IObserver<(T Previous, T Current)> downstream) : IObserver<T>
     {
-        /// <summary>The gate for state access.</summary>
+        /// <summary>Guards the previous value; never held while the observer runs.</summary>
         private readonly Lock _gate = new();
+
+        /// <summary>Serializes downstream deliveries.</summary>
+        private SerializedDelivery<(T Previous, T Current)> _delivery = new();
 
         /// <summary>The previous value.</summary>
         private T? _previous;
@@ -36,24 +41,43 @@ public sealed class PairwiseObservable<T>(IObservable<T> source) : IObservable<(
         /// <inheritdoc/>
         public void OnNext(T value)
         {
+            T previous;
+            bool hadPrevious;
             lock (_gate)
             {
-                if (_hasPrevious)
-                {
-                    downstream.OnNext((_previous!, value));
-                }
-
+                previous = _previous!;
+                hadPrevious = _hasPrevious;
                 _previous = value;
                 _hasPrevious = true;
             }
+
+            if (!hadPrevious)
+            {
+                return;
+            }
+
+            _delivery.OnNext(downstream, (previous, value), new PendingDrain(this));
         }
 
         /// <inheritdoc/>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void OnError(Exception error) => downstream.OnError(error);
+        public void OnError(Exception error) => _delivery.OnError(error, new PendingDrain(this));
 
         /// <inheritdoc/>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void OnCompleted() => downstream.OnCompleted();
+        public void OnCompleted() => _delivery.OnCompleted(new PendingDrain(this));
+
+        /// <summary>Delivers the queued notifications to the downstream observer.</summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private void DrainPending() => _ = _delivery.DrainTo(downstream);
+
+        /// <summary>Drains this observer's queued notifications for the delivery gate.</summary>
+        /// <param name="Owner">The observer.</param>
+        private readonly record struct PendingDrain(PairwiseWitness Owner) : IDrainTarget
+        {
+            /// <inheritdoc/>
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public void Drain() => Owner.DrainPending();
+        }
     }
 }

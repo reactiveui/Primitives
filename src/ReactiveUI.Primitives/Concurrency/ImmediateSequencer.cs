@@ -35,9 +35,9 @@ public sealed class ImmediateSequencer : ISequencer
 
     /// <summary>Schedules an action to run immediately.</summary>
     /// <param name="action">Action to execute.</param>
-    /// <returns>An empty disposable because the action has already run.</returns>
+    /// <returns>An empty disposable; the action runs before this method returns.</returns>
     /// <exception cref="ArgumentExceptionHelper"><paramref name="action"/> is <see langword="null"/>.</exception>
-    public IDisposable Schedule(Action action)
+    public static IDisposable Schedule(Action action)
     {
         ArgumentExceptionHelper.ThrowIfNull(action);
 
@@ -45,7 +45,7 @@ public sealed class ImmediateSequencer : ISequencer
         return EmptyDisposable.Instance;
     }
 
-    /// <summary>Schedules the specified work item.</summary>
+    /// <summary>Executes the work item on the calling thread unless it has been cancelled.</summary>
     /// <param name="item">Work item to execute.</param>
     /// <exception cref="ArgumentExceptionHelper"><paramref name="item"/> is <see langword="null"/>.</exception>
     public void Schedule(IWorkItem item)
@@ -60,7 +60,7 @@ public sealed class ImmediateSequencer : ISequencer
         item.Execute();
     }
 
-    /// <summary>Schedules the specified work item.</summary>
+    /// <summary>Blocks the calling thread until the due timestamp, then executes the work item unless it has been cancelled.</summary>
     /// <param name="item">Work item to execute.</param>
     /// <param name="dueTimestamp">Absolute monotonic timestamp at which to execute the item.</param>
     /// <exception cref="ArgumentExceptionHelper"><paramref name="item"/> is <see langword="null"/>.</exception>
@@ -68,10 +68,18 @@ public sealed class ImmediateSequencer : ISequencer
     {
         ArgumentExceptionHelper.ThrowIfNull(item);
 
-        var dueTime = Sequencer.TimeUntil(dueTimestamp);
+        RunScheduled(item, Sequencer.TimeUntil(dueTimestamp), Wait);
+    }
+
+    /// <summary>Waits for a relative delay and executes work that remains active.</summary>
+    /// <param name="item">The scheduled work.</param>
+    /// <param name="dueTime">The remaining delay.</param>
+    /// <param name="wait">The blocking wait operation.</param>
+    internal static void RunScheduled(IWorkItem item, TimeSpan dueTime, Action<TimeSpan> wait)
+    {
         if (dueTime.Ticks > 0)
         {
-            Thread.Sleep(dueTime);
+            wait(dueTime);
         }
 
         if (Sequencer.IsCancelled(item))
@@ -81,4 +89,10 @@ public sealed class ImmediateSequencer : ISequencer
 
         item.Execute();
     }
+
+    /// <summary>Blocks the scheduling thread for the remaining delay.</summary>
+    /// <param name="dueTime">The remaining delay.</param>
+    [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
+    [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+    private static void Wait(TimeSpan dueTime) => Thread.Sleep(dueTime);
 }

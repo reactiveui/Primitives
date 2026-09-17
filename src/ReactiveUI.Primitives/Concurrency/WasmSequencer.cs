@@ -8,40 +8,31 @@ using Timer = System.Threading.Timer;
 
 namespace ReactiveUI.Primitives.Concurrency;
 
-/// <summary>
-/// Task-pool replacement for single-threaded event-loop runtimes such as browser WebAssembly: it never starts
-/// threads and never blocks. Immediate work is batched one drain per event-loop turn through a zero-due timer
-/// (a <c>setTimeout(0)</c> macrotask on WebAssembly, so the browser can render between batches); delayed work
-/// uses the shared timer, which the WebAssembly runtime backs with the JS event loop.
-/// </summary>
+/// <summary>Schedules immediate batches and delayed work on a single-threaded event loop.</summary>
+/// <remarks>Immediate batches yield between event-loop turns.</remarks>
 /// <seealso cref="ISequencer" />
 [System.Diagnostics.DebuggerDisplay("{DebuggerDisplay,nq}")]
 public sealed class WasmSequencer : ISequencer, IDisposable
 {
-    /// <summary>
-    /// Guards the drain timer. Every arm of the timer goes through <see cref="Post"/>, which takes this gate, and
-    /// <see cref="Dispose"/> releases the timer while holding it — so the timer can never be armed after it is gone.
-    /// </summary>
+    /// <summary>Serializes timer arming and disposal.</summary>
     private readonly Lock _gate = new();
 
     /// <summary>One-shot timer used to yield a drain to the event loop.</summary>
-    private readonly Timer _timer;
+    private readonly Timer? _timer;
+
+    /// <summary>Posts a drain to the event loop.</summary>
+    private readonly Func<Action, bool> _postDrain;
+
+    /// <summary>Schedules the delayed marshal callback.</summary>
+    private readonly Action<IWorkItem, long> _scheduleDelayed;
 
     /// <summary>Coalescing dispatch engine.</summary>
     private DispatchSequencerState _state;
 
-    /// <summary>
-    /// Non-zero once <see cref="Dispose"/> has released the drain timer and the ready queue. Written under
-    /// <see cref="_gate"/> so every path that touches the timer is ordered against disposal, but read without it
-    /// on the scheduling paths, which re-check it after enqueueing rather than holding the gate across a queue.
-    /// </summary>
+    /// <summary>Non-zero after disposal releases the timer and queue; timer access is serialized by the gate.</summary>
     private int _isDisposed;
 
-    /// <summary>
-    /// Initializes a new instance of the <see cref="WasmSequencer"/> class. Callers use <see cref="Default"/>; this is
-    /// internal so a test can own an isolated sequencer it may dispose without shutting the shared singleton down for
-    /// every other test.
-    /// </summary>
+    /// <summary>Initializes a new instance of the <see cref="WasmSequencer"/> class.</summary>
     [System.Diagnostics.CodeAnalysis.SuppressMessage(
         "Correctness",
         "SST2403:Do not let 'this' escape from a constructor",
@@ -49,11 +40,19 @@ public sealed class WasmSequencer : ISequencer, IDisposable
             "The timer is created disarmed, and _state is a struct held inline in this object, so neither reference escapes.")]
     internal WasmSequencer()
     {
-        _timer = new(
-            static state => ((WasmSequencer)state!).RunDrain(),
-            this,
-            Timeout.InfiniteTimeSpan,
-            Timeout.InfiniteTimeSpan);
+        _timer = CreateTimer(this);
+        _postDrain = ArmDrainTimer;
+        _scheduleDelayed = ThreadPoolSequencer.Instance.Schedule;
+        _state = new(this, Post, RunDrain, ScheduleDelayed);
+    }
+
+    /// <summary>Initializes a new instance of the <see cref="WasmSequencer"/> class.</summary>
+    /// <param name="postDrain">Posts a drain to the event loop.</param>
+    /// <param name="scheduleDelayed">Schedules the delayed marshal callback.</param>
+    internal WasmSequencer(Func<Action, bool> postDrain, Action<IWorkItem, long> scheduleDelayed)
+    {
+        _postDrain = postDrain;
+        _scheduleDelayed = scheduleDelayed;
         _state = new(this, Post, RunDrain, ScheduleDelayed);
     }
 
@@ -93,17 +92,10 @@ public sealed class WasmSequencer : ISequencer, IDisposable
         ReleaseQueuedIfDisposed();
     }
 
-    /// <summary>
-    /// Releases the drain timer this sequencer owns and cancels the ready work still queued behind it. Scheduling
-    /// through a disposed sequencer throws <see cref="ObjectDisposedException"/> rather than queueing work no drain
-    /// will ever reach. Delayed work still parked on the shared timer is released when it comes due, because the
-    /// caller cancels it through the handle it was given rather than through this sequencer.
-    /// </summary>
+    /// <summary>Cancels queued immediate work and rejects further scheduling.</summary>
+    /// <remarks>Delayed work is released when due unless its caller cancels it first.</remarks>
     public void Dispose()
     {
-        // Under the gate: every arm of the timer takes it too, so the timer can never be re-armed after it is
-        // released here. Timer.Dispose does not wait for an in-flight callback, so a drain blocked on the gate
-        // inside Post cannot deadlock this — it simply observes the disposed flag once it gets in, and backs off.
         lock (_gate)
         {
             if (IsDisposed)
@@ -112,18 +104,13 @@ public sealed class WasmSequencer : ISequencer, IDisposable
             }
 
             Volatile.Write(ref _isDisposed, 1);
-            _timer.Dispose();
+            _timer?.Dispose();
         }
 
         _state.ReleaseQueued();
     }
 
-    /// <summary>
-    /// Enqueues ready work onto the drain without the disposed guard, releasing it again when a disposal raced the
-    /// enqueue. Internal rather than private so a test can drive the enqueue that was already past
-    /// <see cref="Schedule(IWorkItem)"/>'s disposed check when the disposal drained the ready queue, and prove the
-    /// item is handed back rather than stranded.
-    /// </summary>
+    /// <summary>Queues ready work and releases it if disposal overlaps the enqueue.</summary>
     /// <param name="item">Work item to execute on the next event-loop turn.</param>
     internal void ScheduleReady(IWorkItem item)
     {
@@ -131,33 +118,37 @@ public sealed class WasmSequencer : ISequencer, IDisposable
         ReleaseQueuedIfDisposed();
     }
 
+    /// <summary>Creates a disarmed timer that drains ready work.</summary>
+    /// <param name="owner">The sequencer receiving timer callbacks.</param>
+    /// <returns>The disarmed timer.</returns>
+    [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
+    private static Timer CreateTimer(WasmSequencer owner) =>
+        new(static state => ((WasmSequencer)state!).RunDrain(), owner, Timeout.InfiniteTimeSpan, Timeout.InfiniteTimeSpan);
+
     /// <summary>Arms the drain timer to fire on the next event-loop turn.</summary>
-    /// <param name="_">
-    /// Ignored. The parameter exists only because <see cref="DispatchSequencerState"/> posts through a
-    /// <see cref="Func{T, TResult}"/> of <see cref="Action"/>; the drain callback is already carried by the timer's state.
-    /// </param>
+    /// <param name="drain">The callback to post.</param>
     /// <returns><see langword="true"/> when the timer accepted the change.</returns>
-    private bool Post(Action _)
+    private bool Post(Action drain)
     {
         lock (_gate)
         {
-            // Arming a released timer is a silent no-op that would leave the drain latch set on a drain that can
-            // never run. Refusing the post instead lets the engine hand the latch straight back; with the ready
-            // queue released and scheduling closed, there is nothing left for that drain to do anyway.
-            return !IsDisposed && _timer.Change(TimeSpan.Zero, Timeout.InfiniteTimeSpan);
+            return !IsDisposed && _postDrain(drain);
         }
     }
 
-    /// <summary>
-    /// Marshals delayed work back onto this sequencer's drain once the shared timer says it is due. This replaces the
-    /// engine's default marshal step, which would call back through <see cref="Schedule(IWorkItem)"/> and throw
-    /// <see cref="ObjectDisposedException"/> on the timer's thread for an item that came due after disposal.
-    /// </summary>
+    /// <summary>Returns due work to the drain, releasing it if the sequencer is disposed.</summary>
     /// <param name="item">Work item to run once it is due.</param>
     /// <param name="dueTimestamp">Absolute monotonic timestamp at which to execute the item.</param>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private void ScheduleDelayed(IWorkItem item, long dueTimestamp) =>
-        ThreadPoolSequencer.Instance.Schedule(new DelayedWorkItem(this, item), dueTimestamp);
+        _scheduleDelayed(new DelayedWorkItem(this, item), dueTimestamp);
+
+    /// <summary>Arms the runtime drain timer.</summary>
+    /// <param name="drain">The cached callback carried by the timer.</param>
+    /// <returns>Whether the timer accepted the callback.</returns>
+    [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private bool ArmDrainTimer(Action drain) => _timer!.Change(TimeSpan.Zero, Timeout.InfiniteTimeSpan);
 
     /// <summary>Forwards the cached drain callback to the engine.</summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -174,11 +165,7 @@ public sealed class WasmSequencer : ISequencer, IDisposable
         _state.ReleaseQueued();
     }
 
-    /// <summary>
-    /// Delayed work held by the shared timer until it comes due, then marshalled onto the owner's drain. A sequencer
-    /// disposed while this waits can no longer drain anything, so the item is released to its caller instead of being
-    /// pushed into a queue that will never move again.
-    /// </summary>
+    /// <summary>Requeues work when due, or releases it if the sequencer is disposed.</summary>
     /// <param name="owner">The sequencer whose drain runs the item.</param>
     /// <param name="item">The work item to marshal.</param>
     private sealed class DelayedWorkItem(WasmSequencer owner, IWorkItem item) : IWorkItem
@@ -203,11 +190,10 @@ public sealed class WasmSequencer : ISequencer, IDisposable
                 return;
             }
 
-            // A disposal racing this enqueue is caught by ScheduleReady, which releases the queue it just joined.
             _owner.ScheduleReady(_item);
         }
 
-        /// <summary>Cancels the marshalled item, handing it back to the caller that still holds it.</summary>
+        /// <summary>Cancels the marshalled item, handing it back to the caller holding it.</summary>
         private void Release()
         {
             if (_item is not IDisposable cancellable)

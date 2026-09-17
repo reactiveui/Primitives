@@ -10,7 +10,7 @@ namespace ReactiveUI.Primitives.Async.Signals;
 /// <typeparam name="T">The observed value type.</typeparam>
 internal sealed class StatelessSignalAsyncState<T>
 {
-    /// <summary>The lock used to synchronize observer list updates.</summary>
+    /// <summary>Guards the observer list against concurrent mutation.</summary>
     private readonly Lock _gate = new();
 
     /// <summary>Gets or sets the currently subscribed observers.</summary>

@@ -9,12 +9,7 @@ using RxSubject = System.Reactive.Subjects.Subject<int>;
 
 namespace ReactiveUI.Primitives.Benchmarks;
 
-/// <summary>
-/// Benchmarks latest-value combination across the shapes that reach different coordinators: the pairwise
-/// coordinator holds both values in typed fields, while three or more sources share one coordinator that keeps
-/// latest values in an <c>object?[]</c>. The tuple and list overloads sit on top of those, so their cases show
-/// what the result shape itself costs on each path.
-/// </summary>
+/// <summary>Benchmarks latest-value combination across pair, tuple, and list result shapes.</summary>
 [MemoryDiagnoser]
 public class OperatorCombineLatestBenchmarks
 {

@@ -4,18 +4,16 @@
 
 using System.Runtime.CompilerServices;
 using BenchmarkDotNet.Attributes;
-using BenchmarkDotNet.Diagnosers;
 
 namespace ReactiveUI.Primitives.Benchmarks;
 
 /// <summary>
 /// GC-verbose allocation baselines for the factory operators, across Primitives, System.Reactive,
-/// and R3. Delegates to the comparison benchmark methods so the scenarios stay in one place.
-/// Opt in with <c>--filter "*GcProfile*"</c>.
+/// and R3. Delegates to the comparison benchmark methods. Opt in with <c>--filter "*GcProfile*"</c>.
 /// </summary>
 [ShortRunJob]
 [MemoryDiagnoser]
-[EventPipeProfiler(EventPipeProfile.GcVerbose)]
+
 [System.Diagnostics.DebuggerDisplay("FactoryGcProfileBenchmarks: {nameof(FactoryGcProfileBenchmarks),nq}")]
 public class FactoryGcProfileBenchmarks
 {

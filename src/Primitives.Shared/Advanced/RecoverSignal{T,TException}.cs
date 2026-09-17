@@ -10,15 +10,12 @@ namespace ReactiveUI.Primitives.Reactive.Advanced;
 namespace ReactiveUI.Primitives.Advanced;
 #endif
 
-/// <summary>
-/// Dedicated cold signal for <c>Recover</c>/<c>Resume</c> (catch a typed error and switch to a
-/// handler-selected sequence). Replaces the witness-framework subject with a lightweight sink that
-/// holds its source and fallback subscriptions in two interlocked slots, with no composite disposable.
-/// </summary>
+/// <summary>Mirrors the source and switches to a handler-selected sequence on errors of the specified type.</summary>
 /// <typeparam name="T">The value type.</typeparam>
 /// <typeparam name="TException">The handled exception type.</typeparam>
 /// <param name="source">The source observable.</param>
 /// <param name="handler">The handler that selects the fallback sequence for a caught error.</param>
+/// <remarks>Other error types and exceptions thrown by the handler propagate unchanged.</remarks>
 [System.Diagnostics.DebuggerDisplay("RecoverSignal: Source = {_source}")]
 public sealed class RecoverSignal<T, TException>(IObservable<T> source, Func<TException, IObservable<T>> handler) : IRequireCurrentThread<T>
     where TException : Exception
@@ -78,7 +75,7 @@ public sealed class RecoverSignal<T, TException>(IObservable<T> source, Func<TEx
                 IObservable<T> next;
                 try
                 {
-                    next = _handler == Handle.CatchIgnore<T> ? Signal.None<T>() : _handler(typed);
+                    next = _handler(typed);
                 }
                 catch (Exception handlerError)
                 {

@@ -6,16 +6,11 @@ using Microsoft.CodeAnalysis;
 
 namespace ReactiveUI.Primitives.ObservableEvents.Models;
 
-/// <summary>A diagnostic held as values, so it can ride along in a model until it is reported.</summary>
+/// <summary>Stores diagnostic content and coordinates without retaining compiler objects.</summary>
 /// <param name="Descriptor">The descriptor to report.</param>
 /// <param name="Location">Where to point, or <see langword="null"/> when the request has no source location.</param>
 /// <param name="FirstArgument">The first message argument.</param>
 /// <param name="SecondArgument">The second message argument, when the descriptor takes one.</param>
-/// <remarks>
-/// A <see cref="Diagnostic"/> carries a <see cref="Microsoft.CodeAnalysis.Location"/> and therefore a syntax tree,
-/// which the pipeline can neither compare nor safely cache. Extraction records what to say and where; the source
-/// output turns it back into a diagnostic.
-/// </remarks>
 internal sealed record DiagnosticInfo(
     DiagnosticDescriptor Descriptor,
     LocationInfo? Location,

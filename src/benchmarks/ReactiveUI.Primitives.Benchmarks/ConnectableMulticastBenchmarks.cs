@@ -11,10 +11,7 @@ using RxObservable = System.Reactive.Linq.Observable;
 
 namespace ReactiveUI.Primitives.Benchmarks;
 
-/// <summary>
-/// Benchmarks the general multicast primitive (a connectable backed by a caller-supplied hub),
-/// which underlies the Publish/Share family.
-/// </summary>
+/// <summary>Benchmarks the general multicast primitive (a connectable backed by a caller-supplied hub), which underlies the Publish/Share family.</summary>
 [MemoryDiagnoser]
 public class ConnectableMulticastBenchmarks
 {

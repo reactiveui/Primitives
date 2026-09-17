@@ -20,10 +20,8 @@ internal static class AotSafeAssertionExtensions
         where TCollection : IEnumerable<TItem>
     {
         /// <summary>
-        /// Asserts the collection is equivalent to <paramref name="expected"/>
-        /// using the element type's default <see cref="EqualityComparer{T}"/>
-        /// (order-insensitive, mirroring <c>IsEquivalentTo</c>'s default
-        /// <see cref="CollectionOrdering.Any"/>).
+        /// Asserts the collection is equivalent to <paramref name="expected"/>, order-insensitively
+        /// (<see cref="CollectionOrdering.Any"/>), using the element type's default <see cref="EqualityComparer{T}"/>.
         /// </summary>
         /// <param name="expected">The expected element sequence.</param>
         /// <returns>The chained collection-equivalency assertion.</returns>

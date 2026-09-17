@@ -6,12 +6,7 @@ using System.Text;
 
 namespace ReactiveUI.Primitives.Core;
 
-/// <summary>Holds the parsed composite formats the core value types render with.</summary>
-/// <remarks>
-/// The formats sit on a non-generic type on purpose. A static field inside <see cref="Moment{T}"/> is
-/// a field of each closed generic, so the format would be parsed once per <c>T</c>; one shared instance
-/// serves every one of them.
-/// </remarks>
+/// <summary>Shares parsed value formats across all closed generic types.</summary>
 internal static class CoreCompositeFormats
 {
     /// <summary>The format <see cref="Moment{T}"/> renders with.</summary>

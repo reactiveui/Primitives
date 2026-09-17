@@ -8,7 +8,7 @@ namespace ReactiveUI.Primitives.Reactive.Advanced;
 namespace ReactiveUI.Primitives.Advanced;
 #endif
 
-/// <summary>Concrete signal for Rx-named merge overloads.</summary>
+/// <summary>Merges concurrent sources into one sequence, optionally bounding the active subscription count.</summary>
 /// <typeparam name="T">The value type.</typeparam>
 [System.Diagnostics.DebuggerDisplay("MergeSignal: Sources = {Sources}, MaxConcurrent = {MaxConcurrent}")]
 public sealed class MergeSignal<T> : IObservable<T>

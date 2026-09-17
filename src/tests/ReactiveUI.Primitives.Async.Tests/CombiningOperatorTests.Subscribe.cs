@@ -21,9 +21,7 @@ public partial class CombiningOperatorTests
 
         await using var sub = await source.SubscribeAsync(items.Add, CancellationToken.None);
 
-        await AsyncTestHelpers.WaitForConditionAsync(
-            () => items.Count >= SourceValueCount,
-            CombiningWaitTimeout);
+        await Assert.That(items.Count >= SourceValueCount).IsTrue();
 
         await Assert.That(items).IsCollectionEqualTo([SampleValue1, SampleValue2, SampleValue3]);
     }
@@ -44,9 +42,7 @@ public partial class CombiningOperatorTests
             null,
             CancellationToken.None);
 
-        await AsyncTestHelpers.WaitForConditionAsync(
-            () => items.Count >= SourceValueCount,
-            CombiningWaitTimeout);
+        await Assert.That(items.Count >= SourceValueCount).IsTrue();
 
         await Assert.That(items).IsCollectionEqualTo([SampleValue1, SampleValue2, SampleValue3]);
     }
@@ -70,9 +66,7 @@ public partial class CombiningOperatorTests
             null,
             CancellationToken.None);
 
-        await AsyncTestHelpers.WaitForConditionAsync(
-            () => receivedError is not null,
-            CombiningWaitTimeout);
+        await Assert.That(receivedError is not null).IsTrue();
 
         await Assert.That(receivedError).IsNotNull();
         await Assert.That(receivedError!.Message).IsEqualTo("test error");
@@ -91,9 +85,7 @@ public partial class CombiningOperatorTests
             (Action<Result>?)(result => completionResult = result),
             CancellationToken.None);
 
-        await AsyncTestHelpers.WaitForConditionAsync(
-            () => completionResult is not null,
-            CombiningWaitTimeout);
+        await Assert.That(completionResult is not null).IsTrue();
 
         await Assert.That(completionResult).IsNotNull();
         await Assert.That(completionResult!.Value.IsSuccess).IsTrue();

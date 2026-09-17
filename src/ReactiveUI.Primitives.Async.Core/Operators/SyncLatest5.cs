@@ -14,10 +14,7 @@ public static partial class SignalAsyncExtensions
     /// <param name="src1">Source observable 1 whose latest value is combined.</param>
     extension<T1>(IObservableAsync<T1> src1)
     {
-        /// <summary>
-        /// Combines the latest values from 5 asynchronous observable sources into a single
-        /// sequence, projecting them through <paramref name="selector"/> whenever any source emits.
-        /// </summary>
+        /// <summary>Combines the latest values from 5 asynchronous observable sources into a single sequence, projecting them through <paramref name="selector"/> whenever any source emits.</summary>
         /// <typeparam name="T2">The element type of source 2.</typeparam>
         /// <typeparam name="T3">The element type of source 3.</typeparam>
         /// <typeparam name="T4">The element type of source 4.</typeparam>
@@ -40,10 +37,7 @@ public static partial class SignalAsyncExtensions
                 new(src1, src2, src3, src4, src5),
                 selector);
 
-        /// <summary>
-        /// Combines the latest values from 5 asynchronous observable sources into a single
-        /// sequence, projecting them through <paramref name="selector"/> whenever any source emits.
-        /// </summary>
+        /// <summary>Combines the latest values from 5 asynchronous observable sources into a single sequence, projecting them through <paramref name="selector"/> whenever any source emits.</summary>
         /// <typeparam name="T2">The element type of source 2.</typeparam>
         /// <typeparam name="T3">The element type of source 3.</typeparam>
         /// <typeparam name="T4">The element type of source 4.</typeparam>

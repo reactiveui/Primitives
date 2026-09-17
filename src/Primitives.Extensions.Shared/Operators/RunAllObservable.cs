@@ -10,19 +10,8 @@ namespace ReactiveUI.Primitives.Extensions.Reactive.Operators;
 namespace ReactiveUI.Primitives.Extensions.Operators;
 #endif
 
-/// <summary>
-/// Runs a list of one-shot <see cref="IObservable{RxVoid}"/> observables sequentially,
-/// ignoring emitted values, and emits a single <see cref="RxVoid.Default"/> when all
-/// have completed. If the list is empty, emits <see cref="RxVoid.Default"/> immediately.
-/// Errors from any observable propagate to the downstream observer.
-/// </summary>
+/// <summary>Runs sources sequentially and emits RxVoid on completion, propagating source errors and completing immediately for empty input.</summary>
 /// <param name="sources">The list of one-shot observables to run in order.</param>
-/// <remarks>
-/// Replaces patterns like <c>sources.Concat().LastOrDefaultAsync()</c> with a single
-/// operator that subscribes sequentially. Uses an iterative loop with a sync-completion
-/// flag to avoid stack overflow when sources complete synchronously during
-/// <c>Subscribe</c>.
-/// </remarks>
 internal sealed class RunAllObservable(IReadOnlyList<IObservable<RxVoid>> sources) : IObservable<RxVoid>
 {
     /// <inheritdoc/>
@@ -42,15 +31,10 @@ internal sealed class RunAllObservable(IReadOnlyList<IObservable<RxVoid>> source
         return sink;
     }
 
-    /// <summary>
-    /// Stateful observer that walks the source list sequentially. The sink subscribes itself
-    /// directly to each source — its own <see cref="IObserver{RxVoid}.OnCompleted"/> sets a
-    /// per-iteration flag the surrounding loop reads to decide whether to advance. This
-    /// replaces the previous probe-observer-per-iteration allocation pattern.
-    /// </summary>
+    /// <summary>Advances through sources as each subscription completes, handling synchronous completion without recursive subscription.</summary>
     /// <param name="downstream">The downstream observer.</param>
     /// <param name="sources">The source list to walk.</param>
-    private sealed class Sink(
+    internal sealed class Sink(
         IObserver<RxVoid> downstream,
         IReadOnlyList<IObservable<RxVoid>> sources) : IObserver<RxVoid>, IDisposable
     {
@@ -66,16 +50,13 @@ internal sealed class RunAllObservable(IReadOnlyList<IObservable<RxVoid>> source
         /// <summary>Guards against re-entrant <see cref="RunNext"/> calls.</summary>
         private bool _looping;
 
-        /// <summary>Per-iteration latch (0 = pending, 1 = terminated). Set by <see cref="OnCompleted"/>
-        /// when a source terminates synchronously during <c>Subscribe</c>; read by the surrounding
-        /// loop in <see cref="RunNext"/>. Accessed via <see cref="Volatile"/> so it crosses the
-        /// method boundary safely without needing a separate probe-observer allocation per iteration.</summary>
+        /// <summary>Records synchronous source termination during subscription.</summary>
         private int _iterationTerminated;
 
         /// <inheritdoc/>
         public void OnNext(RxVoid value)
         {
-            // Ignore — we only care about completion.
+            // Values are ignored; completion advances to the next source.
         }
 
         /// <inheritdoc/>
@@ -99,7 +80,6 @@ internal sealed class RunAllObservable(IReadOnlyList<IObservable<RxVoid>> source
 
             if (_looping)
             {
-                // Inside the loop the surrounding RunNext reads _iterationTerminated; no recursion.
                 Volatile.Write(ref _iterationTerminated, 1);
                 return;
             }
@@ -114,10 +94,7 @@ internal sealed class RunAllObservable(IReadOnlyList<IObservable<RxVoid>> source
             Interlocked.Exchange(ref _currentSubscription, null)?.Dispose();
         }
 
-        /// <summary>
-        /// Subscribes to the next source, or emits RxVoid and completes if all are done.
-        /// Iteratively loops on synchronous completion to avoid recursive stack growth.
-        /// </summary>
+        /// <summary>Advances through synchronously completing sources without recursion, then completes when all sources are done.</summary>
         internal void RunNext()
         {
             _looping = true;
@@ -146,11 +123,7 @@ internal sealed class RunAllObservable(IReadOnlyList<IObservable<RxVoid>> source
         }
 
         /// <summary>Emits the terminal <see cref="RxVoid"/> and completes once all sources have run.</summary>
-        /// <remarks>The already-done early-out is only reachable when a concurrent dispose latches between the
-        /// loop exit and this call; this small completion shell is excluded from coverage as race-only while the
-        /// trampoline loop in <see cref="RunNext"/> stays covered.</remarks>
-        [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
-        private void CompleteRun()
+        internal void CompleteRun()
         {
             if (Interlocked.Exchange(ref _done, 1) != 0)
             {

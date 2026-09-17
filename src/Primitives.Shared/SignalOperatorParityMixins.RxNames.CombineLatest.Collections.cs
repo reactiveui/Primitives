@@ -24,7 +24,7 @@ public static partial class LinqExtensions
         /// may keep it. An empty source collection produces an empty sequence.
         /// </returns>
         /// <exception cref="ArgumentNullException"><paramref name="sources"/> or one of its elements is <see langword="null"/>.</exception>
-        /// <remarks>The collection is enumerated once, when the operator is called, not on each subscription.</remarks>
+        /// <remarks>The collection is enumerated once when the operator is called.</remarks>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public IObservable<IList<T>> CombineLatest() => CombineLatestOf(CombineLatestSources(sources));
 
@@ -33,7 +33,7 @@ public static partial class LinqExtensions
         /// <param name="resultSelector">Projects the latest value of every source into a result.</param>
         /// <returns>An observable sequence of projected results. An empty source collection produces an empty sequence.</returns>
         /// <exception cref="ArgumentNullException"><paramref name="sources"/>, one of its elements, or <paramref name="resultSelector"/> is <see langword="null"/>.</exception>
-        /// <remarks>The collection is enumerated once, when the operator is called, not on each subscription.</remarks>
+        /// <remarks>The collection is enumerated once when the operator is called.</remarks>
         public IObservable<TResult> CombineLatest<TResult>(Func<IList<T>, TResult> resultSelector)
         {
             ArgumentExceptionHelper.ThrowIfNull(resultSelector);
@@ -54,16 +54,14 @@ public static partial class LinqExtensions
     /// </returns>
     /// <exception cref="ArgumentNullException"><paramref name="sources"/> or one of its elements is <see langword="null"/>.</exception>
     /// <remarks>
-    /// Ranked below the tuple overloads, which are themselves ranked below the selector overloads. Two to
-    /// sixteen same-typed sources listed inline keep binding to the tuple overload that names each of them;
-    /// this one takes over past that arity, and whenever the sources arrive as an array.
+    /// Inline calls with two through sixteen same-typed sources select tuple overloads; larger calls and arrays select this overload.
     /// </remarks>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     [OverloadResolutionPriority(-2)]
     public static IObservable<IList<T>> CombineLatest<T>(params IObservable<T>[] sources) =>
         CombineLatestOf(CombineLatestSources(sources));
 
-    /// <summary>Builds the list-valued combine-latest signal for already-validated sources.</summary>
+    /// <summary>Builds the list-valued combine-latest signal from validated sources.</summary>
     /// <typeparam name="T">The element type shared by every source.</typeparam>
     /// <param name="sources">The validated source array.</param>
     /// <returns>The combine-latest signal.</returns>
@@ -110,28 +108,5 @@ public static partial class LinqExtensions
         }
 
         return materialized;
-    }
-
-    /// <summary>A combine-latest signal, carrying the factory for a variable number of same-typed sources.</summary>
-    private sealed partial class CombineLatestSignal<TResult>
-    {
-        /// <summary>Creates a combine-latest signal over a variable number of same-typed sources.</summary>
-        /// <typeparam name="T">The element type shared by every source.</typeparam>
-        /// <param name="sources">The source observables.</param>
-        /// <param name="selector">The selector that projects the subscription's latest-value slots.</param>
-        /// <returns>The combine-latest signal.</returns>
-        internal static CombineLatestSignal<TResult> Create<T>(
-            IObservable<T>[] sources,
-            Func<CombineLatestSlot<TResult, T>[], TResult> selector) =>
-            new(coordinator =>
-            {
-                var slots = new CombineLatestSlot<TResult, T>[sources.Length];
-                for (var i = 0; i < sources.Length; i++)
-                {
-                    slots[i] = coordinator.Attach(sources[i]);
-                }
-
-                return () => selector(slots);
-            });
     }
 }

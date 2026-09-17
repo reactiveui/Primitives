@@ -6,9 +6,7 @@ using ReactiveUI.Primitives.Disposables;
 
 namespace ReactiveUI.Disposables.Tests;
 
-/// <summary>Tests for <see cref="MutableDisposable"/> — verifies that reassigning the inner does
-/// NOT dispose the previous, that assigning after disposal immediately disposes the incoming
-/// value, and that <c>Dispose</c> is idempotent.</summary>
+/// <summary>Tests for <see cref="MutableDisposable"/>, whose inner can be replaced without disposing the value it held.</summary>
 public class MutableDisposableTests
 {
     /// <summary>Verifies replacement leaves the previous inner alone.</summary>

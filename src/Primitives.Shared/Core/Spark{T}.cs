@@ -3,6 +3,7 @@
 // See the LICENSE file in the project root for full license information.
 
 using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.Runtime.CompilerServices;
 
@@ -12,14 +13,14 @@ namespace ReactiveUI.Primitives.Reactive.Core;
 namespace ReactiveUI.Primitives.Core;
 #endif
 
-/// <summary>
-/// Represents a spark to an observer. This is a by-value type: materializing a sequence allocates
-/// no per-notification heap object, mirroring the value-type notification used by other modern
-/// reactive libraries.
-/// </summary>
+/// <summary>Represents a value, error, or completion notification.</summary>
 /// <typeparam name="T">The type of the elements received by the observer.</typeparam>
 [Serializable]
 [DebuggerDisplay("{DebuggerDisplay,nq}")]
+[SuppressMessage(
+    "Design",
+    "SST2338:Declare discriminated payloads as a union",
+    Justification = "Zero-allocation public notification struct shared by every target framework; union types are not available on the older targets.")]
 public readonly record struct Spark<T>
 {
     /// <summary>The carried exception for an OnError spark; otherwise <see langword="null"/>.</summary>
@@ -36,17 +37,13 @@ public readonly record struct Spark<T>
         _exception = exception;
     }
 
-    /// <summary>
-    /// Gets the value carried by an OnNext spark, or the default value for OnError and OnCompleted
-    /// sparks. Check <see cref="HasValue"/> (or <see cref="Kind"/>) to determine whether the value is
-    /// meaningful, and read <see cref="Exception"/> for the error carried by an OnError spark.
-    /// </summary>
+    /// <summary>Gets the value for an OnNext notification, or the default value for an error or completion notification.</summary>
     public T Value { get; }
 
     /// <summary>Gets a value indicating whether the spark carries a value.</summary>
     public bool HasValue => Kind == SparkKind.OnNext;
 
-    /// <summary>Gets the exception of an OnError spark or returns null.</summary>
+    /// <summary>Gets the exception carried by an OnError spark, or <see langword="null"/> for any other kind.</summary>
     public Exception Exception => _exception!;
 
     /// <summary>Gets the kind of Spark that is represented.</summary>
@@ -57,13 +54,9 @@ public readonly record struct Spark<T>
     [DebuggerBrowsable(DebuggerBrowsableState.Never)]
     private string DebuggerDisplay => ToString() ?? string.Empty;
 
-    /// <summary>Determines whether the current Spark&lt;T&gt; object has the same observer message payload as a specified Spark&lt;T&gt; value.</summary>
-    /// <param name="other">An object to compare to the current Spark&lt;T&gt; object.</param>
-    /// <returns>true if both Spark&lt;T&gt; objects have the same observer message payload; otherwise, false.</returns>
-    /// <remarks>
-    /// Equality of Spark&lt;T&gt; objects is based on the equality of the observer message payload they represent,
-    /// including the Spark Kind and the Value or Exception (if any).
-    /// </remarks>
+    /// <summary>Determines whether both sparks carry the same observer message payload: the same <see cref="Kind"/> and, for OnNext and OnError, the same value or exception.</summary>
+    /// <param name="other">The spark to compare with this one.</param>
+    /// <returns>true if both sparks carry the same payload; otherwise, false.</returns>
     public bool Equals(Spark<T> other) => Kind == other.Kind && Kind switch
     {
         SparkKind.OnNext => EqualityComparer<T>.Default.Equals(Value, other.Value),

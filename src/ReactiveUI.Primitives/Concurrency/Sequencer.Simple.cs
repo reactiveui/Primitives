@@ -2,7 +2,6 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
-using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
 using ReactiveUI.Primitives.Disposables;
 
@@ -122,7 +121,7 @@ public static partial class Sequencer
                 return;
             }
 
-            Interlocked.Exchange(ref _disposable, EmptyDisposable.Instance)?.Dispose();
+            ReleaseResult();
         }
 
         /// <inheritdoc/>
@@ -141,32 +140,27 @@ public static partial class Sequencer
                 return;
             }
 
-            DisposeIfRaced(disposable);
+            ReleaseCanceledResult();
         }
 
-        /// <summary>
-        /// Race-only cleanup: releases what the action returned when <see cref="Dispose"/> latched the
-        /// flag after the store above claimed the slot. Single-threaded this can never fire - a completed
-        /// <see cref="Dispose"/> leaves the slot holding <see cref="EmptyDisposable.Instance"/>, so the
-        /// compare-exchange takes the already-claimed branch instead and never reaches here. Only a real
-        /// concurrent disposal lands in this window, so it is excluded rather than chased with a
-        /// timing-dependent test.
-        /// </summary>
-        /// <param name="disposable">The disposable the scheduled action returned.</param>
-        [ExcludeFromCodeCoverage]
-        private void DisposeIfRaced(IDisposable disposable)
+        /// <summary>Releases the published result if the work item is cancelled.</summary>
+        internal void ReleaseCanceledResult()
         {
             if (!IsDisposed)
             {
                 return;
             }
 
-            disposable.Dispose();
+            ReleaseResult();
         }
+
+        /// <summary>Takes and disposes the published result, leaving the empty disposable in its place.</summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private void ReleaseResult() => Interlocked.Exchange(ref _disposable, EmptyDisposable.Instance)?.Dispose();
     }
 
     /// <summary>Holds state for recursive action scheduling.</summary>
-    internal sealed class RecursiveScheduleState : MultipleDisposable
+    internal sealed class RecursiveScheduleState : IDisposable
     {
         /// <summary>Sequencer used for recursive scheduling.</summary>
         private readonly ISequencer _scheduler;
@@ -180,6 +174,9 @@ public static partial class Sequencer
         /// <summary>Cached delegate used to avoid recreating the recursive action.</summary>
         private readonly Action _recursiveAction;
 
+        /// <summary>The pending scheduled work, disposed together when recursion is cancelled.</summary>
+        private DisposableSet _scheduled;
+
         /// <summary>Initializes a new instance of the <see cref="RecursiveScheduleState"/> class.</summary>
         /// <param name="scheduler">Sequencer used for recursive scheduling.</param>
         /// <param name="action">Recursive action supplied by the caller.</param>
@@ -188,13 +185,18 @@ public static partial class Sequencer
             _scheduler = scheduler;
             _action = action;
             _recursiveAction = RunRecursiveAction;
+            _scheduled = new();
         }
+
+        /// <inheritdoc/>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void Dispose() => _scheduled.Dispose();
 
         /// <summary>Starts recursive scheduling.</summary>
         /// <returns>The disposable object used to cancel recursive work.</returns>
         internal RecursiveScheduleState Start()
         {
-            Add(_scheduler.Schedule(_recursiveAction));
+            _scheduled.Add(_scheduler.Schedule(_recursiveAction));
             return this;
         }
 
@@ -214,7 +216,7 @@ public static partial class Sequencer
             {
                 if (!handoff.IsDone)
                 {
-                    Add(handoff.Disposable);
+                    _scheduled.Add(handoff.Disposable);
                     handoff.IsAdded = true;
                 }
             }
@@ -229,7 +231,7 @@ public static partial class Sequencer
             {
                 if (handoff.IsAdded)
                 {
-                    _ = Remove(handoff.Disposable!);
+                    _ = _scheduled.Remove(handoff.Disposable!);
                 }
                 else
                 {
@@ -250,7 +252,7 @@ public static partial class Sequencer
             /// <summary>Gets or sets a value indicating whether the disposable was added to the collection.</summary>
             public bool IsAdded { get; set; }
 
-            /// <summary>Gets or sets a value indicating whether the rescheduled work item already ran.</summary>
+            /// <summary>Gets or sets a value indicating whether the rescheduled work item has run.</summary>
             public bool IsDone { get; set; }
         }
     }

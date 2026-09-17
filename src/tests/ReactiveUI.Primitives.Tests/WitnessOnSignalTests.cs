@@ -20,7 +20,7 @@ public sealed class WitnessOnSignalTests
     /// <summary>The second value pushed through the dispatch queue.</summary>
     private const int Second = 2;
 
-    /// <summary>A single virtual tick used to drain the sequencer queue.</summary>
+    /// <summary>A single virtual tick, enough to drain the sequencer queue.</summary>
     private static readonly TimeSpan SingleTick = TimeSpan.FromTicks(1);
 
     /// <summary>The values expected when only the first queued notification is delivered.</summary>
@@ -42,7 +42,6 @@ public sealed class WitnessOnSignalTests
         source.OnNext(First);
         source.OnNext(Second);
 
-        // Nothing may be delivered until the sequencer runs the queued drain.
         await Assert.That(witness.Values.Count).IsEqualTo(0);
 
         clock.AdvanceBy(SingleTick);
@@ -76,7 +75,7 @@ public sealed class WitnessOnSignalTests
         await Assert.That(witness.Errors[0]).IsSameReferenceAs(expected);
     }
 
-    /// <summary>A drain that is torn down mid-flight abandons the notifications still queued behind it.</summary>
+    /// <summary>A drain that is torn down mid-flight abandons the notifications queued behind it.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
     public async Task DispatchAbandonsQueuedNotificationsWhenDisposedMidDrain()

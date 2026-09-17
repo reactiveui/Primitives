@@ -11,10 +11,10 @@ namespace ReactiveUI.Primitives.Signals;
 [System.Diagnostics.DebuggerDisplay("{DebuggerDisplay,nq}")]
 public sealed class ReadOnlyState<T> : IObservable<T>, IDisposable
 {
-    /// <summary>Stores state for the signal implementation.</summary>
+    /// <summary>The state signal holding the mirrored value and its subscribers.</summary>
     private readonly StateSignal<T> _inner;
 
-    /// <summary>Stores state for the signal implementation.</summary>
+    /// <summary>The subscription feeding source values into the inner state.</summary>
     private readonly IDisposable _subscription;
 
     /// <summary>Initializes a new instance of the <see cref="ReadOnlyState{T}"/> class.</summary>
@@ -36,16 +36,15 @@ public sealed class ReadOnlyState<T> : IObservable<T>, IDisposable
 
     /// <summary>Gets the debugger display text.</summary>
     [System.Diagnostics.DebuggerBrowsable(System.Diagnostics.DebuggerBrowsableState.Never)]
-    private string DebuggerDisplay => ToString() ?? string.Empty;
+    private string? DebuggerDisplay => ToString();
 
-    /// <summary>Notifies the provider that an observer is to receive notifications.</summary>
-    /// <param name="observer">The object that is to receive notifications.</param>
-    /// <returns>A reference to an interface that allows observers to stop receiving notifications before the provider has
-    /// finished sending them.</returns>
+    /// <summary>Subscribes an observer, which receives the current value followed by every later one.</summary>
+    /// <param name="observer">The observer to subscribe.</param>
+    /// <returns>A handle that unsubscribes the observer when disposed.</returns>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public IDisposable Subscribe(IObserver<T> observer) => _inner.Subscribe(observer);
 
-    /// <summary>Executes the Dispose operation.</summary>
+    /// <summary>Stops mirroring the source and disposes the cached state.</summary>
     public void Dispose()
     {
         _subscription.Dispose();

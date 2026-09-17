@@ -4,12 +4,7 @@
 
 namespace ReactiveUI.Primitives.Extensions.Operators;
 
-/// <summary>
-/// Emits a stored initial value to every new subscriber, then forwards subsequent emissions from the
-/// shared source. Each subscriber gets its own independent subscription to the source; the per-subscriber
-/// replay is the fixed <c>initialValue</c> supplied at construction (matching the legacy BehaviorSubject
-/// semantics — late subscribers do NOT see the latest value emitted to earlier subscribers).
-/// </summary>
+/// <summary>Emits the fixed initial value to each subscriber before subscribing independently to the source.</summary>
 /// <typeparam name="T">The element type of the source observable.</typeparam>
 /// <param name="source">The source observable.</param>
 /// <param name="initialValue">The initial value emitted to every new subscriber.</param>

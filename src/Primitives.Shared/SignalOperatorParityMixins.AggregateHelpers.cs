@@ -25,7 +25,7 @@ public static partial class LinqExtensions
         IDisposable SubscribeLongCount(IObserver<long> observer);
     }
 
-    /// <summary>Distinct-by operator implemented without delegate observer wrappers.</summary>
+    /// <summary>Forwards the first source value for each distinct key.</summary>
     /// <typeparam name="T">The source value type.</typeparam>
     /// <typeparam name="TKey">The key type.</typeparam>
     /// <param name="source">The source observable.</param>
@@ -115,7 +115,7 @@ public static partial class LinqExtensions
         }
     }
 
-    /// <summary>Count operator implemented without fold composition.</summary>
+    /// <summary>Emits the number of source values once the source completes.</summary>
     /// <typeparam name="T">The source value type.</typeparam>
     private sealed class CountSignal<T> : IRequireCurrentThread<int>
     {
@@ -153,7 +153,7 @@ public static partial class LinqExtensions
         }
     }
 
-    /// <summary>Predicate count operator implemented without fold composition.</summary>
+    /// <summary>Emits the number of source values that match a predicate.</summary>
     /// <typeparam name="T">The source value type.</typeparam>
     /// <param name="source">The source observable.</param>
     /// <param name="predicate">The predicate.</param>
@@ -213,7 +213,7 @@ public static partial class LinqExtensions
         }
     }
 
-    /// <summary>Long-count operator implemented without fold composition.</summary>
+    /// <summary>Emits the number of source values as a 64-bit count.</summary>
     /// <typeparam name="T">The source value type.</typeparam>
     private sealed class LongCountSignal<T> : IRequireCurrentThread<long>
     {
@@ -251,7 +251,7 @@ public static partial class LinqExtensions
         }
     }
 
-    /// <summary>Predicate long-count operator implemented without fold composition.</summary>
+    /// <summary>Emits the number of matching source values as a 64-bit count.</summary>
     /// <typeparam name="T">The source value type.</typeparam>
     /// <param name="source">The source observable.</param>
     /// <param name="predicate">The predicate.</param>
@@ -311,7 +311,7 @@ public static partial class LinqExtensions
         }
     }
 
-    /// <summary>Any operator implemented without predicate composition.</summary>
+    /// <summary>Emits whether the source produced any value.</summary>
     /// <typeparam name="T">The source value type.</typeparam>
     private sealed class AnySignal<T> : IRequireCurrentThread<bool>
     {
@@ -338,9 +338,6 @@ public static partial class LinqExtensions
                 return EmptyDisposable.Instance;
             }
 
-            // The first value settles this operator, so it must be able to dispose the source the moment one arrives.
-            // A current-thread source drains its trampoline inside its own Subscribe, which would not return until the
-            // source ended — never, for an endless one — leaving the sink without the subscription it needs to stop it.
             if (!IsRequiredSubscribeOnCurrentThread() || !CurrentThreadSequencer.IsScheduleRequired)
             {
                 return SubscribeCore(observer);
@@ -368,7 +365,7 @@ public static partial class LinqExtensions
         }
     }
 
-    /// <summary>Predicate any operator implemented without delegate observer wrappers.</summary>
+    /// <summary>Emits whether any source value matches a predicate.</summary>
     /// <typeparam name="T">The source value type.</typeparam>
     /// <param name="source">The source observable.</param>
     /// <param name="predicate">The predicate.</param>
@@ -395,8 +392,6 @@ public static partial class LinqExtensions
                 return EmptyDisposable.Instance;
             }
 
-            // The first matching value settles this operator, so it must own the source subscription before the source
-            // starts producing. See AnySignal for why a current-thread source livelocks without this bootstrap.
             if (!IsRequiredSubscribeOnCurrentThread() || !CurrentThreadSequencer.IsScheduleRequired)
             {
                 return SubscribeCore(observer);

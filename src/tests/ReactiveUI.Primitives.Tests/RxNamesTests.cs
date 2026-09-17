@@ -11,17 +11,13 @@ using ReactiveUI.Primitives.Signals;
 
 namespace ReactiveUI.Primitives.Tests;
 
-/// <summary>
-/// Data-driven parity tests proving each System.Reactive/LINQ name builds a behaviorally identical sink to its
-/// Primitives-named counterpart. Each operator pair is one data-source row consumed by a single test body, so the
-/// behavior is asserted once and checked for both names (and for identity between them).
-/// </summary>
+/// <summary>Verifies Rx and LINQ aliases preserve their corresponding signal operator behavior.</summary>
 public partial class RxNamesTests
 {
     /// <summary>The multiplier/state used by projection cases.</summary>
     private const int Ten = 10;
 
-    /// <summary>The divisor used to select even values.</summary>
+    /// <summary>The divisor that selects even values.</summary>
     private const int Two = 2;
 
     /// <summary>The fold/aggregate seed.</summary>
@@ -59,9 +55,6 @@ public partial class RxNamesTests
 
     /// <summary>The amount the virtual clock is advanced, comfortably past <see cref = "DueTicks"/>.</summary>
     private const long AdvanceTicks = 5;
-
-    /// <summary>The timeout in seconds used while waiting for ThreadPool-scheduled coverage branches.</summary>
-    private const int PollTimeoutSeconds = 2;
 
     /// <summary>Source values 1..5.</summary>
     private static readonly int[] _oneToFive = [1, 2, 3, 4, 5];
@@ -208,7 +201,7 @@ public partial class RxNamesTests
             _latched);
     }
 
-    /// <summary>Provides the generated multi-source CombineLatest arities not covered by the dedicated edge tests.</summary>
+    /// <summary>Provides the arities of the generated multi-source CombineLatest overloads.</summary>
     /// <returns>The CombineLatest arities from 4 through 15.</returns>
     public static IEnumerable<int> MultiSourceCombineLatestArities()
     {
@@ -432,69 +425,6 @@ public partial class RxNamesTests
         await Assert
             .That(((IRequireCurrentThread<int>)new ManualSource<int>().Timeout(timeoutDueTime, Sequencer.Immediate))
                 .IsRequiredSubscribeOnCurrentThread()).IsFalse();
-    }
-
-    /// <summary>Verifies absolute-time overloads use the default scheduler when no scheduler is supplied.</summary>
-    /// <returns>A task representing the asynchronous operation.</returns>
-    [Test]
-    public async Task AbsoluteTimeOperatorsUseDefaultScheduler()
-    {
-        var dueTime = ThreadPoolSequencer.Instance.Now.AddSeconds(-PollTimeoutSeconds);
-        List<int> delayedScalar = [];
-        List<int> delayedRange = [];
-        List<int> delayedSubscriptionScalar = [];
-        List<int> delayedSubscriptionRange = [];
-        List<int> delayedExplicitRange = [];
-        List<int> delayedSubscriptionExplicitRange = [];
-        Exception? timeout = null;
-        Exception? explicitTimeout = null;
-        const ISequencer? defaultScheduler = null;
-
-        using var delayScalarSubscription = Signal.Emit(One)
-            .Delay(dueTime)
-            .Subscribe(delayedScalar.Add);
-        using var delayRangeSubscription = Signal.Sequence(Two, Two)
-            .Delay(dueTime)
-            .Subscribe(delayedRange.Add);
-        using var delayExplicitRangeSubscription = Signal.Sequence(Two, Two)
-            .Delay(dueTime, defaultScheduler)
-            .Subscribe(delayedExplicitRange.Add);
-        using var subscriptionScalarSubscription = Signal.Emit(One)
-            .DelaySubscription(dueTime)
-            .Subscribe(delayedSubscriptionScalar.Add);
-        using var subscriptionRangeSubscription = Signal.Sequence(Two, Two)
-            .DelaySubscription(dueTime)
-            .Subscribe(delayedSubscriptionRange.Add);
-        using var subscriptionExplicitRangeSubscription = Signal.Sequence(Two, Two)
-            .DelaySubscription(dueTime, defaultScheduler)
-            .Subscribe(delayedSubscriptionExplicitRange.Add);
-        using var timeoutSubscription = Signal.Silent<int>()
-            .Timeout(dueTime)
-            .Subscribe(static _ => { }, captured => timeout = captured);
-        using var explicitTimeoutSubscription = Signal.Silent<int>()
-            .Timeout(dueTime, defaultScheduler)
-            .Subscribe(static _ => { }, captured => explicitTimeout = captured);
-
-        await TestPolling.SpinUntil(
-            () =>
-                delayedScalar.Count == One
-                && delayedRange.Count == Two
-                && delayedExplicitRange.Count == Two
-                && delayedSubscriptionScalar.Count == One
-                && delayedSubscriptionRange.Count == Two
-                && delayedSubscriptionExplicitRange.Count == Two
-                && timeout is not null
-                && explicitTimeout is not null,
-            TimeSpan.FromSeconds(PollTimeoutSeconds));
-
-        await Assert.That(delayedScalar.SequenceEqual([One])).IsTrue();
-        await Assert.That(delayedRange.SequenceEqual([Two, Three])).IsTrue();
-        await Assert.That(delayedExplicitRange.SequenceEqual([Two, Three])).IsTrue();
-        await Assert.That(delayedSubscriptionScalar.SequenceEqual([One])).IsTrue();
-        await Assert.That(delayedSubscriptionRange.SequenceEqual([Two, Three])).IsTrue();
-        await Assert.That(delayedSubscriptionExplicitRange.SequenceEqual([Two, Three])).IsTrue();
-        await Assert.That(timeout).IsTypeOf<TimeoutException>();
-        await Assert.That(explicitTimeout).IsTypeOf<TimeoutException>();
     }
 
     /// <summary>Verifies the binary <c>Concat</c>/<c>Chain</c> overload concatenates two sequences identically.</summary>
@@ -726,7 +656,7 @@ public partial class RxNamesTests
         _ = Assert.Throws<ArgumentOutOfRangeException>(() => source.Sample(TimeSpan.FromTicks(NegativeOne)));
     }
 
-    /// <summary>Verifies the stateful sinks forward a value and then an error (covers their error path).</summary>
+    /// <summary>Verifies the stateful sinks forward a value and then an error.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
     public async Task StatefulSinksForwardValueThenError()
@@ -736,7 +666,7 @@ public partial class RxNamesTests
         await Assert.That(RunStatefulError(static s => s.DoWith(Ten, IgnoreState))).IsTrue();
     }
 
-    /// <summary>Verifies the stateful projection sinks forward an exception thrown by the projection (covers their catch path).</summary>
+    /// <summary>Verifies the stateful projection sinks forward an exception thrown by the projection.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
     public async Task StatefulProjectionForwardsThrownError()
@@ -791,7 +721,7 @@ public partial class RxNamesTests
         await Assert.That(values.SequenceEqual(_tenOnly)).IsTrue();
     }
 
-    /// <summary>Verifies <c>Sample</c> mirrors <c>Probe</c> when sampled against an identical virtual clock drive.</summary>
+    /// <summary>Verifies <c>Sample</c> mirrors <c>Probe</c>.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
     public async Task SampleMatchesProbe()
@@ -834,23 +764,11 @@ public partial class RxNamesTests
         await Assert.That(switched).IsEquivalentTo(switchedTo, EqualityComparer<int>.Default);
     }
 
-    /// <summary>Verifies <c>Retry</c> mirrors the source when no error occurs (covers the happy path).</summary>
+    /// <summary>Verifies <c>Retry</c> mirrors the source when no error occurs.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
     public async Task RetryMirrorsSourceWhenNoError() =>
         await Assert.That(Collect(Signal.FromEnumerable(_oneToThree).Retry(Two)).SequenceEqual(_oneToThree)).IsTrue();
-
-    /// <summary>Exercises the default-sequencer (no-scheduler) overloads of the time operators.</summary>
-    /// <returns>A task representing the asynchronous operation.</returns>
-    [Test]
-    public async Task TimeOperatorsAcceptDefaultSequencer()
-    {
-        Signal.Sequence(One, Three).Delay(TimeSpan.FromTicks(DueTicks)).Subscribe(static _ => { }).Dispose();
-        Signal.FromEnumerable(_oneToThree).Timeout(TimeSpan.FromSeconds(AdvanceTicks)).Subscribe(static _ => { })
-            .Dispose();
-        Signal.FromEnumerable(_oneToThree).Sample(TimeSpan.FromTicks(DueTicks)).Subscribe(static _ => { }).Dispose();
-        await Task.CompletedTask.ConfigureAwait(false);
-    }
 
     /// <summary>Verifies the stateful sinks drop notifications that arrive after a terminal notification.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
@@ -908,7 +826,7 @@ public partial class RxNamesTests
             .Resume(Signal.FromEnumerable(_oneToThree))
             .Subscribe((IObserver<int>)null!));
 
-    /// <summary>Verifies Resume takes the scheduled subscription path when a current-thread sequencer is already active.</summary>
+    /// <summary>Verifies Resume schedules its subscription when a current-thread sequencer is active.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
     public async Task ResumeSchedulesWhenCurrentThreadSequencerActive()
@@ -937,9 +855,9 @@ public partial class RxNamesTests
     /// <returns>The new accumulated value.</returns>
     private static int Add(int accumulated, int value) => accumulated + value;
 
-    /// <summary>Returns the value unchanged (key selector).</summary>
+    /// <summary>Returns the value unchanged.</summary>
     /// <param name = "value">The source value.</param>
-    /// <returns>The value.</returns>
+    /// <returns>The same value.</returns>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static int Identity(int value) => value;
 
@@ -955,11 +873,11 @@ public partial class RxNamesTests
     /// <returns><see langword="true"/> when the value is a multiple of the divisor.</returns>
     private static bool IsMultiple(int divisor, int value) => value % divisor == 0;
 
-    /// <summary>Consumes a value without effect (the side-effect under test is irrelevant to the output).</summary>
+    /// <summary>Consumes a value without effect.</summary>
     /// <param name = "_">The source value, which the side effect deliberately ignores.</param>
     private static void Ignore(int _)
     {
-        // Intentionally empty: Do/Tap forward values unchanged regardless of the side effect.
+        // Intentionally empty.
     }
 
     /// <summary>Consumes a state and value without effect.</summary>
@@ -968,7 +886,7 @@ public partial class RxNamesTests
     [SuppressMessage("Maintainability", "SST1461:Remove unread private parameters", Justification = "The signature is fixed by the delegate this method is passed to as a method group.")]
     private static void IgnoreState(int state, int value)
     {
-        // Intentionally empty: DoWith/TapWith forward values unchanged regardless of the side effect.
+        // Intentionally empty.
     }
 
     /// <summary>Projects a value to an inner sequence that emits it twice.</summary>

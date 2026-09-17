@@ -8,7 +8,7 @@ namespace ReactiveUI.Primitives.Reactive.Advanced;
 namespace ReactiveUI.Primitives.Advanced;
 #endif
 
-/// <summary>Object-gated <c>Synchronize</c> compatibility signal.</summary>
+/// <summary>Serializes source notifications behind a caller-supplied object gate.</summary>
 /// <typeparam name="T">The value type.</typeparam>
 /// <param name="source">The source observable.</param>
 /// <param name="gate">The gate shared across subscriptions and other synchronized sequences.</param>

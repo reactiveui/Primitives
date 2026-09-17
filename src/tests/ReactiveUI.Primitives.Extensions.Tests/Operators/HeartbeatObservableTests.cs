@@ -3,13 +3,12 @@
 // See the LICENSE file in the project root for full license information.
 
 using System.Reactive.Subjects;
+using System.Runtime.CompilerServices;
 using ReactiveUI.Primitives.Concurrency;
 
 namespace ReactiveUI.Primitives.Extensions.Tests.Operators;
 
-/// <summary>Edge-case coverage for <c>Heartbeat</c> backed by
-/// <c>HeartbeatObservable&lt;T&gt;</c> — heartbeat-on-quiet, error/completion
-/// forwarding, and post-terminal timer suppression.</summary>
+/// <summary>Tests heartbeats during source inactivity and cancellation after termination.</summary>
 public class HeartbeatObservableTests
 {
     /// <summary>Heartbeat period for the scheduler-driven tests.</summary>
@@ -93,8 +92,7 @@ public class HeartbeatObservableTests
         await Assert.That(updates).IsCollectionEqualTo([Value]);
     }
 
-    /// <summary>Verifies that <c>OnNext</c>, <c>OnError</c> and a duplicate <c>OnCompleted</c>
-    /// arriving after the source has already completed are silently dropped.</summary>
+    /// <summary>Verifies notifications arriving after the source completes are silently dropped.</summary>
     /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenEventsAfterCompleted_ThenDropped()
@@ -124,4 +122,13 @@ public class HeartbeatObservableTests
         await Assert.That(values).IsEmpty();
         await Assert.That(caught).IsNull();
     }
+
+    /// <summary>Verifies an observer that marshals to another thread which completes the source does not deadlock the update delivery.</summary>
+    /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
+    [Test]
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public Task WhenObserverMarshalsCompletionDuringUpdate_ThenNoDeadlock() =>
+        SerializedDeliveryAssertions.ObserverMarshallingCompletionDoesNotDeadlock<Heartbeat<int>>(
+            static (source, observer) => source.Heartbeat(TimeSpan.FromTicks(HeartbeatTicks), new VirtualClock()).Subscribe(observer),
+            static observer => observer.OnNext(1));
 }

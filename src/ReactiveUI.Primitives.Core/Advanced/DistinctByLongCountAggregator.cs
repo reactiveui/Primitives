@@ -14,20 +14,20 @@ public readonly record struct
     /// <summary>The selector that projects each value to its distinctness key.</summary>
     private readonly Func<T, TKey> _keySelector;
 
-    /// <summary>The set of keys that have already been observed.</summary>
+    /// <summary>The set of keys observed so far.</summary>
     private readonly HashSet<TKey> _seen;
 
     /// <summary>Initializes a new instance of the <see cref="DistinctByLongCountAggregator{T,TKey}"/> struct.</summary>
     /// <param name="keySelector">The key selector.</param>
     /// <param name="comparer">The key comparer, or <see langword="null"/> for the default comparer.</param>
     public DistinctByLongCountAggregator(Func<T, TKey> keySelector, IEqualityComparer<TKey>? comparer)
-        : this(keySelector, comparer is null ? [] : [with(comparer)], 0L)
+        : this(keySelector, [with(comparer)], 0L)
     {
     }
 
     /// <summary>Initializes a new instance of the <see cref="DistinctByLongCountAggregator{T,TKey}"/> struct.</summary>
     /// <param name="keySelector">The key selector.</param>
-    /// <param name="seen">The set of keys that have already been observed.</param>
+    /// <param name="seen">The set of keys observed so far.</param>
     /// <param name="result">The current accumulated count.</param>
     private DistinctByLongCountAggregator(Func<T, TKey> keySelector, HashSet<TKey> seen, long result)
     {

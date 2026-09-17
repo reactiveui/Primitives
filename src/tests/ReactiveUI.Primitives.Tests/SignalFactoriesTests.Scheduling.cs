@@ -8,11 +8,7 @@ using ReactiveUI.Primitives.Signals;
 
 namespace ReactiveUI.Primitives.Tests;
 
-/// <summary>
-/// Verifies how the <see cref="Signal"/> run-once, sequence, loop, and timer factories dispatch through an
-/// explicit sequencer: the work is deferred until the sequencer runs it, a current-thread sequencer routes the
-/// subscription through the trampoline, and an external cancellation token is only wired up when it can be cancelled.
-/// </summary>
+/// <summary>Tests factory dispatch, recurring ticks, and cancellation through explicit sequencers.</summary>
 public partial class SignalFactoriesTests
 {
     /// <summary>The number of values taken from the infinite loop signal before it is torn down.</summary>
@@ -21,11 +17,7 @@ public partial class SignalFactoriesTests
     /// <summary>The tick used as both the due time and the period of the virtual timers.</summary>
     private static readonly TimeSpan SingleTick = TimeSpan.FromTicks(1);
 
-    /// <summary>
-    /// Verifies a periodic timer keeps ticking under a sequencer that runs the first tick before its own
-    /// <c>Schedule</c> returns. The tick arms the next one, and the handle the outer call goes on to return must
-    /// not replace - and so cancel - that successor, which would leave the timer emitting a single value.
-    /// </summary>
+    /// <summary>An inline first tick retains the successor it schedules before the initial scheduling call returns.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
     public async Task TimerRetainsThePeriodicTickArmedByAnInlineFirstTick()
@@ -165,7 +157,6 @@ public partial class SignalFactoriesTests
         await Assert.That(witness.Values.SequenceEqual(ExpectedSingleZeroTick)).IsTrue();
         await Assert.That(witness.Completed).IsEqualTo(1);
 
-        // The downstream tore the timer down on its first tick, so no further tick may be scheduled.
         clock.AdvanceBy(SingleTick);
         clock.AdvanceBy(SingleTick);
 
@@ -182,8 +173,7 @@ public partial class SignalFactoriesTests
 
         RecordingWitness<int> witness = new();
 
-        // Loop drives itself through the current-thread trampoline, so the subscription has to be taken while the
-        // trampoline is already running; otherwise the handle that stops the recursion is never handed back.
+        // Subscribe inside the trampoline so Take receives its cancellation handle before emission starts.
         _ = Sequencer.CurrentThread.Schedule(() =>
             Signal.Loop(Seven).Take(LoopTakeCount).Subscribe(witness));
 
@@ -191,7 +181,7 @@ public partial class SignalFactoriesTests
         await Assert.That(witness.Completed).IsEqualTo(1);
     }
 
-    /// <summary>A loop subscription that is already torn down never emits.</summary>
+    /// <summary>A loop subscription torn down before the loop runs never emits.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
     public async Task LoopEmitsNothingWhenTheSubscriptionIsDisposedBeforeItRuns()
@@ -251,16 +241,16 @@ public partial class SignalFactoriesTests
     [Test]
     public async Task FromAsyncWithAnUncancellableTokenStillCompletesWithItsResult()
     {
-        RecordingWitness<int> witness = new();
+        AwaitableWitness<int> witness = new();
 
         using var subscription = Signal
             .FromAsync(static _ => Task.FromResult(Seven), CancellationToken.None)
             .Subscribe(witness);
 
-        await TestPolling.SpinUntil(() => witness.Completed == 1, TimeSpan.FromSeconds(TimeoutSeconds));
+        await witness.Completion;
 
         await Assert.That(witness.Values.SequenceEqual(ExpectedSingleSeven)).IsTrue();
-        await Assert.That(witness.Completed).IsEqualTo(1);
+        await Assert.That(witness.Completions).IsEqualTo(1);
         await Assert.That(witness.Errors.Count).IsEqualTo(0);
     }
 

@@ -19,10 +19,6 @@ internal static class InstanceWrapperEmitter
     /// <param name="model">The host to wrap.</param>
     /// <param name="provider">The observable implementation to write against.</param>
     /// <returns>The generated source.</returns>
-    /// <remarks>
-    /// The host is held in a field rather than resubscribed from a captured expression, so every property on one
-    /// wrapper observes the same instance the consumer handed it.
-    /// </remarks>
     internal static string Emit(InstanceTargetModel model, ObservableProvider provider)
     {
         var events = model.Events.AsArray();

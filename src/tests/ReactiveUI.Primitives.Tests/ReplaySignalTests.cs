@@ -31,7 +31,7 @@ public class ReplaySignalTests
     /// <summary>The integer constant ten.</summary>
     private const int Ten = 10;
 
-    /// <summary>Constructors the argument checking.</summary>
+    /// <summary>Verifies the constructors reject negative buffer sizes, negative windows, and null sequencers.</summary>
     [Test]
     public void Constructor_ArgumentChecking()
     {
@@ -51,7 +51,6 @@ public class ReplaySignalTests
         _ = Assert.Throws<ArgumentNullException>(static () => CreateAndDispose(static () => new(TimeSpan.Zero, null!)));
         _ = Assert.Throws<ArgumentNullException>(static () => CreateAndDispose(static () => new(0, TimeSpan.Zero, null!)));
 
-        // zero allowed
         CreateAndDispose(static () => new(0));
         CreateAndDispose(static () => new(TimeSpan.Zero));
         CreateAndDispose(static () => new(0, TimeSpan.Zero));
@@ -83,7 +82,7 @@ public class ReplaySignalTests
         await Assert.That(replayed.SequenceEqual([Three])).IsTrue();
     }
 
-    /// <summary>Verifies a windowed buffer still drops the values that overflow its buffer size.</summary>
+    /// <summary>Verifies a windowed buffer drops the values that overflow its buffer size.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
     public async Task AWindowedBufferDropsValuesBeyondItsBufferSize()
@@ -113,7 +112,7 @@ public class ReplaySignalTests
         await Assert.That(replayed.Count).IsEqualTo(0);
     }
 
-    /// <summary>Determines whether this instance has observers.</summary>
+    /// <summary>Verifies every replay buffer shape tracks observers as subscriptions are added and removed.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
     public async Task HasObservers()
@@ -121,10 +120,10 @@ public class ReplaySignalTests
         await HasObserversImpl(new());
         await HasObserversImpl(new(1));
         await HasObserversImpl(new(Three));
-        await HasObserversImpl(new(TimeSpan.FromSeconds(1)));
+        await HasObserversImpl(new(TimeSpan.FromSeconds(1), EmptySequencer.Instance));
     }
 
-    /// <summary>Determines whether [has observers dispose1].</summary>
+    /// <summary>Verifies every replay buffer shape drops its observers when the source is disposed first.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
     public async Task HasObservers_Dispose1()
@@ -132,10 +131,10 @@ public class ReplaySignalTests
         await HasObservers_Dispose1Impl(new());
         await HasObservers_Dispose1Impl(new(1));
         await HasObservers_Dispose1Impl(new(Three));
-        await HasObservers_Dispose1Impl(new(TimeSpan.FromSeconds(1)));
+        await HasObservers_Dispose1Impl(new(TimeSpan.FromSeconds(1), EmptySequencer.Instance));
     }
 
-    /// <summary>Determines whether [has observers dispose2].</summary>
+    /// <summary>Verifies every replay buffer shape drops its observers when the subscription is disposed first.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
     public async Task HasObservers_Dispose2()
@@ -143,10 +142,10 @@ public class ReplaySignalTests
         await HasObservers_Dispose2Impl(new());
         await HasObservers_Dispose2Impl(new(1));
         await HasObservers_Dispose2Impl(new(Three));
-        await HasObservers_Dispose2Impl(new(TimeSpan.FromSeconds(1)));
+        await HasObservers_Dispose2Impl(new(TimeSpan.FromSeconds(1), EmptySequencer.Instance));
     }
 
-    /// <summary>Determines whether [has observers dispose3].</summary>
+    /// <summary>Verifies every replay buffer shape reports disposal when it has no subscribers.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
     public async Task HasObservers_Dispose3()
@@ -154,10 +153,10 @@ public class ReplaySignalTests
         await HasObservers_Dispose3Impl(new());
         await HasObservers_Dispose3Impl(new(1));
         await HasObservers_Dispose3Impl(new(Three));
-        await HasObservers_Dispose3Impl(new(TimeSpan.FromSeconds(1)));
+        await HasObservers_Dispose3Impl(new(TimeSpan.FromSeconds(1), EmptySequencer.Instance));
     }
 
-    /// <summary>Determines whether [has observers on completed].</summary>
+    /// <summary>Verifies completion drops the observers of every replay buffer shape.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
     public async Task HasObservers_OnCompleted()
@@ -165,10 +164,10 @@ public class ReplaySignalTests
         await HasObservers_OnCompletedImpl(new());
         await HasObservers_OnCompletedImpl(new(1));
         await HasObservers_OnCompletedImpl(new(Three));
-        await HasObservers_OnCompletedImpl(new(TimeSpan.FromSeconds(1)));
+        await HasObservers_OnCompletedImpl(new(TimeSpan.FromSeconds(1), EmptySequencer.Instance));
     }
 
-    /// <summary>Determines whether [has observers on error].</summary>
+    /// <summary>Verifies an error drops the observers of every replay buffer shape.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
     public async Task HasObservers_OnError()
@@ -176,10 +175,10 @@ public class ReplaySignalTests
         await HasObservers_OnErrorImpl(new());
         await HasObservers_OnErrorImpl(new(1));
         await HasObservers_OnErrorImpl(new(Three));
-        await HasObservers_OnErrorImpl(new(TimeSpan.FromSeconds(1)));
+        await HasObservers_OnErrorImpl(new(TimeSpan.FromSeconds(1), EmptySequencer.Instance));
     }
 
-    /// <summary>Called when [error argument checking].</summary>
+    /// <summary>Verifies a replay signal rejects a null error.</summary>
     [Test]
     public void OnError_ArgumentChecking()
     {
@@ -189,7 +188,7 @@ public class ReplaySignalTests
         _ = Assert.Throws<ArgumentNullException>(static () => new ReplaySignal<int>(EmptySequencer.Instance).OnError(null!));
     }
 
-    /// <summary>Subscribes the argument checking.</summary>
+    /// <summary>Verifies a replay signal rejects a null observer.</summary>
     [Test]
     public void Subscribe_ArgumentChecking()
     {
@@ -199,7 +198,7 @@ public class ReplaySignalTests
         _ = Assert.Throws<ArgumentNullException>(static () => new ReplaySignal<int>(EmptySequencer.Instance).Subscribe(null!));
     }
 
-    /// <summary>Verifies subjects, replay, behavior, state, and connectable aliases cover late terminal branches.</summary>
+    /// <summary>Verifies late subscribers receive the buffered values and the first terminal notification.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
     public async Task SubjectsReplayBehaviorStateAndConnectableAliasesCoverLateTerminalBranches()
@@ -215,16 +214,41 @@ public class ReplaySignalTests
         await Assert.That(state.ParamName).IsEqualTo("selector");
     }
 
-    /// <summary>
-    /// A new subscriber that races a live <see cref="ReplaySignal{T}.OnNext"/> must receive each value exactly
-    /// once: the replayed buffer must not duplicate or reorder a value that is also delivered live.
-    /// </summary>
+    /// <summary>Replay and live delivery run without the shared gate held and deliver each value once in order.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
-    public async Task Subscribe_RacingOnNext_DeliversEachValueOnce()
+    public async Task SubscribeAndOnNextDeliverInOrderOutsideTheGate()
     {
-        await RaceSubscribeAgainstProducer(static () => new(1));
-        await RaceSubscribeAgainstProducer(static () => new(Three));
+        await AssertReplayAndLiveDeliveryRunOutsideTheGate(static () => new(1));
+        await AssertReplayAndLiveDeliveryRunOutsideTheGate(static () => new(Three));
+    }
+
+    /// <summary>An observer that marshals a replayed value to another thread which emits a new value is not deadlocked, and the new value follows the replay.</summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    [Test]
+    public async Task ObserverMarshallingOnNextDuringReplayDoesNotDeadlock()
+    {
+        using MarshallingThread dispatcher = new();
+        using ReplaySignal<int> signal = new(Three);
+        signal.OnNext(One);
+        signal.OnNext(Two);
+        List<int> values = [];
+        IDisposable? subscription = null;
+
+        var subscriber = BackgroundThread.Start(() => subscription = signal.Subscribe(value =>
+        {
+            values.Add(value);
+            if (value != One)
+            {
+                return;
+            }
+
+            dispatcher.Invoke(() => signal.OnNext(Three));
+        }));
+
+        await Assert.That(await BackgroundThread.FinishesPromptly(subscriber)).IsTrue();
+        subscription?.Dispose();
+        await Assert.That(values.SequenceEqual([One, Two, Three])).IsTrue();
     }
 
     /// <summary>Asserts a behavior signal keeps its first terminal notification and replays it to late subscribers.</summary>
@@ -306,45 +330,32 @@ public class ReplaySignalTests
         await Assert.That(windowedLate.Values.SequenceEqual(expectedWindowedLate)).IsTrue();
     }
 
-    /// <summary>
-    /// Continuously emits increasing values from one thread while another thread repeatedly subscribes and
-    /// disposes, asserting that no subscriber ever receives a value out of order or twice.
-    /// </summary>
-    /// <param name = "factory">Factory used to create the replay signal under test.</param>
+    /// <summary>Checks that replay hands over to live delivery in order without the gate held while the observer runs.</summary>
+    /// <param name = "factory">Factory that creates the replay signal under test.</param>
     /// <returns>A task representing the asynchronous operation.</returns>
-    private static async Task RaceSubscribeAgainstProducer(Func<ReplaySignal<int>> factory)
+    private static async Task AssertReplayAndLiveDeliveryRunOutsideTheGate(Func<ReplaySignal<int>> factory)
     {
-        const int subscribeAttempts = 50_000;
-
         using var signal = factory();
-        using CancellationTokenSource stop = new();
-        var firstFailure = default(OrderingWitness<int>.OutOfOrderDelivery);
-
-        var producer = Task.Run(() =>
+        List<int> values = [];
+        var heldGate = false;
+        signal.OnNext(1);
+        using var subscription = signal.Subscribe(value =>
         {
-            var value = 0;
-            while (!stop.IsCancellationRequested)
-            {
-                value++;
-                signal.OnNext(value);
-            }
+            values.Add(value);
+#if NET9_0_OR_GREATER
+            heldGate |= signal.Gate.IsHeldByCurrentThread;
+#else
+            heldGate |= Monitor.IsEntered(signal.Gate);
+#endif
         });
-
-        for (var attempt = 0; attempt < subscribeAttempts && firstFailure is null; attempt++)
-        {
-            OrderingWitness<int> witness = new();
-            signal.Subscribe(witness).Dispose();
-            firstFailure = witness.OutOfOrder;
-        }
-
-        await stop.CancelAsync();
-        await producer;
-
-        await Assert.That(firstFailure).IsNull();
+        signal.OnNext(Two);
+        signal.OnNext(Three);
+        await Assert.That(heldGate).IsFalse();
+        await Assert.That(values.SequenceEqual([1, Two, Three])).IsTrue();
     }
 
     /// <summary>Creates a replay signal and disposes it immediately.</summary>
-    /// <param name = "factory">Factory used to create the signal.</param>
+    /// <param name = "factory">Factory that creates the signal.</param>
     private static void CreateAndDispose(Func<ReplaySignal<int>> factory)
     {
         using var signal = factory();

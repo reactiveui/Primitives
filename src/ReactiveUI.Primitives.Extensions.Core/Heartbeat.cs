@@ -4,13 +4,9 @@
 
 namespace ReactiveUI.Primitives.Extensions;
 
-/// <summary>
-/// Represents either a heartbeat signal or a value update from an observable stream. Value-type shape; the
-/// heartbeat operator emits these directly so per-emission allocations are zero. Note that
-/// <c>default(Heartbeat&lt;T&gt;)</c> represents a value update with the default <typeparamref name="T"/>; use
-/// <c>new Heartbeat&lt;T&gt;()</c> to construct a heartbeat tick.
-/// </summary>
+/// <summary>Represents either a heartbeat tick or a value update.</summary>
 /// <typeparam name="T">The type of the update value.</typeparam>
+/// <remarks>The default struct value is an update containing the default T; the parameterless constructor creates a heartbeat tick.</remarks>
 [System.Diagnostics.DebuggerDisplay("Heartbeat: IsHeartbeat = {IsHeartbeat}, Update = {Update}")]
 public readonly record struct Heartbeat<T> : IHeartbeat<T>
 {

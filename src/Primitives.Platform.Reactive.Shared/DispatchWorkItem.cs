@@ -3,30 +3,32 @@
 // See the LICENSE file in the project root for full license information.
 
 using System.Reactive.Concurrency;
+using System.Runtime.CompilerServices;
 
 namespace ReactiveUI.Primitives.Reactive.Concurrency;
 
 /// <summary>A scheduled work item carrying closure-free state and the scheduler passed back to the action.</summary>
 /// <typeparam name="TState">The scheduled state type.</typeparam>
-internal sealed class DispatchWorkItem<TState> : DispatchWorkItemBase<TState>, IDispatchWorkItem
+/// <param name="scheduler">The scheduler passed back to the scheduled action.</param>
+/// <param name="state">Scheduled state.</param>
+/// <param name="action">Scheduled action.</param>
+internal sealed class DispatchWorkItem<TState>(IScheduler scheduler, TState state, Func<IScheduler, TState, IDisposable> action) : IDispatchWorkItem
 {
-    /// <summary>Initializes a new instance of the <see cref="DispatchWorkItem{TState}"/> class.</summary>
-    /// <param name="scheduler">The scheduler passed back to the scheduled action.</param>
-    /// <param name="state">Scheduled state.</param>
-    /// <param name="action">Scheduled action.</param>
-    public DispatchWorkItem(IScheduler scheduler, TState state, Func<IScheduler, TState, IDisposable> action)
-        : base(scheduler, state, action)
-    {
-    }
+    /// <summary>The run and cancel state.</summary>
+    private DispatchWorkState<TState> _work = new(scheduler, state, action);
+
+    /// <inheritdoc/>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public void Run() => _work.Run();
 
     /// <inheritdoc/>
     public void Dispose()
     {
-        if (!TryClaimDispose())
+        if (!_work.TryClaimDispose())
         {
             return;
         }
 
-        ReleaseStartedWork();
+        _work.ReleaseStartedWork();
     }
 }

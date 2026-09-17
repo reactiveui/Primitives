@@ -6,10 +6,7 @@ using System.Runtime.CompilerServices;
 
 namespace ReactiveUI.Primitives.Extensions.Tests.Internal;
 
-/// <summary>Direct RxVoid tests for <see cref="ObserverArrayHelpers"/> — both the broadcast
-/// loop and the remove-or-null short-circuit paths. The helpers are pure functions over
-/// their inputs, so each branch is exercised by passing synthesized arrays rather than
-/// relying on operator-level scheduler races.</summary>
+/// <summary>Tests for <see cref="ObserverArrayHelpers"/>, the broadcast and remove-or-null helpers.</summary>
 public class ObserverArrayHelpersTests
 {
     /// <summary>Sentinel value broadcast through the helper.</summary>

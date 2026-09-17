@@ -12,7 +12,8 @@ public sealed class BackgroundJobSignal<T> : IObservableAsync<T>
     /// <summary>Initializes a new instance of the <see cref="BackgroundJobSignal{T}"/> class.</summary>
     /// <param name="job">The job to execute for each subscription.</param>
     /// <param name="startSynchronously">A value indicating whether the job starts synchronously on subscribe.</param>
-    /// <param name="taskScheduler">The scheduler used to start the job asynchronously.</param>
+    /// <param name="taskScheduler">The scheduler that starts the job, or <see langword="null"/> to start it on
+    /// the current context after yielding.</param>
     public BackgroundJobSignal(
         Func<IObserverAsync<T>, CancellationToken, ValueTask> job,
         bool startSynchronously,
@@ -31,7 +32,7 @@ public sealed class BackgroundJobSignal<T> : IObservableAsync<T>
     /// <summary>Gets a value indicating whether the job starts synchronously on subscribe.</summary>
     private bool StartSynchronously { get; }
 
-    /// <summary>Gets the scheduler used to start the job asynchronously.</summary>
+    /// <summary>Gets the scheduler that starts the job asynchronously.</summary>
     private TaskScheduler? TaskScheduler { get; }
 
     /// <inheritdoc/>
@@ -58,6 +59,7 @@ public sealed class BackgroundJobSignal<T> : IObservableAsync<T>
     /// <param name="observer">The observer receiving job notifications.</param>
     /// <param name="cancellationToken">The cancellation token for the job.</param>
     /// <returns>A task representing the job.</returns>
+    [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
     private async ValueTask ExecuteAfterYieldAsync(IObserverAsync<T> observer, CancellationToken cancellationToken)
     {
         await Task.Yield();
@@ -66,9 +68,10 @@ public sealed class BackgroundJobSignal<T> : IObservableAsync<T>
 
     /// <summary>Starts the job through the configured task scheduler.</summary>
     /// <param name="observer">The observer receiving job notifications.</param>
-    /// <param name="taskScheduler">The scheduler used to run the job.</param>
+    /// <param name="taskScheduler">The scheduler that runs the job.</param>
     /// <param name="cancellationToken">The cancellation token for the job.</param>
     /// <returns>A task representing the job.</returns>
+    [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
     private async ValueTask ExecuteOnSchedulerAsync(
         IObserverAsync<T> observer,
         TaskScheduler taskScheduler,

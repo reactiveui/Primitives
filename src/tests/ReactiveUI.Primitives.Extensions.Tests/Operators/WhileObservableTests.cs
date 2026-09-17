@@ -6,9 +6,7 @@ using ReactiveUI.Primitives.Concurrency;
 
 namespace ReactiveUI.Primitives.Extensions.Tests.Operators;
 
-/// <summary>Edge-case coverage for the <c>While</c> operator backed by
-/// <c>WhileObservable</c> — inline iteration, scheduler dispatch, predicate-throws,
-/// action-throws, and dispose-during-iteration paths.</summary>
+/// <summary>Tests iteration, scheduling, predicate and action failures, and disposal.</summary>
 public class WhileObservableTests
 {
     /// <summary>Synthetic error message attached to predicate failures.</summary>
@@ -19,15 +17,6 @@ public class WhileObservableTests
 
     /// <summary>Number of inline iterations to run.</summary>
     private const int IterationCount = 3;
-
-    /// <summary>Settle delay in milliseconds used to confirm a disposed loop stops ticking.</summary>
-    private const int SettleDelayMilliseconds = 50;
-
-    /// <summary>Maximum tolerated extra iterations after Dispose() returns.</summary>
-    private const int MaxStragglerIterations = 10;
-
-    /// <summary>Longest a test waits for an asynchronous signal before failing.</summary>
-    private static readonly TimeSpan GuardTimeout = TimeSpan.FromSeconds(5);
 
     /// <summary>Verifies that the inline form runs until the predicate returns <c>false</c>.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
@@ -52,14 +41,18 @@ public class WhileObservableTests
     public async Task WhenWhileWithScheduler_ThenRunsUntilPredicateFalse()
     {
         var remaining = IterationCount;
-        TaskCompletionSource<int> completed = new(TaskCreationOptions.RunContinuationsAsynchronously);
         var emitted = 0;
+        var completed = false;
+        ManualSequencer sequencer = new();
 
-        using var sub = ReactiveExtensions.While(() => remaining > 0, () => remaining--, TaskPoolSequencer.Default)
-            .Subscribe(_ => emitted++, () => completed.TrySetResult(emitted));
+        using var sub = ReactiveExtensions.While(() => remaining > 0, () => remaining--, sequencer)
+            .Subscribe(_ => emitted++, () => completed = true);
 
-        var final = await completed.Task.WaitAsync(GuardTimeout);
-        await Assert.That(final).IsEqualTo(IterationCount);
+        // Nothing runs until the queued work is drained, proving every iteration went through the scheduler.
+        await Assert.That(emitted).IsEqualTo(0);
+        sequencer.RunAll();
+        await Assert.That(emitted).IsEqualTo(IterationCount);
+        await Assert.That(completed).IsTrue();
     }
 
     /// <summary>Verifies that an exception thrown by the predicate is forwarded.</summary>
@@ -96,36 +89,89 @@ public class WhileObservableTests
     public async Task WhenWhileScheduledThenDisposed_ThenIterationStops()
     {
         var ran = 0;
-        TaskCompletionSource<bool> gate = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        ManualSequencer sequencer = new();
 
-        var sub = ReactiveExtensions.While(
-                static () => true,
-                () => SignalFirstIteration(ref ran, gate),
-                TaskPoolSequencer.Default)
+        var sub = ReactiveExtensions.While(static () => true, () => ran++, sequencer)
             .Subscribe(static _ => { });
 
-        await gate.Task.WaitAsync(GuardTimeout);
+        // One iteration, which arms the next one.
+        sequencer.RunNext();
+        await Assert.That(ran).IsEqualTo(1);
+
         sub.Dispose();
-
-        var snapshot = Volatile.Read(ref ran);
-        await Task.Delay(SettleDelayMilliseconds).ConfigureAwait(false);
-        var later = Volatile.Read(ref ran);
-
-        // The loop may execute a few more iterations between Dispose() being called
-        // and the next disposal-check, but it must not keep ticking forever.
-        await Assert.That(later - snapshot).IsLessThanOrEqualTo(MaxStragglerIterations);
+        sequencer.RunAll();
+        await Assert.That(ran).IsEqualTo(1);
     }
 
-    /// <summary>Increments <paramref name="counter"/> and signals <paramref name="gate"/> on the first iteration.</summary>
-    /// <param name="counter">Shared iteration counter.</param>
-    /// <param name="gate">Completion source signalled after the first iteration.</param>
-    private static void SignalFirstIteration(ref int counter, TaskCompletionSource<bool> gate)
+    /// <summary>Verifies an iteration that runs after disposal skips its action.</summary>
+    /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
+    [Test]
+    public async Task WhenWhileIterationRunsAfterDisposal_ThenActionIsSkipped()
     {
-        if (Interlocked.Increment(ref counter) != 1)
+        var ran = 0;
+        ManualSequencer sequencer = new();
+
+        using var sub = ReactiveExtensions.While(static () => true, () => ran++, sequencer)
+            .Subscribe(static _ => { });
+        sequencer.BeforeInlineRun = sub.Dispose;
+
+        sequencer.RunNext();
+
+        await Assert.That(ran).IsEqualTo(1);
+    }
+
+    /// <summary>A sequencer that queues every work item so the test decides when each iteration runs.</summary>
+    private sealed class ManualSequencer : ISequencer
+    {
+        /// <summary>Work items scheduled and not yet run.</summary>
+        private readonly Queue<IWorkItem> _pending = new();
+
+        /// <summary>Gets the sequencer's notion of current time, which never moves.</summary>
+        public DateTimeOffset Now => DateTimeOffset.UnixEpoch;
+
+        /// <summary>Gets the sequencer's monotonic timestamp, which never moves.</summary>
+        public long Timestamp => 0;
+
+        /// <summary>Gets or sets a callback run before the next scheduled item, which then runs inline instead of queueing.</summary>
+        internal Action? BeforeInlineRun { get; set; }
+
+        /// <inheritdoc/>
+        public void Schedule(IWorkItem item)
         {
-            return;
+            var beforeInlineRun = BeforeInlineRun;
+            if (beforeInlineRun is null)
+            {
+                _pending.Enqueue(item);
+                return;
+            }
+
+            BeforeInlineRun = null;
+            beforeInlineRun();
+            item.Execute();
         }
 
-        _ = gate.TrySetResult(true);
+        /// <inheritdoc/>
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public void Schedule(IWorkItem item, long dueTimestamp) => Schedule(item);
+
+        /// <summary>Runs the oldest queued work item, if any.</summary>
+        internal void RunNext()
+        {
+            if (_pending.Count == 0)
+            {
+                return;
+            }
+
+            _pending.Dequeue().Execute();
+        }
+
+        /// <summary>Drains the queue, including work items queued by the items it runs.</summary>
+        internal void RunAll()
+        {
+            while (_pending.Count > 0)
+            {
+                _pending.Dequeue().Execute();
+            }
+        }
     }
 }

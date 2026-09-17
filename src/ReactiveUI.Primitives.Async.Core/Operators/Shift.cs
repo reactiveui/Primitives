@@ -2,12 +2,12 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Diagnostics;
+using System.Runtime.CompilerServices;
+
 namespace ReactiveUI.Primitives.Async;
 
 /// <summary>Provides Delay extension methods for asynchronous observable sequences.</summary>
-/// <remarks>Delay time-shifts the observable sequence by the specified time span. Each element is
-/// emitted after a relative delay from the time it was produced by the source. Errors and completion
-/// are not delayed.</remarks>
 public static partial class SignalAsyncExtensions
 {
     /// <summary>Delay operators that time-shift an observable source sequence.</summary>
@@ -15,13 +15,12 @@ public static partial class SignalAsyncExtensions
     /// <param name="source">The source observable sequence.</param>
     extension<T>(IObservableAsync<T> source)
     {
-        /// <summary>
-        /// Time-shifts the observable sequence by the specified time span. Each element notification
-        /// is delayed by the specified duration.
-        /// </summary>
+        /// <summary>Delays each element notification by the specified duration.</summary>
         /// <param name="delayInterval">The time span by which to delay each element notification. Must be non-negative.</param>
         /// <returns>An observable sequence with element notifications time-shifted by the specified duration.</returns>
         /// <exception cref="ArgumentOutOfRangeException">Thrown if <paramref name="delayInterval"/> is negative.</exception>
+        /// <remarks>Only element notifications are delayed; errors and completion are forwarded as they arrive. A zero
+        /// interval returns the source unchanged.</remarks>
         public IObservableAsync<T> Shift(TimeSpan delayInterval)
         {
             ArgumentOutOfRangeExceptionHelper.ThrowIfLessThan(delayInterval, TimeSpan.Zero);
@@ -36,7 +35,7 @@ public static partial class SignalAsyncExtensions
     /// <typeparam name="T">The type of elements in the sequence.</typeparam>
     /// <param name="source">The source observable sequence.</param>
     /// <param name="delayInterval">The time span by which to delay each element notification.</param>
-    /// <param name="timeProvider">The time provider used to control timing.</param>
+    /// <param name="timeProvider">The time provider that schedules the delay.</param>
     internal sealed class DelaySignal<T>(IObservableAsync<T> source, TimeSpan delayInterval, TimeProvider timeProvider) : IObservableAsync<T>
     {
         /// <inheritdoc/>
@@ -51,29 +50,56 @@ public static partial class SignalAsyncExtensions
         /// <summary>A witness that delays each element by waiting before forwarding to the downstream witness.</summary>
         /// <param name="observer">The downstream observer to forward delayed notifications to.</param>
         /// <param name="delayInterval">The time span by which to delay each element notification.</param>
-        /// <param name="timeProvider">The time provider used to control timing.</param>
+        /// <param name="timeProvider">The time provider that schedules the delay.</param>
         /// <param name="subscribeToken">The subscribe-time cancellation token.</param>
+        [DebuggerDisplay("DelayWitness: {_witness}")]
         internal sealed class DelayWitness(
             IObserverAsync<T> observer,
             TimeSpan delayInterval,
             TimeProvider timeProvider,
-            CancellationToken subscribeToken) : WitnessAsync<T>(subscribeToken)
+            CancellationToken subscribeToken) : IWitnessAsync<T>
         {
+            /// <summary>The notification gate, cancellation link and disposal state.</summary>
+            private WitnessAsyncState _witness = new(subscribeToken);
+
             /// <inheritdoc/>
-            protected override async ValueTask OnNextAsyncCore(T value, CancellationToken cancellationToken)
+            ref WitnessAsyncState IWitnessState.Witness => ref _witness;
+
+            /// <inheritdoc/>
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public ValueTask OnNextAsync(T value, CancellationToken cancellationToken) =>
+                WitnessAsync.OnNextAsync(this, value, cancellationToken);
+
+            /// <inheritdoc/>
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public ValueTask OnErrorResumeAsync(Exception error, CancellationToken cancellationToken) =>
+                WitnessAsync.OnErrorResumeAsync(this, error, cancellationToken);
+
+            /// <inheritdoc/>
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public ValueTask OnCompletedAsync(Result result) => WitnessAsync.OnCompletedAsync(this, result);
+
+            /// <inheritdoc/>
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public ValueTask DisposeAsync() => WitnessAsync.DisposeStateAsync(this);
+
+            /// <inheritdoc/>
+            async ValueTask IWitnessAsync<T>.OnNextAsyncCore(T value, CancellationToken cancellationToken)
             {
                 await DelayAsync(delayInterval, timeProvider, cancellationToken).ConfigureAwait(false);
                 await observer.OnNextAsync(value, cancellationToken).ConfigureAwait(false);
             }
 
             /// <inheritdoc/>
-            protected override ValueTask OnErrorResumeAsyncCore(
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            ValueTask IWitnessAsync<T>.OnErrorResumeAsyncCore(
                 Exception error,
                 CancellationToken cancellationToken) =>
                 observer.OnErrorResumeAsync(error, cancellationToken);
 
             /// <inheritdoc/>
-            protected override ValueTask OnCompletedAsyncCore(Result result) =>
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            ValueTask IWitnessAsync<T>.OnCompletedAsyncCore(Result result) =>
                 observer.OnCompletedAsync(result);
         }
     }

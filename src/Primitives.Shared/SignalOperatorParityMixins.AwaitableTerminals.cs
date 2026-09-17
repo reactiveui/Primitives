@@ -66,8 +66,7 @@ public static partial class LinqExtensions
         /// <param name="cancellationToken">The token used to cancel the task and dispose the subscription.</param>
         /// <returns>A task that completes with the first source value, or <see langword="default"/> when the source is empty.</returns>
         /// <exception cref="ArgumentNullException">The receiver sequence is <see langword="null"/>.</exception>
-        /// <remarks>Deprioritized so calls like <c>FirstOrDefaultAsync(default!)</c> keep binding to the
-        /// <c>FirstOrDefaultAsync(T)</c> overload they compiled against before this overload existed.</remarks>
+        /// <remarks>A call to FirstOrDefaultAsync(default!) selects the default-value overload.</remarks>
         [OverloadResolutionPriority(-1)]
         public Task<T> FirstOrDefaultAsync(CancellationToken cancellationToken)
         {
@@ -134,15 +133,14 @@ public static partial class LinqExtensions
         {
             ArgumentExceptionHelper.ThrowIfNull(source);
 
-            return source.DefaultIfEmpty(defaultValue).ToTask();
+            return Signal.ToTaskOrDefault(source, defaultValue, CancellationToken.None);
         }
 
         /// <summary>Awaits source completion and returns the last value produced by the source, or <see langword="default"/> when the source is empty.</summary>
         /// <param name="cancellationToken">The token used to cancel the task and dispose the subscription.</param>
         /// <returns>A task that completes with the final source value, or <see langword="default"/> when the source is empty.</returns>
         /// <exception cref="ArgumentNullException">The receiver sequence is <see langword="null"/>.</exception>
-        /// <remarks>Deprioritized so calls like <c>LastOrDefaultAsync(default!)</c> keep binding to the
-        /// <c>LastOrDefaultAsync(T)</c> overload they compiled against before this overload existed.</remarks>
+        /// <remarks>A call to LastOrDefaultAsync(default!) selects the default-value overload.</remarks>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         [OverloadResolutionPriority(-1)]
         public Task<T> LastOrDefaultAsync(CancellationToken cancellationToken) =>
@@ -157,7 +155,7 @@ public static partial class LinqExtensions
         {
             ArgumentExceptionHelper.ThrowIfNull(source);
 
-            return source.DefaultIfEmpty(defaultValue).ToTask(cancellationToken);
+            return Signal.ToTaskOrDefault(source, defaultValue, cancellationToken);
         }
 
         /// <summary>Awaits the source count as a task.</summary>
@@ -259,7 +257,7 @@ public static partial class LinqExtensions
         {
             ArgumentExceptionHelper.ThrowIfNull(source);
 
-            return source is RangeSignal range && typeof(T) == typeof(int)
+            return source is RangeSignal range
                 ? new RangeArraySignal<T>(range)
                 : new CollectArraySignal<T>(source);
         }
@@ -302,7 +300,7 @@ public static partial class LinqExtensions
         {
             ArgumentExceptionHelper.ThrowIfNull(source);
 
-            return source is RangeSignal range && typeof(T) == typeof(int)
+            return source is RangeSignal range
                 ? new RangeListSignal<T>(range)
                 : new CollectListSignal<T>(source);
         }

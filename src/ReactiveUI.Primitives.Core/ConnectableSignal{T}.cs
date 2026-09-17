@@ -10,10 +10,14 @@ namespace ReactiveUI.Primitives;
 
 /// <summary>Connectable hot signal that subscribes to its source only when connected.</summary>
 /// <typeparam name="T">The value type.</typeparam>
+/// <remarks>
+/// The gate only records the active connection. The source is subscribed and unsubscribed after the gate is released, so a
+/// source that connects or disconnects from another thread while it is being subscribed cannot deadlock the caller.
+/// </remarks>
 [System.Diagnostics.DebuggerDisplay("{DebuggerDisplay,nq}")]
 public sealed class ConnectableSignal<T> : IObservable<T>
 {
-    /// <summary>Synchronizes connection state.</summary>
+    /// <summary>Synchronizes connection state; never held while the source is subscribed or unsubscribed.</summary>
     private readonly Lock _gate = new();
 
     /// <summary>Source sequence to connect.</summary>
@@ -22,7 +26,7 @@ public sealed class ConnectableSignal<T> : IObservable<T>
     /// <summary>Multicast hub that receives source values.</summary>
     private readonly ISignal<T> _hub;
 
-    /// <summary>Active source connection slot. The returned connection handle owns disposal.</summary>
+    /// <summary>The active source connection, whose returned handle owns disposal.</summary>
     private StrongBox<Connection>? _connection;
 
     /// <summary>Set after the source sends a terminal notification to the hub.</summary>
@@ -43,10 +47,11 @@ public sealed class ConnectableSignal<T> : IObservable<T>
     [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
     private string DebuggerDisplay => ToString() ?? string.Empty;
 
-    /// <summary>Subscribes the hub to the source if it is not already connected.</summary>
+    /// <summary>Subscribes the hub to the source, returning the live handle when a connection is open.</summary>
     /// <returns>A handle that disconnects the source subscription.</returns>
     public IDisposable Connect()
     {
+        Connection connection;
         lock (_gate)
         {
             if (Volatile.Read(ref _terminated))
@@ -54,25 +59,34 @@ public sealed class ConnectableSignal<T> : IObservable<T>
                 return Scope.Empty;
             }
 
-            // Allocate the connection only on the first connect. A dedicated disposable type
-            // avoids the closure (and extra anonymous-disposable wrapper) that Scope.Create
-            // would allocate.
             if (_connection?.Value is { } activeConnection)
             {
                 return activeConnection;
             }
 
-            var sourceSubscription = _source.Subscribe(new ConnectionObserver(this));
-            if (Volatile.Read(ref _terminated))
-            {
-                sourceSubscription.Dispose();
-                return Scope.Empty;
-            }
-
-            var connection = new Connection(this, sourceSubscription);
+            connection = new(this);
             _connection = new(connection);
+        }
+
+        IDisposable sourceSubscription;
+        try
+        {
+            sourceSubscription = _source.Subscribe(new ConnectionObserver(this));
+        }
+        catch
+        {
+            connection.Dispose();
+            throw;
+        }
+
+        connection.Attach(sourceSubscription);
+        if (!Volatile.Read(ref _terminated))
+        {
             return connection;
         }
+
+        connection.Dispose();
+        return Scope.Empty;
     }
 
     /// <inheritdoc />
@@ -108,35 +122,51 @@ public sealed class ConnectableSignal<T> : IObservable<T>
         public void OnNext(T value) => _parent._hub.OnNext(value);
     }
 
-    /// <summary>Disconnect handle for an active source connection.</summary>
+    /// <summary>Disconnect handle for a source connection, published before its source subscription arrives.</summary>
     /// <param name="parent">The owning connectable signal.</param>
-    /// <param name="sourceSubscription">The source subscription feeding the hub.</param>
-    private sealed class Connection(ConnectableSignal<T> parent, IDisposable sourceSubscription) : IDisposable
+    private sealed class Connection(ConnectableSignal<T> parent) : IDisposable
     {
         /// <summary>The owning connectable signal.</summary>
         private readonly ConnectableSignal<T> _parent = parent;
 
-        /// <summary>The source subscription feeding the hub; nulled once on dispose.</summary>
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Usage", "CA2213:Disposable fields should be disposed", Justification = "Disposed via the Interlocked.Exchange'd local in Dispose.")]
-        private IDisposable? _sourceSubscription = sourceSubscription;
+        /// <summary>The source subscription feeding the hub; nulled once released.</summary>
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Usage", "CA2213:Disposable fields should be disposed", Justification = "Disposed via the Interlocked.Exchange'd local in Release.")]
+        private IDisposable? _sourceSubscription;
+
+        /// <summary>Disposal latch; non-zero once the handle has been disposed.</summary>
+        private int _disposed;
 
         /// <inheritdoc/>
         public void Dispose()
         {
-            var subscription = Interlocked.Exchange(ref _sourceSubscription, null);
-            if (subscription is null)
+            if (Interlocked.Exchange(ref _disposed, 1) != 0)
             {
                 return;
             }
 
+            Release();
             lock (_parent._gate)
             {
-                subscription.Dispose();
-                if (_parent._connection is { Value: var activeConnection } && ReferenceEquals(activeConnection, this))
-                {
-                    _parent._connection = null;
-                }
+                // Connect creates a new connection only after this one has cleared itself, so the slot still holds this handle.
+                _parent._connection = null;
             }
         }
+
+        /// <summary>Stores the source subscription, releasing it at once when the handle was disposed while subscribing.</summary>
+        /// <param name="sourceSubscription">The source subscription feeding the hub.</param>
+        internal void Attach(IDisposable sourceSubscription)
+        {
+            Volatile.Write(ref _sourceSubscription, sourceSubscription);
+            if (Volatile.Read(ref _disposed) == 0)
+            {
+                return;
+            }
+
+            Release();
+        }
+
+        /// <summary>Disposes the source subscription once, if it has arrived.</summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private void Release() => Interlocked.Exchange(ref _sourceSubscription, null)?.Dispose();
     }
 }

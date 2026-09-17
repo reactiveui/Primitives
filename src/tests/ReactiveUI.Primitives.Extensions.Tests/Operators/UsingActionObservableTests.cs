@@ -6,19 +6,11 @@ using ReactiveUI.Primitives.Concurrency;
 
 namespace ReactiveUI.Primitives.Extensions.Tests.Operators;
 
-/// <summary>Edge-case coverage for the action-form <c>Using</c> operator backed by
-/// <c>UsingActionObservable&lt;T&gt;</c> — happy path, null action, scheduler dispatch,
-/// and action-throws-then-disposes paths.</summary>
+/// <summary>Tests inline and scheduled actions and resource disposal after success or failure.</summary>
 public partial class UsingActionObservableTests
 {
     /// <summary>Synthetic error message attached to action failures.</summary>
     private const string ActionFailedMessage = "action failed";
-
-    /// <summary>How long to spin waiting for the scheduler thread to land the resource dispose before giving up.</summary>
-    private const int DisposeWaitMilliseconds = 5000;
-
-    /// <summary>Guard timeout so a hung rendezvous fails this test rather than stalling the run.</summary>
-    private static readonly TimeSpan GuardTimeout = TimeSpan.FromSeconds(5);
 
     /// <summary>Verifies that <c>Using</c> with a null action still emits, completes, and disposes the resource.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
@@ -79,24 +71,16 @@ public partial class UsingActionObservableTests
     [Test]
     public async Task WhenUsingWithScheduler_ThenRunsViaScheduler()
     {
+        VirtualClock scheduler = new();
         TrackedDisposable resource = new();
-        TaskCompletionSource<bool> completed = new(TaskCreationOptions.RunContinuationsAsynchronously);
         var actionRan = false;
-
-        using var sub = resource.Using(_ => actionRan = true, TaskPoolSequencer.Default)
-            .Subscribe(static _ => { }, () => completed.TrySetResult(true));
-
-        await completed.Task.WaitAsync(GuardTimeout);
+        var completed = false;
+        using var sub = resource.Using(_ => actionRan = true, scheduler)
+            .Subscribe(static _ => { }, () => completed = true);
+        await Assert.That(actionRan).IsFalse();
+        scheduler.Start();
         await Assert.That(actionRan).IsTrue();
-
-        // OnCompleted is signalled before the resource is disposed on the scheduler
-        // thread, so wait briefly for the dispose to land.
-        var deadline = Environment.TickCount64 + DisposeWaitMilliseconds;
-        while (resource.DisposeCount == 0 && Environment.TickCount64 < deadline)
-        {
-            await Task.Yield();
-        }
-
+        await Assert.That(completed).IsTrue();
         await Assert.That(resource.DisposeCount).IsEqualTo(1);
     }
 

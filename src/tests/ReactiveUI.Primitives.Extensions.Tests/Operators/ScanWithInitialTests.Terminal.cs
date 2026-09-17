@@ -6,7 +6,7 @@ using System.Reactive.Subjects;
 
 namespace ReactiveUI.Primitives.Extensions.Tests.Operators;
 
-/// <summary>Terminal-notification coverage for <c>ScanWithInitial</c> — source error, source completion, and post-terminal value ignore.</summary>
+/// <summary>Tests source termination and suppression of subsequent values.</summary>
 public partial class ScanWithInitialTests
 {
     /// <summary>Synthetic error message attached to source errors.</summary>

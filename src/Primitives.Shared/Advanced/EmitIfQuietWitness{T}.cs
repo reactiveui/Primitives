@@ -21,7 +21,7 @@ public sealed class EmitIfQuietWitness<T> : IObserver<T>, IDisposable
     /// <summary>The latest observed value.</summary>
     private T? _latest;
 
-    /// <summary>Monotonic version used to suppress obsolete scheduled emissions.</summary>
+    /// <summary>Monotonic version that suppresses obsolete scheduled emissions.</summary>
     private long _version;
 
     /// <summary>Whether a latest value is pending emission.</summary>
@@ -33,7 +33,7 @@ public sealed class EmitIfQuietWitness<T> : IObserver<T>, IDisposable
     /// <summary>Initializes a new instance of the <see cref="EmitIfQuietWitness{T}"/> class.</summary>
     /// <param name="observer">The downstream observer.</param>
     /// <param name="dueTime">The quiet period before emitting the latest value.</param>
-    /// <param name="sequencer">The sequencer used to schedule delayed emissions.</param>
+    /// <param name="sequencer">The sequencer that schedules delayed emissions.</param>
     /// <exception cref="ArgumentNullException"><paramref name="observer"/> or <paramref name="sequencer"/> is <see langword="null"/>.</exception>
     public EmitIfQuietWitness(IObserver<T> observer, TimeSpan dueTime, ISequencer sequencer)
     {
@@ -48,7 +48,7 @@ public sealed class EmitIfQuietWitness<T> : IObserver<T>, IDisposable
     /// <summary>Gets the quiet period before emitting the latest value.</summary>
     private TimeSpan DueTime { get; }
 
-    /// <summary>Gets the sequencer used to schedule delayed emissions.</summary>
+    /// <summary>Gets the sequencer that schedules delayed emissions.</summary>
     private ISequencer Sequencer { get; }
 
     /// <summary>Gets the source subscription and scheduled delayed emissions.</summary>
@@ -125,7 +125,7 @@ public sealed class EmitIfQuietWitness<T> : IObserver<T>, IDisposable
         }
     }
 
-    /// <summary>Emits the latest value if the scheduled version is still current.</summary>
+    /// <summary>Emits the latest value when the scheduled version is the current one.</summary>
     /// <param name="scheduledVersion">The version captured when the emission was scheduled.</param>
     private void EmitIfLatest(long scheduledVersion)
     {
@@ -158,7 +158,7 @@ public sealed class EmitIfQuietWitness<T> : IObserver<T>, IDisposable
         }
     }
 
-    /// <summary>Marks the observer as stopped if it has not already stopped.</summary>
+    /// <summary>Transitions the observer to the stopped state.</summary>
     /// <returns><see langword="true"/> when this call stopped the observer.</returns>
     private bool TryMarkStopped()
     {

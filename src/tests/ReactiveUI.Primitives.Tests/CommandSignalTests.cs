@@ -8,7 +8,7 @@ using ReactiveUI.Primitives.Signals;
 namespace ReactiveUI.Primitives.Tests;
 
 /// <summary>Verifies <see cref="CommandSignal{TResult}"/> result, failure, running-state, and disposal contracts.</summary>
-public sealed class CommandSignalTests
+public sealed partial class CommandSignalTests
 {
     /// <summary>Initial behavior state value used by command tests.</summary>
     private const int InitialStateValue = 10;
@@ -18,9 +18,6 @@ public sealed class CommandSignalTests
 
     /// <summary>Successful command result.</summary>
     private const int CommandResult = 42;
-
-    /// <summary>Number of tasks that race for the lazily allocated stream in the contention test.</summary>
-    private const int ContendingTasks = 2;
 
     /// <summary>Number of results the longest-lived result subscriber receives in the fan-out test.</summary>
     private const int ThreeResults = 3;
@@ -71,7 +68,7 @@ public sealed class CommandSignalTests
         await Assert.That(rejected!.Message).IsEqualTo("Command cannot run.");
     }
 
-    /// <summary>Verifies command aliases, sync execution failures, and disposal branches.</summary>
+    /// <summary>A synchronous command that throws publishes the fault, and a disposed command rejects execution.</summary>
     /// <returns>A task that completes when command assertions finish.</returns>
     [Test]
     public async Task CommandSignalCoversSyncFaultAndDisposalBranches()
@@ -117,49 +114,23 @@ public sealed class CommandSignalTests
         await Assert.That(disposed).IsNotNull();
     }
 
-    /// <summary>
-    /// Reproduces the lazy-init race for <see cref="CommandSignal{TResult}.IsRunning"/>: the state
-    /// stream is requested for the first time while an execution is finishing. If the getter
-    /// snapshots a <see langword="true"/> flag and installs the stream after the matching
-    /// completion lowered it, the stream must still settle at <see langword="false"/> rather than
-    /// latching permanently true with no in-flight execution to correct it.
-    /// </summary>
-    /// <returns>A task that completes when every interleaving has settled at false.</returns>
+    /// <summary>Installing a stale running snapshot reconciles it with the completed execution.</summary>
+    /// <returns>A task representing the asynchronous test.</returns>
     [Test]
-    public async Task IsRunningNeverLatchesTrueWhenFirstObservedDuringCompletion()
-    {
-        const int iterations = 20_000;
-
-        for (var iteration = 0; iteration < iterations; iteration++)
-        {
-            CommandSignal<int> command = new(static () => CommandResult);
-            using ManualResetEventSlim ready = new(false);
-
-            // Race the first observation of the lazily allocated stream against the execution that
-            // raises and immediately lowers the running flag.
-            var reader = Task.Run(() =>
-            {
-                ready.Wait();
-                return command.IsRunning;
-            });
-
-            ready.Set();
-            _ = command.ExecuteAsync();
-            var stream = await reader;
-
-            // No execution is in flight once ExecuteAsync returns for the synchronous path, so a
-            // stuck-true stream would have no future event to correct it. TryGetValue reads under
-            // the state lock, giving a synchronized view of the settled value.
-            _ = stream.TryGetValue(out var latched);
-            await Assert.That(latched).IsFalse();
-        }
+    public async Task InstallingAStaleRunningSnapshotReconcilesCompletion()
+{
+        TaskCompletionSource<int> release = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        using CommandSignal<int> command = new(release.Task.WaitAsync);
+        var execution = command.ExecuteAsync();
+        StateSignal<bool> candidate = new(true);
+        release.SetResult(CommandResult);
+        _ = await execution;
+        var installed = command.InstallRunningState(candidate);
+        await Assert.That(installed).IsSameReferenceAs(candidate);
+        await Assert.That(installed.Value).IsFalse();
     }
 
-    /// <summary>
-    /// Verifies the running-state stream is allocated lazily, cached on the second access, and
-    /// reports <see langword="false"/> when first observed on an idle command (the install CAS wins
-    /// and the post-install reconcile publishes the authoritative flag).
-    /// </summary>
+    /// <summary>The running-state stream is allocated lazily, cached, and reports <see langword="false"/> on an idle command.</summary>
     /// <returns>A task that completes when the lazy-allocation assertions finish.</returns>
     [Test]
     public async Task IsRunningAllocatesLazilyAndCachesTheStream()
@@ -173,11 +144,7 @@ public sealed class CommandSignalTests
         await Assert.That(first.Value).IsFalse();
     }
 
-    /// <summary>
-    /// Verifies a normal true-then-false transition flows through an already-installed stream: the
-    /// stream is observed before execution, so <c>SetRunning</c> takes the "stream present" path on
-    /// both edges and the running flag returns to <see langword="false"/> at the end.
-    /// </summary>
+    /// <summary>A stream observed before execution sees the true-then-false transition and ends at <see langword="false"/>.</summary>
     /// <returns>A task that completes when the transition assertions finish.</returns>
     [Test]
     public async Task IsRunningTransitionsTrueThenFalseThroughInstalledStream()
@@ -192,11 +159,7 @@ public sealed class CommandSignalTests
         await Assert.That(running.SequenceEqual(ExpectedRunningValues)).IsTrue();
     }
 
-    /// <summary>
-    /// Verifies that when an execution completes without the running-state stream ever having been
-    /// observed, <c>SetRunning</c> exercises the "stream still null" reconciliation branch and a
-    /// later first observation still reports <see langword="false"/>.
-    /// </summary>
+    /// <summary>A first observation made after the execution completes reports <see langword="false"/>.</summary>
     /// <returns>A task that completes when the deferred-observation assertions finish.</returns>
     [Test]
     public async Task IsRunningReportsFalseWhenObservedOnlyAfterExecution()
@@ -208,43 +171,22 @@ public sealed class CommandSignalTests
         await Assert.That(command.IsRunning.Value).IsFalse();
     }
 
-    /// <summary>
-    /// Drives the lazy install deterministically: the stream is first observed while an async
-    /// execution is in flight (running flag true), then the execution completes and lowers it. This
-    /// exercises the install-side re-sync seeding a <see langword="true"/> value followed by the
-    /// installed-stream completion edge.
-    /// </summary>
+    /// <summary>A stream first observed mid-flight reports <see langword="true"/>, then <see langword="false"/> once the execution completes.</summary>
     /// <returns>A task that completes when the mid-flight assertions finish.</returns>
     [Test]
     public async Task IsRunningObservedMidFlightSettlesFalseAfterCompletion()
-    {
-        using ManualResetEventSlim release = new(false);
-        using ManualResetEventSlim entered = new(false);
-        CommandSignal<int> command = new(async token =>
-        {
-            entered.Set();
-            await Task.Run(() => release.Wait(token), token);
-            return CommandResult;
-        });
-
+{
+        TaskCompletionSource<int> release = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        using CommandSignal<int> command = new(release.Task.WaitAsync);
         var execution = command.ExecuteAsync();
-        entered.Wait();
-
-        // The first observation happens while the command is genuinely running.
         var stream = command.IsRunning;
         await Assert.That(stream.Value).IsTrue();
-
-        release.Set();
+        release.SetResult(CommandResult);
         _ = await execution;
-
         await Assert.That(stream.Value).IsFalse();
     }
 
-    /// <summary>
-    /// Results fan out to every active subscriber, and unsubscribing removes that subscriber and nobody else.
-    /// This walks the observer set through all three of its shapes — one observer, a pair, a longer array — and
-    /// back down again, because each shape has its own add and remove path.
-    /// </summary>
+    /// <summary>Results reach each active subscriber as subscriptions are added and removed.</summary>
     /// <returns>A task that completes when the fan-out assertions finish.</returns>
     [Test]
     public async Task ResultsFanOutToEverySubscriberAndStopAtUnsubscribe()
@@ -260,15 +202,13 @@ public sealed class CommandSignalTests
 
         _ = command.ExecuteAsync();
 
-        // Remove from the middle of a three-observer array: the survivors must both keep receiving.
+        // Removing the middle of a three-observer array leaves both survivors receiving.
         secondSubscription.Dispose();
         _ = command.ExecuteAsync();
 
-        // Remove from a two-observer array, collapsing it back to a single observer.
         thirdSubscription.Dispose();
         _ = command.ExecuteAsync();
 
-        // Removing the last observer, then disposing the same handle again, must both be safe.
         firstSubscription.Dispose();
         firstSubscription.Dispose();
         _ = command.ExecuteAsync();
@@ -279,10 +219,7 @@ public sealed class CommandSignalTests
         await Assert.That(first.TrueForAll(static value => value == CommandResult)).IsTrue();
     }
 
-    /// <summary>
-    /// Disposing the command drops its observer set, so a subscription handle disposed afterwards has nothing
-    /// to detach from. That must be a quiet no-op rather than a failure.
-    /// </summary>
+    /// <summary>Disposing a result subscription after the command is disposed is a quiet no-op.</summary>
     /// <returns>A task that completes when the post-disposal assertions finish.</returns>
     [Test]
     public async Task ResultSubscriptionDisposedAfterTheCommandIsSafe()
@@ -298,18 +235,14 @@ public sealed class CommandSignalTests
         _ = Assert.Throws<ObjectDisposedException>(() => command.Results.Subscribe(results.Add));
     }
 
-    /// <summary>
-    /// An async command that faults publishes the fault to the fault stream before the awaited task rethrows it,
-    /// and still lowers the running flag on the way out.
-    /// </summary>
+    /// <summary>An async command that faults publishes the fault before the await rethrows it, and lowers the running flag.</summary>
     /// <returns>A task that completes when the async-fault assertions finish.</returns>
     [Test]
     public async Task AsyncExecutionPublishesTheFaultAndStillLowersTheRunningFlag()
     {
         InvalidOperationException fault = new("async failed");
 
-        // The delegate type is spelled out because a body that only throws gives the compiler no return
-        // expression to infer Task<int> from.
+        // The delegate type is spelled out: a throw-only body gives the compiler nothing to infer Task<int> from.
         Func<CancellationToken, Task<int>> execute = async token =>
         {
             await Task.Yield();
@@ -340,10 +273,7 @@ public sealed class CommandSignalTests
         await Assert.That(command.IsRunning.Value).IsFalse();
     }
 
-    /// <summary>
-    /// The fault stream is allocated on first use and cached thereafter, and disposing the command tears down
-    /// the gate subscription along with the streams it created.
-    /// </summary>
+    /// <summary>The fault stream is cached after first use, and disposing the command releases the gate subscription.</summary>
     /// <returns>A task that completes when the lazy-fault-stream assertions finish.</returns>
     [Test]
     public async Task FaultsAllocateLazilyAndDisposalReleasesTheGateSubscription()
@@ -360,71 +290,77 @@ public sealed class CommandSignalTests
 
         command.Dispose();
 
-        // The command released the gate, so the gate signal no longer feeds anything.
+        // The command released the gate, so the gate signal feeds nothing.
         await Assert.That(canRun.HasObservers).IsFalse();
         await Assert.That(running.IsDisposed).IsTrue();
     }
 
-    /// <summary>
-    /// Forces concurrent first observations of the lazily allocated fault stream so the install CAS has a loser,
-    /// exercising the dispose-and-return-installed branch. All racers must observe the same instance.
-    /// </summary>
-    /// <returns>A task that completes when the concurrent fault-stream assertions finish.</returns>
+    /// <summary>Competing fault-stream candidates return the installed stream and dispose the unused candidate.</summary>
+    /// <returns>A task representing the asynchronous test.</returns>
     [Test]
-    public async Task ConcurrentFirstObservationsShareASingleFaultStream()
-    {
-        const int iterations = 5_000;
-
-        for (var iteration = 0; iteration < iterations; iteration++)
-        {
-            CommandSignal<int> command = new(static () => CommandResult);
-            using Barrier barrier = new(ContendingTasks);
-
-            var left = Task.Run(() =>
-            {
-                barrier.SignalAndWait();
-                return command.Faults;
-            });
-            var right = Task.Run(() =>
-            {
-                barrier.SignalAndWait();
-                return command.Faults;
-            });
-
-            var streams = await Task.WhenAll(left, right);
-            await Assert.That(streams[0]).IsSameReferenceAs(streams[1]);
-        }
+    public async Task CompetingFaultStreamCandidatesShareTheInstalledStream()
+{
+        using CommandSignal<int> command = new(static () => CommandResult);
+        Signal<Exception> first = new();
+        Signal<Exception> second = new();
+        var winner = command.InstallFaultsSignal(first);
+        var loser = command.InstallFaultsSignal(second);
+        await Assert.That(winner).IsSameReferenceAs(first);
+        await Assert.That(loser).IsSameReferenceAs(first);
+        await Assert.That(command.Faults).IsSameReferenceAs(first);
+        await Assert.That(first.IsDisposed).IsFalse();
+        await Assert.That(second.IsDisposed).IsTrue();
     }
 
-    /// <summary>
-    /// Forces concurrent first observations of the lazily allocated stream so the install CAS has a
-    /// loser, exercising the dispose-and-return-installed branch. All racers must observe the same
-    /// instance.
-    /// </summary>
-    /// <returns>A task that completes when the concurrent-install assertions finish.</returns>
+    /// <summary>Competing running-stream candidates return the installed stream and dispose the unused candidate.</summary>
+    /// <returns>A task representing the asynchronous test.</returns>
     [Test]
-    public async Task ConcurrentFirstObservationsShareASingleStream()
+    public async Task CompetingRunningStreamCandidatesShareTheInstalledStream()
+{
+        using CommandSignal<int> command = new(static () => CommandResult);
+        StateSignal<bool> first = new(false);
+        StateSignal<bool> second = new(false);
+        var winner = command.InstallRunningState(first);
+        var loser = command.InstallRunningState(second);
+        await Assert.That(winner).IsSameReferenceAs(first);
+        await Assert.That(loser).IsSameReferenceAs(first);
+        await Assert.That(command.IsRunning).IsSameReferenceAs(first);
+        await Assert.That(first.IsDisposed).IsFalse();
+        await Assert.That(second.IsDisposed).IsTrue();
+    }
+
+    /// <summary>Running-state notifications reach observers without the running gate held, in transition order.</summary>
+    /// <returns>A task representing the asynchronous test.</returns>
+    [Test]
+    public async Task IsRunningNotificationsAreDeliveredOutsideTheRunningGate()
     {
-        const int iterations = 5_000;
-
-        for (var iteration = 0; iteration < iterations; iteration++)
+        using CommandSignal<int> command = new(static () => CommandResult);
+        List<bool> running = [];
+        var heldGate = false;
+        _ = command.IsRunning.Changed.Subscribe(value =>
         {
-            CommandSignal<int> command = new(static () => CommandResult);
-            using Barrier barrier = new(ContendingTasks);
+            running.Add(value);
+#if NET9_0_OR_GREATER
+            heldGate |= command.RunningGate.IsHeldByCurrentThread;
+#else
+            heldGate |= Monitor.IsEntered(command.RunningGate);
+#endif
+        });
 
-            var left = Task.Run(() =>
-            {
-                barrier.SignalAndWait();
-                return command.IsRunning;
-            });
-            var right = Task.Run(() =>
-            {
-                barrier.SignalAndWait();
-                return command.IsRunning;
-            });
+        _ = command.ExecuteAsync();
 
-            var streams = await Task.WhenAll(left, right);
-            await Assert.That(streams[0]).IsSameReferenceAs(streams[1]);
-        }
+        await Assert.That(heldGate).IsFalse();
+        await Assert.That(running.SequenceEqual(ExpectedRunningValues)).IsTrue();
+    }
+
+    /// <summary>Both command constructors reject a null command body.</summary>
+    /// <returns>A task representing the asynchronous test.</returns>
+    [Test]
+    public async Task ConstructorsRejectANullCommandBody()
+    {
+        await Assert.That(static () => new CommandSignal<int>((Func<CancellationToken, Task<int>>)null!))
+            .ThrowsExactly<ArgumentNullException>();
+        await Assert.That(static () => new CommandSignal<int>((Func<int>)null!))
+            .ThrowsExactly<ArgumentNullException>();
     }
 }

@@ -19,9 +19,9 @@ public static partial class SignalExtensions
     /// <param name="source">The source signal.</param>
     extension<T>(IObservable<T> source)
     {
-        /// <summary>Witnesses the on.</summary>
-        /// <param name="scheduler">The scheduler.</param>
-        /// <returns>An Observable.</returns>
+        /// <summary>Delivers the source notifications on the supplied sequencer.</summary>
+        /// <param name="scheduler">The sequencer that notifications are delivered on.</param>
+        /// <returns>A signal that forwards the source on <paramref name="scheduler"/>.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public IObservable<T> WitnessOn(ISequencer scheduler) =>
             new WitnessOnSignal<T>(source, scheduler);
@@ -46,14 +46,28 @@ public static partial class SignalExtensions
                 },
                 completed.Set);
 
-            completed.Wait();
+            WaitForCompletion(completed);
 
-            if (error is not null)
-            {
-                ExceptionDispatchInfo.Capture(error).Throw();
-            }
-
-            return values;
+            return error is null ? values : Rethrow(error, values);
         }
     }
+
+    /// <summary>Rethrows <paramref name="error"/> with its original stack, typed by <paramref name="fallback"/> so a value-returning caller can return the call.</summary>
+    /// <typeparam name="TResult">The caller's return type.</typeparam>
+    /// <param name="error">The failure to rethrow.</param>
+    /// <param name="fallback">The value the caller would otherwise return; never returned.</param>
+    /// <returns>Never returns; the return after the throw is unreachable.</returns>
+    [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static TResult Rethrow<TResult>(Exception error, TResult fallback)
+    {
+        ExceptionDispatchInfo.Capture(error).Throw();
+        return fallback;
+    }
+
+    /// <summary>Blocks until the source signals completion.</summary>
+    /// <param name="completed">The source's completion signal.</param>
+    [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static void WaitForCompletion(ManualResetEventSlim completed) => completed.Wait();
 }

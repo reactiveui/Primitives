@@ -7,11 +7,7 @@ using ReactiveUI.Primitives.Async.Disposables;
 
 namespace ReactiveUI.Primitives.Async.Tests;
 
-/// <summary>
-/// An async observable source that stores observer references for direct method invocation in tests.
-/// Subscriptions return no-op disposables so that external disposal does not tear down observer access.
-/// This enables testing race-condition guards inside operators like CombineLatest.
-/// </summary>
+/// <summary>Retains subscribed observers for direct notification after disposal.</summary>
 /// <typeparam name="T">The element type.</typeparam>
 internal sealed class DirectSource<T> : IObservableAsync<T>
 {

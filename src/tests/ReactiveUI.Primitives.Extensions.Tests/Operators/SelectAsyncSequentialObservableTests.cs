@@ -2,13 +2,14 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Reactive;
 using System.Reactive.Subjects;
+using System.Runtime.CompilerServices;
+using ReactiveUI.Primitives.Extensions.Operators;
 
 namespace ReactiveUI.Primitives.Extensions.Tests.Operators;
 
-/// <summary>Edge-case coverage for <c>SelectAsyncSequential</c> backed by
-/// <c>SelectAsyncSequentialObservable&lt;TSource, TResult&gt;</c> — error forwarding,
-/// disposal mid-flight, and completion while an in-flight selector is running.</summary>
+/// <summary>Tests sequential projection completion, errors, and disposal during projection.</summary>
 public class SelectAsyncSequentialObservableTests
 {
     /// <summary>Synthetic error message attached to a failing selector.</summary>
@@ -16,12 +17,6 @@ public class SelectAsyncSequentialObservableTests
 
     /// <summary>Synthetic error message attached to source errors.</summary>
     private const string SourceErrorMessage = "source error";
-
-    /// <summary>Settle delay in milliseconds used to let an awaited continuation attempt delivery.</summary>
-    private const int SettleDelayMilliseconds = 50;
-
-    /// <summary>Guard timeout so a hung rendezvous fails this test rather than stalling the run.</summary>
-    private static readonly TimeSpan GuardTimeout = TimeSpan.FromSeconds(5);
 
     /// <summary>Verifies that <c>SelectAsyncSequential</c> forwards selector exceptions and stops draining the queue afterwards.</summary>
     /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
@@ -34,12 +29,10 @@ public class SelectAsyncSequentialObservableTests
         TaskCompletionSource<Exception> faulted = new(TaskCreationOptions.RunContinuationsAsynchronously);
         List<int> results = [];
         InvalidOperationException expected = new(SelectorErrorMessage);
-        using var sub = subject
-            .SelectAsyncSequential(x => x == First ? Task.FromException<int>(expected) : Task.FromResult(x))
-            .Subscribe(results.Add, ex => faulted.TrySetResult(ex));
+        using var sub = subject.SelectAsyncSequential(x => x == First ? Task.FromException<int>(expected) : Task.FromResult(x)).Subscribe(results.Add, ex => faulted.TrySetResult(ex));
         subject.OnNext(First);
         subject.OnNext(Second);
-        var caught = await faulted.Task.WaitAsync(GuardTimeout);
+        var caught = await faulted.Task;
         await Assert.That(caught).IsSameReferenceAs(expected);
         await Assert.That(results).IsEmpty();
     }
@@ -65,20 +58,15 @@ public class SelectAsyncSequentialObservableTests
     public async Task WhenSelectAsyncSequentialDisposedMidFlight_ThenSuppressesEmissionAndCompletion()
     {
         const int TriggerValue = 1;
-        Subject<int> subject = new();
-        TaskCompletionSource<bool> gate = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        TaskCompletionSource<int> gate = new(TaskCreationOptions.RunContinuationsAsynchronously);
         List<int> results = [];
         var completed = false;
-        var sub = subject.SelectAsyncSequential(async x =>
-        {
-            await gate.Task.ConfigureAwait(false);
-            return x;
-        }).Subscribe(results.Add, () => completed = true);
-        subject.OnNext(TriggerValue);
-        subject.OnCompleted();
-        sub.Dispose();
-        _ = gate.TrySetResult(true);
-        await Task.Delay(SettleDelayMilliseconds).ConfigureAwait(false);
+        SelectAsyncSequentialObservable<int, int>.SelectAsyncSequentialSink sink = new(Observer.Create<int>(results.Add, () => completed = true), (_, _) => gate.Task);
+        var processing = sink.OnNextAsync(TriggerValue);
+        sink.Dispose();
+        gate.SetResult(TriggerValue);
+        await processing;
+        sink.OnCompleted();
         await Assert.That(results).IsEmpty();
         await Assert.That(completed).IsFalse();
     }
@@ -100,12 +88,10 @@ public class SelectAsyncSequentialObservableTests
         }).Subscribe(results.Add, () => completed.TrySetResult(true));
         subject.OnNext(Value);
         subject.OnCompleted();
-
-        // Completion must not fire while selector is gated.
-        await Task.Delay(SettleDelayMilliseconds).ConfigureAwait(false);
         await Assert.That(completed.Task.IsCompleted).IsFalse();
-        _ = gate.TrySetResult(true);
-        var done = await completed.Task.WaitAsync(GuardTimeout);
+        await Assert.That(results).IsEmpty();
+        gate.SetResult(true);
+        var done = await completed.Task;
         await Assert.That(done).IsTrue();
         await Assert.That(results).IsCollectionEqualTo([Value]);
     }
@@ -121,13 +107,43 @@ public class SelectAsyncSequentialObservableTests
         List<int> values = [];
         Exception? caught = null;
         var completedCount = 0;
-        using var sub = source.SelectAsyncSequential(Task.FromResult)
-            .Subscribe(values.Add, ex => caught = ex, () => completedCount++);
+        using var sub = source.SelectAsyncSequential(Task.FromResult).Subscribe(values.Add, ex => caught = ex, () => completedCount++);
         source.Observer.OnCompleted();
         source.Observer.OnError(new InvalidOperationException("late"));
         source.Observer.OnCompleted();
-        await Task.Delay(SettleDelayMilliseconds);
         await Assert.That(completedCount).IsEqualTo(1);
         await Assert.That(caught).IsNull();
+    }
+
+    /// <summary>Verifies an observer that marshals to another thread which completes the source does not deadlock the projection delivery.</summary>
+    /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
+    [Test]
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public Task WhenObserverMarshalsCompletionDuringProjectionDelivery_ThenNoDeadlock() =>
+        SerializedDeliveryAssertions.ObserverMarshallingCompletionDoesNotDeadlock<int>(
+            static (source, observer) => source.SelectAsyncSequential(Task.FromResult).Subscribe(observer),
+            static observer => observer.OnNext(1));
+
+    /// <summary>Verifies a value arriving while a projection is running is queued and projected after it, in order.</summary>
+    /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
+    [Test]
+    public async Task WhenSelectAsyncSequentialValueArrivesWhileProcessing_ThenProjectedAfterInOrder()
+    {
+        const int First = 1;
+        const int Second = 2;
+        TaskCompletionSource<int> gate = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        List<int> results = [];
+        SelectAsyncSequentialObservable<int, int>.SelectAsyncSequentialSink sink = new(
+            Observer.Create<int>(results.Add),
+            (value, _) => value == First ? gate.Task : Task.FromResult(value));
+
+        var processing = sink.OnNextAsync(First);
+        var queued = sink.OnNextAsync(Second);
+        var queuedCompletedImmediately = queued.IsCompleted;
+        gate.SetResult(First);
+        await processing;
+
+        await Assert.That(queuedCompletedImmediately).IsTrue();
+        await Assert.That(results).IsCollectionEqualTo([First, Second]);
     }
 }

@@ -7,21 +7,10 @@ using ReactiveUI.Primitives.Disposables;
 
 namespace ReactiveUI.Primitives.Extensions.Internal;
 
-/// <summary>
-/// Shared subscription loop for sync operators that fan an indexed callback set across an N-source
-/// list (e.g. <c>BooleanReduceObservable</c>, <c>MinMaxObservable</c>). Each call site previously
-/// hand-rolled the same loop — index-capture, <see cref="ObservableSubscribeExtensions.SubscribeCallbacks{T}"/>
-/// triple, <see cref="DisposableBag"/> aggregate — so centralising it here keeps the per-emission
-/// closure shape consistent and the duplication off Sonar's CPD radar.
-/// </summary>
+/// <summary>Subscribes indexed callbacks to each source and aggregates the subscription handles.</summary>
 internal static class IndexedSubscribeHelper
 {
-    /// <summary>
-    /// Subscribes the supplied callbacks to every source in <paramref name="sources"/>, threading
-    /// each source's positional index through to the <paramref name="onNext"/> and
-    /// <paramref name="onCompleted"/> hooks. The returned disposable disposes every per-source
-    /// subscription on dispose.
-    /// </summary>
+    /// <summary>Subscribes callbacks carrying each source's index and returns a handle that disposes all subscriptions.</summary>
     /// <typeparam name="T">The element type of the source observables.</typeparam>
     /// <param name="sources">The source observables, indexed 0..N-1.</param>
     /// <param name="onNext">Per-source OnNext hook: <c>(index, value)</c>.</param>
@@ -48,7 +37,7 @@ internal static class IndexedSubscribeHelper
         return composite;
     }
 
-    /// <summary>Observer that carries a source index without allocating per-source callback closures.</summary>
+    /// <summary>Observer that tags each notification with its source index before invoking the shared hooks.</summary>
     /// <typeparam name="T">The element type.</typeparam>
     /// <param name="index">The source index.</param>
     /// <param name="onNext">Per-source OnNext hook.</param>

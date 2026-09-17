@@ -7,12 +7,11 @@ using ReactiveUI.Primitives.Disposables;
 
 namespace ReactiveUI.Primitives.Advanced;
 
-/// <summary>Represents the ImmutableEmptySignal class.</summary>
-/// <typeparam name="T">The T type.</typeparam>
+/// <summary>Signal that completes synchronously inside <c>Subscribe</c> without emitting a value.</summary>
+/// <typeparam name="T">The value type.</typeparam>
 public sealed class ImmutableEmptySignal<T> : IRequireCurrentThread<T>, IInlineSignal<T>
 {
-    /// <summary>Executes the new operation.</summary>
-    /// <returns>The result.</returns>
+    /// <summary>The shared instance; the signal carries no per-subscription state.</summary>
     public static readonly ImmutableEmptySignal<T> Instance = new();
 
     /// <summary>Initializes a new instance of the <see cref="ImmutableEmptySignal{T}"/> class.</summary>
@@ -20,14 +19,15 @@ public sealed class ImmutableEmptySignal<T> : IRequireCurrentThread<T>, IInlineS
     {
     }
 
-    /// <summary>Executes the IsRequiredSubscribeOnCurrentThread operation.</summary>
-    /// <returns>The result.</returns>
+    /// <summary>Indicates whether subscription has to happen on the calling thread.</summary>
+    /// <returns>Always <see langword="false"/>.</returns>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public bool IsRequiredSubscribeOnCurrentThread() => false;
 
-    /// <summary>Executes the Subscribe operation.</summary>
-    /// <param name="observer">The observer value.</param>
-    /// <returns>The result.</returns>
+    /// <summary>Completes <paramref name="observer"/> before returning.</summary>
+    /// <param name="observer">The observer to complete.</param>
+    /// <returns>An empty disposable; the signal has finished by the time this returns.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="observer"/> is <see langword="null"/>.</exception>
     public IDisposable Subscribe(IObserver<T> observer)
     {
         ArgumentExceptionHelper.ThrowIfNull(observer);
@@ -36,11 +36,11 @@ public sealed class ImmutableEmptySignal<T> : IRequireCurrentThread<T>, IInlineS
         return EmptyDisposable.Instance;
     }
 
-    /// <summary>Executes the Subscribe operation.</summary>
-    /// <param name="onNext">The onNext value.</param>
-    /// <param name="onError">The onError value.</param>
-    /// <param name="onCompleted">The onCompleted value.</param>
-    /// <returns>The result.</returns>
+    /// <summary>Invokes <paramref name="onCompleted"/> before returning.</summary>
+    /// <param name="onNext">The unused value callback.</param>
+    /// <param name="onError">The unused error callback.</param>
+    /// <param name="onCompleted">Invoked before this method returns.</param>
+    /// <returns>An empty disposable; the signal has finished by the time this returns.</returns>
     public IDisposable Subscribe(Action<T> onNext, Action<Exception> onError, Action onCompleted)
     {
         onCompleted();

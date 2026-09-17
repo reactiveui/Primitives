@@ -8,11 +8,6 @@ using System.Runtime.CompilerServices;
 namespace ReactiveUI.Primitives.ObservableEvents.Tests;
 
 /// <summary>Verifies every spelling of the static request attribute is recognised.</summary>
-/// <remarks>
-/// The attribute is matched on how it is written rather than on the symbol it binds to, because the type it names
-/// is this generator's own output and output is invisible to the pipeline that produced it. That puts the burden of
-/// understanding C#'s naming forms on this generator, so each one a consumer may reasonably write is pinned here.
-/// </remarks>
 public sealed partial class EventGeneratorTests
 {
     /// <summary>The host every spelling in these tests points at.</summary>

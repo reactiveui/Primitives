@@ -6,14 +6,12 @@ using System.Runtime.CompilerServices;
 
 namespace ReactiveUI.Primitives.Extensions.Operators;
 
-/// <summary>
-/// Catches the configured exception type, emits a fallback built from the exception, and completes.
-/// Other exception types propagate downstream.
-/// </summary>
+/// <summary>Replaces matching errors with a factory-produced fallback value and completes.</summary>
 /// <typeparam name="T">Element type.</typeparam>
 /// <typeparam name="TException">Exception type to catch.</typeparam>
 /// <param name="source">Upstream source.</param>
 /// <param name="fallbackFactory">Builds the fallback from the caught exception.</param>
+/// <remarks>Other error types propagate unchanged; a fallback factory failure replaces the caught error.</remarks>
 public sealed class CatchAndReturnWithFactoryObservable<T, TException>(
     IObservable<T> source,
     Func<TException, T> fallbackFactory) : IObservable<T>
@@ -28,11 +26,7 @@ public sealed class CatchAndReturnWithFactoryObservable<T, TException>(
         return source.Subscribe(new CatchAndReturnWithFactoryWitness(observer, fallbackFactory));
     }
 
-    /// <summary>
-    /// Forwarding observer that passes <see cref="OnNext"/> / <see cref="OnCompleted"/>
-    /// through and converts a matching <see cref="OnError"/> into an inline emit of the
-    /// factory-produced fallback followed by terminal <see cref="IObserver{T}.OnCompleted"/>.
-    /// </summary>
+    /// <summary>Forwarding observer that turns a matching error into the factory's fallback value followed by completion.</summary>
     /// <param name="downstream">The downstream observer.</param>
     /// <param name="fallbackFactory">The fallback factory.</param>
     private sealed class CatchAndReturnWithFactoryWitness(

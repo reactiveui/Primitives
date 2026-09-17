@@ -7,7 +7,7 @@ using System.Text.RegularExpressions;
 
 namespace ReactiveUI.Primitives.Extensions.Tests.Operators;
 
-/// <summary>Edge-case coverage for several small synchronous operators — <c>Shuffle</c>, <c>Filter</c> (regex), <c>TrySelect</c>.</summary>
+/// <summary>Tests shuffle, regex filtering, and conditional projection.</summary>
 public partial class SimpleSyncOperatorTests
 {
     /// <summary>Synthetic error message attached to source errors.</summary>
@@ -30,9 +30,6 @@ public partial class SimpleSyncOperatorTests
 
     /// <summary>Shuffle test sentinel.</summary>
     private const int Shuffle5 = 5;
-
-    /// <summary>Length of the pathological input that drives the regex into catastrophic backtracking.</summary>
-    private const int PathologicalInputLength = 100;
 
     /// <summary>Divisor the <c>TrySelect</c> projection uses to keep even values and drop the odd ones.</summary>
     private const int EvenDivisor = 2;
@@ -146,15 +143,15 @@ public partial class SimpleSyncOperatorTests
     [Test]
     public async Task WhenFilterRegexThrows_ThenForwardsError()
     {
-        // A regex with a 1-microsecond timeout against pathological input should throw.
-        var regex = PathologicalCatastrophicBacktrack();
+        RegexMatchTimeoutException expected = new("matching failed");
+        ThrowingRegex regex = new(expected);
         Subject<string> subject = new();
         Exception? caught = null;
         using var sub = subject.Filter(regex).Subscribe(
             static _ => { },
             ex => caught = ex);
-        subject.OnNext($"{new string('a', PathologicalInputLength)}!");
-        await Assert.That(caught).IsNotNull();
+        subject.OnNext(Apple);
+        await Assert.That(caught).IsSameReferenceAs(expected);
     }
 
     /// <summary>Verifies that <c>TrySelect</c> drops null projections and forwards non-nulls.</summary>
@@ -202,10 +199,37 @@ public partial class SimpleSyncOperatorTests
     [GeneratedRegex("^a")]
     private static partial Regex StartsWithA();
 
-    /// <summary>Compiled regex with catastrophic backtracking and a 1-tick timeout —
-    /// guaranteed to throw <see cref = "RegexMatchTimeoutException"/> on pathological input.
-    /// Used to exercise the error-forwarding branch of <c>Filter</c>.</summary>
-    /// <returns>A compile-time generated <see cref = "Regex"/> instance with a 1-tick match timeout.</returns>
-    [GeneratedRegex("(a+)+$", RegexOptions.None, 1)]
-    private static partial Regex PathologicalCatastrophicBacktrack();
+    /// <summary>A regex whose matching engine throws the supplied error.</summary>
+    private sealed class ThrowingRegex : Regex
+    {
+        /// <summary>Initializes a new instance of the <see cref="ThrowingRegex"/> class.</summary>
+        /// <param name="error">The matching error.</param>
+        public ThrowingRegex(Exception error)
+        {
+            factory = new ThrowingRunnerFactory(error);
+            capsize = 1;
+        }
+
+        /// <summary>Creates matching engines that fail with the supplied error.</summary>
+        /// <param name="error">The matching error.</param>
+        private sealed class ThrowingRunnerFactory(Exception error) : RegexRunnerFactory
+        {
+            /// <inheritdoc/>
+            protected override RegexRunner CreateInstance() => new ThrowingRunner(error);
+        }
+
+        /// <summary>Throws when matching begins.</summary>
+        /// <param name="error">The matching error.</param>
+        private sealed class ThrowingRunner(Exception error) : RegexRunner
+        {
+            /// <inheritdoc/>
+            protected override void Go() => throw error;
+
+            /// <inheritdoc/>
+            protected override bool FindFirstChar() => true;
+
+            /// <inheritdoc/>
+            protected override void InitTrackCount() => runtrackcount = 1;
+        }
+    }
 }

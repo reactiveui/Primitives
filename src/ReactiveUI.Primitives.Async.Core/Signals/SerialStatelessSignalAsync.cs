@@ -6,11 +6,9 @@ using System.Runtime.CompilerServices;
 
 namespace ReactiveUI.Primitives.Async.Signals;
 
-/// <summary>Represents a stateless asynchronous Signal that notifies observers of events in a serial, sequential manner.</summary>
+/// <summary>An asynchronous Signal that notifies its observers serially and keeps publishing after a terminal notification.</summary>
 /// <typeparam name="T">The type of the elements processed and observed by the Signal.</typeparam>
-/// <remarks>Observers are notified one at a time in the order they are registered. Each observer receives the
-/// event only after the previous observer has completed processing. This class is suitable for scenarios where event
-/// delivery order and sequential processing are required. Thread safety and ordering are managed internally.</remarks>
+/// <remarks>Observers are notified in registration order; each notification is awaited before the next begins.</remarks>
 [System.Diagnostics.DebuggerDisplay("SerialStatelessSignalAsync: Observers = {_state.Observers.Length}")]
 public sealed class SerialStatelessSignalAsync<T> : ISignalAsync<T>
 {

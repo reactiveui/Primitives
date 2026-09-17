@@ -4,13 +4,14 @@
 
 namespace ReactiveUI.Primitives.Async.Advanced;
 
-/// <summary>An observable that emits incrementing ticks at a fixed interval.</summary>
+/// <summary>Emits ticks numbered from zero, waiting one period between notifications until disposal.</summary>
 [System.Diagnostics.DebuggerDisplay("IntervalSignal: Period = {Period}, TimeProvider = {TimeProvider}")]
 public sealed class IntervalSignal : IObservableAsync<long>
 {
     /// <summary>Initializes a new instance of the <see cref="IntervalSignal"/> class.</summary>
     /// <param name="period">The delay between ticks.</param>
-    /// <param name="timeProvider">The time provider used for custom scheduling.</param>
+    /// <param name="timeProvider">The time provider that schedules the ticks, or <see langword="null"/> for the
+    /// system clock.</param>
     public IntervalSignal(TimeSpan period, TimeProvider? timeProvider)
     {
         Period = period;

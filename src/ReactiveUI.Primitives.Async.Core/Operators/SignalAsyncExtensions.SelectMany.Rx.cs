@@ -12,13 +12,11 @@ public static partial class SignalAsyncExtensions
     /// <param name="source">The source observable sequence.</param>
     extension<T>(IObservableAsync<T> source)
     {
-        /// <summary>
-        /// Projects each element of the observable sequence to an asynchronous observable sequence and
-        /// merges the resulting sequences into one observable sequence.
-        /// </summary>
+        /// <summary>Projects each element of the observable sequence to an asynchronous observable sequence and merges the resulting sequences into one observable sequence.</summary>
         /// <typeparam name="TResult">The type of the elements in the projected inner sequences.</typeparam>
         /// <param name="selector">A transform function to apply to each element.</param>
         /// <returns>An observable sequence whose elements are the merged projection results.</returns>
+        /// <exception cref="ArgumentNullException"><paramref name="selector"/> is <see langword="null"/>.</exception>
         public IObservableAsync<TResult> SelectMany<TResult>(Func<T, IObservableAsync<TResult>> selector)
         {
             ArgumentExceptionHelper.ThrowIfNull(selector);
@@ -33,6 +31,7 @@ public static partial class SignalAsyncExtensions
         /// <typeparam name="TResult">The type of the elements in the projected inner sequences.</typeparam>
         /// <param name="selector">An asynchronous transform function to apply to each element.</param>
         /// <returns>An observable sequence whose elements are the merged projection results.</returns>
+        /// <exception cref="ArgumentNullException"><paramref name="selector"/> is <see langword="null"/>.</exception>
         public IObservableAsync<TResult> SelectMany<TResult>(
             Func<T, CancellationToken, ValueTask<IObservableAsync<TResult>>> selector)
         {
@@ -55,8 +54,7 @@ public static partial class SignalAsyncExtensions
         /// <returns>An observable sequence whose elements are the result of invoking the one-to-many transform
         /// function on each element of the source sequence, and then mapping each pair of source and collection
         /// element through the result selector.</returns>
-        /// <exception cref="ArgumentExceptionHelper">Thrown if <paramref name="collectionSelector"/> or
-        /// <paramref name="resultSelector"/> is null.</exception>
+        /// <exception cref="ArgumentNullException"><paramref name="collectionSelector"/> or <paramref name="resultSelector"/> is <see langword="null"/>.</exception>
         public IObservableAsync<TResult> SelectMany<TCollection, TResult>(
             Func<T, IObservableAsync<TCollection>> collectionSelector,
             Func<T, TCollection, TResult> resultSelector)

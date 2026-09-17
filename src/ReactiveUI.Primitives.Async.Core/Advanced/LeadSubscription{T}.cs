@@ -47,16 +47,16 @@ public sealed class LeadSubscription<T> : IAsyncDisposable
     /// <summary>Gets the subscription cancellation source.</summary>
     private CancellationTokenSource Cancellation { get; }
 
-    /// <summary>Gets the reentrancy marker used to avoid self-joining the driver task.</summary>
+    /// <summary>Gets the flag marking the driver task, so disposal called from inside it skips awaiting it.</summary>
     private AsyncLocal<bool> Reentrant { get; } = new();
 
     /// <summary>Gets or sets the driver task.</summary>
     private Task Pipeline { get; set; }
 
-    /// <summary>Gets or sets a value indicating whether disposal has already run.</summary>
+    /// <summary>Gets or sets a value indicating whether disposal has run.</summary>
     private bool Disposed { get; set; }
 
-    /// <summary>Starts the lead pipeline.</summary>
+    /// <summary>Starts the pipeline that emits the leading values and then subscribes to the source.</summary>
     public void Start() => Pipeline = RunAsync();
 
     /// <inheritdoc/>
@@ -99,7 +99,7 @@ public sealed class LeadSubscription<T> : IAsyncDisposable
         }
         catch (OperationCanceledException)
         {
-            // Cooperative subscription cancellation.
+            // Subscription cancellation is not reported as a failure.
         }
         catch (Exception e)
         {

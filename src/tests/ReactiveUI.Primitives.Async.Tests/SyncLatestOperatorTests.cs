@@ -13,9 +13,6 @@ namespace ReactiveUI.Primitives.Async.Tests;
 /// </summary>
 public partial class SyncLatestOperatorTests
 {
-    /// <summary>Seconds a test waits for a combined emission before giving up.</summary>
-    private const int WaitTimeoutSeconds = 5;
-
     /// <summary>Index of source 3 in the per-test source list.</summary>
     private const int SourceIndex2 = 2;
 
@@ -88,9 +85,6 @@ public partial class SyncLatestOperatorTests
     /// <summary>Value emitted by the second source in the enumerable tests.</summary>
     private const int SecondValue = 2;
 
-    /// <summary>Maximum time a test waits for a combined emission to arrive.</summary>
-    private static readonly TimeSpan WaitTimeout = TimeSpan.FromSeconds(WaitTimeoutSeconds);
-
     /// <summary>Verifies the enumerable <c>SyncLatest</c> emits a snapshot of the latest value of every source
     /// once all of them have produced one.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
@@ -116,7 +110,7 @@ public partial class SyncLatestOperatorTests
         await first.OnNextAsync(1, CancellationToken.None);
         await second.OnNextAsync(SecondValue, CancellationToken.None);
 
-        await AsyncTestHelpers.WaitForConditionAsync(() => snapshots.Count >= 1, WaitTimeout);
+        await Assert.That(snapshots.Count >= 1).IsTrue();
 
         await Assert.That(snapshots).Count().IsGreaterThanOrEqualTo(1);
         await Assert.That(snapshots[0]).IsCollectionEqualTo([1, SecondValue]);
@@ -143,7 +137,7 @@ public partial class SyncLatestOperatorTests
         await first.OnNextAsync(1, CancellationToken.None);
         await second.OnNextAsync(SecondValue, CancellationToken.None);
 
-        await AsyncTestHelpers.WaitForConditionAsync(() => results.Count >= 1, WaitTimeout);
+        await Assert.That(results.Count >= 1).IsTrue();
 
         await Assert.That(results).Count().IsGreaterThanOrEqualTo(1);
         await Assert.That(results[0]).IsEqualTo(1 + SecondValue);
@@ -180,7 +174,7 @@ public partial class SyncLatestOperatorTests
             await signals[index].OnNextAsync(1, CancellationToken.None);
         }
 
-        await AsyncTestHelpers.WaitForConditionAsync(() => results.Count >= 1, WaitTimeout);
+        await Assert.That(results.Count >= 1).IsTrue();
 
         await Assert.That(results).Count().IsGreaterThanOrEqualTo(1);
         await Assert.That(results[0]).IsEqualTo(ArityEight);
@@ -218,7 +212,7 @@ public partial class SyncLatestOperatorTests
             await signals[index].OnNextAsync(1, CancellationToken.None);
         }
 
-        await AsyncTestHelpers.WaitForConditionAsync(() => results.Count >= 1, WaitTimeout);
+        await Assert.That(results.Count >= 1).IsTrue();
 
         await Assert.That(results).Count().IsGreaterThanOrEqualTo(1);
         await Assert.That(results[0]).IsEqualTo(ArityNine);
@@ -257,7 +251,7 @@ public partial class SyncLatestOperatorTests
             await signals[index].OnNextAsync(1, CancellationToken.None);
         }
 
-        await AsyncTestHelpers.WaitForConditionAsync(() => results.Count >= 1, WaitTimeout);
+        await Assert.That(results.Count >= 1).IsTrue();
 
         await Assert.That(results).Count().IsGreaterThanOrEqualTo(1);
         await Assert.That(results[0]).IsEqualTo(ArityTen);
@@ -297,7 +291,7 @@ public partial class SyncLatestOperatorTests
             await signals[index].OnNextAsync(1, CancellationToken.None);
         }
 
-        await AsyncTestHelpers.WaitForConditionAsync(() => results.Count >= 1, WaitTimeout);
+        await Assert.That(results.Count >= 1).IsTrue();
 
         await Assert.That(results).Count().IsGreaterThanOrEqualTo(1);
         await Assert.That(results[0]).IsEqualTo(ArityEleven);

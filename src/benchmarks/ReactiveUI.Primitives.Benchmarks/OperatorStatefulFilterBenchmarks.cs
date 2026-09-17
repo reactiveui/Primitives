@@ -10,10 +10,9 @@ using RxObservable = System.Reactive.Linq.Observable;
 namespace ReactiveUI.Primitives.Benchmarks;
 
 /// <summary>
-/// Subscribe-and-drain benchmarks for the stateful single-source operators that were converted
-/// from per-subscription closures to dedicated single-source sinks (Skip, Unique, Fold,
-/// Reduce, TakeWhile, SkipWhile, UniqueBy). The Allocated column reflects the closure-to-sink
-/// reduction; System.Reactive is the comparison baseline.
+/// Subscribe-and-drain benchmarks for the stateful single-source operators (Skip, Unique, Fold,
+/// Reduce, TakeWhile, SkipWhile, UniqueBy), measured against the System.Reactive equivalents as
+/// the comparison baseline.
 /// </summary>
 [MemoryDiagnoser]
 public class OperatorStatefulFilterBenchmarks

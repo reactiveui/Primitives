@@ -6,10 +6,7 @@ using ReactiveUI.Primitives.Advanced;
 
 namespace ReactiveUI.Primitives.Signals;
 
-/// <summary>
-/// Invokes a stateful action for each source value while forwarding the value unchanged, without allocating a
-/// per-value closure: the state is stored on the sink and passed to the action for each element.
-/// </summary>
+/// <summary>Invokes the supplied action with each source value and state, then forwards the value unchanged.</summary>
 /// <typeparam name="T">The value type.</typeparam>
 /// <typeparam name="TState">The state type passed to the action.</typeparam>
 /// <param name="source">The source sequence.</param>
@@ -72,7 +69,7 @@ public sealed class TapWithSignal<T, TState>(IObservable<T> source, TState state
         }
 
         /// <summary>Forwards an error downstream.</summary>
-        /// <param name="error">The error value.</param>
+        /// <param name="error">The terminal error.</param>
         public void OnError(Exception error)
         {
             if (Interlocked.Exchange(ref _stopped, 1) != 0)

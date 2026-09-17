@@ -18,8 +18,7 @@ public static partial class Signal
     [System.Diagnostics.CodeAnalysis.SuppressMessage(
         "Design",
         "SST2307:Generic method type parameters should be inferable from the parameters",
-        Justification =
-            "The type parameter defines the element type for this Rx-style factory and cannot be inferred from the arguments.")]
+        Justification = "The element type cannot be inferred from the arguments.")]
     public static ScheduledSignal<T> Scheduled<T>(ISequencer scheduler) =>
         new(scheduler);
 
@@ -30,6 +29,23 @@ public static partial class Signal
     /// <returns>A scheduled signal.</returns>
     public static ScheduledSignal<T> Scheduled<T>(ISequencer scheduler, IObserver<T>? defaultObserver) =>
         new(scheduler, defaultObserver);
+
+    /// <summary>Creates a signal that accepts notifications from any thread and delivers them to its subscribers one at a time.</summary>
+    /// <typeparam name="T">The element type.</typeparam>
+    /// <returns>A serialized signal over a new <see cref="Signal{T}"/>.</returns>
+    [System.Diagnostics.CodeAnalysis.SuppressMessage(
+        "Design",
+        "SST2307:Generic method type parameters should be inferable from the parameters",
+        Justification = "The element type cannot be inferred from the arguments.")]
+    public static SerializedSignal<T> Serialized<T>() =>
+        new();
+
+    /// <summary>Wraps <paramref name="signal"/> so notifications from any thread reach its subscribers one at a time.</summary>
+    /// <typeparam name="T">The element type.</typeparam>
+    /// <param name="signal">The signal whose notifications are serialized.</param>
+    /// <returns>A serialized signal over <paramref name="signal"/>.</returns>
+    public static SerializedSignal<T> Serialized<T>(ISignal<T> signal) =>
+        new(signal);
 
     /// <summary>Creates a signal that buffers notifications while delayed and emits a de-duplicated batch when <see cref="DelayableNotificationSignal{T}.Flush"/> is called.</summary>
     /// <typeparam name="T">The notification type.</typeparam>

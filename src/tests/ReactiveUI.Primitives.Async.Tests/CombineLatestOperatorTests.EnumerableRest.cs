@@ -8,13 +8,10 @@ using AsyncObs = ReactiveUI.Primitives.Async.SignalAsync;
 
 namespace ReactiveUI.Primitives.Async.Tests;
 
-/// <summary>Tests for CombineLatestOperatorTests.</summary>
+/// <summary>Tests the enumerable <c>CombineLatest</c> overload's disposal and completion guards.</summary>
 public partial class CombineLatestOperatorTests
 {
-    /// <summary>
-    /// Tests CombineLatest enumerable returns early from SubscribeAsync when disposed during subscribe,
-    /// exercising the early return path in CombineLatestEnumerable.
-    /// </summary>
+    /// <summary>Verifies that emitting after an immediate dispose completes without error.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenCombineLatestEnumerableDisposedDuringSubscribe_ThenReturnsEarly()
@@ -26,17 +23,12 @@ public partial class CombineLatestOperatorTests
             static (_, _) => default,
             null);
 
-        // Dispose immediately, before any values
         await sub.DisposeAsync();
 
-        // Emit after dispose - should be ignored
         await signal.OnNextAsync(1, CancellationToken.None);
     }
 
-    /// <summary>
-    /// Tests CombineLatest enumerable OnNextAsync returns early when disposed,
-    /// exercising the OnNextAsync disposed guard in CombineLatestEnumerable.
-    /// </summary>
+    /// <summary>Verifies that values pushed by either source after disposal are not forwarded.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenCombineLatestEnumerableOnNextAfterDispose_ThenIgnored()
@@ -58,17 +50,13 @@ public partial class CombineLatestOperatorTests
 
         await sub.DisposeAsync();
 
-        // These should be ignored
         await signal1.OnNextAsync(1, CancellationToken.None);
         await signal2.OnNextAsync(SecondSignalValue, CancellationToken.None);
 
         await Assert.That(items).IsEmpty();
     }
 
-    /// <summary>
-    /// Tests CombineLatest enumerable OnErrorResumeAsync returns early when disposed,
-    /// exercising the OnErrorResumeAsync disposed guard in CombineLatestEnumerable.
-    /// </summary>
+    /// <summary>Verifies that an error resumed after disposal is not forwarded.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenCombineLatestEnumerableOnErrorResumeAfterDispose_ThenIgnored()
@@ -88,16 +76,12 @@ public partial class CombineLatestOperatorTests
 
         await sub.DisposeAsync();
 
-        // Error after dispose should be ignored
         await signal.OnErrorResumeAsync(new InvalidOperationException("err"), CancellationToken.None);
 
         await Assert.That(errors).IsEmpty();
     }
 
-    /// <summary>
-    /// Tests CombineLatest enumerable OnCompletedAsync returns early when already completed for same index,
-    /// exercising the already-completed guard in CombineLatestEnumerable.
-    /// </summary>
+    /// <summary>Verifies that a source completing after disposal forwards no completion.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenCombineLatestEnumerableAlreadyDisposed_ThenOnCompletedIgnored()
@@ -117,20 +101,14 @@ public partial class CombineLatestOperatorTests
                 return default;
             });
 
-        // Dispose first
         await sub.DisposeAsync();
 
-        // Complete after dispose - should be ignored
         await signal1.OnCompletedAsync(Result.Success);
 
-        // No extra completion should have been forwarded since we disposed
         await Assert.That(completion).IsNull();
     }
 
-    /// <summary>
-    /// Tests CombineLatest enumerable completes when a source completes without emitting a value,
-    /// exercising the shouldComplete path in CombineLatestEnumerable.
-    /// </summary>
+    /// <summary>Verifies that an empty source completes the combined sequence during subscription.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenCombineLatestEnumerableSourceCompletesWithoutValue_ThenCompletes()
@@ -150,18 +128,13 @@ public partial class CombineLatestOperatorTests
                 return default;
             });
 
-        await AsyncTestHelpers.WaitForConditionAsync(
-            () => completion is not null,
-            TimeSpan.FromSeconds(WaitTimeoutSeconds));
+        await Assert.That(completion is not null).IsTrue();
 
         await Assert.That(completion).IsNotNull();
         await Assert.That(completion!.Value.IsSuccess).IsTrue();
     }
 
-    /// <summary>
-    /// Verifies that CombineLatestEnumerable OnNextAsync returns early when disposed.
-    /// Uses the blocking-OnCompletedAsync technique to keep the gate alive while _disposed is set.
-    /// </summary>
+    /// <summary>Verifies that a value arriving while the subscription tears down is dropped.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenCombineLatestEnumerableOnNextAfterDispose_ThenReturnsEarly()
@@ -187,15 +160,13 @@ public partial class CombineLatestOperatorTests
                     await allowCompletion.Task;
                 });
 
-        // Set up initial values
         await src1.EmitNext(1);
         await src2.EmitNext(Source1Value);
 
-        // Trigger failure on src1 → FinishAsync → _disposed=1 → blocks on OnCompletedAsync
-        var failTask = Task.Run(() => src1.Complete(Result.Failure(new InvalidOperationException("test"))));
+        // Blocking inside the completion handler parks the subscription mid-teardown.
+        var failTask = src1.Complete(Result.Failure(new InvalidOperationException("test")));
         await completionBlocked.Task;
 
-        // _disposed is 1, gate still alive → OnNextAsync should hit the guard
         await src2.EmitNext(SentinelValue);
 
         await Assert.That(items).Count().IsEqualTo(1);
@@ -204,7 +175,7 @@ public partial class CombineLatestOperatorTests
         await failTask;
     }
 
-    /// <summary>Verifies that CombineLatestEnumerable OnErrorResumeAsync returns early when disposed.</summary>
+    /// <summary>Verifies that an error arriving while the subscription tears down is dropped.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenCombineLatestEnumerableOnErrorResumeAfterDispose_ThenReturnsEarly()
@@ -233,10 +204,10 @@ public partial class CombineLatestOperatorTests
         await src1.EmitNext(1);
         await src2.EmitNext(Source1Value);
 
-        var failTask = Task.Run(() => src1.Complete(Result.Failure(new InvalidOperationException("test"))));
+        // Blocking inside the completion handler parks the subscription mid-teardown.
+        var failTask = src1.Complete(Result.Failure(new InvalidOperationException("test")));
         await completionBlocked.Task;
 
-        // _disposed is 1, gate still alive → OnErrorResumeAsync should hit the guard
         await src2.EmitError(new InvalidOperationException("post-dispose error"));
 
         await Assert.That(errors).IsEmpty();
@@ -245,7 +216,7 @@ public partial class CombineLatestOperatorTests
         await failTask;
     }
 
-    /// <summary>Verifies that CombineLatestEnumerable OnCompleted returns early for an already-completed index.</summary>
+    /// <summary>Verifies that completing a source twice yields a single overall completion.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenCombineLatestEnumerableDoubleComplete_ThenSecondIsIgnored()
@@ -268,19 +239,14 @@ public partial class CombineLatestOperatorTests
         await src1.EmitNext(1);
         await src2.EmitNext(Source1Value);
 
-        // Complete src1 (has emitted, src2 still active → no overall completion)
         await src1.Complete(Result.Success);
-
-        // Complete src1 again - already completed[0] = true, returns early
         await src1.Complete(Result.Success);
-
-        // Now complete src2 → overall completion
         await src2.Complete(Result.Success);
 
         await Assert.That(completionCount).IsEqualTo(1);
     }
 
-    /// <summary>Verifies that CombineLatestEnumerable completes when a source completes without emitting.</summary>
+    /// <summary>Verifies that a source completing without a value completes the sequence at once.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenCombineLatestEnumerableSourceCompletesWithoutValue_ThenCompletesImmediately()
@@ -300,70 +266,55 @@ public partial class CombineLatestOperatorTests
                     return default;
                 });
 
-        // src1 completes without ever emitting, so shouldComplete = !_values[0].HasValue = true
         await src1.Complete(Result.Success);
 
         await Assert.That(completionResult).IsNotNull();
         await Assert.That(completionResult!.Value.IsSuccess).IsTrue();
     }
 
-    /// <summary>Verifies that CombineLatestEnumerable returns early when disposed during subscribe loop.</summary>
+    /// <summary>Verifies that cancelling mid-subscribe throws and leaves later sources unsubscribed.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenCombineLatestEnumerableDisposedDuringSubscribeLoop_ThenReturnsEarly()
     {
-        // First source triggers disposal when subscribed
-        TaskCompletionSource<IAsyncDisposable> disposeTrigger = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        TaskCompletionSource entered = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        TaskCompletionSource release = new(TaskCreationOptions.RunContinuationsAsynchronously);
         var slowSource = AsyncObs.Create<int>(async (_, ct) =>
         {
-            var disp = await disposeTrigger.Task.WaitAsync(ct);
-            await disp.DisposeAsync();
+            IgnoredResult.Of(entered.TrySetResult());
+            await release.Task.WaitAsync(ct);
             return DisposableAsync.Empty;
         });
 
-        DirectSource<int> normalSource = new();
+        var normalSubscribed = false;
+        var normalSource = AsyncObs.Create<int>((_, _) =>
+        {
+            normalSubscribed = true;
+            return new(DisposableAsync.Empty);
+        });
         IObservableAsync<int>[] sources = [slowSource, normalSource];
-
-        // Cancel after 1s, not WaitTimeoutSeconds (5s): this test pure-waits for cancellation
-        // by design (nothing ever sets disposeTrigger) — the cancellation is the only exit,
-        // so we want the shortest window that reliably lets the subscribe loop start. 1s is
-        // safe even on slow CI runners.
-        using CancellationTokenSource cts = new(TimeSpan.FromSeconds(1));
-
-        try
-        {
-            var sub = await sources.CombineLatest()
-                .SubscribeAsync(static (_, _) => default, null, null, cts.Token);
-            disposeTrigger.SetResult(sub);
-            await sub.DisposeAsync();
-        }
-        catch (OperationCanceledException)
-        {
-            // Expected
-        }
+        using CancellationTokenSource cts = new();
+        var pending = sources.CombineLatest()
+            .SubscribeAsync(static (_, _) => default, null, null, cts.Token);
+        await entered.Task;
+        await cts.CancelAsync();
+        await Assert.That(async () => await pending).Throws<OperationCanceledException>();
+        await Assert.That(normalSubscribed).IsFalse();
     }
 
-    /// <summary>
-    /// Verifies that SubscribeAsync bails out of the source subscription loop when an
-    /// earlier source completes without emitting (triggering overall completion and
-    /// cancelling the dispose CTS) before remaining sources are subscribed,
-    /// covering the early-return guard in CombineLatestEnumerable.SubscribeAsync.
-    /// </summary>
+    /// <summary>Verifies that a first source completing during subscribe skips subscribing the rest.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenCombineLatestEnumerableFirstSourceCompletesImmediately_ThenSkipsRemainingSubscriptions()
     {
         var secondSourceSubscribed = false;
 
-        // Second source records whether it was ever subscribed.
         var trackingSource = AsyncObs.Create<int>((_, _) =>
         {
             secondSourceSubscribed = true;
             return new(DisposableAsync.Empty);
         });
 
-        // Empty completes immediately during subscribe, triggering overall completion
-        // before the loop reaches the second source.
         IObservableAsync<int>[] sources = [AsyncObs.Empty<int>(), trackingSource];
 
         await using var sub = await sources.CombineLatest()
@@ -372,11 +323,7 @@ public partial class CombineLatestOperatorTests
         await Assert.That(secondSourceSubscribed).IsFalse();
     }
 
-    /// <summary>
-    /// Verifies that OnCompletedAsync returns early when the same source index completes
-    /// a second time while the subscription is still active (the _completed[index] guard),
-    /// covering line 268 in CombineLatestEnumerable.
-    /// </summary>
+    /// <summary>Verifies that a repeated completion from one of three sources is not counted twice.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenCombineLatestEnumerableSameSourceCompletedTwice_ThenSecondCompletionIsIgnored()
@@ -397,31 +344,22 @@ public partial class CombineLatestOperatorTests
                     return default;
                 });
 
-        // All sources emit so _values[i].HasValue is true for all.
         await src1.EmitNext(1);
         await src2.EmitNext(Source1Value);
         await src3.EmitNext(Source2Value);
 
-        // src1 completes: _completed[0]=true, completedCount=1 (not 3), shouldComplete=false.
         await src1.Complete(Result.Success);
-
-        // src1 completes again: _completed[0] is already true, returns early (line 268).
         await src1.Complete(Result.Success);
 
         await Assert.That(completionCount).IsEqualTo(0);
 
-        // Finish: complete remaining sources so the subscription terminates cleanly.
         await src2.Complete(Result.Success);
         await src3.Complete(Result.Success);
 
         await Assert.That(completionCount).IsEqualTo(1);
     }
 
-    /// <summary>
-    /// Verifies that OnCompletedAsync takes the non-completing path (shouldComplete=false)
-    /// when a source that has already emitted a value completes while other sources remain active,
-    /// covering line 277 in CombineLatestEnumerable.
-    /// </summary>
+    /// <summary>Verifies that a completed source that had emitted keeps the sequence open while others run.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenCombineLatestEnumerableSourceWithValueCompletes_ThenDoesNotCompleteUntilAllDone()
@@ -450,37 +388,29 @@ public partial class CombineLatestOperatorTests
                     return default;
                 });
 
-        // Both emit so _values[i].HasValue is true for both.
         await src1.EmitNext(Src1FirstValue);
         await src2.EmitNext(Src2FirstValue);
 
         await Assert.That(emissions).Count().IsEqualTo(1);
 
-        // src1 completes: _values[0].HasValue=true, completedCount=1 (not 2) → shouldComplete=false (line 277).
         await src1.Complete(Result.Success);
 
-        // Subscription is still active because shouldComplete was false.
         await Assert.That(completionResult).IsNull();
 
-        // src2 can still emit and combine with src1's last value.
+        // src2 combines against the last value of the completed src1.
         await src2.EmitNext(Src2SecondValue);
 
         await Assert.That(emissions).Count().IsEqualTo(ExpectedEmissions);
         await Assert.That(emissions[1][0]).IsEqualTo(Src1FirstValue);
         await Assert.That(emissions[1][1]).IsEqualTo(Src2SecondValue);
 
-        // Complete src2 → all sources completed, shouldComplete=true.
         await src2.Complete(Result.Success);
 
         await Assert.That(completionResult).IsNotNull();
         await Assert.That(completionResult!.Value.IsSuccess).IsTrue();
     }
 
-    /// <summary>
-    /// Verifies that OnCompletedAsync returns early without incrementing the completed count
-    /// when the same source index has already completed, exercising the _completed[index] guard
-    /// on line 268 of CombineLatestEnumerable with a single additional source still active.
-    /// </summary>
+    /// <summary>Verifies that a repeated completion leaves the remaining source free to emit.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task
@@ -508,42 +438,32 @@ public partial class CombineLatestOperatorTests
                     return default;
                 });
 
-        // Both sources emit so all _values have values.
         await src1.EmitNext(1);
         await src2.EmitNext(Source1Value);
 
         await Assert.That(emissions).Count().IsEqualTo(1);
 
-        // src1 completes: _completed[0]=true, completedCount=1, shouldComplete=false.
         await src1.Complete(Result.Success);
 
         await Assert.That(completionResult).IsNull();
 
-        // Duplicate completion for index 0: _completed[0] is already true, returns default (line 268).
         await src1.Complete(Result.Success);
 
-        // Still no overall completion because src2 hasn't completed.
         await Assert.That(completionResult).IsNull();
 
-        // src2 can still emit; the duplicate completion did not corrupt state.
         await src2.EmitNext(Src2LateValue);
 
         await Assert.That(emissions).Count().IsEqualTo(ExpectedEmissions);
         await Assert.That(emissions[1][0]).IsEqualTo(1);
         await Assert.That(emissions[1][1]).IsEqualTo(Src2LateValue);
 
-        // Clean termination.
         await src2.Complete(Result.Success);
 
         await Assert.That(completionResult).IsNotNull();
         await Assert.That(completionResult!.Value.IsSuccess).IsTrue();
     }
 
-    /// <summary>
-    /// Verifies that when one source in a three-source CombineLatest completes without ever
-    /// emitting a value, the shouldComplete path triggers immediate completion and the remaining
-    /// sources are torn down, exercising line 277 of CombineLatestEnumerable.
-    /// </summary>
+    /// <summary>Verifies that a middle source completing without a value completes the sequence with no snapshot.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenCombineLatestEnumerableMiddleSourceCompletesWithoutEmitting_ThenCompletesImmediately()
@@ -571,20 +491,16 @@ public partial class CombineLatestOperatorTests
                     return default;
                 });
 
-        // src1 and src3 emit, but src2 never emits.
         await src1.EmitNext(Src1Value);
         await src3.EmitNext(Src3Value);
 
-        // No snapshot yet because src2 has not emitted.
         await Assert.That(emissions).IsEmpty();
 
-        // src2 completes without emitting: !_values[1].HasValue is true → shouldComplete=true (line 277).
         await src2.Complete(Result.Success);
 
         await Assert.That(completionResult).IsNotNull();
         await Assert.That(completionResult!.Value.IsSuccess).IsTrue();
 
-        // No snapshots were ever emitted because not all sources had values.
         await Assert.That(emissions).IsEmpty();
     }
 }

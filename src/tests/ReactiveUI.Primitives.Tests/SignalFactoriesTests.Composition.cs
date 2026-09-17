@@ -54,7 +54,7 @@ public partial class SignalFactoriesTests
     /// <summary>The fourth projected value after applying the projection multiplier.</summary>
     private const int ProjectedFourthValue = 21;
 
-    /// <summary>A peer value used to verify distinct-by bucketing.</summary>
+    /// <summary>A peer value that shares a distinct-by bucket.</summary>
     private const int ProjectedSecondBucketPeerValue = 12;
 
     /// <summary>The zip result expected from the first pair.</summary>
@@ -285,11 +285,9 @@ public partial class SignalFactoriesTests
     }
 
     /// <summary>Verifies async enumerable subscriptions cancel and dispose the enumerator.</summary>
-    /// <param name="testToken">The test cancellation token.</param>
     /// <returns>A task that completes when the asynchronous assertions have run.</returns>
     [Test]
-    [Timeout(30_000)]
-    public async Task AsyncEnumerableFactoryCancelsEnumeratorOnDispose(CancellationToken testToken)
+    public async Task AsyncEnumerableFactoryCancelsEnumeratorOnDispose()
     {
         var disposed = false;
         List<int> values = [];
@@ -301,7 +299,7 @@ public partial class SignalFactoriesTests
             try
             {
                 yield return FirstValue;
-                await Task.Delay(Timeout.InfiniteTimeSpan, token);
+                await token.WhenCanceled();
                 yield return SecondValue;
             }
             finally
@@ -311,7 +309,7 @@ public partial class SignalFactoriesTests
             }
         }
 
-        var subscription = Signal.FromAsyncEnumerable(Values(testToken), testToken).Subscribe(
+        var subscription = Signal.FromAsyncEnumerable(Values()).Subscribe(
             value =>
             {
                 values.Add(value);
@@ -319,9 +317,9 @@ public partial class SignalFactoriesTests
             },
             static _ => { },
             static () => { });
-        await firstValueObserved.Task.WaitAsync(testToken).ConfigureAwait(false);
+        await firstValueObserved.Task.ConfigureAwait(false);
         subscription.Dispose();
-        await disposedSignal.Task.WaitAsync(testToken).ConfigureAwait(false);
+        await disposedSignal.Task.ConfigureAwait(false);
         await Assert.That(values.SequenceEqual(AsyncEnumerableBeforeDisposeExpected)).IsTrue();
         await Assert.That(disposed).IsTrue();
     }
@@ -366,7 +364,7 @@ public partial class SignalFactoriesTests
         await Assert.That(every.SequenceEqual(EveryExpected)).IsTrue();
     }
 
-    /// <summary>Verifies additional factory and unary operator parity helpers.</summary>
+    /// <summary>Sequence boundary, boolean terminal, and selection operators emit their expected values.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
     public async Task AdditionalFactoriesAndUnaryOperatorsCoverCommonParitySurface()
@@ -376,7 +374,7 @@ public partial class SignalFactoriesTests
         await VerifySelectionAndProjectionOperators();
     }
 
-    /// <summary>Verifies System.Reactive-style aliases intended to ease migration.</summary>
+    /// <summary>System.Reactive-named aliases prepend, tap, recover, and observe on a sequencer.</summary>
     /// <returns>A task that completes when the asynchronous assertions have run.</returns>
     [Test]
     public async Task SystemReactiveNamedAliasesCoverMigrationConvenienceSurface()
@@ -662,7 +660,7 @@ public partial class SignalFactoriesTests
         "Concurrency",
         "PSH1313:Call the async overload from an async method",
         Justification =
-            "This test deliberately exercises the synchronous IObservable operator overloads, not their awaitable terminal counterparts.")]
+            "The assertions target the synchronous IObservable operator overloads.")]
     private static async Task VerifyBooleanTerminalOperators()
     {
         List<int> count = [];

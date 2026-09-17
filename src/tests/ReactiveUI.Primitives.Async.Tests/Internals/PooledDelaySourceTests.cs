@@ -10,13 +10,10 @@ public class PooledDelaySourceTests
     /// <summary>The delay used by the happy-path test.</summary>
     private static readonly TimeSpan ShortDelay = TimeSpan.FromMilliseconds(20);
 
-    /// <summary>Lower bound the elapsed time must clear to prove the delay was actually awaited.</summary>
-    private static readonly TimeSpan MinimumObservedDelay = TimeSpan.FromMilliseconds(5);
-
     /// <summary>A delay long enough that it can only end through cancellation.</summary>
     private static readonly TimeSpan DelayOutlivingTheTest = TimeSpan.FromSeconds(10);
 
-    /// <summary>Verifies that a pre-cancelled token fails the source immediately with <see cref = "OperationCanceledException"/> — the BeginAsync early-return path.</summary>
+    /// <summary>Verifies that a pre-cancelled token fails the source immediately with <see cref = "OperationCanceledException"/> - the BeginAsync early-return path.</summary>
     /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenPreCancelledToken_ThenFailsWithOperationCanceled()
@@ -24,7 +21,7 @@ public class PooledDelaySourceTests
         using CancellationTokenSource cts = new();
         await cts.CancelAsync();
         var source = PooledDelaySource.Rent();
-        var task = source.BeginAsync(ShortDelay, new NonSystemTimeProvider(), cts.Token);
+        var task = source.BeginAsync(ShortDelay, new ManualTimeProvider(), cts.Token);
         var ex = await Assert.That(async () => await task).ThrowsExactly<OperationCanceledException>();
         await Assert.That(ex).IsNotNull();
     }
@@ -35,12 +32,26 @@ public class PooledDelaySourceTests
     public async Task WhenTimerFires_ThenSourceCompletes()
     {
         var source = PooledDelaySource.Rent();
-        var start = TimeProvider.System.GetTimestamp();
-        await source.BeginAsync(ShortDelay, new NonSystemTimeProvider(), CancellationToken.None);
-        var elapsed = TimeProvider.System.GetElapsedTime(start);
+        ManualTimeProvider time = new();
+        var pending = source.BeginAsync(ShortDelay, time, CancellationToken.None);
+        var timer = await time.NextTimerAsync();
+        await Assert.That(pending.IsCompleted).IsFalse();
+        await Assert.That(timer.DueTime).IsEqualTo(ShortDelay);
+        timer.Fire();
+        await pending;
+    }
 
-        // Verify the delay actually happened — the source's timer-fired path completed it.
-        await Assert.That(elapsed).IsGreaterThanOrEqualTo(MinimumObservedDelay);
+    /// <summary>A callback fired during timer creation completes before cancellation registration.</summary>
+    /// <returns>A task representing the asynchronous test.</returns>
+    [Test]
+    public async Task WhenTimerFiresDuringCreation_ThenCompletesSynchronously()
+    {
+        using CancellationTokenSource cancellation = new();
+        var source = PooledDelaySource.Rent();
+        var pending = source.BeginAsync(ShortDelay, new ImmediateTimeProvider(), cancellation.Token);
+        await Assert.That(pending.IsCompletedSuccessfully).IsTrue();
+        await cancellation.CancelAsync();
+        await pending;
     }
 
     /// <summary>Verifies that a token cancelled mid-flight propagates an <see cref = "OperationCanceledException"/>.</summary>
@@ -50,17 +61,47 @@ public class PooledDelaySourceTests
     {
         using CancellationTokenSource cts = new();
         var source = PooledDelaySource.Rent();
-        var task = source.BeginAsync(DelayOutlivingTheTest, new NonSystemTimeProvider(), cts.Token);
+        var task = source.BeginAsync(DelayOutlivingTheTest, new ManualTimeProvider(), cts.Token);
         await cts.CancelAsync();
         var ex = await Assert.That(async () => await task).ThrowsExactly<OperationCanceledException>();
         await Assert.That(ex).IsNotNull();
     }
 
-    /// <summary>Non-System <see cref = "TimeProvider"/> that forces BeginAsync down the non-System path.</summary>
-    private sealed class NonSystemTimeProvider : TimeProvider
+    /// <summary>The first terminal event owns the result even when the second event runs before consumption.</summary>
+    /// <param name="cancelFirst">Whether cancellation precedes the timer callback.</param>
+    /// <returns>A task representing the asynchronous test.</returns>
+    [Test]
+    [Arguments(false)]
+    [Arguments(true)]
+    public async Task WhenTimerAndCancellationBothFire_ThenFirstEventWins(bool cancelFirst)
+    {
+        ManualTimeProvider time = new();
+        using CancellationTokenSource cancellation = new();
+        var source = PooledDelaySource.Rent();
+        var pending = source.BeginAsync(ShortDelay, time, cancellation.Token);
+        var timer = await time.NextTimerAsync();
+        if (cancelFirst)
+        {
+            await cancellation.CancelAsync();
+            timer.Fire();
+            await Assert.That(async () => await pending).ThrowsExactly<OperationCanceledException>();
+        }
+        else
+        {
+            timer.Fire();
+            await cancellation.CancelAsync();
+            await pending;
+        }
+    }
+
+    /// <summary>A provider that invokes its callback inside timer creation.</summary>
+    private sealed class ImmediateTimeProvider : TimeProvider
     {
         /// <inheritdoc/>
-        public override ITimer CreateTimer(TimerCallback callback, object? state, TimeSpan dueTime, TimeSpan period) =>
-            System.CreateTimer(callback, state, dueTime, period);
+        public override ITimer CreateTimer(TimerCallback callback, object? state, TimeSpan dueTime, TimeSpan period)
+        {
+            callback(state);
+            return new ManualTimeProvider.ManualTimer(callback, state, dueTime);
+        }
     }
 }

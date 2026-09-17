@@ -18,6 +18,15 @@ internal static class GeneratorHarness
     /// <summary>The host whose file the event-edit case rewrites.</summary>
     private const int EditedHostIndex = 0;
 
+    /// <summary>The diagnostic reported when no observable provider is referenced.</summary>
+    private const string MissingProviderId = "RXOE001";
+
+    /// <summary>The diagnostic reported for a host without supported events.</summary>
+    private const string NoEventsId = "RXOE002";
+
+    /// <summary>The diagnostic reported for an event host the generator cannot represent.</summary>
+    private const string UnsupportedEventId = "RXOE003";
+
     /// <summary>The parse options every corpus tree is parsed with.</summary>
     private static readonly CSharpParseOptions ParseOptions =
         CSharpParseOptions.Default.WithLanguageVersion(LanguageVersion.Latest);
@@ -34,25 +43,16 @@ internal static class GeneratorHarness
     internal static (Compilation Compilation, CSharpGeneratorDriver Driver) CreateColdState(CorpusSize size) =>
         (BuildCompilation(size), CreateDriver());
 
-    /// <summary>Creates a primed driver and the very compilation it was primed against.</summary>
+    /// <summary>Runs the generator with unchanged inputs to measure cache reuse.</summary>
     /// <param name="size">The corpus size.</param>
-    /// <returns>The unchanged compilation and a driver that has already generated once.</returns>
-    /// <remarks>
-    /// The control the other incremental cases are only meaningful against: nothing whatsoever has changed, so
-    /// every cache that can hit must hit. Whatever this still costs is the floor no amount of caching removes, and
-    /// if it sits at the cold number then the caching is not buying wall-clock however green the step table looks.
-    /// </remarks>
+    /// <returns>The unchanged compilation and the primed driver.</returns>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal static (Compilation Compilation, CSharpGeneratorDriver Driver) CreateUnchangedState(CorpusSize size) =>
         RunOnce(size);
 
-    /// <summary>Creates a primed driver and a compilation edited somewhere no request depends on.</summary>
+    /// <summary>Runs the generator after editing a file unrelated to event activation.</summary>
     /// <param name="size">The corpus size.</param>
-    /// <returns>The edited compilation and a driver that has already generated once.</returns>
-    /// <remarks>
-    /// This is the keystroke case: the consumer typed in a file that declares no event and calls no activation, so
-    /// a pipeline that caches properly should do nothing beyond re-scanning the one new tree.
-    /// </remarks>
+    /// <returns>The edited compilation and the primed driver.</returns>
     internal static (Compilation Compilation, CSharpGeneratorDriver Driver) CreateUnrelatedEditState(CorpusSize size)
     {
         var primed = RunOnce(size);
@@ -61,19 +61,14 @@ internal static class GeneratorHarness
         return (edited, primed.Driver);
     }
 
-    /// <summary>Creates a primed driver and a compilation whose first host gained an event.</summary>
+    /// <summary>Runs the generator after changing one host's event declarations.</summary>
     /// <param name="size">The corpus size.</param>
-    /// <returns>The edited compilation and a driver that has already generated once.</returns>
-    /// <remarks>
-    /// One host's file is replaced and no other. The edit changes what exactly one wrapper exposes, so the cost
-    /// here is the floor for a real change rather than for a full regeneration.
-    /// </remarks>
+    /// <returns>The edited compilation and the primed driver.</returns>
     internal static (Compilation Compilation, CSharpGeneratorDriver Driver) CreateEventEditState(CorpusSize size)
     {
         var primed = RunOnce(size);
         var fileName = EventCorpus.HostFileName(EditedHostIndex);
-        var original = primed.Compilation.SyntaxTrees.First(tree =>
-            string.Equals(tree.FilePath, fileName, StringComparison.Ordinal));
+        var original = FindTree(primed.Compilation, fileName);
         var edited = primed.Compilation.ReplaceSyntaxTree(
             original,
             CSharpSyntaxTree.ParseText(
@@ -83,30 +78,50 @@ internal static class GeneratorHarness
         return (edited, primed.Driver);
     }
 
+    /// <summary>Creates a fresh driver over the corpus plus requests the generator can only answer with diagnostics.</summary>
+    /// <param name="size">The corpus size.</param>
+    /// <param name="withProvider">Whether the compilation references an observable provider.</param>
+    /// <returns>The compilation and a fresh driver.</returns>
+    internal static (Compilation Compilation, CSharpGeneratorDriver Driver) CreateUnservableState(CorpusSize size, bool withProvider)
+    {
+        var compilation = BuildCompilation(size, withProvider).AddSyntaxTrees(
+            CSharpSyntaxTree.ParseText(EventCorpus.UnservableSource, ParseOptions, EventCorpus.UnservableFileName));
+        return (compilation, CreateDriver());
+    }
+
     /// <summary>Runs every corpus size once and reports what came out, so a broken corpus fails loudly.</summary>
-    /// <exception cref="InvalidOperationException">A corpus does not compile, making its measurements worthless.</exception>
+    /// <exception cref="InvalidOperationException">A corpus does not compile, or the unservable requests report nothing, making the measurements worthless.</exception>
     internal static void ValidateCorpus()
     {
+        ExpectDiagnostics(CreateUnservableState(CorpusSize.Small, true), [NoEventsId, UnsupportedEventId], "with a provider");
+        ExpectDiagnostics(CreateUnservableState(CorpusSize.Small, false), [MissingProviderId], "without a provider");
+
         foreach (var size in Enum.GetValues<CorpusSize>())
         {
             var cold = CreateColdState(size);
             var updated = cold.Driver.RunGeneratorsAndUpdateCompilation(cold.Compilation, out var result, out _);
-            var errors = result.GetDiagnostics()
-                .Where(static diagnostic => diagnostic.Severity == DiagnosticSeverity.Error)
-                .ToArray();
+            List<Diagnostic> errors = [];
+            foreach (var diagnostic in result.GetDiagnostics())
+            {
+                if (diagnostic.Severity == DiagnosticSeverity.Error)
+                {
+                    errors.Add(diagnostic);
+                }
+            }
+
             var generated = ((CSharpGeneratorDriver)updated).GetRunResult().GeneratedTrees.Length;
 
             Console.WriteLine(string.Create(
                 CultureInfo.InvariantCulture,
-                $"{size}: {EventCorpus.HostCountFor(size)} hosts in {cold.Compilation.SyntaxTrees.Count()} files, "
-                + $"{generated} generated files, {errors.Length} errors"));
+                $"{size}: {EventCorpus.HostCountFor(size)} hosts in {EventCorpus.FilesFor(size).Count} files, "
+                + $"{generated} generated files, {errors.Count} errors"));
 
             foreach (var error in errors)
             {
                 Console.WriteLine(error.ToString());
             }
 
-            if (errors.Length > 0)
+            if (errors.Count > 0)
             {
                 throw new InvalidOperationException($"The {size} corpus does not compile; the benchmark is invalid.");
             }
@@ -116,7 +131,14 @@ internal static class GeneratorHarness
     /// <summary>Builds a compilation over one file per host, as real code is laid out.</summary>
     /// <param name="size">The corpus size.</param>
     /// <returns>The compilation.</returns>
-    private static CSharpCompilation BuildCompilation(CorpusSize size)
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static CSharpCompilation BuildCompilation(CorpusSize size) => BuildCompilation(size, true);
+
+    /// <summary>Builds a compilation over one file per host, optionally without any observable provider referenced.</summary>
+    /// <param name="size">The corpus size.</param>
+    /// <param name="withProvider">Whether the compilation references an observable provider.</param>
+    /// <returns>The compilation.</returns>
+    private static CSharpCompilation BuildCompilation(CorpusSize size, bool withProvider)
     {
         var files = EventCorpus.FilesFor(size);
         var trees = new SyntaxTree[files.Count];
@@ -125,7 +147,34 @@ internal static class GeneratorHarness
             trees[index] = CSharpSyntaxTree.ParseText(files[index].Text, ParseOptions, files[index].Path);
         }
 
-        return CSharpCompilation.Create(CompilationAssemblyName, trees, CreateReferences(), CompilationOptions);
+        return CSharpCompilation.Create(CompilationAssemblyName, trees, CreateReferences(withProvider), CompilationOptions);
+    }
+
+    /// <summary>Runs a fresh driver and checks it reported every expected diagnostic.</summary>
+    /// <param name="state">The compilation and fresh driver.</param>
+    /// <param name="expectedIds">The diagnostic identifiers the run must report.</param>
+    /// <param name="description">How the compilation differs, for the report.</param>
+    /// <exception cref="InvalidOperationException">An expected diagnostic was not reported.</exception>
+    private static void ExpectDiagnostics(
+        (Compilation Compilation, CSharpGeneratorDriver Driver) state,
+        string[] expectedIds,
+        string description)
+    {
+        var result = state.Driver.RunGenerators(state.Compilation).GetRunResult();
+        HashSet<string> reported = [with(StringComparer.Ordinal)];
+        foreach (var diagnostic in result.Diagnostics)
+        {
+            _ = reported.Add(diagnostic.Id);
+        }
+
+        Console.WriteLine($"Unservable requests {description}: {string.Join(", ", reported)}");
+        foreach (var id in expectedIds)
+        {
+            if (!reported.Contains(id))
+            {
+                throw new InvalidOperationException($"The unservable requests {description} did not report {id}; the benchmark is invalid.");
+            }
+        }
     }
 
     /// <summary>Creates a driver with only the observable-event generator loaded.</summary>
@@ -146,9 +195,48 @@ internal static class GeneratorHarness
     }
 
     /// <summary>Collects the metadata references the corpus compiles against.</summary>
-    /// <returns>The metadata references, including the lean provider the generated wrappers name.</returns>
-    private static List<MetadataReference> CreateReferences() =>
-        [.. AppContext.GetData("TRUSTED_PLATFORM_ASSEMBLIES")!.ToString()!
-            .Split(Path.PathSeparator)
-            .Select(static path => (MetadataReference)MetadataReference.CreateFromFile(path))];
+    /// <param name="withProvider">Whether to keep the observable providers the generated wrappers name.</param>
+    /// <returns>The metadata references.</returns>
+    private static List<MetadataReference> CreateReferences(bool withProvider)
+    {
+        var paths = AppContext.GetData("TRUSTED_PLATFORM_ASSEMBLIES")!.ToString()!.Split(Path.PathSeparator);
+        List<MetadataReference> references = [with(capacity: paths.Length)];
+        foreach (var path in paths)
+        {
+            if (!withProvider && IsObservableProvider(Path.GetFileName(path)))
+            {
+                continue;
+            }
+
+            references.Add(MetadataReference.CreateFromFile(path));
+        }
+
+        return references;
+    }
+
+    /// <summary>Reports whether an assembly file carries an observable provider the generator can target.</summary>
+    /// <param name="fileName">The assembly file name.</param>
+    /// <returns><see langword="true"/> for the Primitives and System.Reactive assemblies.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static bool IsObservableProvider(string fileName) =>
+        fileName.StartsWith("ReactiveUI.", StringComparison.Ordinal)
+        || fileName.StartsWith("System.Reactive", StringComparison.Ordinal);
+
+    /// <summary>Finds the corpus tree with the given file path.</summary>
+    /// <param name="compilation">The compilation to search.</param>
+    /// <param name="fileName">The file path of the tree.</param>
+    /// <returns>The matching tree.</returns>
+    /// <exception cref="InvalidOperationException">No tree has that file path.</exception>
+    private static SyntaxTree FindTree(Compilation compilation, string fileName)
+    {
+        foreach (var tree in compilation.SyntaxTrees)
+        {
+            if (string.Equals(tree.FilePath, fileName, StringComparison.Ordinal))
+            {
+                return tree;
+            }
+        }
+
+        throw new InvalidOperationException($"The corpus has no file named {fileName}.");
+    }
 }

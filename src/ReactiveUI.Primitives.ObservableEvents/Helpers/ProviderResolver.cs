@@ -10,15 +10,9 @@ namespace ReactiveUI.Primitives.ObservableEvents.Helpers;
 /// <summary>Chooses which observable implementation the generated code is written against.</summary>
 internal static class ProviderResolver
 {
-    /// <summary>Selects the best provider visible to a consumer.</summary>
+    /// <summary>Selects a fully referenced provider, preferring Primitives over System.Reactive.</summary>
     /// <param name="compilation">The consumer compilation.</param>
     /// <returns>The selected provider, or <see cref="ObservableProvider.None"/> when none is referenced.</returns>
-    /// <remarks>
-    /// Lean wins over reactive when both are referenced, because a consumer that has the lean package on hand is
-    /// asking for the allocation-free payload; falling back to <c>Unit</c> there would be a silent downgrade. Each
-    /// candidate is confirmed by every type its generated code names, so a partial reference set moves on to the
-    /// next candidate instead of emitting source that will not compile.
-    /// </remarks>
     internal static ObservableProvider Resolve(Compilation compilation)
     {
         if (HasTypes(

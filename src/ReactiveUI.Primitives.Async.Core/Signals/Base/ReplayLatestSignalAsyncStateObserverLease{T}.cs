@@ -2,8 +2,6 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
-using System.Diagnostics.CodeAnalysis;
-
 namespace ReactiveUI.Primitives.Async.Signals;
 
 /// <summary>Subscription handle that removes an observer from a replay signal when disposed.</summary>
@@ -14,7 +12,7 @@ internal sealed class ReplayLatestSignalAsyncStateObserverLease<T>(
     ReplayLatestSignalAsyncState<T> state,
     IObserverAsync<T> observer) : IAsyncDisposable
 {
-    /// <summary>Indicates whether the lease has already removed its observer.</summary>
+    /// <summary>Latch raised by the first disposer, so the observer is removed once.</summary>
     private int _disposed;
 
     /// <inheritdoc/>
@@ -25,7 +23,6 @@ internal sealed class ReplayLatestSignalAsyncStateObserverLease<T>(
 
     /// <summary>Removes the observer from the replay signal under the serialization gate.</summary>
     /// <returns>A task that represents the asynchronous removal operation.</returns>
-    [ExcludeFromCodeCoverage]
     private async ValueTask RemoveObserverAsync()
     {
         if (state.IsDisposed)
@@ -42,11 +39,11 @@ internal sealed class ReplayLatestSignalAsyncStateObserverLease<T>(
         }
         catch (OperationCanceledException)
         {
-            // The signal was disposed while removal was waiting to enter the gate.
+            // Unsubscription is harmless after signal disposal.
         }
         catch (ObjectDisposedException)
         {
-            // The gate was disposed while removal was waiting to enter it.
+            // Unsubscription is harmless after signal disposal.
         }
     }
 }

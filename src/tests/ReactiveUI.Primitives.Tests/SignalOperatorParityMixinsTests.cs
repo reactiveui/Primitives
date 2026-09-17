@@ -27,7 +27,7 @@ public partial class SignalOperatorParityMixinsTests
     /// <summary>The long constant two.</summary>
     private const long TwoLong = 2L;
 
-    /// <summary>The expected one-and-two prefix retained by distinct branches.</summary>
+    /// <summary>The expected one-and-two prefix from the distinct operators.</summary>
     private static readonly int[] ExpectedOneTwo = [One, Two];
 
     /// <summary>The expected single two produced by the distinct count alias.</summary>
@@ -39,13 +39,13 @@ public partial class SignalOperatorParityMixinsTests
     /// <summary>The expected single true value emitted by a true signal.</summary>
     private static readonly bool[] ExpectedTrueValues = [true];
 
-    /// <summary>Covers operator Subscribe(null) and current-thread propagation for internal optimized signal classes.</summary>
+    /// <summary>The optimized operator signals reject a null observer and do not require the current thread.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [SuppressMessage(
         "Concurrency",
         "PSH1313:Call the async overload from an async method",
         Justification =
-            "This test deliberately exercises the synchronous IObservable operator overloads, not their awaitable terminal counterparts.")]
+            "The synchronous IObservable operator overloads are the subject under test.")]
     [Test]
     public async Task InternalOptimizedOperatorSignalsValidateObserversAndThreadRequirements()
     {
@@ -98,13 +98,13 @@ public partial class SignalOperatorParityMixinsTests
         }
     }
 
-    /// <summary>Covers optimized aggregate helper paths with custom comparers, selector exceptions, and range-backed count aliases.</summary>
+    /// <summary>The optimized aggregates honor custom comparers, surface selector faults, and count range sources.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [SuppressMessage(
         "Concurrency",
         "PSH1313:Call the async overload from an async method",
         Justification =
-            "This test deliberately exercises the synchronous IObservable operator overloads, not their awaitable terminal counterparts.")]
+            "The synchronous IObservable operator overloads are the subject under test.")]
     [Test]
     public async Task AggregateOptimizedSignalsCoverComparerAndExceptionPaths()
     {
@@ -145,13 +145,13 @@ public partial class SignalOperatorParityMixinsTests
         await Assert.That(containsRange.Values.SequenceEqual(ExpectedTrueValues)).IsTrue();
     }
 
-    /// <summary>Covers terminal observers that must ignore protocol violations after their first terminal signal.</summary>
+    /// <summary>Terminal observers ignore notifications after their first terminal signal and forward predicate failures.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [SuppressMessage(
         "Concurrency",
         "PSH1313:Call the async overload from an async method",
         Justification =
-            "This test deliberately exercises the synchronous IObservable operator overloads, not their awaitable terminal counterparts.")]
+            "The synchronous IObservable operator overloads are the subject under test.")]
     [Test]
     public async Task TerminalObserversIgnoreLateSignalsAndForwardPredicateFailures()
     {
@@ -194,7 +194,7 @@ public partial class SignalOperatorParityMixinsTests
         await Assert.That(values).Contains(true);
     }
 
-    /// <summary>Verifies scheduler-based ToObservable conversion and task conversion aliases.</summary>
+    /// <summary>The scheduler and task ToObservable aliases emit their values and honor cancellation.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
     public async Task ToObservableSchedulerAndTaskAliasesEmitAndHonorCancellation()
@@ -252,7 +252,7 @@ public partial class SignalOperatorParityMixinsTests
         _ = Assert.Throws<ArgumentNullException>(static () => ((Task<int>)null!).ToObservable());
     }
 
-    /// <summary>Covers deterministic shortcut branches in System.Reactive-name parity operators.</summary>
+    /// <summary>The System.Reactive-named parity operators apply their default arguments and range fast paths.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
     public async Task ParityShortcutBranchesCoverDefaultsAndRangeFastPaths()
@@ -311,7 +311,7 @@ public partial class SignalOperatorParityMixinsTests
         await Assert.That(fusedRanges.SequenceEqual(expectedLatest)).IsTrue();
     }
 
-    /// <summary>Creates a source that keeps signalling values and a completion after it has already errored.</summary>
+    /// <summary>Creates a source that signals a value and a completion after it has errored.</summary>
     /// <returns>The misbehaving source.</returns>
     private static ScriptedObservable<int> CreateSourceThatKeepsSignallingAfterItsError() =>
         new(static observer =>
@@ -322,7 +322,7 @@ public partial class SignalOperatorParityMixinsTests
             observer.OnCompleted();
         });
 
-    /// <summary>Creates a source that keeps signalling values and an error after it has already completed.</summary>
+    /// <summary>Creates a source that signals an error and a value after it has completed.</summary>
     /// <returns>The misbehaving source.</returns>
     private static ScriptedObservable<int> CreateSourceThatKeepsSignallingAfterItsCompletion() =>
         new(static observer =>

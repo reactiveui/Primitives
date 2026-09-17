@@ -2,14 +2,12 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Diagnostics;
 using System.Runtime.CompilerServices;
 
 namespace ReactiveUI.Primitives.Async;
 
 /// <summary>Provides extension methods for performing asynchronous operations on observable sequences.</summary>
-/// <remarks>The SignalAsync class contains static methods that extend the functionality of asynchronous
-/// observable sequences, enabling operations such as counting elements that satisfy a specified condition. These
-/// methods are designed to work with types that implement asynchronous observation patterns.</remarks>
 public static partial class SignalAsyncExtensions
 {
     /// <summary>Asynchronous element-counting operators for an observable source sequence.</summary>
@@ -59,13 +57,46 @@ public static partial class SignalAsyncExtensions
     /// <typeparam name="T">The type of elements in the source sequence.</typeparam>
     /// <param name="predicate">An optional predicate to filter elements. If null, all elements are counted.</param>
     /// <param name="cancellationToken">A cancellation token for the operation.</param>
-    internal sealed class CountTaskWitness<T>(Func<T, bool>? predicate, CancellationToken cancellationToken) : TaskResultWitnessAsyncBase<T, int>(cancellationToken)
+    [DebuggerDisplay("CountTaskWitness: {_witness}")]
+    internal sealed class CountTaskWitness<T>(Func<T, bool>? predicate, CancellationToken cancellationToken) : IWitnessAsync<T>
     {
+        /// <summary>Produces and cancels the witness's single result value.</summary>
+        private readonly TaskResultCompletionSource<int> _completion = new(cancellationToken);
+
         /// <summary>The running count of elements that satisfy the predicate.</summary>
         private int _count;
 
+        /// <summary>The notification gate, cancellation link and disposal state.</summary>
+        private WitnessAsyncState _witness;
+
         /// <inheritdoc/>
-        protected override ValueTask OnNextAsyncCore(T value, CancellationToken cancellationToken)
+        ref WitnessAsyncState IWitnessState.Witness => ref _witness;
+
+        /// <inheritdoc/>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public ValueTask OnNextAsync(T value, CancellationToken cancellationToken) =>
+            WitnessAsync.OnNextAsync(this, value, cancellationToken);
+
+        /// <inheritdoc/>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public ValueTask OnErrorResumeAsync(Exception error, CancellationToken cancellationToken) =>
+            WitnessAsync.OnErrorResumeAsync(this, error, cancellationToken);
+
+        /// <inheritdoc/>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public ValueTask OnCompletedAsync(Result result) => WitnessAsync.OnCompletedAsync(this, result);
+
+        /// <inheritdoc/>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public ValueTask DisposeAsync() => WitnessAsync.DisposeStateAsync(this);
+
+        /// <summary>Asynchronously waits for the witness to produce its result value.</summary>
+        /// <returns>A task representing the asynchronous operation, containing the result value.</returns>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        internal ValueTask<int> AwaitResultAsync() => _completion.AwaitResultAsync(this);
+
+        /// <inheritdoc/>
+        ValueTask IWitnessAsync<T>.OnNextAsyncCore(T value, CancellationToken cancellationToken)
         {
             if (predicate is not null && !predicate(value))
             {
@@ -78,11 +109,13 @@ public static partial class SignalAsyncExtensions
         }
 
         /// <inheritdoc/>
-        protected override ValueTask OnErrorResumeAsyncCore(Exception error, CancellationToken cancellationToken) =>
-            SetExceptionAndDisposeAsync(error);
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        ValueTask IWitnessAsync<T>.OnErrorResumeAsyncCore(Exception error, CancellationToken cancellationToken) =>
+            _completion.SetExceptionAndDisposeAsync(error, this);
 
         /// <inheritdoc/>
-        protected override ValueTask OnCompletedAsyncCore(Result result) =>
-            !result.IsSuccess ? SetExceptionAndDisposeAsync(result.Exception) : SetResultAndDisposeAsync(_count);
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        ValueTask IWitnessAsync<T>.OnCompletedAsyncCore(Result result) =>
+            _completion.CompleteAndDisposeAsync(result, _count, this);
     }
 }

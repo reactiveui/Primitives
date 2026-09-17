@@ -6,8 +6,7 @@ using ReactiveUI.Primitives.Disposables;
 
 namespace ReactiveUI.Disposables.Tests;
 
-/// <summary>Coverage for <see cref="DisposableBag"/> — inline-slot fill, overflow growth,
-/// add-after-dispose immediate disposal, three-arg constructor, and dispose-order guarantees.</summary>
+/// <summary>Tests bag growth, disposal order, and additions after disposal.</summary>
 public class DisposableBagTests
 {
     /// <summary>Verifies that the parameterless constructor accepts inline slot fills and disposes both.</summary>
@@ -109,7 +108,7 @@ public class DisposableBagTests
         await Assert.That(late.DisposeCount).IsEqualTo(1);
     }
 
-    /// <summary>Tracking disposable used to count dispose invocations.</summary>
+    /// <summary>Tracking disposable that counts its dispose invocations.</summary>
     private sealed class CountedDisposable : IDisposable
     {
         /// <summary>Gets the number of times <see cref="Dispose"/> has been invoked.</summary>

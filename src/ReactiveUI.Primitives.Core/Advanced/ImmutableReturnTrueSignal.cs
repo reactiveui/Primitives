@@ -7,11 +7,10 @@ using ReactiveUI.Primitives.Disposables;
 
 namespace ReactiveUI.Primitives.Advanced;
 
-/// <summary>Represents the ImmutableReturnTrueSignal class.</summary>
+/// <summary>Signal that emits <see langword="true"/> and completes synchronously inside <c>Subscribe</c>.</summary>
 public sealed class ImmutableReturnTrueSignal : IRequireCurrentThread<bool>, IInlineSignal<bool>
 {
-    /// <summary>Executes the new operation.</summary>
-    /// <returns>The result.</returns>
+    /// <summary>The shared instance; the signal carries no per-subscription state.</summary>
     public static readonly ImmutableReturnTrueSignal Instance = new();
 
     /// <summary>Initializes a new instance of the <see cref="ImmutableReturnTrueSignal"/> class.</summary>
@@ -19,14 +18,14 @@ public sealed class ImmutableReturnTrueSignal : IRequireCurrentThread<bool>, IIn
     {
     }
 
-    /// <summary>Executes the IsRequiredSubscribeOnCurrentThread operation.</summary>
-    /// <returns>The result.</returns>
+    /// <summary>Indicates whether subscription has to happen on the calling thread.</summary>
+    /// <returns>Always <see langword="false"/>.</returns>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public bool IsRequiredSubscribeOnCurrentThread() => false;
 
-    /// <summary>Executes the Subscribe operation.</summary>
-    /// <param name="observer">The observer value.</param>
-    /// <returns>The result.</returns>
+    /// <summary>Emits <see langword="true"/> to <paramref name="observer"/> and completes it before returning.</summary>
+    /// <param name="observer">The observer to notify.</param>
+    /// <returns>An empty disposable; the signal has finished by the time this returns.</returns>
     public IDisposable Subscribe(IObserver<bool> observer)
     {
         observer.OnNext(true);
@@ -34,11 +33,11 @@ public sealed class ImmutableReturnTrueSignal : IRequireCurrentThread<bool>, IIn
         return EmptyDisposable.Instance;
     }
 
-    /// <summary>Executes the Subscribe operation.</summary>
-    /// <param name="onNext">The onNext value.</param>
-    /// <param name="onError">The onError value.</param>
-    /// <param name="onCompleted">The onCompleted value.</param>
-    /// <returns>The result.</returns>
+    /// <summary>Invokes <paramref name="onNext"/> with <see langword="true"/>, then <paramref name="onCompleted"/>.</summary>
+    /// <param name="onNext">Invoked with <see langword="true"/>.</param>
+    /// <param name="onError">Never invoked.</param>
+    /// <param name="onCompleted">Invoked after the value.</param>
+    /// <returns>An empty disposable; the signal has finished by the time this returns.</returns>
     public IDisposable Subscribe(Action<bool> onNext, Action<Exception> onError, Action onCompleted)
     {
         onNext(true);

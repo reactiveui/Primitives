@@ -22,25 +22,25 @@ namespace ReactiveUI.Primitives.Benchmarks;
 /// <summary>Benchmarks the complete synchronous ReactiveUI.Primitives.Extensions public helper surface.</summary>
 public partial class ReactiveExtensionsComparisonBenchmarks
 {
-    /// <summary>Executes the <c>RunAsSignal</c> benchmark helper.</summary>
-    /// <param name="library">The <c>library</c> value.</param>
-    /// <returns>The <c>RunAsSignal</c> result.</returns>
+    /// <summary>Projects the selected library's range to unit values through AsSignal.</summary>
+    /// <param name="library">The library implementation to exercise.</param>
+    /// <returns>The scenario checksum.</returns>
     private static int RunAsSignal(ExtensionsLibrary library) =>
         library == ExtensionsLibrary.Primitives
             ? DrainPrimitiveUnit(PrimitivesExtensions.AsSignal(Range(library)))
             : DrainPackageUnit(PackageExtensions.AsSignal(Range(library)));
 
-    /// <summary>Executes the <c>RunBufferUntil</c> benchmark helper.</summary>
-    /// <param name="library">The <c>library</c> value.</param>
-    /// <returns>The <c>RunBufferUntil</c> result.</returns>
+    /// <summary>Buffers the character source between bracket delimiters.</summary>
+    /// <param name="library">The library implementation to exercise.</param>
+    /// <returns>The scenario checksum.</returns>
     private static int RunBufferUntil(ExtensionsLibrary library) =>
         library == ExtensionsLibrary.Primitives
             ? DrainString(PrimitivesExtensions.BufferUntil(PrimitivesExtensions.FromArray(BufferCharacters), '[', ']'))
             : DrainString(PackageExtensions.BufferUntil(PackageExtensions.FromArray(BufferCharacters), '[', ']'));
 
-    /// <summary>Executes the <c>RunBufferUntilIdle</c> benchmark helper.</summary>
-    /// <param name="library">The <c>library</c> value.</param>
-    /// <returns>The <c>RunBufferUntilIdle</c> result.</returns>
+    /// <summary>Buffers the array source until it falls idle, on an immediate scheduler.</summary>
+    /// <param name="library">The library implementation to exercise.</param>
+    /// <returns>The scenario checksum.</returns>
     private static int RunBufferUntilIdle(ExtensionsLibrary library) =>
         library == ExtensionsLibrary.Primitives
             ? DrainList(PrimitivesExtensions.BufferUntilIdle(ArraySource(library), TimeSpan.Zero, Sequencer.Immediate))
@@ -49,9 +49,9 @@ public partial class ReactiveExtensionsComparisonBenchmarks
                 TimeSpan.Zero,
                 ImmediateScheduler.Instance));
 
-    /// <summary>Executes the <c>RunBufferUntilInactive</c> benchmark helper.</summary>
-    /// <param name="library">The <c>library</c> value.</param>
-    /// <returns>The <c>RunBufferUntilInactive</c> result.</returns>
+    /// <summary>Buffers the array source until it falls inactive, on an immediate scheduler.</summary>
+    /// <param name="library">The library implementation to exercise.</param>
+    /// <returns>The scenario checksum.</returns>
     private static int RunBufferUntilInactive(ExtensionsLibrary library) =>
         library == ExtensionsLibrary.Primitives
             ? DrainList(
@@ -61,9 +61,9 @@ public partial class ReactiveExtensionsComparisonBenchmarks
                 TimeSpan.Zero,
                 ImmediateScheduler.Instance));
 
-    /// <summary>Executes the <c>RunCatchAndReturn</c> benchmark helper.</summary>
-    /// <param name="library">The <c>library</c> value.</param>
-    /// <returns>The <c>RunCatchAndReturn</c> result.</returns>
+    /// <summary>Substitutes a computed fallback for a typed failure through CatchAndReturn.</summary>
+    /// <param name="library">The library implementation to exercise.</param>
+    /// <returns>The scenario checksum.</returns>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static int RunCatchAndReturn(ExtensionsLibrary library) =>
         DrainInt(library == ExtensionsLibrary.Primitives
@@ -74,62 +74,62 @@ public partial class ReactiveExtensionsComparisonBenchmarks
                 ThrowInt(library),
                 static _ => Fallback));
 
-    /// <summary>Executes the <c>RunCatchIgnore</c> benchmark helper.</summary>
-    /// <param name="library">The <c>library</c> value.</param>
-    /// <returns>The <c>RunCatchIgnore</c> result.</returns>
+    /// <summary>Swallows a typed failure through CatchIgnore.</summary>
+    /// <param name="library">The library implementation to exercise.</param>
+    /// <returns>The scenario checksum.</returns>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static int RunCatchIgnore(ExtensionsLibrary library) =>
         DrainInt(library == ExtensionsLibrary.Primitives
             ? PrimitivesExtensions.CatchIgnore<int, InvalidOperationException>(ThrowInt(library), static _ => { })
             : PackageExtensions.CatchIgnore<int, InvalidOperationException>(ThrowInt(library), static _ => { }));
 
-    /// <summary>Executes the <c>RunCatchReturn</c> benchmark helper.</summary>
-    /// <param name="library">The <c>library</c> value.</param>
-    /// <returns>The <c>RunCatchReturn</c> result.</returns>
+    /// <summary>Substitutes a constant fallback for a failure through CatchReturn.</summary>
+    /// <param name="library">The library implementation to exercise.</param>
+    /// <returns>The scenario checksum.</returns>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static int RunCatchReturn(ExtensionsLibrary library) =>
         DrainInt(library == ExtensionsLibrary.Primitives
             ? PrimitivesExtensions.CatchReturn(ThrowInt(library), Fallback)
             : PackageExtensions.CatchReturn(ThrowInt(library), Fallback));
 
-    /// <summary>Executes the <c>RunCatchReturnUnit</c> benchmark helper.</summary>
-    /// <param name="library">The <c>library</c> value.</param>
-    /// <returns>The <c>RunCatchReturnUnit</c> result.</returns>
+    /// <summary>Substitutes a unit value for a failing unit source.</summary>
+    /// <param name="library">The library implementation to exercise.</param>
+    /// <returns>The scenario checksum.</returns>
     private static int RunCatchReturnUnit(ExtensionsLibrary library) =>
         library == ExtensionsLibrary.Primitives
             ? DrainPrimitiveUnit(PrimitivesExtensions.CatchReturnUnit(ThrowPrimitiveUnit()))
             : DrainPackageUnit(PackageExtensions.CatchReturnUnit(ThrowPackageUnit()));
 
-    /// <summary>Executes the <c>RunCombineLatestValuesAreAllFalse</c> benchmark helper.</summary>
-    /// <param name="library">The <c>library</c> value.</param>
-    /// <returns>The <c>RunCombineLatestValuesAreAllFalse</c> result.</returns>
+    /// <summary>Combines two false sources and tests that every value is false.</summary>
+    /// <param name="library">The library implementation to exercise.</param>
+    /// <returns>The scenario checksum.</returns>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static int RunCombineLatestValuesAreAllFalse(ExtensionsLibrary library) =>
         DrainBool(library == ExtensionsLibrary.Primitives
             ? PrimitivesExtensions.CombineLatestValuesAreAllFalse(BoolSources(library, false))
             : PackageExtensions.CombineLatestValuesAreAllFalse(BoolSources(library, false)));
 
-    /// <summary>Executes the <c>RunCombineLatestValuesAreAllTrue</c> benchmark helper.</summary>
-    /// <param name="library">The <c>library</c> value.</param>
-    /// <returns>The <c>RunCombineLatestValuesAreAllTrue</c> result.</returns>
+    /// <summary>Combines two true sources and tests that every value is true.</summary>
+    /// <param name="library">The library implementation to exercise.</param>
+    /// <returns>The scenario checksum.</returns>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static int RunCombineLatestValuesAreAllTrue(ExtensionsLibrary library) =>
         DrainBool(library == ExtensionsLibrary.Primitives
             ? PrimitivesExtensions.CombineLatestValuesAreAllTrue(BoolSources(library, true))
             : PackageExtensions.CombineLatestValuesAreAllTrue(BoolSources(library, true)));
 
-    /// <summary>Executes the <c>RunConflate</c> benchmark helper.</summary>
-    /// <param name="library">The <c>library</c> value.</param>
-    /// <returns>The <c>RunConflate</c> result.</returns>
+    /// <summary>Conflates the array source over a zero window on an immediate scheduler.</summary>
+    /// <param name="library">The library implementation to exercise.</param>
+    /// <returns>The scenario checksum.</returns>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static int RunConflate(ExtensionsLibrary library) =>
         DrainInt(library == ExtensionsLibrary.Primitives
             ? PrimitivesExtensions.Conflate(ArraySource(library), TimeSpan.Zero, Sequencer.Immediate)
             : PackageExtensions.Conflate(ArraySource(library), TimeSpan.Zero, ImmediateScheduler.Instance));
 
-    /// <summary>Executes the <c>RunContinuationDispose</c> benchmark helper.</summary>
-    /// <param name="library">The <c>library</c> value.</param>
-    /// <returns>The <c>RunContinuationDispose</c> result.</returns>
+    /// <summary>Constructs and disposes a continuation, reading its completed phase count.</summary>
+    /// <param name="library">The library implementation to exercise.</param>
+    /// <returns>The scenario checksum.</returns>
     private static int RunContinuationDispose(ExtensionsLibrary library)
     {
         if (library == ExtensionsLibrary.Primitives)
@@ -142,9 +142,9 @@ public partial class ReactiveExtensionsComparisonBenchmarks
         return (int)packageContinuation.CompletedPhases;
     }
 
-    /// <summary>Executes the <c>RunContinuationLock</c> benchmark helper.</summary>
-    /// <param name="library">The <c>library</c> value.</param>
-    /// <returns>The <c>RunContinuationLock</c> result.</returns>
+    /// <summary>Acquires a continuation lock and observes the task-based handle.</summary>
+    /// <param name="library">The library implementation to exercise.</param>
+    /// <returns>The scenario checksum.</returns>
     private static int RunContinuationLock(ExtensionsLibrary library)
     {
         TupleWitness<int> observer = new();
@@ -162,9 +162,9 @@ public partial class ReactiveExtensionsComparisonBenchmarks
         return observer.ItemCount;
     }
 
-    /// <summary>Executes the <c>RunContinuationLockValueTask</c> benchmark helper.</summary>
-    /// <param name="library">The <c>library</c> value.</param>
-    /// <returns>The <c>RunContinuationLockValueTask</c> result.</returns>
+    /// <summary>Acquires a continuation lock and observes the value-task handle.</summary>
+    /// <param name="library">The library implementation to exercise.</param>
+    /// <returns>The scenario checksum.</returns>
     private static int RunContinuationLockValueTask(ExtensionsLibrary library)
     {
         TupleWitness<int> observer = new();
@@ -182,18 +182,18 @@ public partial class ReactiveExtensionsComparisonBenchmarks
         return observer.ItemCount;
     }
 
-    /// <summary>Executes the <c>RunDebounceImmediate</c> benchmark helper.</summary>
-    /// <param name="library">The <c>library</c> value.</param>
-    /// <returns>The <c>RunDebounceImmediate</c> result.</returns>
+    /// <summary>Debounces the array source, emitting the leading value of each window.</summary>
+    /// <param name="library">The library implementation to exercise.</param>
+    /// <returns>The scenario checksum.</returns>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static int RunDebounceImmediate(ExtensionsLibrary library) =>
         DrainInt(library == ExtensionsLibrary.Primitives
             ? PrimitivesExtensions.DebounceImmediate(ArraySource(library), TimeSpan.Zero, Sequencer.Immediate)
             : PackageExtensions.DebounceImmediate(ArraySource(library), TimeSpan.Zero, ImmediateScheduler.Instance));
 
-    /// <summary>Executes the <c>RunDebounceUntil</c> benchmark helper.</summary>
-    /// <param name="library">The <c>library</c> value.</param>
-    /// <returns>The <c>RunDebounceUntil</c> result.</returns>
+    /// <summary>Debounces the array source until a value clears the match threshold.</summary>
+    /// <param name="library">The library implementation to exercise.</param>
+    /// <returns>The scenario checksum.</returns>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static int RunDebounceUntil(ExtensionsLibrary library) =>
         DrainInt(library == ExtensionsLibrary.Primitives
@@ -208,9 +208,9 @@ public partial class ReactiveExtensionsComparisonBenchmarks
                 static value => value >= Match,
                 ImmediateScheduler.Instance));
 
-    /// <summary>Executes the <c>RunDetectStale</c> benchmark helper.</summary>
-    /// <param name="library">The <c>library</c> value.</param>
-    /// <returns>The <c>RunDetectStale</c> result.</returns>
+    /// <summary>Advances virtual time over a silent source to emit a stale marker.</summary>
+    /// <param name="library">The library implementation to exercise.</param>
+    /// <returns>The scenario checksum.</returns>
     private static int RunDetectStale(ExtensionsLibrary library)
     {
         if (library == ExtensionsLibrary.Primitives)
@@ -231,9 +231,9 @@ public partial class ReactiveExtensionsComparisonBenchmarks
         return packageObserver.Count + packageObserver.CompletionCount;
     }
 
-    /// <summary>Executes the <c>RunDoOnDispose</c> benchmark helper.</summary>
-    /// <param name="library">The <c>library</c> value.</param>
-    /// <returns>The <c>RunDoOnDispose</c> result.</returns>
+    /// <summary>Counts the dispose callback raised when the subscription is released.</summary>
+    /// <param name="library">The library implementation to exercise.</param>
+    /// <returns>The scenario checksum.</returns>
     private static int RunDoOnDispose(ExtensionsLibrary library)
     {
         var count = 0;
@@ -245,9 +245,9 @@ public partial class ReactiveExtensionsComparisonBenchmarks
         return count;
     }
 
-    /// <summary>Executes the <c>RunDoOnSubscribe</c> benchmark helper.</summary>
-    /// <param name="library">The <c>library</c> value.</param>
-    /// <returns>The <c>RunDoOnSubscribe</c> result.</returns>
+    /// <summary>Counts the subscribe callback raised when the source is subscribed.</summary>
+    /// <param name="library">The library implementation to exercise.</param>
+    /// <returns>The scenario checksum.</returns>
     private static int RunDoOnSubscribe(ExtensionsLibrary library)
     {
         var count = 0;
@@ -257,18 +257,18 @@ public partial class ReactiveExtensionsComparisonBenchmarks
         return total + count;
     }
 
-    /// <summary>Executes the <c>RunDropIfBusy</c> benchmark helper.</summary>
-    /// <param name="library">The <c>library</c> value.</param>
-    /// <returns>The <c>RunDropIfBusy</c> result.</returns>
+    /// <summary>Drops values from the array source while the handler is busy.</summary>
+    /// <param name="library">The library implementation to exercise.</param>
+    /// <returns>The scenario checksum.</returns>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static int RunDropIfBusy(ExtensionsLibrary library) =>
         DrainInt(library == ExtensionsLibrary.Primitives
             ? PrimitivesExtensions.DropIfBusy(ArraySource(library), static _ => default)
             : PackageExtensions.DropIfBusy(ArraySource(library), static _ => default));
 
-    /// <summary>Executes the <c>RunFastForEach</c> benchmark helper.</summary>
-    /// <param name="library">The <c>library</c> value.</param>
-    /// <returns>The <c>RunFastForEach</c> result.</returns>
+    /// <summary>Pushes the shared array into an observer through FastForEach.</summary>
+    /// <param name="library">The library implementation to exercise.</param>
+    /// <returns>The scenario checksum.</returns>
     private static int RunFastForEach(ExtensionsLibrary library)
     {
         IntSignalWitness observer = new();
@@ -284,18 +284,18 @@ public partial class ReactiveExtensionsComparisonBenchmarks
         return observer.Total;
     }
 
-    /// <summary>Executes the <c>RunFilter</c> benchmark helper.</summary>
-    /// <param name="library">The <c>library</c> value.</param>
-    /// <returns>The <c>RunFilter</c> result.</returns>
+    /// <summary>Filters the string source by the even-digit regex.</summary>
+    /// <param name="library">The library implementation to exercise.</param>
+    /// <returns>The scenario checksum.</returns>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static int RunFilter(ExtensionsLibrary library) =>
         DrainString(library == ExtensionsLibrary.Primitives
             ? PrimitivesExtensions.Filter(PrimitivesExtensions.FromArray(StringValues), EvenRegex())
             : PackageExtensions.Filter(PackageExtensions.FromArray(StringValues), EvenRegex()));
 
-    /// <summary>Executes the <c>RunFirstMatchFromCandidates</c> benchmark helper.</summary>
-    /// <param name="library">The <c>library</c> value.</param>
-    /// <returns>The <c>RunFirstMatchFromCandidates</c> result.</returns>
+    /// <summary>Probes candidate values and takes the first that clears the match threshold.</summary>
+    /// <param name="library">The library implementation to exercise.</param>
+    /// <returns>The scenario checksum.</returns>
     private static int RunFirstMatchFromCandidates(ExtensionsLibrary library)
     {
         var candidates = Values;
@@ -314,9 +314,9 @@ public partial class ReactiveExtensionsComparisonBenchmarks
                 Fallback));
     }
 
-    /// <summary>Executes the <c>RunForEach</c> benchmark helper.</summary>
-    /// <param name="library">The <c>library</c> value.</param>
-    /// <returns>The <c>RunForEach</c> result.</returns>
+    /// <summary>Flattens a single batch of values through ForEach.</summary>
+    /// <param name="library">The library implementation to exercise.</param>
+    /// <returns>The scenario checksum.</returns>
     private static int RunForEach(ExtensionsLibrary library)
     {
         int[][] batches = [Values];
@@ -325,15 +325,15 @@ public partial class ReactiveExtensionsComparisonBenchmarks
             : PackageExtensions.ForEach(PackageExtensions.FromArray<IEnumerable<int>>(batches), null));
     }
 
-    /// <summary>Executes the <c>RunFromArray</c> benchmark helper.</summary>
-    /// <param name="library)">The <c>library)</c> value.</param>
-    /// <returns>The <c>RunFromArray</c> result.</returns>
+    /// <summary>Drains the shared int array through the library's FromArray.</summary>
+    /// <param name="library">The library implementation to exercise.</param>
+    /// <returns>The scenario checksum.</returns>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static int RunFromArray(ExtensionsLibrary library) => DrainInt(ArraySource(library));
 
-    /// <summary>Executes the <c>RunGetMax</c> benchmark helper.</summary>
-    /// <param name="library">The <c>library</c> value.</param>
-    /// <returns>The <c>RunGetMax</c> result.</returns>
+    /// <summary>Combines two scalar sources into their maximum.</summary>
+    /// <param name="library">The library implementation to exercise.</param>
+    /// <returns>The scenario checksum.</returns>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static int RunGetMax(ExtensionsLibrary library) =>
         DrainInt(library == ExtensionsLibrary.Primitives
@@ -344,9 +344,9 @@ public partial class ReactiveExtensionsComparisonBenchmarks
                 PackageObservables.Return(FirstValue),
                 PackageObservables.Return(SecondValue)));
 
-    /// <summary>Executes the <c>RunGetMin</c> benchmark helper.</summary>
-    /// <param name="library">The <c>library</c> value.</param>
-    /// <returns>The <c>RunGetMin</c> result.</returns>
+    /// <summary>Combines two scalar sources into their minimum.</summary>
+    /// <param name="library">The library implementation to exercise.</param>
+    /// <returns>The scenario checksum.</returns>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static int RunGetMin(ExtensionsLibrary library) =>
         DrainInt(library == ExtensionsLibrary.Primitives
@@ -357,9 +357,9 @@ public partial class ReactiveExtensionsComparisonBenchmarks
                 PackageObservables.Return(FirstValue),
                 PackageObservables.Return(SecondValue)));
 
-    /// <summary>Executes the <c>RunHeartbeat</c> benchmark helper.</summary>
-    /// <param name="library">The <c>library</c> value.</param>
-    /// <returns>The <c>RunHeartbeat</c> result.</returns>
+    /// <summary>Advances virtual time over a silent source to emit a heartbeat.</summary>
+    /// <param name="library">The library implementation to exercise.</param>
+    /// <returns>The scenario checksum.</returns>
     private static int RunHeartbeat(ExtensionsLibrary library)
     {
         if (library == ExtensionsLibrary.Primitives)
@@ -380,18 +380,18 @@ public partial class ReactiveExtensionsComparisonBenchmarks
         return packageObserver.Count + packageObserver.CompletionCount;
     }
 
-    /// <summary>Executes the <c>RunLatestOrDefault</c> benchmark helper.</summary>
-    /// <param name="library">The <c>library</c> value.</param>
-    /// <returns>The <c>RunLatestOrDefault</c> result.</returns>
+    /// <summary>Reads the latest value of the array source, falling back when it has none.</summary>
+    /// <param name="library">The library implementation to exercise.</param>
+    /// <returns>The scenario checksum.</returns>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static int RunLatestOrDefault(ExtensionsLibrary library) =>
         DrainInt(library == ExtensionsLibrary.Primitives
             ? PrimitivesExtensions.LatestOrDefault(ArraySource(library), Fallback)
             : PackageExtensions.LatestOrDefault(ArraySource(library), Fallback));
 
-    /// <summary>Executes the <c>RunLogErrors</c> benchmark helper.</summary>
-    /// <param name="library">The <c>library</c> value.</param>
-    /// <returns>The <c>RunLogErrors</c> result.</returns>
+    /// <summary>Wraps the array source in the error-logging operator and drains it.</summary>
+    /// <param name="library">The library implementation to exercise.</param>
+    /// <returns>The scenario checksum.</returns>
     private static int RunLogErrors(ExtensionsLibrary library)
     {
         var errors = 0;
@@ -401,36 +401,36 @@ public partial class ReactiveExtensionsComparisonBenchmarks
         return total + errors;
     }
 
-    /// <summary>Executes the <c>RunNot</c> benchmark helper.</summary>
-    /// <param name="library">The <c>library</c> value.</param>
-    /// <returns>The <c>RunNot</c> result.</returns>
+    /// <summary>Negates each boolean emitted by the boolean source.</summary>
+    /// <param name="library">The library implementation to exercise.</param>
+    /// <returns>The scenario checksum.</returns>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static int RunNot(ExtensionsLibrary library) =>
         DrainBool(library == ExtensionsLibrary.Primitives
             ? PrimitivesExtensions.Not(BoolSource(library))
             : PackageExtensions.Not(BoolSource(library)));
 
-    /// <summary>Executes the <c>RunObserveOnIf</c> benchmark helper.</summary>
-    /// <param name="library">The <c>library</c> value.</param>
-    /// <returns>The <c>RunObserveOnIf</c> result.</returns>
+    /// <summary>Conditionally reschedules the array source onto an immediate scheduler.</summary>
+    /// <param name="library">The library implementation to exercise.</param>
+    /// <returns>The scenario checksum.</returns>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static int RunObserveOnIf(ExtensionsLibrary library) =>
         DrainInt(library == ExtensionsLibrary.Primitives
             ? PrimitivesExtensions.ObserveOnIf(ArraySource(library), true, Sequencer.Immediate)
             : PackageExtensions.ObserveOnIf(ArraySource(library), true, ImmediateScheduler.Instance));
 
-    /// <summary>Executes the <c>RunObserveOnSafe</c> benchmark helper.</summary>
-    /// <param name="library">The <c>library</c> value.</param>
-    /// <returns>The <c>RunObserveOnSafe</c> result.</returns>
+    /// <summary>Reschedules the array source onto an immediate scheduler with error isolation.</summary>
+    /// <param name="library">The library implementation to exercise.</param>
+    /// <returns>The scenario checksum.</returns>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static int RunObserveOnSafe(ExtensionsLibrary library) =>
         DrainInt(library == ExtensionsLibrary.Primitives
             ? PrimitivesExtensions.ObserveOnSafe(ArraySource(library), Sequencer.Immediate)
             : PackageExtensions.ObserveOnSafe(ArraySource(library), ImmediateScheduler.Instance));
 
-    /// <summary>Executes the <c>RunOnErrorRetry</c> benchmark helper.</summary>
-    /// <param name="library">The <c>library</c> value.</param>
-    /// <returns>The <c>RunOnErrorRetry</c> result.</returns>
+    /// <summary>Retries the array source once on a typed failure with no delay.</summary>
+    /// <param name="library">The library implementation to exercise.</param>
+    /// <returns>The scenario checksum.</returns>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static int RunOnErrorRetry(ExtensionsLibrary library) =>
         DrainInt(library == ExtensionsLibrary.Primitives
@@ -447,9 +447,9 @@ public partial class ReactiveExtensionsComparisonBenchmarks
                 TimeSpan.Zero,
                 ImmediateScheduler.Instance));
 
-    /// <summary>Executes the <c>RunOnNext</c> benchmark helper.</summary>
-    /// <param name="library">The <c>library</c> value.</param>
-    /// <returns>The <c>RunOnNext</c> result.</returns>
+    /// <summary>Pushes the shared array into an observer one value at a time.</summary>
+    /// <param name="library">The library implementation to exercise.</param>
+    /// <returns>The scenario checksum.</returns>
     private static int RunOnNext(ExtensionsLibrary library)
     {
         IntSignalWitness observer = new();
@@ -465,9 +465,9 @@ public partial class ReactiveExtensionsComparisonBenchmarks
         return observer.Total;
     }
 
-    /// <summary>Executes the <c>RunPairwise</c> benchmark helper.</summary>
-    /// <param name="library">The <c>library</c> value.</param>
-    /// <returns>The <c>RunPairwise</c> result.</returns>
+    /// <summary>Pairs each value of the array source with its predecessor.</summary>
+    /// <param name="library">The library implementation to exercise.</param>
+    /// <returns>The scenario checksum.</returns>
     private static int RunPairwise(ExtensionsLibrary library)
     {
         PairWitness observer = new();

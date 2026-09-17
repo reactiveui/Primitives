@@ -7,7 +7,7 @@ using System.Reactive.Concurrency;
 
 namespace ReactiveUI.Primitives.Extensions.Reactive.Tests;
 
-/// <summary>Smoke tests confirming the Reactive Extensions leaf's recompiled shared operators behave correctly.</summary>
+/// <summary>Smoke tests for the shared operators as recompiled into the Reactive Extensions leaf.</summary>
 public class ReactiveExtensionsTests
 {
     /// <summary>Value pushed through the signal conversion; only its type is asserted.</summary>

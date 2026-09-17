@@ -6,11 +6,12 @@ using System.Runtime.CompilerServices;
 
 namespace ReactiveUI.Primitives.Extensions.Operators;
 
-/// <summary>Operator that catches exceptions of a specific type and completes.</summary>
+/// <summary>Passes matching errors to the action and completes.</summary>
 /// <typeparam name="TSource">The type of the elements in the source sequence.</typeparam>
 /// <typeparam name="TException">The type of the exception to catch.</typeparam>
 /// <param name="source">The source observable sequence.</param>
 /// <param name="errorAction">Action to invoke when an exception of type <typeparamref name="TException"/> occurs.</param>
+/// <remarks>Other error types propagate unchanged; an action failure replaces the caught error.</remarks>
 [System.Diagnostics.DebuggerDisplay("CatchIgnoreObservable: Source = {_source}, ErrorAction = {_errorAction}")]
 public sealed class CatchIgnoreObservable<TSource, TException>(
     IObservable<TSource> source,
@@ -30,7 +31,7 @@ public sealed class CatchIgnoreObservable<TSource, TException>(
         return _source.Subscribe(new CatchIgnoreWitness(observer, _errorAction));
     }
 
-    /// <summary>Observer that catches specific exceptions.</summary>
+    /// <summary>Forwarding observer that diverts a matching error into the action and completes instead.</summary>
     /// <param name="downstream">The downstream observer.</param>
     /// <param name="errorAction">The error action.</param>
     private sealed class CatchIgnoreWitness(

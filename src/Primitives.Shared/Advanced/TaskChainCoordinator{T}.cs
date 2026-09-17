@@ -3,6 +3,7 @@
 // See the LICENSE file in the project root for full license information.
 
 using System.Runtime.CompilerServices;
+using ReactiveUI.Primitives.Extensions;
 
 #if REACTIVE_SHIM
 namespace ReactiveUI.Primitives.Reactive.Advanced;
@@ -12,10 +13,16 @@ namespace ReactiveUI.Primitives.Advanced;
 
 /// <summary>Coordinates sequential task-source concatenation without a map adapter.</summary>
 /// <typeparam name="T">The task result type.</typeparam>
+/// <remarks>
+/// The gate only guards the queue and flags. Deliveries are serialized by a <see cref="SerializedDelivery{T}"/> and the
+/// next task signal is subscribed after the gate is released, so no lock is held while the observer runs, whichever
+/// thread the outer source or a task completion arrives on. A terminal notification raised before <see cref="Dispose"/>
+/// is still delivered; nothing raised after it is.
+/// </remarks>
 [System.Diagnostics.DebuggerDisplay("TaskChainCoordinator: Queued = {_queue.Count}, Active = {_active}, Done = {_done}")]
 public sealed class TaskChainCoordinator<T> : IDisposable
 {
-    /// <summary>Guards the queue and active/completed flags.</summary>
+    /// <summary>Guards the queue and flags; never held while user code runs.</summary>
     private readonly Lock _gate = new();
 
     /// <summary>Queued task signals awaiting the active one to complete.</summary>
@@ -27,13 +34,16 @@ public sealed class TaskChainCoordinator<T> : IDisposable
     /// <summary>The downstream observer.</summary>
     private readonly IObserver<T> _observer;
 
+    /// <summary>Serializes downstream deliveries.</summary>
+    private SerializedDelivery<T> _delivery = new();
+
     /// <summary>A value indicating whether an inner task signal is active.</summary>
     private bool _active;
 
     /// <summary>A value indicating whether the outer task source completed.</summary>
     private bool _outerCompleted;
 
-    /// <summary>A value indicating whether a terminal notification has been emitted.</summary>
+    /// <summary>Whether a terminal notification has been queued or the coordinator disposed; written under the gate.</summary>
     private bool _done;
 
     /// <summary>Initializes a new instance of the <see cref="TaskChainCoordinator{T}"/> class.</summary>
@@ -41,8 +51,16 @@ public sealed class TaskChainCoordinator<T> : IDisposable
     public TaskChainCoordinator(IObserver<T> observer) => _observer = observer;
 
     /// <inheritdoc/>
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public void Dispose() => _pocket.Dispose();
+    public void Dispose()
+    {
+        lock (_gate)
+        {
+            Volatile.Write(ref _done, true);
+            _queue.Clear();
+        }
+
+        _pocket.Dispose();
+    }
 
     /// <summary>Subscribes to the outer task source.</summary>
     /// <param name="sources">The outer task source.</param>
@@ -59,7 +77,13 @@ public sealed class TaskChainCoordinator<T> : IDisposable
         IObservable<T>? next = null;
         lock (_gate)
         {
-            if (_done || _active)
+            if (_done)
+            {
+                _queue.Clear();
+                return;
+            }
+
+            if (_active)
             {
                 return;
             }
@@ -71,17 +95,22 @@ public sealed class TaskChainCoordinator<T> : IDisposable
             }
             else if (_outerCompleted)
             {
-                _done = true;
-                _observer.OnCompleted();
+                Volatile.Write(ref _done, true);
+                _ = _delivery.PostCompleted();
+            }
+            else
+            {
+                return;
             }
         }
 
         if (next is null)
         {
+            _delivery.Flush(new PendingDrain(this));
             return;
         }
 
-        _pocket.Add(next.Subscribe(_observer.OnNext, OnError, OnInnerCompleted));
+        _pocket.Add(next.Subscribe(OnInnerNext, OnError, OnInnerCompleted));
     }
 
     /// <summary>Queues a task as a task-backed signal and pumps the drain.</summary>
@@ -101,11 +130,6 @@ public sealed class TaskChainCoordinator<T> : IDisposable
 
         lock (_gate)
         {
-            if (_done)
-            {
-                return;
-            }
-
             _queue.Enqueue(source);
         }
 
@@ -117,11 +141,6 @@ public sealed class TaskChainCoordinator<T> : IDisposable
     {
         lock (_gate)
         {
-            if (_done)
-            {
-                return;
-            }
-
             _outerCompleted = true;
         }
 
@@ -133,7 +152,13 @@ public sealed class TaskChainCoordinator<T> : IDisposable
     private void OnInnerCompleted() =>
         TaskChainCoordinatorState.OnInnerCompleted(_gate, ref _done, ref _active, this);
 
-    /// <summary>Forwards an error and terminates active subscriptions.</summary>
+    /// <summary>Forwards a task result, directly when nothing else is delivering.</summary>
+    /// <param name="value">The task result.</param>
+    /// <remarks>A result after the terminal is refused by the delivery, and a task signal stops once its subscription is disposed.</remarks>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private void OnInnerNext(T value) => _delivery.OnNext(_observer, value, new PendingDrain(this));
+
+    /// <summary>Queues the first terminal error and terminates active subscriptions.</summary>
     /// <param name="error">The terminal error.</param>
     private void OnError(Exception error)
     {
@@ -144,10 +169,21 @@ public sealed class TaskChainCoordinator<T> : IDisposable
                 return;
             }
 
-            _done = true;
-            _observer.OnError(error);
+            Volatile.Write(ref _done, true);
+            _queue.Clear();
+            _ = _delivery.PostError(error);
         }
 
-        Dispose();
+        _delivery.Flush(new PendingDrain(this));
+        _pocket.Dispose();
+    }
+
+    /// <summary>Drains this coordinator's queued notifications for the delivery gate.</summary>
+    /// <param name="Owner">The coordinator.</param>
+    private readonly record struct PendingDrain(TaskChainCoordinator<T> Owner) : IDrainTarget
+    {
+        /// <inheritdoc/>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void Drain() => _ = Owner._delivery.DrainTo(Owner._observer);
     }
 }

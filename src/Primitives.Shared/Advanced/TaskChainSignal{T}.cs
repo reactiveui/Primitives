@@ -8,7 +8,7 @@ namespace ReactiveUI.Primitives.Reactive.Advanced;
 namespace ReactiveUI.Primitives.Advanced;
 #endif
 
-/// <summary>Task-source <c>Chain</c>/<c>Concat</c> signal.</summary>
+/// <summary>Emits the results of an observable sequence of tasks, one task at a time in source order.</summary>
 /// <typeparam name="T">The task result type.</typeparam>
 [System.Diagnostics.DebuggerDisplay("TaskChainSignal: Sources = {_sources}")]
 public sealed class TaskChainSignal<T> : IObservable<T>

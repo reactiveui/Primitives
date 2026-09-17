@@ -7,22 +7,21 @@ using ReactiveUI.Primitives.Disposables;
 
 namespace ReactiveUI.Primitives.Advanced;
 
-/// <summary>Represents the ImmutableNeverSignal class.</summary>
-/// <typeparam name="T">The T type.</typeparam>
+/// <summary>Signal that never emits a value and never terminates.</summary>
+/// <typeparam name="T">The value type.</typeparam>
 public sealed class ImmutableNeverSignal<T> : IRequireCurrentThread<T>
 {
-    /// <summary>Executes the new operation.</summary>
-    /// <returns>The result.</returns>
+    /// <summary>The shared instance; the signal carries no per-subscription state.</summary>
     public static readonly ImmutableNeverSignal<T> Instance = new();
 
-    /// <summary>Executes the IsRequiredSubscribeOnCurrentThread operation.</summary>
-    /// <returns>The result.</returns>
+    /// <summary>Indicates whether subscription has to happen on the calling thread.</summary>
+    /// <returns>Always <see langword="false"/>.</returns>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public bool IsRequiredSubscribeOnCurrentThread() => false;
 
-    /// <summary>Executes the Subscribe operation.</summary>
-    /// <param name="observer">The observer value.</param>
-    /// <returns>The result.</returns>
+    /// <summary>Accepts the observer without ever notifying it.</summary>
+    /// <param name="observer">The observer, which receives nothing.</param>
+    /// <returns>An empty disposable; there is no subscription to release.</returns>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public IDisposable Subscribe(IObserver<T> observer) =>
         EmptyDisposable.Instance;

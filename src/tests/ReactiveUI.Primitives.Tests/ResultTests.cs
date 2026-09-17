@@ -12,7 +12,7 @@ public class ResultTests
     /// <summary>Failure message used by result tests.</summary>
     private const string FailureMessage = "boom";
 
-    /// <summary>Covers the success result contract.</summary>
+    /// <summary>Verifies a success result reports success with no exception.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
     public async Task ResultSuccessReportsStatusAndString()
@@ -25,7 +25,7 @@ public class ResultTests
         await Assert.That(result.ToString()).IsEqualTo("Success");
     }
 
-    /// <summary>Covers the failure result contract.</summary>
+    /// <summary>Verifies a failure result reports failure and carries its exception.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
     public async Task ResultFailureReportsExceptionStatusAndString()
@@ -41,7 +41,7 @@ public class ResultTests
         await Assert.That(created.Exception).IsSameReferenceAs(error);
     }
 
-    /// <summary>Covers failure result argument validation.</summary>
+    /// <summary>Verifies a result rejects a null exception.</summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     [Test]
     public void ResultRejectsNullException() =>

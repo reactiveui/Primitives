@@ -9,7 +9,7 @@ using ReactiveUI.Primitives.Signals;
 
 namespace ReactiveUI.Primitives.Tests;
 
-/// <summary>Focused coverage for the Rx-style on-error resume sequence coordinator.</summary>
+/// <summary>Tests continuation after source errors.</summary>
 public sealed class OnErrorResumeNextSignalTests
 {
     /// <summary>The integer constant one.</summary>
@@ -181,7 +181,7 @@ public sealed class OnErrorResumeNextSignalTests
         System.Collections.IEnumerator System.Collections.IEnumerable.GetEnumerator() => GetEnumerator();
     }
 
-    /// <summary>Enumerable that returns a null enumerator to cover the defensive null path.</summary>
+    /// <summary>Enumerable that returns a null enumerator.</summary>
     /// <typeparam name="T">The source value type.</typeparam>
     /// <param name="returnsNull">Whether <see cref="IEnumerable{T}.GetEnumerator"/> returns null.</param>
     private sealed class NullEnumeratorEnumerable<T>(bool returnsNull) : IEnumerable<IObservable<T>>

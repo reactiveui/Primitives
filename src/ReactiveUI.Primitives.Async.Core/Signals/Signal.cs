@@ -7,41 +7,28 @@ using System.Runtime.CompilerServices;
 
 namespace ReactiveUI.Primitives.Async.Signals;
 
-/// <summary>
-/// Provides factory methods for creating asynchronous Signal instances with configurable publishing and state
-/// retention behaviors.
-/// </summary>
-/// <remarks>The Signal class offers a variety of static methods to create Signals that support different
-/// publishing strategies (such as serial or concurrent) and state management options (stateful or stateless). These
-/// Signals can be used to broadcast values to multiple observers in asynchronous scenarios. Use the provided creation
-/// options to customize the Signal's behavior according to your application's requirements.</remarks>
+/// <summary>Provides factory methods for creating asynchronous Signal instances with configurable publishing and state retention behaviors.</summary>
 public static class Signal
 {
     /// <summary>Creates a new asynchronous Signal instance for the specified type.</summary>
     /// <typeparam name="T">The type of elements processed by the Signal.</typeparam>
     /// <returns>An <see cref="ISignalAsync{T}"/> that represents the newly created asynchronous Signal.</returns>
-    /// <remarks>The created Signal uses the default Signal creation options. Use the overload that accepts
-    /// <see cref="SignalCreationOptions"/> to customize Signal behavior.</remarks>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     [SuppressMessage(
         "Design",
         "SST2307:Generic method type parameters should be inferable from the parameters",
-        Justification = "Public factory API — caller specifies T explicitly: Signal.Create<int>().")]
+        Justification = "There are no parameters to infer from; the caller states the element type: Signal.Create<int>().")]
     public static ISignalAsync<T> Create<T>() => new SerialSignalAsync<T>();
 
     /// <summary>Creates a new asynchronous Signal instance with the specified publishing and state options.</summary>
     /// <typeparam name="T">The type of elements processed by the Signal.</typeparam>
-    /// <param name="options">The options that configure the publishing behavior and statefulness of the Signal. Must specify valid values
-    /// for publishing and statelessness.</param>
+    /// <param name="options">The publishing order and statelessness to build the signal with.</param>
     /// <returns>An asynchronous Signal instance configured according to the specified options.</returns>
     /// <exception cref="ArgumentOutOfRangeException">Thrown if the specified combination of publishing and statelessness options is not supported.</exception>
-    /// <remarks>Use this method to create an ISignalAsync{T} with the desired concurrency and state
-    /// management characteristics. The returned Signal type depends on the values provided in the options
-    /// parameter.</remarks>
     [SuppressMessage(
         "Design",
         "SST2307:Generic method type parameters should be inferable from the parameters",
-        Justification = "Public factory API — caller specifies T explicitly: Signal.Create<int>(options).")]
+        Justification = "The options carry no element type to infer from; the caller states it: Signal.Create<int>(options).")]
     public static ISignalAsync<T> Create<T>(SignalCreationOptions? options) =>
         (options?.PublishingOption, options?.IsStateless) switch
         {
@@ -60,10 +47,7 @@ public static class Signal
     public static ISignalAsync<T> CreateBehavior<T>(T startValue) =>
         new SerialReplayLatestSignalAsync<T>(new(startValue));
 
-    /// <summary>
-    /// Creates a new asynchronous Signal that replays the latest value to new subscribers, using the specified initial
-    /// value and creation options.
-    /// </summary>
+    /// <summary>Creates a new asynchronous Signal that replays the latest value to new subscribers, using the specified initial value and creation options.</summary>
     /// <typeparam name="T">The type of the values published by the Signal.</typeparam>
     /// <param name="startValue">The initial value to be published by the Signal before any values are pushed.</param>
     /// <param name="options">The options that control the Signal's publishing behavior and state management.</param>
@@ -86,30 +70,25 @@ public static class Signal
     /// <summary>Creates a new asynchronous Signal that replays only the most recent value to new subscribers.</summary>
     /// <typeparam name="T">The type of the elements processed by the Signal.</typeparam>
     /// <returns>An asynchronous Signal that stores and replays the latest value to each new subscriber.</returns>
-    /// <remarks>The returned Signal will only retain the most recent value published. When a new subscriber
-    /// subscribes, it immediately receives the latest value, if any, followed by subsequent values. This is useful for
-    /// scenarios where only the most recent state is relevant to new observers.</remarks>
+    /// <remarks>New subscribers receive the latest published value, if present, followed by live values.</remarks>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     [SuppressMessage(
         "Design",
         "SST2307:Generic method type parameters should be inferable from the parameters",
-        Justification = "Public factory API — caller specifies T explicitly: Signal.CreateReplayLatest<int>().")]
+        Justification = "There are no parameters to infer from; the caller states the element type: Signal.CreateReplayLatest<int>().")]
     public static ISignalAsync<T> CreateReplayLatest<T>() =>
         new SerialReplayLatestSignalAsync<T>(Optional<T>.Empty);
 
-    /// <summary>
-    /// Creates a new asynchronous Signal that replays the latest value to new subscribers, with configuration options
-    /// for publishing behavior and statefulness.
-    /// </summary>
+    /// <summary>Creates a new asynchronous Signal that replays the latest value to new subscribers, with configuration options for publishing behavior and statefulness.</summary>
     /// <typeparam name="T">The type of the elements processed by the Signal.</typeparam>
-    /// <param name="options">The options that specify the publishing mode and whether the Signal maintains state. Cannot be null.</param>
+    /// <param name="options">The publishing order and statelessness to build the signal with. Cannot be null.</param>
     /// <returns>An asynchronous Signal that replays the latest value to new subscribers, configured according to the specified
     /// options.</returns>
     /// <exception cref="ArgumentOutOfRangeException">Thrown if the combination of options specified in the <paramref name="options"/> parameter is not supported.</exception>
     [SuppressMessage(
         "Design",
         "SST2307:Generic method type parameters should be inferable from the parameters",
-        Justification = "Public factory API — caller specifies T explicitly: Signal.CreateReplayLatest<int>(options).")]
+        Justification = "The options carry no element type to infer from; the caller states it: Signal.CreateReplayLatest<int>(options).")]
     public static ISignalAsync<T> CreateReplayLatest<T>(ReplayLatestSignalCreationOptions? options) =>
         (options?.PublishingOption, options?.IsStateless) switch
         {

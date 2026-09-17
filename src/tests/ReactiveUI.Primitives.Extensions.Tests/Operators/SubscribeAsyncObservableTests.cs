@@ -3,12 +3,11 @@
 // See the LICENSE file in the project root for full license information.
 
 using System.Reactive.Subjects;
+using ReactiveUI.Primitives.Extensions.Operators;
 
 namespace ReactiveUI.Primitives.Extensions.Tests.Operators;
 
-/// <summary>Edge-case coverage for the <c>SubscribeSynchronous</c> / <c>SubscribeAsync</c>
-/// overloads backed by <c>SubscribeAsyncObservable&lt;T&gt;</c> — sequential handler invocation,
-/// handler-throws forwards via onError, completion-while-processing defers, disposal stops queue.</summary>
+/// <summary>Tests sequential handlers, deferred completion, error forwarding, and disposal.</summary>
 public class SubscribeAsyncObservableTests
 {
     /// <summary>Synthetic error message attached to handler failures.</summary>
@@ -16,12 +15,6 @@ public class SubscribeAsyncObservableTests
 
     /// <summary>Synthetic error message attached to source errors.</summary>
     private const string SourceErrorMessage = "source error";
-
-    /// <summary>Settle delay in milliseconds used to confirm completion is deferred.</summary>
-    private const int SettleDelayMilliseconds = 50;
-
-    /// <summary>Guard timeout so a hung rendezvous fails this test rather than stalling the run.</summary>
-    private static readonly TimeSpan GuardTimeout = TimeSpan.FromSeconds(5);
 
     /// <summary>Verifies that values are handled in order and completion fires.</summary>
     /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
@@ -44,7 +37,7 @@ public class SubscribeAsyncObservableTests
         subject.OnNext(First);
         subject.OnNext(Second);
         subject.OnCompleted();
-        var done = await completed.Task.WaitAsync(GuardTimeout);
+        var done = await completed.Task;
         await Assert.That(done).IsTrue();
         await Assert.That(results).IsCollectionEqualTo([First, Second]);
     }
@@ -61,7 +54,7 @@ public class SubscribeAsyncObservableTests
         using var sub =
             subject.SubscribeSynchronous(_ => ValueTask.FromException(expected), ex => faulted.TrySetResult(ex));
         subject.OnNext(TriggerValue);
-        var caught = await faulted.Task.WaitAsync(GuardTimeout);
+        var caught = await faulted.Task;
         await Assert.That(caught).IsSameReferenceAs(expected);
     }
 
@@ -102,6 +95,8 @@ public class SubscribeAsyncObservableTests
     {
         const int Value = 7;
         Subject<int> subject = new();
+
+        // The gate completes its continuations inline, so releasing it drains the pump before control returns.
         TaskCompletionSource<bool> gate = new(TaskCreationOptions.RunContinuationsAsynchronously);
         TaskCompletionSource<bool> completed = new(TaskCreationOptions.RunContinuationsAsynchronously);
         using var sub = subject.SubscribeSynchronous(
@@ -109,10 +104,11 @@ public class SubscribeAsyncObservableTests
             () => completed.TrySetResult(true));
         subject.OnNext(Value);
         subject.OnCompleted();
-        await Task.Delay(SettleDelayMilliseconds).ConfigureAwait(false);
+
+        // The handler is parked on the gate, so completion cannot have been signalled yet.
         await Assert.That(completed.Task.IsCompleted).IsFalse();
-        _ = gate.TrySetResult(true);
-        var done = await completed.Task.WaitAsync(GuardTimeout);
+        gate.SetResult(true);
+        var done = await completed.Task;
         await Assert.That(done).IsTrue();
     }
 
@@ -123,19 +119,13 @@ public class SubscribeAsyncObservableTests
     {
         const int Value = 7;
         Subject<int> subject = new();
-        TaskCompletionSource<bool> gate = new(TaskCreationOptions.RunContinuationsAsynchronously);
-        TaskCompletionSource<bool> handled = new(TaskCreationOptions.RunContinuationsAsynchronously);
-        using var sub = subject.SubscribeSynchronous(async value =>
-        {
-            await gate.Task.ConfigureAwait(false);
-            _ = handled.TrySetResult(true);
-        });
-        subject.OnNext(Value);
+        TaskCompletionSource gate = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        using SubscribeAsyncObservable<int> subscription = new(subject, _ => new ValueTask(gate.Task), null, null);
+        var processing = subscription.OnNextAsync(Value);
         subject.OnCompleted();
-        _ = gate.TrySetResult(true);
-        var done = await handled.Task.WaitAsync(GuardTimeout);
-        await Task.Delay(SettleDelayMilliseconds).ConfigureAwait(false);
-        await Assert.That(done).IsTrue();
+        gate.SetResult();
+        await processing;
+        await Assert.That(processing.IsCompletedSuccessfully).IsTrue();
     }
 
     /// <summary>Verifies disposal during an in-flight handler suppresses deferred terminal callbacks.</summary>
@@ -145,27 +135,54 @@ public class SubscribeAsyncObservableTests
     {
         const int Value = 7;
         Subject<int> subject = new();
-        TaskCompletionSource<bool> gate = new(TaskCreationOptions.RunContinuationsAsynchronously);
-        TaskCompletionSource<bool> handlerStarted = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        TaskCompletionSource gate = new(TaskCreationOptions.RunContinuationsAsynchronously);
         Exception? caught = null;
         var completedCount = 0;
-        var sub = subject.SubscribeSynchronous(
-            async value =>
+        SubscribeAsyncObservable<int> subscription = new(
+            subject,
+            async _ =>
             {
-                _ = handlerStarted.TrySetResult(true);
                 await gate.Task.ConfigureAwait(false);
                 throw new InvalidOperationException(HandlerFailedMessage);
             },
             ex => caught = ex,
             () => completedCount++);
-        subject.OnNext(Value);
-        await handlerStarted.Task.WaitAsync(GuardTimeout);
+        var processing = subscription.OnNextAsync(Value);
         subject.OnCompleted();
-        sub.Dispose();
-        _ = gate.TrySetResult(true);
-        await Task.Delay(SettleDelayMilliseconds).ConfigureAwait(false);
+        subscription.Dispose();
+        gate.SetResult();
+        await processing;
         await Assert.That(caught).IsNull();
         await Assert.That(completedCount).IsEqualTo(0);
+    }
+
+    /// <summary>Verifies disposal between queued values stops the pump before the next handler runs.</summary>
+    /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
+    [Test]
+    public async Task WhenSubscribeAsyncDisposedBetweenQueuedValues_ThenStopsBeforeTheNextHandler()
+    {
+        const int First = 1;
+        const int Second = 2;
+        Subject<int> subject = new();
+        TaskCompletionSource gate = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        List<int> handled = [];
+        SubscribeAsyncObservable<int> subscription = new(
+            subject,
+            value =>
+            {
+                handled.Add(value);
+                return new ValueTask(gate.Task);
+            },
+            null,
+            null);
+        var processing = subscription.OnNextAsync(First);
+        _ = subscription.OnNextAsync(Second);
+
+        subscription.Dispose();
+        gate.SetResult();
+        await processing;
+
+        await Assert.That(handled).IsCollectionEqualTo([First]);
     }
 
     /// <summary>Verifies that disposing the subscription stops further handler invocations.</summary>
@@ -208,7 +225,6 @@ public class SubscribeAsyncObservableTests
         source.Observer.OnNext(1);
         source.Observer.OnError(new InvalidOperationException("late"));
         source.Observer.OnCompleted();
-        await Task.Delay(SettleDelayMilliseconds);
         await Assert.That(completedCount).IsEqualTo(1);
         await Assert.That(values).IsEmpty();
         await Assert.That(caught).IsNull();
@@ -226,7 +242,6 @@ public class SubscribeAsyncObservableTests
         using var sub = source.SubscribeSynchronous(static _ => default, ex => caught = ex, () => completedCount++);
         source.Observer.OnError(expected);
         source.Observer.OnCompleted();
-        await Task.Delay(SettleDelayMilliseconds);
         await Assert.That(caught).IsSameReferenceAs(expected);
         await Assert.That(completedCount).IsEqualTo(0);
     }

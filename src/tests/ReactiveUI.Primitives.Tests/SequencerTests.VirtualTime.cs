@@ -7,10 +7,7 @@ using ReactiveUI.Primitives.Disposables;
 
 namespace ReactiveUI.Primitives.Tests;
 
-/// <summary>
-/// Verifies the virtual-time sequencers: the stateful scheduling overloads, the guards that stop the clock being
-/// re-entered while it is running, and a sequencer built on a clock type of the caller's choosing.
-/// </summary>
+/// <summary>Verifies virtual-time scheduling overloads, re-entrancy guards, and caller-supplied clock types.</summary>
 public partial class SequencerTests
 {
     /// <summary>Clock value a virtual sequencer starts at.</summary>
@@ -147,10 +144,7 @@ public partial class SequencerTests
         await Assert.That(stopwatch.Elapsed).IsEqualTo(TimeSpan.FromTicks(VirtualDelay));
     }
 
-    /// <summary>
-    /// Creates a virtual-time sequencer whose clock is a raw tick count. Unlike <see cref="VirtualClock"/> it does not
-    /// normalize a negative relative time away, so the sequencer's own arithmetic delegates and guards are exercised.
-    /// </summary>
+    /// <summary>Creates a virtual sequencer that preserves signed relative tick counts.</summary>
     /// <returns>The sequencer.</returns>
     private static VirtualTimeSequencer<long, long> CreateTickSequencer() =>
         new(

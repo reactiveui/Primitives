@@ -34,12 +34,12 @@ public sealed class TaskAnyWitness<T> : IObserver<T>, IDisposable
     private int _stopped;
 
     /// <summary>Initializes a new instance of the <see cref="TaskAnyWitness{T}"/> class.</summary>
-    /// <param name="cancellationToken">The token used to cancel the task and dispose the subscription.</param>
+    /// <param name="cancellationToken">The token that cancels the task and disposes the subscription.</param>
     public TaskAnyWitness(CancellationToken cancellationToken) => _cancellationToken = cancellationToken;
 
     /// <summary>Initializes a new instance of the <see cref="TaskAnyWitness{T}"/> class.</summary>
     /// <param name="predicate">The predicate.</param>
-    /// <param name="cancellationToken">The token used to cancel the task and dispose the subscription.</param>
+    /// <param name="cancellationToken">The token that cancels the task and disposes the subscription.</param>
     public TaskAnyWitness(Func<T, bool> predicate, CancellationToken cancellationToken)
     {
         ArgumentExceptionHelper.ThrowIfNull(predicate);

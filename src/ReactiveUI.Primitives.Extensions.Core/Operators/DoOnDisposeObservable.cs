@@ -4,7 +4,7 @@
 
 namespace ReactiveUI.Primitives.Extensions.Operators;
 
-/// <summary>Executes an action when the subscription is disposed.</summary>
+/// <summary>Forwards the source and runs an action exactly once when the subscription is disposed, after the upstream subscription is released.</summary>
 /// <typeparam name="T">The type of elements in the source sequence.</typeparam>
 /// <param name="source">The source observable.</param>
 /// <param name="disposeAction">The action to execute when the subscription is disposed.</param>
@@ -22,11 +22,7 @@ public sealed class DoOnDisposeObservable<T>(
         return new DoOnDisposeSubscription(source.Subscribe(observer), disposeAction);
     }
 
-    /// <summary>
-    /// Per-subscribe disposal handle that forwards <see cref="IDisposable.Dispose"/> to the source
-    /// subscription and then to the caller-supplied action. Dedicated class instead of the
-    /// previous <c>ActionDisposable(() =&gt; …)</c> form so no closure is allocated per subscribe.
-    /// </summary>
+    /// <summary>Disposes the upstream subscription, then invokes the action exactly once.</summary>
     /// <param name="subscription">The upstream subscription disposed before the action fires.</param>
     /// <param name="disposeAction">The action executed once after the upstream is disposed.</param>
     private sealed class DoOnDisposeSubscription(IDisposable subscription, Action disposeAction) : IDisposable

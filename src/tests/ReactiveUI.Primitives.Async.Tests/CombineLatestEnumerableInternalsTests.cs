@@ -6,15 +6,10 @@ using System.Runtime.CompilerServices;
 
 namespace ReactiveUI.Primitives.Async.Tests;
 
-/// <summary>Direct unit tests for the internal types inside
-/// <c>SyncLatestEnumerableSignal{TSource,TResult}</c> that the public API path doesn't
-/// fully exercise — specifically the contractual <see cref="IAsyncDisposable.DisposeAsync"/>
-/// stub on <c>IndexedWitness</c>.</summary>
+/// <summary>Tests disposal of per-source sync-latest observers.</summary>
 public class CombineLatestEnumerableInternalsTests
 {
-    /// <summary>Verifies the per-source <c>IndexedWitness</c>'s no-op <c>DisposeAsync</c> —
-    /// required by the <see cref="IObserverAsync{T}"/> contract but never invoked by the
-    /// pipeline, so coverage of the line otherwise relies on a direct call.</summary>
+    /// <summary>Verifies that disposing a per-source observer is a no-op.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenIndexedObserverDisposed_ThenNoOp()

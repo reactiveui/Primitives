@@ -10,10 +10,7 @@ using RxObservable = System.Reactive.Linq.Observable;
 
 namespace ReactiveUI.Primitives.Benchmarks;
 
-/// <summary>
-/// Benchmarks for the common, previously-uncovered operators: prefix truncation (Take), batching
-/// (Buffer / Chunk), and the error-handling path (Recover / Resume vs Catch).
-/// </summary>
+/// <summary>Benchmarks prefix truncation, batching, and error recovery across observable libraries.</summary>
 [MemoryDiagnoser]
 public class OperatorTakeBufferRecoverBenchmarks
 {

@@ -2,15 +2,12 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Diagnostics;
 using System.Runtime.CompilerServices;
 
 namespace ReactiveUI.Primitives.Async;
 
 /// <summary>Provides extension methods for asynchronously converting an observable sequence to a dictionary.</summary>
-/// <remarks>The methods in this class enable the transformation of an asynchronous observable sequence into a
-/// dictionary, using user-supplied key and element selector functions. These operations are performed asynchronously
-/// and support cancellation via a CancellationToken. All methods throw an exception if duplicate keys are encountered
-/// in the source sequence, consistent with the behavior of Dictionary{TKey, TValue}.</remarks>
 public static partial class SignalAsyncExtensions
 {
     /// <summary>Asynchronous dictionary-materialization operators for an observable source sequence.</summary>
@@ -26,7 +23,8 @@ public static partial class SignalAsyncExtensions
         /// <param name="cancellationToken">A cancellation token that can be used to cancel the asynchronous operation.</param>
         /// <returns>A task that represents the asynchronous operation. The task result contains a dictionary mapping keys to
         /// elements from the sequence.</returns>
-        /// <exception cref="ArgumentExceptionHelper">Thrown if the keySelector parameter is null.</exception>
+        /// <exception cref="ArgumentNullException"><paramref name="keySelector"/> is <see langword="null"/>.</exception>
+        /// <exception cref="ArgumentException">Two elements of the source sequence produce the same key.</exception>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public ValueTask<Dictionary<TKey, T>> ToDictionaryAsync<TKey>(
             Func<T, TKey> keySelector,
@@ -35,24 +33,19 @@ public static partial class SignalAsyncExtensions
             where TKey : notnull =>
             ToDictionaryCore(source, keySelector, DictionaryIdentity<T>.Instance, comparer, cancellationToken);
 
-        /// <summary>
-        /// Asynchronously creates a dictionary from the elements of the sequence, using the specified key selector
-        /// function and the default equality comparer for the key type.
-        /// </summary>
+        /// <summary>Asynchronously creates a dictionary from the elements of the sequence, using the specified key selector function and the default equality comparer for the key type.</summary>
         /// <typeparam name="TKey">The type of the keys in the resulting dictionary. Must be non-nullable.</typeparam>
         /// <param name="keySelector">A function to extract a key from each element in the sequence. Cannot be null.</param>
         /// <returns>A task that represents the asynchronous operation. The task result contains a dictionary mapping keys to
         /// elements from the sequence.</returns>
-        /// <exception cref="ArgumentExceptionHelper">Thrown if the keySelector parameter is null.</exception>
+        /// <exception cref="ArgumentNullException"><paramref name="keySelector"/> is <see langword="null"/>.</exception>
+        /// <exception cref="ArgumentException">Two elements of the source sequence produce the same key.</exception>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public ValueTask<Dictionary<TKey, T>> ToDictionaryAsync<TKey>(Func<T, TKey> keySelector)
             where TKey : notnull =>
             source.ToDictionaryAsync(keySelector, null, CancellationToken.None);
 
-        /// <summary>
-        /// Asynchronously creates a dictionary from the elements of the sequence using the specified key and element
-        /// selector functions.
-        /// </summary>
+        /// <summary>Asynchronously creates a dictionary from the elements of the sequence using the specified key and element selector functions.</summary>
         /// <typeparam name="TKey">The type of the keys in the resulting dictionary. Must be non-nullable.</typeparam>
         /// <typeparam name="TValue">The type of the values in the resulting dictionary.</typeparam>
         /// <param name="keySelector">A function to extract a key from each element in the sequence.</param>
@@ -62,9 +55,8 @@ public static partial class SignalAsyncExtensions
         /// <param name="cancellationToken">A cancellation token that can be used to cancel the asynchronous operation.</param>
         /// <returns>A task that represents the asynchronous operation. The task result contains a dictionary mapping keys to
         /// values as defined by the selector functions.</returns>
-        /// <exception cref="ArgumentExceptionHelper">Thrown if <paramref name="keySelector"/> or <paramref name="elementSelector"/> is null.</exception>
-        /// <remarks>If multiple elements produce the same key, an exception may be thrown. The operation
-        /// is performed asynchronously and can be cancelled using the provided cancellation token.</remarks>
+        /// <exception cref="ArgumentNullException"><paramref name="keySelector"/> or <paramref name="elementSelector"/> is <see langword="null"/>.</exception>
+        /// <exception cref="ArgumentException">Two elements of the source sequence produce the same key.</exception>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public ValueTask<Dictionary<TKey, TValue>> ToDictionaryAsync<TKey, TValue>(
             Func<T, TKey> keySelector,
@@ -84,7 +76,8 @@ public static partial class SignalAsyncExtensions
         /// <param name="elementSelector">A function to map each element in the sequence to a value in the resulting dictionary.</param>
         /// <returns>A task that represents the asynchronous operation. The task result contains a dictionary mapping keys to
         /// values as defined by the selector functions.</returns>
-        /// <exception cref="ArgumentExceptionHelper">Thrown if <paramref name="keySelector"/> or <paramref name="elementSelector"/> is null.</exception>
+        /// <exception cref="ArgumentNullException"><paramref name="keySelector"/> or <paramref name="elementSelector"/> is <see langword="null"/>.</exception>
+        /// <exception cref="ArgumentException">Two elements of the source sequence produce the same key.</exception>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public ValueTask<Dictionary<TKey, TValue>> ToDictionaryAsync<TKey, TValue>(
             Func<T, TKey> keySelector,
@@ -140,18 +133,51 @@ public static partial class SignalAsyncExtensions
     /// <param name="elementSelector">A function to extract a value from each element.</param>
     /// <param name="comparer">An optional equality comparer for keys.</param>
     /// <param name="cancellationToken">A cancellation token for the operation.</param>
+    [DebuggerDisplay("ToDictionaryTaskWitness: {_witness}")]
     private sealed class ToDictionaryTaskWitness<TSource, TKey, TValue>(
         Func<TSource, TKey> keySelector,
         Func<TSource, TValue> elementSelector,
         IEqualityComparer<TKey>? comparer,
-        CancellationToken cancellationToken) : TaskResultWitnessAsyncBase<TSource, Dictionary<TKey, TValue>>(cancellationToken)
+        CancellationToken cancellationToken) : IWitnessAsync<TSource>
         where TKey : notnull
     {
+        /// <summary>Produces and cancels the witness's single result value.</summary>
+        private readonly TaskResultCompletionSource<Dictionary<TKey, TValue>> _completion = new(cancellationToken);
+
         /// <summary>The dictionary that accumulates key-value pairs from the source sequence.</summary>
         private readonly Dictionary<TKey, TValue> _map = comparer is null ? [] : [with(comparer)];
 
+        /// <summary>The notification gate, cancellation link and disposal state.</summary>
+        private WitnessAsyncState _witness;
+
         /// <inheritdoc/>
-        protected override ValueTask OnNextAsyncCore(TSource value, CancellationToken cancellationToken)
+        ref WitnessAsyncState IWitnessState.Witness => ref _witness;
+
+        /// <inheritdoc/>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public ValueTask OnNextAsync(TSource value, CancellationToken cancellationToken) =>
+            WitnessAsync.OnNextAsync(this, value, cancellationToken);
+
+        /// <inheritdoc/>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public ValueTask OnErrorResumeAsync(Exception error, CancellationToken cancellationToken) =>
+            WitnessAsync.OnErrorResumeAsync(this, error, cancellationToken);
+
+        /// <inheritdoc/>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public ValueTask OnCompletedAsync(Result result) => WitnessAsync.OnCompletedAsync(this, result);
+
+        /// <inheritdoc/>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public ValueTask DisposeAsync() => WitnessAsync.DisposeStateAsync(this);
+
+        /// <summary>Asynchronously waits for the witness to produce its result value.</summary>
+        /// <returns>A task representing the asynchronous operation, containing the result value.</returns>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        internal ValueTask<Dictionary<TKey, TValue>> AwaitResultAsync() => _completion.AwaitResultAsync(this);
+
+        /// <inheritdoc/>
+        ValueTask IWitnessAsync<TSource>.OnNextAsyncCore(TSource value, CancellationToken cancellationToken)
         {
             var key = keySelector(value);
             _map.Add(key, elementSelector(value));
@@ -159,11 +185,13 @@ public static partial class SignalAsyncExtensions
         }
 
         /// <inheritdoc/>
-        protected override ValueTask OnErrorResumeAsyncCore(Exception error, CancellationToken cancellationToken) =>
-            SetExceptionAndDisposeAsync(error);
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        ValueTask IWitnessAsync<TSource>.OnErrorResumeAsyncCore(Exception error, CancellationToken cancellationToken) =>
+            _completion.SetExceptionAndDisposeAsync(error, this);
 
         /// <inheritdoc/>
-        protected override ValueTask OnCompletedAsyncCore(Result result) =>
-            !result.IsSuccess ? SetExceptionAndDisposeAsync(result.Exception) : SetResultAndDisposeAsync(_map);
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        ValueTask IWitnessAsync<TSource>.OnCompletedAsyncCore(Result result) =>
+            _completion.CompleteAndDisposeAsync(result, _map, this);
     }
 }

@@ -6,7 +6,6 @@
     <TargetFrameworks>$(LibraryTargetFrameworks)</TargetFrameworks>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
-    <LangVersion>preview</LangVersion>
     <!-- Keep the default namespace so split-out engine types share the Async root. -->
     <RootNamespace>ReactiveUI.Primitives.Async</RootNamespace>
     <PackageDescription>Type-agnostic core of ReactiveUI.Primitives.Async, shared by the lean and Reactive leaves.</PackageDescription>

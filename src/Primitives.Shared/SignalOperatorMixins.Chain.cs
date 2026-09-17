@@ -3,6 +3,7 @@
 // See the LICENSE file in the project root for full license information.
 
 using System.Runtime.CompilerServices;
+using ReactiveUI.Primitives.Extensions;
 
 #if REACTIVE_SHIM
 namespace ReactiveUI.Primitives.Reactive;
@@ -51,9 +52,14 @@ public static partial class LinqExtensions
 
     /// <summary>Coordinates sequential concatenation of inner sources for <c>Chain</c>.</summary>
     /// <typeparam name="T">The value type.</typeparam>
+    /// <remarks>
+    /// The gate only guards the queue and flags. Deliveries are serialized by a <see cref="SerializedDelivery{T}"/> and the
+    /// next inner source is subscribed after the gate is released, so no lock is held while the observer or an inner source
+    /// runs.
+    /// </remarks>
     private sealed class ChainCoordinator<T> : IDisposable
     {
-        /// <summary>Guards the queue and active/completed flags.</summary>
+        /// <summary>Guards the queue and flags; never held while user code runs.</summary>
         private readonly Lock _gate = new();
 
         /// <summary>Queued inner sources awaiting the active one to complete.</summary>
@@ -65,26 +71,40 @@ public static partial class LinqExtensions
         /// <summary>The downstream observer.</summary>
         private readonly IObserver<T> _observer;
 
+        /// <summary>Serializes downstream deliveries.</summary>
+        private SerializedDelivery<T> _delivery = new();
+
         /// <summary>A value indicating whether an inner source is active.</summary>
         private bool _active;
 
         /// <summary>A value indicating whether the outer source completed.</summary>
         private bool _outerCompleted;
 
+        /// <summary>Whether a terminal notification has been queued or the coordinator disposed; written under the gate.</summary>
+        private bool _done;
+
         /// <summary>Initializes a new instance of the <see cref="ChainCoordinator{T}"/> class.</summary>
         /// <param name="observer">The downstream observer.</param>
         internal ChainCoordinator(IObserver<T> observer) => _observer = observer;
 
         /// <inheritdoc/>
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Dispose() => _pocket.Dispose();
+        public void Dispose()
+        {
+            lock (_gate)
+            {
+                Volatile.Write(ref _done, true);
+                _queue.Clear();
+            }
+
+            _pocket.Dispose();
+        }
 
         /// <summary>Subscribes to the outer source.</summary>
         /// <param name="sources">The outer sequence of inner sources.</param>
         /// <returns>The coordinator that owns the subscription cleanup.</returns>
         internal ChainCoordinator<T> Run(IObservable<IObservable<T>> sources)
         {
-            _pocket.Add(sources.Subscribe(OnSource, _observer.OnError, OnOuterCompleted));
+            _pocket.Add(sources.Subscribe(OnSource, OnError, OnOuterCompleted));
             return this;
         }
 
@@ -111,7 +131,7 @@ public static partial class LinqExtensions
         {
             if (source is null)
             {
-                _observer.OnError(new InvalidOperationException("Chain source contained null."));
+                OnError(new InvalidOperationException("Chain source contained null."));
                 return;
             }
 
@@ -145,12 +165,49 @@ public static partial class LinqExtensions
             Drain();
         }
 
-        /// <summary>Subscribes the next queued inner source, or completes when the chain is drained.</summary>
+        /// <summary>Forwards an inner value unless the coordinator has terminated or been disposed.</summary>
+        /// <param name="value">The value to forward.</param>
+        private void OnInnerNext(T value)
+        {
+            if (Volatile.Read(ref _done))
+            {
+                return;
+            }
+
+            _delivery.OnNext(_observer, value, new PendingDrain(this));
+        }
+
+        /// <summary>Queues the first terminal error and stops subscribing further sources.</summary>
+        /// <param name="error">The error to forward.</param>
+        private void OnError(Exception error)
+        {
+            lock (_gate)
+            {
+                if (_done)
+                {
+                    return;
+                }
+
+                Volatile.Write(ref _done, true);
+                _queue.Clear();
+                _ = _delivery.PostError(error);
+            }
+
+            _delivery.Flush(new PendingDrain(this));
+        }
+
+        /// <summary>Subscribes the next queued inner source, or completes when the outer source is done and nothing is left.</summary>
         private void Drain()
         {
             IObservable<T>? next = null;
             lock (_gate)
             {
+                if (_done)
+                {
+                    _queue.Clear();
+                    return;
+                }
+
                 if (_active)
                 {
                     return;
@@ -163,17 +220,31 @@ public static partial class LinqExtensions
                 }
                 else if (_outerCompleted)
                 {
-                    _observer.OnCompleted();
+                    Volatile.Write(ref _done, true);
+                    _ = _delivery.PostCompleted();
+                }
+                else
+                {
                     return;
                 }
             }
 
             if (next is null)
             {
+                _delivery.Flush(new PendingDrain(this));
                 return;
             }
 
-            _pocket.Add(next.Subscribe(_observer.OnNext, _observer.OnError, OnInnerCompleted));
+            _pocket.Add(next.Subscribe(OnInnerNext, OnError, OnInnerCompleted));
+        }
+
+        /// <summary>Drains this coordinator's queued notifications for the delivery gate.</summary>
+        /// <param name="Owner">The coordinator.</param>
+        private readonly record struct PendingDrain(ChainCoordinator<T> Owner) : IDrainTarget
+        {
+            /// <inheritdoc/>
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public void Drain() => _ = Owner._delivery.DrainTo(Owner._observer);
         }
     }
 }

@@ -2,19 +2,27 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Runtime.CompilerServices;
+
 namespace ReactiveUI.Primitives.Async.Advanced;
 
 /// <summary>A subscription that emits a contiguous integer sequence.</summary>
 [System.Diagnostics.DebuggerDisplay("SequenceSubscription: StartValue = {StartValue}, Count = {Count}")]
-public sealed class SequenceSubscription : TaskSignalSubscription<int>
+public sealed class SequenceSubscription : IAsyncDisposable, ITaskSignalJob<int>
 {
+    /// <summary>The observer receiving the job's notifications.</summary>
+    private readonly IObserverAsync<int> _observer;
+
+    /// <summary>Runs the job and joins it on disposal.</summary>
+    private readonly TaskSignalState _task = new();
+
     /// <summary>Initializes a new instance of the <see cref="SequenceSubscription"/> class.</summary>
     /// <param name="observer">The observer receiving the values.</param>
     /// <param name="start">The first emitted value.</param>
     /// <param name="count">The number of values to emit.</param>
     public SequenceSubscription(IObserverAsync<int> observer, int start, int count)
-        : base(observer)
     {
+        _observer = observer;
         StartValue = start;
         Count = count;
     }
@@ -25,8 +33,16 @@ public sealed class SequenceSubscription : TaskSignalSubscription<int>
     /// <summary>Gets the number of values to emit.</summary>
     private int Count { get; }
 
+    /// <summary>Starts the subscription's job and returns without waiting for it to finish.</summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public void Start() => _task.Start(this, _observer);
+
     /// <inheritdoc/>
-    protected override async ValueTask ExecuteAsyncCore(
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public ValueTask DisposeAsync() => _task.DisposeAsync();
+
+    /// <inheritdoc/>
+    async ValueTask ITaskSignalJob<int>.ExecuteAsync(
         IObserverAsync<int> observer,
         CancellationToken cancellationToken)
     {
@@ -34,7 +50,6 @@ public sealed class SequenceSubscription : TaskSignalSubscription<int>
         {
             cancellationToken.ThrowIfCancellationRequested();
 
-            // Keep the observer notification token-free on the hot path; the loop checks the subscription token.
             await observer.OnNextAsync(StartValue + i, CancellationToken.None).ConfigureAwait(false);
         }
 

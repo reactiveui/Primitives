@@ -6,13 +6,9 @@ using Microsoft.CodeAnalysis;
 
 namespace ReactiveUI.Primitives.ObservableEvents.Helpers;
 
-/// <summary>The framework types an event delegate is allowed to return, resolved once per extraction.</summary>
+/// <summary>Caches framework symbols used during event extraction.</summary>
 /// <param name="Task">The resolved task type, or null when the consumer cannot see it.</param>
 /// <param name="ValueTask">The resolved value task type, or null when the consumer cannot see it.</param>
-/// <remarks>
-/// Resolved up front rather than per event, because an async event host declares many events and each one would
-/// otherwise repeat the same two metadata lookups.
-/// </remarks>
 internal readonly record struct WellKnownTypes(INamedTypeSymbol? Task, INamedTypeSymbol? ValueTask)
 {
     /// <summary>Resolves the types from a consumer compilation.</summary>

@@ -17,10 +17,6 @@ namespace ReactiveUI.Primitives.Extensions;
 #endif
 
 /// <summary>Extension methods for Reactive objects.</summary>
-[SuppressMessage(
-    "Roslynator",
-    "RCS1047:Non-asynchronous method name should not end with \'Async\'",
-    Justification = "Existing API")]
 public static partial class ReactiveExtensions
 {
     /// <summary>Default match timeout for regex filters created from string patterns.</summary>
@@ -42,16 +38,16 @@ public static partial class ReactiveExtensions
     /// <param name="condition">Condition to evaluate.</param>
     extension(Func<bool> condition)
     {
-        /// <summary>While construct.</summary>
+        /// <summary>Runs the action inline, emitting <see cref="RxVoid.Default"/> after each iteration for as long as the condition holds.</summary>
         /// <param name="action">Action to execute.</param>
         /// <returns>Observable representing the loop.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public IObservable<RxVoid> While(Action action) =>
             While(condition, action, null);
 
-        /// <summary>While construct.</summary>
+        /// <summary>Runs the action on the scheduler, emitting <see cref="RxVoid.Default"/> after each iteration for as long as the condition holds.</summary>
         /// <param name="action">Action to execute.</param>
-        /// <param name="scheduler">Scheduler.</param>
+        /// <param name="scheduler">Scheduler each iteration runs on; <c>null</c> runs inline.</param>
         /// <returns>Observable representing the loop.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public IObservable<RxVoid> While(Action action, ISequencer? scheduler) =>
@@ -62,13 +58,13 @@ public static partial class ReactiveExtensions
     /// <param name="sources">The sources.</param>
     extension(IEnumerable<IObservable<bool>> sources)
     {
-        /// <summary>Latest values of each sequence are all false.</summary>
+        /// <summary>Combines the latest value of every source and reports whether they are all false.</summary>
         /// <returns>A sequence that emits true when all latest booleans are false.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public IObservable<bool> CombineLatestValuesAreAllFalse() =>
             new BooleanReduceObservable(sources, false);
 
-        /// <summary>Latest values of each sequence are all true.</summary>
+        /// <summary>Combines the latest value of every source and reports whether they are all true.</summary>
         /// <returns>A sequence that emits true when all latest booleans are true.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public IObservable<bool> CombineLatestValuesAreAllTrue() =>
@@ -134,7 +130,7 @@ public static partial class ReactiveExtensions
     extension(IObservable<RxVoid> source)
     {
         /// <summary>Convenience overload: <c>source.CatchReturnUnit()</c> is shorthand for <c>source.CatchReturn(RxVoid.Default)</c>.</summary>
-        /// <returns>An observable that never produces an error terminal — errors are replaced with a single <see cref="RxVoid.Default"/>.</returns>
+        /// <returns>An observable that never produces an error terminal - errors are replaced with a single <see cref="RxVoid.Default"/>.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public IObservable<RxVoid> CatchReturnUnit() =>
             new CatchReturnObservable<RxVoid>(source, RxVoid.Default);
@@ -145,13 +141,15 @@ public static partial class ReactiveExtensions
     /// <param name="source">The source observable sequence.</param>
     extension<T>(IObservable<T> source)
     {
-        /// <summary>Returns only values that are not null. Converts the nullability.</summary>
-        /// <returns>A non nullable version of the observable that only emits valid values.</returns>
+        /// <summary>Filters out null values, keeping the source's element type.</summary>
+        /// <returns>A sequence carrying only the source's non-null values.</returns>
+        /// <remarks>The element type is unchanged, so a nullable source stays nullable downstream and a handler that takes
+        /// a non-nullable parameter still warns. The async operator of this name narrows a <c>T?</c> source to <c>T</c>.</remarks>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public IObservable<T> WhereIsNotNull() =>
             new WhereIsNotNullObservable<T>(source);
 
-        /// <summary>Change the source observable type to <see cref="RxVoid"/>. This allows us to be notified when the observable emits a value.</summary>
+        /// <summary>Replaces each source value with RxVoid.</summary>
         /// <returns>The signal.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public IObservable<RxVoid> AsSignal() =>
@@ -166,7 +164,7 @@ public static partial class ReactiveExtensions
 
         /// <summary>Emit a batch when the stream goes quiet.</summary>
         /// <param name="idleTime">The idle time.</param>
-        /// <param name="scheduler">The scheduler.</param>
+        /// <param name="scheduler">The sequencer that times the quiet period.</param>
         /// <returns>A sequence of buffered lists.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public IObservable<IList<T>> BufferUntilIdle(TimeSpan idleTime, ISequencer? scheduler) =>
@@ -183,20 +181,20 @@ public static partial class ReactiveExtensions
 
         /// <summary>Detects when a stream becomes inactive for some period of time.</summary>
         /// <param name="stalenessPeriod">If source stream does not OnNext any update during this period, it is declared stale.</param>
-        /// <param name="scheduler">The scheduler.</param>
+        /// <param name="scheduler">The sequencer that times the inactivity window.</param>
         /// <returns>Observable stale markers or updates.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public IObservable<Stale<T>> DetectStale(TimeSpan stalenessPeriod, ISequencer scheduler) =>
             new DetectStaleObservable<T>(source, stalenessPeriod, scheduler);
 
-        /// <summary>
-        /// Applies a conflation algorithm to an observable stream. Anytime the stream OnNext twice
-        /// below minimumUpdatePeriod, the second update gets delayed to respect the
-        /// minimumUpdatePeriod. If more than 2 updates happen, only the last update is pushed.
-        /// </summary>
+        /// <summary>Emits updates at least <paramref name="minimumUpdatePeriod"/> apart, retaining only the latest pending update.</summary>
         /// <param name="minimumUpdatePeriod">Minimum delay between two updates.</param>
         /// <param name="scheduler">Scheduler to publish updates.</param>
         /// <returns>The conflated stream.</returns>
+        /// <remarks>A value arriving less than <paramref name="minimumUpdatePeriod"/> after the last emission is held until
+        /// the period ends, and a later value replaces it, so each window emits its newest value at the end of that window.
+        /// The clock starts at subscription, so the first value is held too. A value arriving after a quiet gap longer than
+        /// the period goes out at once.</remarks>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public IObservable<T> Conflate(TimeSpan minimumUpdatePeriod, ISequencer scheduler) =>
             new ConflateObservable<T>(source, minimumUpdatePeriod, scheduler);
@@ -216,7 +214,7 @@ public static partial class ReactiveExtensions
         public IObservable<T> LatestOrDefault(T defaultValue) =>
             new LatestOrDefaultObservable<T>(source, defaultValue);
 
-        /// <summary>Logs the errors. Inline error logging without terminating the stream.</summary>
+        /// <summary>Logs errors without terminating the sequence.</summary>
         /// <param name="logger">The logger.</param>
         /// <returns>A sequence that logs errors.</returns>
         public IObservable<T> LogErrors(Action<Exception> logger)
@@ -234,7 +232,7 @@ public static partial class ReactiveExtensions
 
         /// <summary>Conditionally switch schedulers.</summary>
         /// <param name="condition">if set to <c>true</c> [condition].</param>
-        /// <param name="scheduler">The scheduler.</param>
+        /// <param name="scheduler">The sequencer used while the condition holds.</param>
         /// <returns>An IObservable of T.</returns>
         public IObservable<T> ObserveOnIf(bool condition, ISequencer scheduler) =>
             condition ? new ObserveOnObservable<T>(source, scheduler) : source;
@@ -289,7 +287,7 @@ public static partial class ReactiveExtensions
 
         /// <summary>Schedules the specified due time.</summary>
         /// <param name="dueTime">The due time.</param>
-        /// <param name="scheduler">The scheduler.</param>
+        /// <param name="scheduler">The sequencer the work runs on.</param>
         /// <returns>An IObservable of T.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public IObservable<T> Schedule(TimeSpan dueTime, ISequencer scheduler) =>
@@ -297,7 +295,7 @@ public static partial class ReactiveExtensions
 
         /// <summary>Schedules the specified due time.</summary>
         /// <param name="dueTime">The due time.</param>
-        /// <param name="scheduler">The scheduler.</param>
+        /// <param name="scheduler">The sequencer the work runs on.</param>
         /// <returns>An IObservable of T.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public IObservable<T> Schedule(DateTimeOffset dueTime, ISequencer scheduler) =>
@@ -305,8 +303,8 @@ public static partial class ReactiveExtensions
 
         /// <summary>Schedules the specified due time.</summary>
         /// <param name="dueTime">The due time.</param>
-        /// <param name="scheduler">The scheduler.</param>
-        /// <param name="action">The action.</param>
+        /// <param name="scheduler">The sequencer the work runs on.</param>
+        /// <param name="action">The work to run.</param>
         /// <returns>An IObservable of T.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public IObservable<T> Schedule(TimeSpan dueTime, ISequencer scheduler, Action<T> action) =>
@@ -314,15 +312,15 @@ public static partial class ReactiveExtensions
 
         /// <summary>Schedules the specified due time.</summary>
         /// <param name="dueTime">The due time.</param>
-        /// <param name="scheduler">The scheduler.</param>
-        /// <param name="action">The action.</param>
+        /// <param name="scheduler">The sequencer the work runs on.</param>
+        /// <param name="action">The work to run.</param>
         /// <returns>An IObservable of T.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public IObservable<T> Schedule(DateTimeOffset dueTime, ISequencer scheduler, Action<T> action) =>
             new ScheduledSourceObservable<T>(source, ScheduleConfig<T>.Absolute(scheduler, dueTime).WithAction(action));
 
         /// <summary>Schedules the specified due time.</summary>
-        /// <param name="scheduler">The scheduler.</param>
+        /// <param name="scheduler">The sequencer the work runs on.</param>
         /// <param name="function">The function.</param>
         /// <returns>An IObservable of T.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -331,7 +329,7 @@ public static partial class ReactiveExtensions
 
         /// <summary>Schedules the specified due time.</summary>
         /// <param name="dueTime">The due time.</param>
-        /// <param name="scheduler">The scheduler.</param>
+        /// <param name="scheduler">The sequencer the work runs on.</param>
         /// <param name="function">The function.</param>
         /// <returns>An IObservable of T.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -349,8 +347,9 @@ public static partial class ReactiveExtensions
             return new TakeUntilInclusiveObservable<T>(source, predicate);
         }
 
-        /// <summary>Wraps values with a synchronization disposable that completes when disposed.</summary>
-        /// <returns>Sequence of (value, sync handle).</returns>
+        /// <summary>Another name for <c>SynchronizeAsync</c>, pairing each value with its own acknowledgement handle.</summary>
+        /// <returns>A sequence of each value and its own acknowledgement handle.</returns>
+        /// <remarks>The producer does not wait on the handle, and one value's handle does not gate the next.</remarks>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public IObservable<(T Value, IDisposable Sync)> SynchronizeSynchronous() =>
             new SynchronizeAsyncObservable<T>(source);
@@ -398,12 +397,11 @@ public static partial class ReactiveExtensions
         public IObservable<T> SwitchIfEmpty(IObservable<T> fallback) =>
             new SwitchIfEmptyObservable<T>(source, fallback);
 
-        /// <summary>
-        /// Synchronizes the asynchronous operations in downstream operations.
-        /// Use SubscribeSynchronus instead for a simpler version.
-        /// Call Sync.Dispose() to release the lock in the downstream methods.
-        /// </summary>
-        /// <returns>An Observable of T and a release mechanism.</returns>
+        /// <summary>Pairs each value with an independent acknowledgement handle the subscriber disposes when it has finished with that value.</summary>
+        /// <returns>A sequence of each value and its own acknowledgement handle.</returns>
+        /// <remarks>The producer does not wait on the handle, and one value's handle does not gate the next. Disposing a
+        /// handle settles that emission's acknowledgement and nothing else, so a subscriber that ignores the handle still
+        /// receives every value and the terminal notification.</remarks>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public IObservable<(T Value, IDisposable Sync)> SynchronizeAsync() =>
             new SynchronizeAsyncObservable<T>(source);
@@ -412,10 +410,6 @@ public static partial class ReactiveExtensions
         /// <param name="onNext">Action to invoke for each element in the observable sequence.</param>
         /// <returns><see cref="IDisposable"/> object used to unsubscribe from the observable sequence.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        [SuppressMessage(
-            "Roslynator",
-            "RCS1047:Non-asynchronous method name should not end with \'Async\'",
-            Justification = "This is an existing method")]
         public IDisposable SubscribeAsync(Func<T, ValueTask> onNext) =>
             new SubscribeAsyncObservable<T>(source, onNext, null, null);
 
@@ -426,10 +420,6 @@ public static partial class ReactiveExtensions
         ///   <see cref="IDisposable" /> object used to unsubscribe from the observable sequence.
         /// </returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        [SuppressMessage(
-            "Roslynator",
-            "RCS1047:Non-asynchronous method name should not end with \'Async\'",
-            Justification = "This is an existing method")]
         public IDisposable SubscribeAsync(Func<T, ValueTask> onNext, Action onCompleted) =>
             new SubscribeAsyncObservable<T>(source, onNext, null, onCompleted);
 
@@ -440,10 +430,6 @@ public static partial class ReactiveExtensions
         ///   <see cref="IDisposable" /> object used to unsubscribe from the observable sequence.
         /// </returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        [SuppressMessage(
-            "Roslynator",
-            "RCS1047:Non-asynchronous method name should not end with \'Async\'",
-            Justification = "This is an existing method")]
         public IDisposable SubscribeAsync(Func<T, ValueTask> onNext, Action<Exception> onError) =>
             new SubscribeAsyncObservable<T>(source, onNext, onError, null);
 
@@ -455,10 +441,6 @@ public static partial class ReactiveExtensions
         ///   <see cref="IDisposable" /> object used to unsubscribe from the observable sequence.
         /// </returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        [SuppressMessage(
-            "Roslynator",
-            "RCS1047:Non-asynchronous method name should not end with \'Async\'",
-            Justification = "This is an existing method")]
         public IDisposable SubscribeAsync(
             Func<T, ValueTask> onNext,
             Action<Exception> onError,
@@ -483,9 +465,11 @@ public static partial class ReactiveExtensions
             return new CatchAndReturnWithFactoryObservable<T, TException>(source, fallbackFactory);
         }
 
-        /// <summary>Always replay the last value, even if the source hasnt produced one yet.</summary>
-        /// <param name="initialValue">The initial value.</param>
+        /// <summary>Emits <paramref name="initialValue"/> to each new subscriber, then that subscriber's own source values.</summary>
+        /// <param name="initialValue">The value every new subscriber receives before any source value.</param>
         /// <returns>An IObservable of T.</returns>
+        /// <remarks>Each subscriber gets its own subscription to the source, so a late subscriber receives
+        /// <paramref name="initialValue"/> rather than the value the source produced most recently.</remarks>
         public IObservable<T> ReplayLastOnSubscribe(T initialValue)
         {
             ArgumentExceptionHelper.ThrowIfNull(source);
@@ -531,13 +515,7 @@ public static partial class ReactiveExtensions
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public Task<T> ToHotTask() => FirstAsTaskHelper.FirstAsTask(source);
 
-        /// <summary>
-        /// Convert an observable to a <see cref="ValueTask{T}"/> that starts immediately. Backed by a
-        /// pooled <see cref="System.Threading.Tasks.Sources.IValueTaskSource{T}"/> implementation, so
-        /// steady-state callers pay no allocations after the per-type pool warms up. Prefer this over
-        /// <see cref="ToHotTask{T}"/> when the call site can consume a <see cref="ValueTask{T}"/>
-        /// (single await, no caching, no <c>WhenAll</c>).
-        /// </summary>
+        /// <summary>Subscribes immediately and returns a ValueTask for the first value that must be consumed exactly once.</summary>
         /// <returns>A <see cref="ValueTask{T}"/> that completes with the first value, faults on source error, or faults on empty completion.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public ValueTask<T> ToHotValueTask() =>
@@ -552,7 +530,7 @@ public static partial class ReactiveExtensions
 
         /// <summary>Throttle but only emit when the value actually changes.</summary>
         /// <param name="throttle">The throttle.</param>
-        /// <param name="scheduler">The scheduler.</param>
+        /// <param name="scheduler">The sequencer that times the throttle window.</param>
         /// <returns>A throttled distinct sequence.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public IObservable<T> ThrottleDistinct(TimeSpan throttle, ISequencer scheduler) =>
@@ -597,7 +575,7 @@ public static partial class ReactiveExtensions
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public IObservable<TResult> SelectAsync<TResult>(
             Func<T, CancellationToken, Task<TResult>> asyncSelector) =>
-            new SelectAsyncSequentialObservable<T, TResult>(source, x => asyncSelector(x, CancellationToken.None));
+            new SelectAsyncSequentialObservable<T, TResult>(source, asyncSelector);
 
         /// <summary>Maps values to async operations without losing ordering or cancellation semantics.</summary>
         /// <typeparam name="TResult">The type of the result.</typeparam>
@@ -643,6 +621,10 @@ public static partial class ReactiveExtensions
         /// <summary>Partitions a sequence into two based on predicate.</summary>
         /// <param name="predicate">Predicate.</param>
         /// <returns>Tuple of (trueSequence, falseSequence).</returns>
+        /// <remarks>Both sides share one subscription to the source, which the first side to subscribe opens and the last
+        /// side to unsubscribe closes. Over a cold source that produces its values during subscribe, the first side to
+        /// subscribe consumes the sequence and the other side sees nothing, so share the source first when both sides
+        /// need it.</remarks>
         public (IObservable<T> True, IObservable<T> False) Partition(Func<T, bool> predicate)
         {
             PartitionObservable<T> partition = new(source, predicate);
@@ -692,11 +674,7 @@ public static partial class ReactiveExtensions
         public IObservable<T> DoOnDispose(Action disposeAction) =>
             new DoOnDisposeObservable<T>(source, disposeAction);
 
-        /// <summary>
-        /// Fused <c>Where(predicate).Select(selector)</c>. Allocates a single observer
-        /// per subscription instead of two, eliminating the intermediate operator that
-        /// the equivalent Rx chain would build.
-        /// </summary>
+        /// <summary>Projects source values that satisfy the predicate.</summary>
         /// <typeparam name="TOut">The projected element type.</typeparam>
         /// <param name="predicate">Filter applied to each source element.</param>
         /// <param name="selector">Projection applied to elements that pass <paramref name="predicate"/>.</param>
@@ -712,11 +690,7 @@ public static partial class ReactiveExtensions
         public IObservable<T> CatchReturn(T fallback) =>
             new CatchReturnObservable<T>(source, fallback);
 
-        /// <summary>
-        /// Projects every source element to a stored constant, avoiding the closure
-        /// allocation of <c>.Select(_ =&gt; value)</c>. Common in fire-then-return-value
-        /// chains.
-        /// </summary>
+        /// <summary>Replaces each source value with the supplied constant.</summary>
         /// <typeparam name="TResult">The result element type.</typeparam>
         /// <param name="constant">The constant value emitted for each source element.</param>
         /// <returns>An observable that emits <paramref name="constant"/> for each source element.</returns>
@@ -724,11 +698,7 @@ public static partial class ReactiveExtensions
         public IObservable<TResult> SelectConstant<TResult>(TResult constant) =>
             new SelectConstantObservable<T, TResult>(source, constant);
 
-        /// <summary>
-        /// Applies <paramref name="selector"/> and emits only non-null results.
-        /// Replaces <c>.Select(f).Where(x =&gt; x is not null).Select(x =&gt; x!)</c>
-        /// with a single operator allocation.
-        /// </summary>
+        /// <summary>Projects source values and forwards only non-null results.</summary>
         /// <typeparam name="TOut">The projected element type.</typeparam>
         /// <param name="selector">Projection that may return <see langword="null"/>.</param>
         /// <returns>An observable that emits only non-null projected values.</returns>
@@ -736,14 +706,11 @@ public static partial class ReactiveExtensions
         public IObservable<TOut> TrySelect<TOut>(Func<T, TOut?> selector) =>
             new TrySelectObservable<T, TOut>(source, selector);
 
-        /// <summary>
-        /// Chains two one-shot <c>SelectMany</c> projections into a single operator.
-        /// Replaces <c>.SelectMany(a).SelectMany(b)</c> (2 operator allocations) with 1.
-        /// </summary>
+        /// <summary>Projects each source value through two successive observable selectors.</summary>
         /// <typeparam name="TMid">The intermediate element type.</typeparam>
         /// <typeparam name="TResult">The final result type.</typeparam>
-        /// <param name="first">First projection: source → intermediate observable.</param>
-        /// <param name="second">Second projection: intermediate → result observable.</param>
+        /// <param name="first">First projection: source -> intermediate observable.</param>
+        /// <param name="second">Second projection: intermediate -> result observable.</param>
         /// <returns>A fused two-stage SelectMany observable.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public IObservable<TResult> SelectManyThen<TMid, TResult>(
@@ -802,8 +769,8 @@ public static partial class ReactiveExtensions
     }
 
     /// <summary>Null-skipping operators for an observable source sequence of reference types.</summary>
-    /// <typeparam name="T">The type.</typeparam>
-    /// <param name="source">The source.</param>
+    /// <typeparam name="T">The reference type of the source elements.</typeparam>
+    /// <param name="source">The source observable.</param>
     extension<T>(IObservable<T> source)
         where T : class
     {
@@ -818,7 +785,7 @@ public static partial class ReactiveExtensions
 
     /// <summary>Operators for an observable source sequence that may emit null values.</summary>
     /// <typeparam name="TSource">The type of the source.</typeparam>
-    /// <param name="source">The source.</param>
+    /// <param name="source">The source observable.</param>
     extension<TSource>(IObservable<TSource?> source)
     {
         /// <summary>Catch exception and return Observable.Empty.</summary>
@@ -911,12 +878,7 @@ public static partial class ReactiveExtensions
     /// <param name="sources">The observables to run in order.</param>
     extension(IReadOnlyList<IObservable<RxVoid>> sources)
     {
-        /// <summary>
-        /// Runs a list of one-shot <see cref="IObservable{RxVoid}"/> sequentially and emits
-        /// a single <see cref="RxVoid.Default"/> when all have completed. Replaces
-        /// <c>.Concat().LastOrDefaultAsync()</c> with a single operator that avoids stack
-        /// overflow on inline-completing sources.
-        /// </summary>
+        /// <summary>Runs sources sequentially and emits RxVoid after all complete.</summary>
         /// <returns>A one-shot observable that completes after all sources.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public IObservable<RxVoid> RunAll() =>
@@ -929,11 +891,7 @@ public static partial class ReactiveExtensions
     extension<TKey>(IReadOnlyList<TKey> candidates)
     {
         /// <summary>
-        /// Walks a list of candidate keys sequentially, projects each into a one-shot
-        /// observable, transforms the raw value, and emits the first transformed value
-        /// that satisfies <paramref name="predicate"/>. Errors from individual projections
-        /// are swallowed (the candidate is skipped). If no candidate matches, emits
-        /// <paramref name="fallback"/>.
+        /// Projects candidates sequentially, skipping projection errors, and emits the first matching transformed value or the fallback.
         /// </summary>
         /// <typeparam name="TRaw">The raw element type emitted by the projection.</typeparam>
         /// <typeparam name="TResult">The transformed result type.</typeparam>
@@ -984,14 +942,9 @@ public static partial class ReactiveExtensions
         {
             ArgumentExceptionHelper.ThrowIfNull(action);
 
-            if (scheduler is null)
-            {
-                Thread.Sleep(dueTime);
-                action();
-                return EmptyDisposable.Instance;
-            }
-
-            return scheduler.Schedule(dueTime, action);
+            return scheduler is null
+                ? ScheduledWait.Run(dueTime, action)
+                : scheduler.Schedule(dueTime, action);
         }
     }
 
@@ -1036,7 +989,7 @@ public static partial class ReactiveExtensions
 
     /// <summary>Change-notification operators for a notifying object.</summary>
     /// <typeparam name="T">The type of the source.</typeparam>
-    /// <param name="source">The source.</param>
+    /// <param name="source">The notifying object.</param>
     extension<T>(T source)
         where T : INotifyPropertyChanged
     {
@@ -1060,9 +1013,9 @@ public static partial class ReactiveExtensions
         }
     }
 
-    /// <summary>Scheduling operators for a single value.</summary>
-    /// <typeparam name="T">The type.</typeparam>
-    /// <param name="value">The value.</param>
+    /// <summary>Scheduling operators for a single value, named apart from the source operators so a concrete signal type cannot bind them by mistake.</summary>
+    /// <typeparam name="T">The value type.</typeparam>
+    /// <param name="value">The value to schedule.</param>
     extension<T>(T value)
     {
         /// <summary>Schedules a single value after a delay.</summary>
@@ -1070,50 +1023,50 @@ public static partial class ReactiveExtensions
         /// <param name="scheduler">Scheduler.</param>
         /// <returns>Observable that emits the value.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public IObservable<T> Schedule(TimeSpan dueTime, ISequencer scheduler) =>
+        public IObservable<T> ScheduleValue(TimeSpan dueTime, ISequencer scheduler) =>
             new ScheduledValueObservable<T>(value, scheduler, dueTime, null, null, null);
 
         /// <summary>Schedules the specified due time.</summary>
         /// <param name="dueTime">The due time.</param>
-        /// <param name="scheduler">The scheduler.</param>
+        /// <param name="scheduler">The sequencer the work runs on.</param>
         /// <returns>An IObservable of T.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public IObservable<T> Schedule(DateTimeOffset dueTime, ISequencer scheduler) =>
+        public IObservable<T> ScheduleValue(DateTimeOffset dueTime, ISequencer scheduler) =>
             new ScheduledValueObservable<T>(value, scheduler, null, dueTime, null, null);
 
         /// <summary>Schedules the specified due time.</summary>
         /// <param name="dueTime">The due time.</param>
-        /// <param name="scheduler">The scheduler.</param>
-        /// <param name="action">The action.</param>
+        /// <param name="scheduler">The sequencer the work runs on.</param>
+        /// <param name="action">The work to run.</param>
         /// <returns>An IObservable of T.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public IObservable<T> Schedule(TimeSpan dueTime, ISequencer scheduler, Action<T> action) =>
+        public IObservable<T> ScheduleValue(TimeSpan dueTime, ISequencer scheduler, Action<T> action) =>
             new ScheduledValueObservable<T>(value, scheduler, dueTime, null, null, action);
 
         /// <summary>Schedules the specified due time.</summary>
         /// <param name="dueTime">The due time.</param>
-        /// <param name="scheduler">The scheduler.</param>
-        /// <param name="action">The action.</param>
+        /// <param name="scheduler">The sequencer the work runs on.</param>
+        /// <param name="action">The work to run.</param>
         /// <returns>An IObservable of T.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public IObservable<T> Schedule(DateTimeOffset dueTime, ISequencer scheduler, Action<T> action) =>
+        public IObservable<T> ScheduleValue(DateTimeOffset dueTime, ISequencer scheduler, Action<T> action) =>
             new ScheduledValueObservable<T>(value, scheduler, null, dueTime, null, action);
 
         /// <summary>Schedules the specified due time.</summary>
-        /// <param name="scheduler">The scheduler.</param>
+        /// <param name="scheduler">The sequencer the work runs on.</param>
         /// <param name="function">The function.</param>
         /// <returns>An IObservable of T.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public IObservable<T> Schedule(ISequencer scheduler, Func<T, T> function) =>
+        public IObservable<T> ScheduleValue(ISequencer scheduler, Func<T, T> function) =>
             new ScheduledValueObservable<T>(value, scheduler, null, null, function, null);
 
         /// <summary>Schedules the specified due time.</summary>
         /// <param name="dueTime">The due time.</param>
-        /// <param name="scheduler">The scheduler.</param>
+        /// <param name="scheduler">The sequencer the work runs on.</param>
         /// <param name="function">The function.</param>
         /// <returns>An IObservable of T.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public IObservable<T> Schedule(TimeSpan dueTime, ISequencer scheduler, Func<T, T> function) =>
+        public IObservable<T> ScheduleValue(TimeSpan dueTime, ISequencer scheduler, Func<T, T> function) =>
             new ScheduledValueObservable<T>(value, scheduler, dueTime, null, function, null);
     }
 
@@ -1145,7 +1098,7 @@ public static partial class ReactiveExtensions
         new StartFuncObservable<TResult>(function, scheduler);
 
     /// <summary>Builds a current-value subject pair: a read-only observable and the push-side observer.</summary>
-    /// <typeparam name="T">The type.</typeparam>
+    /// <typeparam name="T">The value type carried by the subject.</typeparam>
     /// <param name="initialValue">The initial value.</param>
     /// <returns>A tuple of IObservable and IObserver.</returns>
     public static (IObservable<T> Observable, IObserver<T> Observer) ToReadOnlyBehavior<T>(T initialValue)

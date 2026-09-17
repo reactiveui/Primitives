@@ -14,13 +14,13 @@ public class ChooseSwitchSelectTests
     /// <summary>The value ten.</summary>
     private const int Ten = 10;
 
-    /// <summary>The value eleven (stale inner value that must be ignored).</summary>
+    /// <summary>The value eleven, emitted by a superseded inner source.</summary>
     private const int Eleven = 11;
 
     /// <summary>The value twenty.</summary>
     private const int Twenty = 20;
 
-    /// <summary>The divisor used to select even values in the Choose test.</summary>
+    /// <summary>The divisor that selects even values in the Choose test.</summary>
     private const int Two = 2;
 
     /// <summary>The expected single-occurrence count.</summary>
@@ -72,10 +72,7 @@ public class ChooseSwitchSelectTests
         await Assert.That(error is InvalidOperationException).IsTrue();
     }
 
-    /// <summary>
-    /// Verifies that SwitchSelect skips null source values, mirrors the latest inner observable, and ignores
-    /// values from a superseded inner observable.
-    /// </summary>
+    /// <summary>Verifies SwitchSelect skips null values, mirrors the latest inner source, and ignores a superseded one.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
     public async Task SwitchSelectFiltersNullSwitchesAndIgnoresStaleInner()
@@ -85,12 +82,12 @@ public class ChooseSwitchSelectTests
         Signal<int> inner2 = new();
         List<int> values = [];
         _ = outer.SwitchSelect(key => key == KeyA ? inner1 : inner2).Subscribe(values.Add);
-        outer.OnNext(null); // skipped (null)
-        outer.OnNext(KeyA); // subscribe inner1
-        inner1.OnNext(Ten); // forwarded
-        outer.OnNext(KeyB); // switch to inner2; inner1 superseded
-        inner1.OnNext(Eleven); // stale -> ignored
-        inner2.OnNext(Twenty); // forwarded
+        outer.OnNext(null);
+        outer.OnNext(KeyA);
+        inner1.OnNext(Ten);
+        outer.OnNext(KeyB);
+        inner1.OnNext(Eleven);
+        inner2.OnNext(Twenty);
         await Assert.That(values.SequenceEqual(_tenThenTwenty)).IsTrue();
     }
 
@@ -106,10 +103,10 @@ public class ChooseSwitchSelectTests
             static _ => { },
             static ex => throw ex,
             () => completed++);
-        outer.OnNext(KeyA); // active inner
-        outer.OnCompleted(); // outer done, inner still active -> not complete
+        outer.OnNext(KeyA);
+        outer.OnCompleted();
         await Assert.That(completed).IsEqualTo(0);
-        inner.OnCompleted(); // now complete
+        inner.OnCompleted();
         await Assert.That(completed).IsEqualTo(Once);
     }
 
@@ -189,8 +186,8 @@ public class ChooseSwitchSelectTests
         outer.OnNext(KeyA);
         inner.OnNext(Ten);
         subscription.Dispose();
-        inner.OnNext(Eleven); // disposed -> ignored
-        outer.OnNext(KeyB); // disposed -> ignored
+        inner.OnNext(Eleven);
+        outer.OnNext(KeyB);
         await Assert.That(values.SequenceEqual(_tenOnly)).IsTrue();
     }
 
@@ -207,9 +204,9 @@ public class ChooseSwitchSelectTests
             static ex => throw ex,
             () => completed++);
         outer.OnNext(KeyA);
-        inner.OnCompleted(); // inner done; outer still open -> not complete
+        inner.OnCompleted();
         await Assert.That(completed).IsEqualTo(0);
-        outer.OnCompleted(); // outer done, no active inner -> complete
+        outer.OnCompleted();
         await Assert.That(completed).IsEqualTo(Once);
     }
 
@@ -228,11 +225,7 @@ public class ChooseSwitchSelectTests
         await Assert.That(completed).IsEqualTo(Once);
     }
 
-    /// <summary>
-    /// Verifies the SwitchSelect race guards drop notifications from a superseded inner observable and
-    /// from the outer/active-inner sources after disposal — the defensive early-returns that a
-    /// well-behaved (unsubscribing) source would otherwise hide.
-    /// </summary>
+    /// <summary>Verifies the SwitchSelect guards drop superseded-inner notifications and every notification after disposal.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
     public async Task SwitchSelectGuardsIgnoreStaleAndPostDisposeNotifications()
@@ -245,17 +238,16 @@ public class ChooseSwitchSelectTests
         var completed = 0;
         var subscription = outer.SwitchSelect(key => key == KeyA ? inner1 : inner2)
             .Subscribe(values.Add, ex => error = ex, () => completed++);
-        outer.Next(KeyA); // inner1 active
-        outer.Next(KeyB); // inner2 active; inner1 now superseded
+        outer.Next(KeyA);
+        outer.Next(KeyB);
 
-        // Superseded inner1 (its id != the latest): every notification hits the stale guard.
         inner1.Next(Eleven);
         inner1.Error(new InvalidOperationException(Boom));
         inner1.Complete();
         subscription.Dispose();
-        subscription.Dispose(); // idempotent: the second dispose hits the disposed guard
+        subscription.Dispose(); // Disposing twice must be a no-op.
 
-        // After disposal every outer and active-inner notification hits the disposed guard.
+        // ManualObservable keeps pushing after disposal, so the guards are what drop these.
         outer.Next(KeyA);
         outer.Error(new InvalidOperationException(Boom));
         outer.Complete();
@@ -282,12 +274,7 @@ public class ChooseSwitchSelectTests
             new Signal<string?>().SwitchSelect(static _ => Signal.None<int>()).Subscribe((IObserver<int>)null!));
     }
 
-    /// <summary>
-    /// An observable whose subscription deliberately ignores disposal, retaining its observer so a test
-    /// can keep pushing notifications after the operator has switched away from it or disposed it. A
-    /// well-behaved source unsubscribes on either event; this misbehaving source is what the operator's
-    /// race guards exist to defend against.
-    /// </summary>
+    /// <summary>Retains its observer after disposal and permits further notifications.</summary>
     /// <typeparam name = "T">The element type.</typeparam>
     private sealed class ManualObservable<T> : IObservable<T>
     {

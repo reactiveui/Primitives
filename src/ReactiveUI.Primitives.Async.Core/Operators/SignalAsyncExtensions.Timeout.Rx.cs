@@ -12,13 +12,10 @@ public static partial class SignalAsyncExtensions
     /// <param name="source">The source observable sequence.</param>
     extension<T>(IObservableAsync<T> source)
     {
-        /// <summary>
-        /// Applies a dueTime policy to the observable sequence. If the next element is not received within
-        /// the specified time span, the sequence completes with a <see cref="TimeoutException"/>.
-        /// </summary>
+        /// <summary>Completes with a TimeoutException when the next element misses the deadline.</summary>
         /// <param name="dueTime">The maximum time span allowed between consecutive elements. Must be positive.</param>
         /// <returns>An observable sequence that mirrors the source but completes with a
-        /// <see cref="TimeoutException"/> if any inter-element interval exceeds the specified dueTime.</returns>
+        /// <see cref="TimeoutException"/> if any inter-element interval exceeds the specified interval.</returns>
         /// <exception cref="ArgumentOutOfRangeException">Thrown if <paramref name="dueTime"/> is negative or zero.</exception>
         public IObservableAsync<T> Timeout(TimeSpan dueTime)
         {
@@ -27,15 +24,12 @@ public static partial class SignalAsyncExtensions
             return new TimeoutSignal<T>(source, dueTime, TimeProvider.System);
         }
 
-        /// <summary>
-        /// Applies a dueTime policy to the observable sequence. If the next element is not received within
-        /// the specified time span, the sequence completes with a <see cref="TimeoutException"/>.
-        /// </summary>
+        /// <summary>Completes with a TimeoutException when the next element misses the deadline.</summary>
         /// <param name="dueTime">The maximum time span allowed between consecutive elements. Must be positive.</param>
         /// <param name="timeProvider">An optional time provider for controlling timing. If null, <see cref="TimeProvider.System"/>
         /// is used.</param>
         /// <returns>An observable sequence that mirrors the source but completes with a
-        /// <see cref="TimeoutException"/> if any inter-element interval exceeds the specified dueTime.</returns>
+        /// <see cref="TimeoutException"/> if any inter-element interval exceeds the specified interval.</returns>
         /// <exception cref="ArgumentOutOfRangeException">Thrown if <paramref name="dueTime"/> is negative or zero.</exception>
         public IObservableAsync<T> Timeout(TimeSpan dueTime, TimeProvider? timeProvider)
         {
@@ -44,16 +38,13 @@ public static partial class SignalAsyncExtensions
             return new TimeoutSignal<T>(source, dueTime, timeProvider ?? TimeProvider.System);
         }
 
-        /// <summary>
-        /// Applies a dueTime policy to the observable sequence. If the next element is not received within
-        /// the specified time span, the sequence switches to the specified fallback observable.
-        /// </summary>
+        /// <summary>Switches to the fallback sequence when the next element misses the deadline.</summary>
         /// <param name="dueTime">The maximum time span allowed between consecutive elements. Must be positive.</param>
-        /// <param name="fallback">The fallback observable to switch to when a dueTime occurs. Cannot be null.</param>
+        /// <param name="fallback">The fallback observable to switch to when a timeout occurs. Cannot be null.</param>
         /// <returns>An observable sequence that mirrors the source, switching to the fallback sequence
-        /// if any inter-element interval exceeds the specified dueTime.</returns>
+        /// if any inter-element interval exceeds the specified interval.</returns>
         /// <exception cref="ArgumentOutOfRangeException">Thrown if <paramref name="dueTime"/> is negative or zero.</exception>
-        /// <exception cref="ArgumentExceptionHelper">Thrown if <paramref name="fallback"/> is null.</exception>
+        /// <exception cref="ArgumentNullException"><paramref name="fallback"/> is <see langword="null"/>.</exception>
         public IObservableAsync<T> Timeout(TimeSpan dueTime, IObservableAsync<T> fallback)
         {
             ArgumentExceptionHelper.ThrowIfNull(fallback);
@@ -62,18 +53,15 @@ public static partial class SignalAsyncExtensions
             return new TimeoutWithFallbackSignal<T>(source, dueTime, fallback, TimeProvider.System);
         }
 
-        /// <summary>
-        /// Applies a dueTime policy to the observable sequence. If the next element is not received within
-        /// the specified time span, the sequence switches to the specified fallback observable.
-        /// </summary>
+        /// <summary>Switches to the fallback sequence when the next element misses the deadline.</summary>
         /// <param name="dueTime">The maximum time span allowed between consecutive elements. Must be positive.</param>
-        /// <param name="fallback">The fallback observable to switch to when a dueTime occurs. Cannot be null.</param>
+        /// <param name="fallback">The fallback observable to switch to when a timeout occurs. Cannot be null.</param>
         /// <param name="timeProvider">An optional time provider for controlling timing. If null, <see cref="TimeProvider.System"/>
         /// is used.</param>
         /// <returns>An observable sequence that mirrors the source, switching to the fallback sequence
-        /// if any inter-element interval exceeds the specified dueTime.</returns>
+        /// if any inter-element interval exceeds the specified interval.</returns>
         /// <exception cref="ArgumentOutOfRangeException">Thrown if <paramref name="dueTime"/> is negative or zero.</exception>
-        /// <exception cref="ArgumentExceptionHelper">Thrown if <paramref name="fallback"/> is null.</exception>
+        /// <exception cref="ArgumentNullException"><paramref name="fallback"/> is <see langword="null"/>.</exception>
         public IObservableAsync<T> Timeout(
             TimeSpan dueTime,
             IObservableAsync<T> fallback,

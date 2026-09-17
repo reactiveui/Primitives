@@ -60,7 +60,7 @@ public static partial class LinqExtensions
     /// <param name="source">The source sequence.</param>
     extension<T>(IObservable<T> source)
     {
-        /// <summary>Prepends a value before the source sequence. Alias of <c>Prepend</c> using Primitives vocabulary.</summary>
+        /// <summary>Prepends a value before the source sequence.</summary>
         /// <param name="value">The value to emit before the source.</param>
         /// <returns>A sequence that emits <paramref name="value"/> before the source values.</returns>
         /// <exception cref="ArgumentNullException">The receiver sequence is <see langword="null"/>.</exception>
@@ -128,10 +128,16 @@ public static partial class LinqExtensions
                 : new AppendSignal<T>(source, value);
         }
 
-        /// <summary>Returns the source as an observable. This is an identity adapter for BCL observable sources.</summary>
-        /// <returns>The supplied source sequence.</returns>
+        /// <summary>Returns a view of the source that hides the source's own type.</summary>
+        /// <returns>A sequence that forwards to the source and cannot be cast back to it.</returns>
         /// <exception cref="ArgumentNullException">The receiver sequence is <see langword="null"/>.</exception>
-        public IObservable<T> AsObservable() => source ?? throw new ArgumentNullException(nameof(source));
+        /// <remarks>Hand this to a caller that should read the sequence but never push into it.</remarks>
+        public IObservable<T> AsObservable()
+        {
+            ArgumentExceptionHelper.ThrowIfNull(source);
+
+            return source as AsObservableSignal<T> ?? new AsObservableSignal<T>(source);
+        }
 
         /// <summary>Schedules observer notifications on the supplied scheduler using the System.Reactive operator name.</summary>
         /// <param name="scheduler">The sequencer used to deliver observer notifications.</param>
@@ -239,7 +245,7 @@ public static partial class LinqExtensions
             return new IgnoreValuesSignal<T>(source);
         }
 
-        /// <summary>Emits the supplied value if the source completes without values.</summary>
+        /// <summary>Emits <see langword="default"/> if the source completes without values.</summary>
         /// <returns>A sequence that emits <see langword="default"/> when the source is empty.</returns>
         /// <exception cref="ArgumentNullException">The receiver sequence is <see langword="null"/>.</exception>
         public IObservable<T> DefaultIfEmpty()
@@ -608,7 +614,7 @@ public static partial class LinqExtensions
             return new CalmSignal<T>(source, dueTime, sequencer);
         }
 
-        /// <summary>Emits the latest source value whenever the sampling period ticks.</summary>
+        /// <summary>Emits the latest source value once the period has passed since the value that started the timer.</summary>
         /// <param name="period">The interval between sampling ticks.</param>
         /// <returns>A sequence that emits the latest source value on each sampling tick.</returns>
         /// <exception cref="ArgumentNullException">The receiver sequence is <see langword="null"/>.</exception>
@@ -622,7 +628,7 @@ public static partial class LinqExtensions
             return new ProbeSignal<T>(source, period, ThreadPoolSequencer.Instance);
         }
 
-        /// <summary>Emits the latest source value whenever the sampling period ticks.</summary>
+        /// <summary>Emits the latest source value once the period has passed since the value that started the timer.</summary>
         /// <param name="period">The interval between sampling ticks.</param>
         /// <param name="scheduler">The sequencer used to schedule sampling ticks.</param>
         /// <returns>A sequence that emits the latest source value on each sampling tick.</returns>
@@ -690,7 +696,7 @@ public static partial class LinqExtensions
                 : new TimeIntervalSignal<T>(source, scheduler);
         }
 
-        /// <summary>Combines latest values from both sources. Alias for latest-fusion vocabulary.</summary>
+        /// <summary>Combines the latest values from both sources into a projected result.</summary>
         /// <typeparam name="TRight">The right value type.</typeparam>
         /// <typeparam name="TResult">The result value type.</typeparam>
         /// <param name="right">The right sequence.</param>
@@ -760,7 +766,7 @@ public static partial class LinqExtensions
         }
     }
 
-    /// <summary>Task-compatibility helpers for migrations from System.Reactive.</summary>
+    /// <summary>Conversion operators that expose a task under the System.Reactive names.</summary>
     /// <typeparam name="T">The task result type.</typeparam>
     /// <param name="task">The task.</param>
     extension<T>(Task<T> task)
@@ -771,7 +777,7 @@ public static partial class LinqExtensions
         [System.Diagnostics.CodeAnalysis.SuppressMessage(
             "Concurrency",
             "PSH1315:A blocking wait on an awaitable that may not be done",
-            Justification = "Synchronous read is limited to the already-completed task fast path.")]
+            Justification = "The read is guarded by a RanToCompletion check, so the task is done.")]
         public IObservable<T> ToObservable()
         {
             ArgumentExceptionHelper.ThrowIfNull(task);
@@ -787,17 +793,16 @@ public static partial class LinqExtensions
             }
 
             return task.IsFaulted
-                ? new ImmediateThrowSignal<T>(task.Exception!.InnerException ?? task.Exception)
+                ? new ImmediateThrowSignal<T>(task.Exception!.InnerException!)
                 : new TaskInstanceSignal<T>(task);
         }
 
-        /// <summary>Identity helper that keeps source-compatible <c>FirstAsync().ToTask()</c> migrations compiling.</summary>
+        /// <summary>Returns the task unchanged, so a <c>FirstAsync().ToTask()</c> chain resolves.</summary>
         /// <returns>The supplied task.</returns>
         /// <exception cref="ArgumentNullException">The receiver task is <see langword="null"/>.</exception>
         public Task<T> ToTask() => task ?? throw new ArgumentNullException(nameof(task));
 
-        /// <summary>Returns a task that mirrors the supplied task but transitions to the canceled state when
-        /// <paramref name="cancellationToken"/> is canceled first; keeps source-compatible <c>FirstAsync().ToTask(token)</c> migrations compiling.</summary>
+        /// <summary>Returns a task that mirrors the supplied task but transitions to the canceled state when <paramref name="cancellationToken"/> is canceled first.</summary>
         /// <param name="cancellationToken">The token used to cancel the returned task.</param>
         /// <returns>The supplied task, or a task that completes with the supplied task's outcome or cancels when <paramref name="cancellationToken"/> is canceled.</returns>
         /// <exception cref="ArgumentNullException">The receiver task is <see langword="null"/>.</exception>
@@ -816,7 +821,7 @@ public static partial class LinqExtensions
         }
     }
 
-    /// <summary>Stamps a value with the supplied scheduler's current time. A non-capturing selector reused by <c>Timestamp</c> via <c>MapWith</c>.</summary>
+    /// <summary>Stamps a value with the supplied scheduler's current time.</summary>
     /// <typeparam name="T">The value type.</typeparam>
     /// <param name="scheduler">The sequencer that supplies the timestamp.</param>
     /// <param name="value">The value to stamp.</param>
@@ -837,13 +842,8 @@ public static partial class LinqExtensions
         }
         catch (OperationCanceledException)
         {
-            // The wait was abandoned while the underlying task may still be running; observe any later
-            // fault so it cannot surface as an UnobservedTaskException on the finalizer thread.
-            _ = task.ContinueWith(
-                static abandoned => _ = abandoned.Exception,
-                CancellationToken.None,
-                TaskContinuationOptions.OnlyOnFaulted | TaskContinuationOptions.ExecuteSynchronously,
-                TaskScheduler.Default);
+            // Faults are observed even after the wait is cancelled.
+            TaskFaultObservation.Register(task);
             throw;
         }
     }

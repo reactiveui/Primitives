@@ -58,7 +58,6 @@ public sealed class StatefulWitness<T, TState> : IObserver<T>
     /// <summary>Rethrows the supplied exception without losing its stack information.</summary>
     /// <param name="error">The exception to rethrow.</param>
     /// <param name="state">Unused callback state.</param>
-    /// <remarks>Excluded from coverage: the unreachable sequence point after <see cref="ExceptionDispatchInfo"/> rethrow cannot be credited by cobertura.</remarks>
     [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
     private static void Rethrow(Exception error, TState state)
     {

@@ -7,7 +7,7 @@ using ReactiveUI.Primitives.Disposables;
 
 namespace ReactiveUI.Primitives.Advanced;
 
-/// <summary>Concatenates synchronous integer ranges without outer observable/coordinator overhead.</summary>
+/// <summary>Signal that emits several integer ranges back to back, synchronously inside <c>Subscribe</c>.</summary>
 [System.Diagnostics.DebuggerDisplay("RangeConcatSignal: Ranges = {_ranges.Length}")]
 public sealed class RangeConcatSignal : IRequireCurrentThread<int>, IInlineSignal<int>
 {

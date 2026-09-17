@@ -18,9 +18,7 @@ public static class AsyncContextExtensions
         /// <summary>Determines whether the specified <see cref="AsyncContext"/> represents the current asynchronous context.</summary>
         /// <returns><see langword="true"/> if the specified <see cref="AsyncContext"/> matches the current <see
         /// cref="SynchronizationContext"/> or <see cref="TaskScheduler"/>; otherwise, <see langword="false"/>.</returns>
-        /// <remarks>This method compares the <see cref="SynchronizationContext"/>, <see cref="TaskScheduler"/>, or sequencer adapter
-        /// of the provided <see cref="AsyncContext"/> with the current context to determine equivalence. Use this method to
-        /// check if code is executing within the intended asynchronous environment.</remarks>
+        /// <remarks>A sequencer matches only when the current task scheduler wraps that same sequencer instance.</remarks>
         public bool IsSameAsCurrentAsyncContext()
         {
             ArgumentExceptionHelper.ThrowIfNull(context);

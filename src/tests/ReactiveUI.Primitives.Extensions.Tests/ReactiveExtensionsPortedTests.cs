@@ -8,7 +8,7 @@ using ReactiveUI.Primitives.Concurrency;
 
 namespace ReactiveUI.Primitives.Extensions.Tests;
 
-/// <summary>Ported coverage for the migrated synchronous extension operators using primitives runtime types.</summary>
+/// <summary>Tests synchronous extension operators with primitives runtime types.</summary>
 public sealed class ReactiveExtensionsPortedTests
 {
     /// <summary>Candidate keys probed by the first-match test.</summary>
@@ -131,7 +131,7 @@ public sealed class ReactiveExtensionsPortedTests
         const int EmittedThrottled = 3;
         VirtualClock clock = new();
         List<int> scheduled = [];
-        using var scheduledSub = ScheduledValue.Schedule(TimeSpan.FromSeconds(1), clock).Subscribe(scheduled.Add);
+        using var scheduledSub = ScheduledValue.ScheduleValue(TimeSpan.FromSeconds(1), clock).Subscribe(scheduled.Add);
         Subject<int> throttledSource = new();
         List<int> throttled = [];
         using var throttleSub = throttledSource.ThrottleFirst(TimeSpan.FromSeconds(1), clock).Subscribe(throttled.Add);
@@ -234,7 +234,6 @@ public sealed class ReactiveExtensionsPortedTests
         const int SequentialMultiplier = 2;
         const int ConcurrentMultiplier = 3;
         const int MaxConcurrency = 2;
-        const int DelayMilliseconds = 50;
         const int SequentialResult = 4;
         const int ConcurrentResult = 6;
         Subject<int> source = new();
@@ -246,7 +245,6 @@ public sealed class ReactiveExtensionsPortedTests
             .SelectAsyncConcurrent(static x => Task.FromResult(x * ConcurrentMultiplier), MaxConcurrency)
             .Subscribe(concurrent.Add);
         source.OnNext(InputValue);
-        await Task.Delay(DelayMilliseconds);
         List<RxVoid> runAll = [];
         using var runAllSub = new[] { Observable.Return(RxVoid.Default), Observable.Return(RxVoid.Default) }.RunAll()
             .Subscribe(runAll.Add);

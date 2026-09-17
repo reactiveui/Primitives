@@ -17,16 +17,11 @@ internal static class EventExtractor
     /// <summary>The parameter count of the conventional sender-and-arguments event delegate.</summary>
     private const int SenderAndArgsParameterCount = 2;
 
-    /// <summary>Collects the events a host can expose, recording a diagnostic for each one it cannot.</summary>
+    /// <summary>Extracts inherited events, preferring the most derived declaration for duplicate names.</summary>
     /// <param name="request">Everything about the host and where it was requested from.</param>
     /// <param name="diagnostics">The destination for anything found wrong.</param>
     /// <param name="cancellationToken">A token that cancels the walk.</param>
     /// <returns>The supported events, in declaration order from the host down to its last base type.</returns>
-    /// <remarks>
-    /// Walking the base chain by hand rather than asking for all members at once is what lets a derived host expose
-    /// an event it inherits. A name already seen is skipped so an event redeclared in a derived type wins over the
-    /// one it hides, which is the member a consumer's own code would bind to.
-    /// </remarks>
     internal static EquatableArray<EventModel> Collect(
         in EventRequest request,
         List<DiagnosticInfo> diagnostics,
@@ -67,15 +62,10 @@ internal static class EventExtractor
         return events.Count == 0 ? EquatableArray<EventModel>.Empty : new([.. events]);
     }
 
-    /// <summary>Builds the mangled property name a static event gets on its namespace's shared class.</summary>
+    /// <summary>Builds an unambiguous static property name from length-prefixed host segments.</summary>
     /// <param name="host">The requested static host.</param>
     /// <param name="eventName">The event name.</param>
     /// <returns>The generated property name.</returns>
-    /// <remarks>
-    /// Every namespace's static events share one class, so the host's name has to be part of the property name.
-    /// Concatenating names would let distinct hosts collide - <c>A.BC</c> and <c>AB.C</c> both flattening to
-    /// <c>ABC</c> - so each segment is length-prefixed, which no pair of different segmentations can produce.
-    /// </remarks>
     private static string StaticPropertyName(INamedTypeSymbol host, string eventName)
     {
         var containers = new Stack<INamedTypeSymbol>();
@@ -118,14 +108,10 @@ internal static class EventExtractor
             SymbolHelpers.EscapeXml(eventSymbol.Name));
     }
 
-    /// <summary>Builds the expression the generated handler is added to and removed from.</summary>
+    /// <summary>Qualifies event access with its declaring type to resolve hidden inherited members.</summary>
     /// <param name="eventSymbol">The event to subscribe to.</param>
     /// <param name="request">The host request the event was reached through.</param>
     /// <returns>The subscription target expression.</returns>
-    /// <remarks>
-    /// An instance target is cast to the type that declares the event rather than to the requested host, so an
-    /// event the host inherits and hides with a member of the same name still binds to the one being wrapped.
-    /// </remarks>
     private static string BuildEventAccess(IEventSymbol eventSymbol, in EventRequest request)
     {
         var builder = new PooledStringBuilder();
@@ -143,15 +129,10 @@ internal static class EventExtractor
         return builder.Append('.').Append(SymbolHelpers.EscapeIdentifier(eventSymbol.Name)).ToStringAndReturn();
     }
 
-    /// <summary>Selects the observable payload type and the value handed to the observer.</summary>
+    /// <summary>Selects event payloads: arguments for sender/args delegates, otherwise all parameters.</summary>
     /// <param name="invokeMethod">The delegate's invocation method.</param>
     /// <param name="request">The host request the event was reached through.</param>
     /// <returns>The payload type and value, both empty for a parameterless delegate.</returns>
-    /// <remarks>
-    /// The two-parameter sender/args shape is the one nearly every .NET event has, and its sender is the object the
-    /// consumer already holds, so only the args are surfaced. Anything else is passed through whole: a single
-    /// parameter as itself, several as a tuple.
-    /// </remarks>
     private static (string PayloadType, string PayloadValue) SelectPayload(
         IMethodSymbol invokeMethod,
         in EventRequest request)
@@ -177,14 +158,10 @@ internal static class EventExtractor
                 $"({JoinParameterNames(invokeMethod)})");
     }
 
-    /// <summary>Renders the generated handler's parameter list.</summary>
+    /// <summary>Builds handler parameters with the delegate's nullability annotations.</summary>
     /// <param name="invokeMethod">The delegate's invocation method.</param>
     /// <param name="request">The host request the event was reached through.</param>
     /// <returns>The comma-separated parameter declarations.</returns>
-    /// <remarks>
-    /// The declared types carry whatever annotations the delegate declared, because a handler is only assignable to
-    /// a delegate whose parameter nullability it matches.
-    /// </remarks>
     private static string JoinParameterDeclarations(IMethodSymbol invokeMethod, in EventRequest request)
     {
         var builder = new PooledStringBuilder();
@@ -240,15 +217,10 @@ internal static class EventExtractor
         return returnsTask ? Constants.CompletedTask : Constants.DefaultValueTask;
     }
 
-    /// <summary>Determines why an event cannot be exposed as an observable.</summary>
+    /// <summary>Returns why an event cannot be captured or exposed to an observer.</summary>
     /// <param name="eventSymbol">The event to validate.</param>
     /// <param name="wellKnownTypes">The task types resolved from the consumer compilation.</param>
     /// <returns>The reason, or <see langword="null"/> when the event is supported.</returns>
-    /// <remarks>
-    /// The generated handler hands its parameters to an observer, which outlives the callback, so anything that
-    /// cannot leave the stack or be captured has to be refused here rather than emitted and left to fail the
-    /// consumer's build.
-    /// </remarks>
     private static string? SelectUnsupportedReason(IEventSymbol eventSymbol, WellKnownTypes wellKnownTypes)
     {
         if (eventSymbol.Type is not INamedTypeSymbol { DelegateInvokeMethod: { } invokeMethod })

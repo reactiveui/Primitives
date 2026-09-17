@@ -6,11 +6,7 @@ using ReactiveUI.Primitives.Disposables;
 
 namespace ReactiveUI.Primitives.Extensions.Operators;
 
-/// <summary>
-/// Re-subscribes to the source indefinitely on error. Forwards values verbatim and completes when
-/// the source completes. Per-subscription state is held in a single sink; resubscription swaps the
-/// inner disposable rather than allocating a new wrapper chain.
-/// </summary>
+/// <summary>Re-subscribes to the source indefinitely whenever it errors, discarding the error; values pass through and the source's completion ends the sequence.</summary>
 /// <typeparam name="T">Element type.</typeparam>
 /// <param name="source">Upstream source.</param>
 public sealed class RetryForeverObservable<T>(IObservable<T> source) : IObservable<T>
@@ -31,7 +27,7 @@ public sealed class RetryForeverObservable<T>(IObservable<T> source) : IObservab
     private sealed class RetrySink(IObservable<T> source, IObserver<T> downstream) : IObserver<T>, IDisposable
     {
         /// <summary>Holds the current inner subscription; swapped on each resubscribe.</summary>
-        private readonly MutableDisposable _inner = new();
+        private readonly SwapDisposable _inner = new();
 
         /// <summary>Latches to <c>1</c> on the first dispose so teardown is idempotent.</summary>
         private int _disposed;

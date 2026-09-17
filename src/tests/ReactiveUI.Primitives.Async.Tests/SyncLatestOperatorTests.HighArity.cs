@@ -44,7 +44,7 @@ public partial class SyncLatestOperatorTests
             await signals[index].OnNextAsync(1, CancellationToken.None);
         }
 
-        await AsyncTestHelpers.WaitForConditionAsync(() => results.Count >= 1, WaitTimeout);
+        await Assert.That(results.Count >= 1).IsTrue();
 
         await Assert.That(results).Count().IsGreaterThanOrEqualTo(1);
         await Assert.That(results[0]).IsEqualTo(ArityTwelve);
@@ -86,7 +86,7 @@ public partial class SyncLatestOperatorTests
             await signals[index].OnNextAsync(1, CancellationToken.None);
         }
 
-        await AsyncTestHelpers.WaitForConditionAsync(() => results.Count >= 1, WaitTimeout);
+        await Assert.That(results.Count >= 1).IsTrue();
 
         await Assert.That(results).Count().IsGreaterThanOrEqualTo(1);
         await Assert.That(results[0]).IsEqualTo(ArityThirteen);
@@ -130,7 +130,7 @@ public partial class SyncLatestOperatorTests
             await signals[index].OnNextAsync(1, CancellationToken.None);
         }
 
-        await AsyncTestHelpers.WaitForConditionAsync(() => results.Count >= 1, WaitTimeout);
+        await Assert.That(results.Count >= 1).IsTrue();
 
         await Assert.That(results).Count().IsGreaterThanOrEqualTo(1);
         await Assert.That(results[0]).IsEqualTo(ArityFourteen);
@@ -175,7 +175,7 @@ public partial class SyncLatestOperatorTests
             await signals[index].OnNextAsync(1, CancellationToken.None);
         }
 
-        await AsyncTestHelpers.WaitForConditionAsync(() => results.Count >= 1, WaitTimeout);
+        await Assert.That(results.Count >= 1).IsTrue();
 
         await Assert.That(results).Count().IsGreaterThanOrEqualTo(1);
         await Assert.That(results[0]).IsEqualTo(ArityFifteen);
@@ -221,7 +221,7 @@ public partial class SyncLatestOperatorTests
             await signals[index].OnNextAsync(1, CancellationToken.None);
         }
 
-        await AsyncTestHelpers.WaitForConditionAsync(() => results.Count >= 1, WaitTimeout);
+        await Assert.That(results.Count >= 1).IsTrue();
 
         await Assert.That(results).Count().IsGreaterThanOrEqualTo(1);
         await Assert.That(results[0]).IsEqualTo(AritySixteen);

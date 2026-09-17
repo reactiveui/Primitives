@@ -3,14 +3,16 @@
 // See the LICENSE file in the project root for full license information.
 
 using System.Runtime.CompilerServices;
+using ReactiveUI.Primitives.Advanced;
 using ReactiveUI.Primitives.Disposables;
 
 namespace ReactiveUI.Primitives.Extensions.Operators;
 
-/// <summary>Samples the latest value from the source observable whenever a trigger observable emits.</summary>
+/// <summary>Emits the latest source value on each trigger after the source first emits.</summary>
 /// <typeparam name="T">The type of elements in the source sequence.</typeparam>
 /// <param name="source">The source observable.</param>
 /// <param name="trigger">The trigger observable.</param>
+/// <remarks>Source completion or either error terminates the result; trigger completion is ignored.</remarks>
 public sealed class SampleLatestObservable<T>(
     IObservable<T> source,
     IObservable<object> trigger) : IObservable<T>
@@ -28,12 +30,16 @@ public sealed class SampleLatestObservable<T>(
         return new DisposableBag(sourceSub, triggerSub, sink);
     }
 
-    /// <summary>Sinks the source observable and samples it based on the trigger.</summary>
+    /// <summary>Holds the latest source value and the terminal state shared by the source and trigger observers.</summary>
     /// <param name="downstream">The downstream observer.</param>
+    /// <remarks>Samples and terminals are serialized, and no lock is held while the observer runs.</remarks>
     private sealed class SampleLatestSink(IObserver<T> downstream) : IDisposable
     {
-        /// <summary>The gate for synchronization.</summary>
+        /// <summary>Guards the latest value and the terminal flag; never held while the observer runs.</summary>
         private readonly Lock _gate = new();
+
+        /// <summary>Serializes downstream deliveries.</summary>
+        private SerializedDelivery<T> _delivery = new();
 
         /// <summary>The latest value from the source.</summary>
         private T? _latest;
@@ -44,10 +50,10 @@ public sealed class SampleLatestObservable<T>(
         /// <summary>Whether the sequence is done.</summary>
         private bool _done;
 
-        /// <summary>Gets the source observer.</summary>
+        /// <summary>Gets a new observer that records source values into this sink.</summary>
         public IObserver<T> SourceWitness => new SourceSampleWitness(this);
 
-        /// <summary>Gets the trigger observer.</summary>
+        /// <summary>Gets a new observer that samples this sink on each trigger notification.</summary>
         public IObserver<object> TriggerObserver => new TriggerSampleWitness(this);
 
         /// <inheritdoc/>
@@ -82,11 +88,12 @@ public sealed class SampleLatestObservable<T>(
                 }
 
                 _done = true;
-                downstream.OnError(error);
             }
+
+            _delivery.OnError(error, new PendingDrain(this));
         }
 
-        /// <summary>Forwards source completion.</summary>
+        /// <summary>Completes the downstream observer once, ignoring later notifications.</summary>
         private void OnSourceCompleted()
         {
             lock (_gate)
@@ -97,8 +104,9 @@ public sealed class SampleLatestObservable<T>(
                 }
 
                 _done = true;
-                downstream.OnCompleted();
             }
+
+            _delivery.OnCompleted(new PendingDrain(this));
         }
 
         /// <summary>Samples and forwards the latest source value if one is available.</summary>
@@ -117,10 +125,23 @@ public sealed class SampleLatestObservable<T>(
                 return;
             }
 
-            downstream.OnNext(value!);
+            _delivery.OnNext(downstream, value!, new PendingDrain(this));
         }
 
-        /// <summary>Observer for source values.</summary>
+        /// <summary>Delivers the queued notifications to the downstream observer.</summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private void DrainPending() => _ = _delivery.DrainTo(downstream);
+
+        /// <summary>Drains this sink's queued notifications for the delivery gate.</summary>
+        /// <param name="Owner">The sink.</param>
+        private readonly record struct PendingDrain(SampleLatestSink Owner) : IDrainTarget
+        {
+            /// <inheritdoc/>
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public void Drain() => Owner.DrainPending();
+        }
+
+        /// <summary>Observer that stores each source value in the sink.</summary>
         /// <param name="sink">The owning sink.</param>
         private sealed class SourceSampleWitness(SampleLatestSink sink) : IObserver<T>
         {
@@ -137,7 +158,7 @@ public sealed class SampleLatestObservable<T>(
             public void OnCompleted() => sink.OnSourceCompleted();
         }
 
-        /// <summary>Observer for trigger values.</summary>
+        /// <summary>Observer that asks the sink to emit its latest value on each trigger notification.</summary>
         /// <param name="sink">The owning sink.</param>
         private sealed class TriggerSampleWitness(SampleLatestSink sink) : IObserver<object>
         {
@@ -152,7 +173,7 @@ public sealed class SampleLatestObservable<T>(
             /// <inheritdoc/>
             public void OnCompleted()
             {
-                /* Trigger completion does not affect sample */
+                // A completed trigger leaves the sampled sequence running.
             }
         }
     }

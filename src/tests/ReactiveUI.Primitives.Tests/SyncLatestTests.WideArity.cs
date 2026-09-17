@@ -4,11 +4,7 @@
 
 namespace ReactiveUI.Primitives.Tests;
 
-/// <summary>
-/// Verifies the wide-arity <c>SyncLatest</c> combinators for ten through sixteen sources: a result is
-/// withheld until every source has produced a value, each source lands in its own selector parameter, and a
-/// later value from any source replaces only that source's contribution.
-/// </summary>
+/// <summary>Verifies the ten- through sixteen-source <c>SyncLatest</c> combinators over their latest values.</summary>
 public partial class SyncLatestTests
 {
     /// <summary>The number of sources combined by the ten-source overload.</summary>

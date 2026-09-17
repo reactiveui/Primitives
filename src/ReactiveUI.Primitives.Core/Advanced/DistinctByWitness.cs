@@ -6,7 +6,7 @@ using System.Runtime.CompilerServices;
 
 namespace ReactiveUI.Primitives.Advanced;
 
-/// <summary>Observer for distinct-by.</summary>
+/// <summary>Sink that forwards the first value seen for each key the selector produces.</summary>
 /// <typeparam name="T">The source value type.</typeparam>
 /// <typeparam name="TKey">The key type.</typeparam>
 [System.Diagnostics.DebuggerDisplay("DistinctByWitness: Done = {_done}, SeenKeys = {_seen.Count}")]
@@ -46,15 +46,7 @@ public sealed class DistinctByWitness<T, TKey> : IObserver<T>, IDisposable
             return;
         }
 
-        try
-        {
-            _observer.OnNext(value);
-        }
-        catch
-        {
-            Dispose();
-            throw;
-        }
+        SinkDelivery.Next(_observer, value, this);
     }
 
     /// <inheritdoc/>
@@ -65,7 +57,7 @@ public sealed class DistinctByWitness<T, TKey> : IObserver<T>, IDisposable
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void OnCompleted() => SinkTerminal.Complete(_observer, this, ref _done);
 
-    /// <summary>Assigns the upstream subscription, disposing it if one is already held.</summary>
+    /// <summary>Assigns the upstream subscription, disposing the incoming one when this sink holds a subscription or has been disposed.</summary>
     /// <param name="subscription">The upstream subscription.</param>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void SetSubscription(IDisposable subscription) => SinkSubscription.Set(ref _subscription, subscription);

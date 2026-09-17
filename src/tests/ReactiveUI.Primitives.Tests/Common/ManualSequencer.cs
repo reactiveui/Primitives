@@ -7,11 +7,7 @@ using ReactiveUI.Primitives.Concurrency;
 
 namespace ReactiveUI.Primitives.Tests;
 
-/// <summary>
-/// A sequencer that queues scheduled work instead of running it, so a test can decide exactly when a timer
-/// fires. <see cref="RunStaleTick"/> re-runs the most recently fired work item, modelling a timer that fires a
-/// second time after the operator has already consumed the value it was scheduled for.
-/// </summary>
+/// <summary>Queues work for explicit execution and permits replaying the last callback.</summary>
 internal sealed class ManualSequencer : ISequencer
 {
     /// <summary>The work items scheduled and not yet run.</summary>
@@ -38,10 +34,7 @@ internal sealed class ManualSequencer : ISequencer
     [System.Diagnostics.CodeAnalysis.SuppressMessage(
         "Design",
         "SST2318:Members should not have identical bodies",
-        Justification =
-            "The relative and absolute Schedule overloads of this test-double sequencer intentionally behave the same "
-            + "way; both are required by the ISequencer contract and, as distinct interface overloads, cannot forward "
-            + "to one another.")]
+        Justification = "Both ISequencer Schedule overloads of this test double queue the item without honoring a due time.")]
     public void Schedule(IWorkItem item, long dueTimestamp) => _pending.Add(item);
 
     /// <summary>Moves the sequencer's clock forward without running any work.</summary>

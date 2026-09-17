@@ -3,94 +3,132 @@
 // See the LICENSE file in the project root for full license information.
 
 using System.Reactive.Concurrency;
+using System.Reactive.Disposables;
 using System.Windows.Threading;
 using ReactiveUI.Primitives.Reactive.Concurrency;
+using TUnit.Assertions.Enums;
 
 namespace ReactiveUI.Primitives.Wpf.Reactive.Tests;
 
-/// <summary>
-/// Tests for <see cref="DispatcherSequencer"/> as an <see cref="IScheduler"/>, exercised against a real WPF
-/// <see cref="Dispatcher"/> pumped on a dedicated STA thread so both the immediate and timer-based dispatch
-/// paths run end to end. Compiled only on Windows builds (see the csproj).
-/// </summary>
+/// <summary>Tests dispatcher batching and cancellation with manually invoked callbacks.</summary>
 public sealed class DispatcherSequencerTests
 {
-    /// <summary>Maximum time to wait for work to be marshalled onto the dispatcher thread before failing.</summary>
-    private static readonly TimeSpan WaitTimeout = TimeSpan.FromSeconds(5);
+    /// <summary>The second value in a scheduled batch.</summary>
+    private const int SecondValue = 2;
 
-    /// <summary>How far into the future the delayed work is scheduled.</summary>
-    private static readonly TimeSpan ScheduleDelay = TimeSpan.FromMilliseconds(50);
-
-    /// <summary>Verifies the constructor rejects a null dispatcher.</summary>
-    /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
+    /// <summary>Constructor validation rejects a missing dispatcher.</summary>
+    /// <returns>The test operation.</returns>
     [Test]
-    public async Task ConstructorRejectsNullDispatcher() =>
+    public async Task ConstructorRejectsNullDispatcher()
+    {
         await Assert.That(static () => new DispatcherSequencer(null!)).ThrowsExactly<ArgumentNullException>();
-
-    /// <summary>Verifies immediate work is posted to and executed on the dispatcher thread.</summary>
-    /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
-    [Test]
-    public async Task ImmediateScheduleExecutesOnDispatcherThread()
-    {
-        using var harness = new DispatcherHarness();
-        var scheduler = new DispatcherSequencer(harness.Dispatcher);
-        var completion = new TaskCompletionSource<int>(TaskCreationOptions.RunContinuationsAsynchronously);
-
-        _ = scheduler.Schedule(() => completion.TrySetResult(Environment.CurrentManagedThreadId));
-
-        var ranOnThreadId = await completion.Task.WaitAsync(WaitTimeout);
-        await Assert.That(ranOnThreadId).IsEqualTo(harness.ThreadId);
+        await Assert.That(static () => new DispatcherSequencer(null!, DispatcherPriority.Normal))
+            .ThrowsExactly<ArgumentNullException>();
     }
 
-    /// <summary>Verifies work due in the future is executed on the dispatcher thread via the dispatcher timer.</summary>
-    /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
+    /// <summary>Construction retains dispatcher identity and priority.</summary>
+    /// <returns>The test operation.</returns>
     [Test]
-    public async Task DelayedScheduleExecutesOnDispatcherThread()
+    public async Task ConstructorRetainsDispatcherAndPriority()
     {
-        using var harness = new DispatcherHarness();
-        var scheduler = new DispatcherSequencer(harness.Dispatcher);
-        var completion = new TaskCompletionSource<int>(TaskCreationOptions.RunContinuationsAsynchronously);
-
-        _ = scheduler.Schedule(ScheduleDelay, () => completion.TrySetResult(Environment.CurrentManagedThreadId));
-
-        var ranOnThreadId = await completion.Task.WaitAsync(WaitTimeout);
-        await Assert.That(ranOnThreadId).IsEqualTo(harness.ThreadId);
+        var dispatcher = Dispatcher.CurrentDispatcher;
+        DispatcherSequencer sequencer = new(dispatcher, DispatcherPriority.Background);
+        await Assert.That(sequencer.Dispatcher).IsSameReferenceAs(dispatcher);
+        await Assert.That(sequencer.Priority).IsEqualTo(DispatcherPriority.Background);
+        await Assert.That(new DispatcherSequencer(dispatcher).Priority).IsEqualTo(DispatcherPriority.Normal);
     }
 
-    /// <summary>Hosts a WPF <see cref="Dispatcher"/> on a dedicated STA thread and pumps its message loop, shutting it down and joining the thread on disposal.</summary>
-    private sealed class DispatcherHarness : IDisposable
+    /// <summary>A posted batch preserves order and skips cancelled work.</summary>
+    /// <returns>The test operation.</returns>
+    [Test]
+    public async Task ScheduleCoalescesOrderedWorkAndSkipsCancellation()
     {
-        /// <summary>The thread running the dispatcher message loop.</summary>
-        private readonly Thread _thread;
-
-        /// <summary>Initializes a new instance of the <see cref="DispatcherHarness"/> class and waits until the dispatcher is running.</summary>
-        public DispatcherHarness()
-        {
-            using var ready = new ManualResetEventSlim(false);
-            _thread = new(() =>
+        Queue<Action> drains = new();
+        DispatcherSequencer scheduler = new(
+            Dispatcher.CurrentDispatcher,
+            DispatcherPriority.Normal,
+            drain =>
             {
-                Dispatcher = Dispatcher.CurrentDispatcher;
-                ThreadId = Environment.CurrentManagedThreadId;
-                ready.Set();
-                Dispatcher.Run();
-            }) { IsBackground = true, Name = "WpfDispatcherHarness" };
+                drains.Enqueue(drain);
+                return true;
+            },
+            null);
+        List<int> values = [];
+        using var first = scheduler.Schedule(() => values.Add(1));
+        var cancelled = scheduler.Schedule(() => values.Add(0));
+        using var second = scheduler.Schedule(TimeSpan.Zero, () => values.Add(SecondValue));
+        cancelled.Dispose();
+        await Assert.That(values).IsEmpty();
+        await Assert.That(drains).Count().IsEqualTo(1);
+        drains.Dequeue()();
+        await Assert.That(values).IsEquivalentTo([1, SecondValue], EqualityComparer<int>.Default, CollectionOrdering.Matching);
+    }
 
-            _thread.SetApartmentState(ApartmentState.STA);
-            _thread.Start();
-            ready.Wait();
-        }
-
-        /// <summary>Gets the hosted dispatcher.</summary>
-        public Dispatcher Dispatcher { get; private set; } = null!;
-
-        /// <summary>Gets the managed thread id the dispatcher runs on.</summary>
-        public int ThreadId { get; private set; }
-
-        /// <inheritdoc/>
-        public void Dispose()
+    /// <summary>Scheduling inside a callback posts another batch.</summary>
+    /// <returns>The test operation.</returns>
+    [Test]
+    public async Task ScheduleDuringDrainWaitsForTheNextDrain()
+    {
+        Queue<Action> drains = new();
+        DispatcherSequencer scheduler = new(
+            Dispatcher.CurrentDispatcher,
+            DispatcherPriority.Normal,
+            drain =>
+            {
+                drains.Enqueue(drain);
+                return true;
+            },
+            null);
+        List<int> values = [];
+        using var first = scheduler.Schedule(() =>
         {
-            Dispatcher.InvokeShutdown();
-            _ = _thread.Join(WaitTimeout);
+            values.Add(1);
+            _ = scheduler.Schedule(() => values.Add(SecondValue));
+        });
+        drains.Dequeue()();
+        await Assert.That(values).IsEquivalentTo([1], EqualityComparer<int>.Default, CollectionOrdering.Matching);
+        drains.Dequeue()();
+        await Assert.That(values).IsEquivalentTo([1, SecondValue], EqualityComparer<int>.Default, CollectionOrdering.Matching);
+    }
+
+    /// <summary>Disposal cancels a delayed timer and suppresses even a late callback.</summary>
+    /// <param name="cancel">Whether to cancel before delivery.</param>
+    /// <returns>The test operation.</returns>
+    [Test]
+    [Arguments(false)]
+    [Arguments(true)]
+    public async Task DelayedScheduleHonorsCancellationBeforeDelivery(bool cancel)
+    {
+        Queue<(Action Callback, TimeSpan Delay, BooleanDisposable Cancellation)> delayed = new();
+        DispatcherSequencer scheduler = new(
+            Dispatcher.CurrentDispatcher,
+            DispatcherPriority.Normal,
+            static _ => throw new InvalidOperationException("Unexpected immediate dispatch."),
+            (callback, delay) =>
+            {
+                BooleanDisposable cancellation = new();
+                delayed.Enqueue((callback, delay, cancellation));
+                return cancellation;
+            });
+        var calls = 0;
+        var delay = TimeSpan.FromSeconds(1);
+        var handle = scheduler.Schedule(delay, () => calls++);
+        var pending = delayed.Dequeue();
+        await Assert.That(pending.Delay).IsEqualTo(delay);
+        await Assert.That(calls).IsEqualTo(0);
+        if (cancel)
+        {
+            handle.Dispose();
         }
+
+        pending.Callback();
+        await Assert.That(pending.Cancellation.IsDisposed).IsEqualTo(cancel);
+        await Assert.That(calls).IsEqualTo(cancel ? 0 : 1);
+        if (cancel)
+        {
+            return;
+        }
+
+        handle.Dispose();
     }
 }

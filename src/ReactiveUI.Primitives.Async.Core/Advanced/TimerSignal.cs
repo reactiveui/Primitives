@@ -20,10 +20,10 @@ public sealed class TimerSignal : IObservableAsync<long>
     }
 
     /// <summary>Gets the delay before the first tick.</summary>
-    private TimeSpan DueTime { get; }
+    internal TimeSpan DueTime { get; }
 
     /// <summary>Gets the optional delay between subsequent ticks.</summary>
-    private TimeSpan? Period { get; }
+    internal TimeSpan? Period { get; }
 
     /// <summary>Gets the time provider used for scheduling.</summary>
     private TimeProvider TimeProvider { get; }

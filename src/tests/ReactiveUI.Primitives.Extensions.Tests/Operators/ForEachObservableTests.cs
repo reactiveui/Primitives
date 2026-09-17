@@ -8,8 +8,7 @@ using ReactiveUI.Primitives.Extensions.Operators;
 
 namespace ReactiveUI.Primitives.Extensions.Tests.Operators;
 
-/// <summary>Tests for <see cref = "ForEachObservable{T}"/> — null-batch ignore semantics, the
-/// scheduler-marshalled delivery path, error forwarding, and the null-observer subscribe guard.</summary>
+/// <summary>Tests for <see cref = "ForEachObservable{T}"/> - null batches, scheduled delivery, and error forwarding.</summary>
 public class ForEachObservableTests
 {
     /// <summary>Sentinel batch element.</summary>
@@ -29,9 +28,6 @@ public class ForEachObservableTests
 
     /// <summary>Scheduler-delivered sentinel.</summary>
     private const int ScheduledThirty = 30;
-
-    /// <summary>Guard timeout so a hung rendezvous fails this test rather than stalling the run.</summary>
-    private static readonly TimeSpan GuardTimeout = TimeSpan.FromSeconds(5);
 
     /// <summary>Verifies that a null inner enumerable is ignored and subsequent batches continue flowing.</summary>
     /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
@@ -56,8 +52,10 @@ public class ForEachObservableTests
         var source = batches.ToObservable();
         TaskCompletionSource<List<int>> done = new(TaskCreationOptions.RunContinuationsAsynchronously);
         List<int> results = [];
-        using var sub = source.ForEach(Sequencer.Default).Subscribe(results.Add, () => done.TrySetResult(results));
-        var output = await done.Task.WaitAsync(GuardTimeout);
+        VirtualClock scheduler = new();
+        using var sub = source.ForEach(scheduler).Subscribe(results.Add, () => done.TrySetResult(results));
+        scheduler.Start();
+        var output = await done.Task;
         await Assert.That(output).IsCollectionEqualTo([ScheduledTen, ScheduledTwenty, ScheduledThirty]);
     }
 

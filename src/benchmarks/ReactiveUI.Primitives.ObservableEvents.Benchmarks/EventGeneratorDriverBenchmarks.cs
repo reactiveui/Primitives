@@ -4,43 +4,16 @@
 
 using System.Runtime.CompilerServices;
 using BenchmarkDotNet.Attributes;
-using BenchmarkDotNet.Diagnosers;
+
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 
 namespace ReactiveUI.Primitives.ObservableEvents.Benchmarks;
 
-/// <summary>What the observable-event generator itself costs on a build and on a keystroke.</summary>
-/// <remarks>
-/// <para>
-/// These run the generator only. <c>RunGeneratorsAndUpdateCompilation</c> would also fold the generated trees back
-/// into a new compilation, and at this corpus size that parse-and-rebuild is several times the generator's own
-/// work - large enough to hide the difference between a cached run and a cold one entirely. It is Roslyn's cost
-/// and it is paid whatever the generator does, so it is left out of the measurement.
-/// </para>
-/// <para>
-/// <c>Cold</c> is a driver that has generated nothing yet, over the whole corpus: the build cost, paid once.
-/// </para>
-/// <para>
-/// <c>Unchanged</c> is the control, and the one to read first: a primed driver re-run against the very compilation
-/// it was primed against. Nothing has changed, so every cache that can hit does. Whatever it still costs is the
-/// floor, and if that floor sits at the <c>Cold</c> number then the caching is not buying wall-clock - however
-/// thoroughly the driver's own step table reports each step as cached.
-/// </para>
-/// <para>
-/// The remaining two are what an editor pays per keystroke. <c>UnrelatedEdit</c> touches a file no request depends
-/// on; <c>EventEdit</c> adds an event to exactly one host. Both are only interesting relative to <c>Unchanged</c>:
-/// against <c>Cold</c> they flatter whatever the floor already is.
-/// </para>
-/// <para>
-/// CPU sampling rather than an allocation column: everything here runs inside Roslyn, whose own work dominates
-/// both the time and the bytes, so a single inclusive total says nothing about which half moved. The trace names
-/// the frames, which is the only way to tell the generator's cost from the compiler's.
-/// </para>
-/// </remarks>
+/// <summary>Generator execution for cold, unchanged, unrelated-edit, and event-edit inputs, excluding compilation updates.</summary>
 [System.Diagnostics.DebuggerDisplay("EventGeneratorDriverBenchmarks: {Size}")]
 [SimpleJob(warmupCount: 5, iterationCount: 15)]
-[EventPipeProfiler(EventPipeProfile.CpuSampling)]
+
 public class EventGeneratorDriverBenchmarks
 {
     /// <summary>The compilation the cold driver runs against.</summary>

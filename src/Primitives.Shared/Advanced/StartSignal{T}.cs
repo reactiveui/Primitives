@@ -15,18 +15,18 @@ public sealed class StartSignal<T> : IRequireCurrentThread<T>
 {
     /// <summary>Initializes a new instance of the <see cref="StartSignal{T}"/> class.</summary>
     /// <param name="function">The function to run.</param>
-    /// <param name="scheduler">The scheduler used to run the function.</param>
+    /// <param name="scheduler">The sequencer that runs the function.</param>
     public StartSignal(Func<T> function, ISequencer scheduler)
     {
         Function = function;
         Scheduler = scheduler;
     }
 
+    /// <summary>Gets the sequencer that runs the function.</summary>
+    internal ISequencer Scheduler { get; }
+
     /// <summary>Gets the function to run.</summary>
     private Func<T> Function { get; }
-
-    /// <summary>Gets the scheduler used to run the function.</summary>
-    private ISequencer Scheduler { get; }
 
     /// <inheritdoc/>
     public bool IsRequiredSubscribeOnCurrentThread() => Scheduler == Sequencer.CurrentThread;
@@ -44,7 +44,7 @@ public sealed class StartSignal<T> : IRequireCurrentThread<T>
 
     /// <summary>Runs the function and forwards its terminal notification.</summary>
     /// <param name="observer">The downstream observer.</param>
-    private void Run(IObserver<T> observer)
+    internal void Run(IObserver<T> observer)
     {
         try
         {

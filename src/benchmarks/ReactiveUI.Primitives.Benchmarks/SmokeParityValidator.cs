@@ -7,12 +7,7 @@ using System.Globalization;
 
 namespace ReactiveUI.Primitives.Benchmarks;
 
-/// <summary>
-/// Validates the <c>key=value</c> rows written by <see cref="SmokeBenchmarkRunner"/>. Consecutive
-/// rows that normalize to the same scenario form a group, and every library in a group must produce
-/// the same value — except for the scheduling differences documented below, which are pinned to
-/// their known values so a change in behaviour is caught rather than silently accepted.
-/// </summary>
+/// <summary>Validates consecutive scenario groups against cross-library results and explicit scheduling expectations.</summary>
 internal static class SmokeParityValidator
 {
     /// <summary>The expected Primitives value for the documented SwitchRanges scheduling difference.</summary>

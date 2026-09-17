@@ -6,7 +6,7 @@ using ReactiveUI.Primitives.Signals;
 
 namespace ReactiveUI.Primitives.Tests;
 
-/// <summary>Tests for the fused <see cref = "LinqExtensions.BlendUnique{T}(IObservable{T}[])"/> operator (merge + distinct-until-changed in a single sink).</summary>
+/// <summary>Tests for the fused <see cref = "LinqExtensions.BlendUnique{T}(IObservable{T}[])"/> operator.</summary>
 public class BlendUniqueTests
 {
     /// <summary>The value one.</summary>
@@ -39,10 +39,7 @@ public class BlendUniqueTests
     /// <summary>Expected case-insensitive distinct result.</summary>
     private static readonly string[] _distinctCaseInsensitive = ["a", "B"];
 
-    /// <summary>
-    /// Verifies that the merged stream forwards only values that differ from the previously forwarded one
-    /// and completes once every source has completed.
-    /// </summary>
+    /// <summary>Verifies the merged stream drops values equal to the last forwarded one and completes once every source does.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
     public async Task MergesSourcesAndSuppressesConsecutiveDuplicates()
@@ -50,7 +47,6 @@ public class BlendUniqueTests
         List<int> values = [];
         var completed = 0;
 
-        // source0 emits 1,1,2 (-> 1,2) then source1 emits 2,3,3 (2 == last, dropped -> 3).
         _ = LinqExtensions
             .BlendUnique(
                 Signal.FromEnumerable(_firstDuplicatedThenSecond),
@@ -72,14 +68,13 @@ public class BlendUniqueTests
         await Assert.That(completed).IsEqualTo(Once);
     }
 
-    /// <summary>Verifies that a custom comparer is used to suppress duplicates.</summary>
+    /// <summary>Verifies that a custom comparer decides which values count as duplicates.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
     public async Task UsesSuppliedComparer()
     {
         List<string> values = [];
 
-        // Case-insensitive: "a","A" collapse; "B" forwarded.
         _ = LinqExtensions.BlendUnique([Signal.FromEnumerable(_caseVariants)], StringComparer.OrdinalIgnoreCase)
             .Subscribe(values.Add);
         await Assert.That(values.SequenceEqual(_distinctCaseInsensitive)).IsTrue();
@@ -110,7 +105,7 @@ public class BlendUniqueTests
         var subscription = LinqExtensions.BlendUnique(source).Subscribe(values.Add);
         source.OnNext(One);
         subscription.Dispose();
-        source.OnNext(Two); // no longer subscribed -> ignored
+        source.OnNext(Two);
         await Assert.That(values.SequenceEqual(_single)).IsTrue();
     }
 
@@ -126,11 +121,11 @@ public class BlendUniqueTests
         Exception? error = null;
         var completed = 0;
         _ = LinqExtensions.BlendUnique(first, second, third).Subscribe(values.Add, ex => error = ex, () => completed++);
-        first.OnNext(One); // forwarded
-        second.OnError(new InvalidOperationException("boom")); // terminal
-        first.OnNext(Two); // value suppressed (done)
-        first.OnCompleted(); // completion suppressed (done)
-        third.OnError(new InvalidOperationException("again")); // error suppressed (done)
+        first.OnNext(One);
+        second.OnError(new InvalidOperationException("boom"));
+        first.OnNext(Two);
+        first.OnCompleted();
+        third.OnError(new InvalidOperationException("again"));
         await Assert.That(values.SequenceEqual(_single)).IsTrue();
         await Assert.That(error).IsNotNull();
         await Assert.That(completed).IsEqualTo(0);

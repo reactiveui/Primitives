@@ -17,13 +17,7 @@ public static class TimerSlot
     /// <param name="delay">The delay before the callback runs.</param>
     /// <param name="tick">The timer callback.</param>
     /// <exception cref="ArgumentNullException">An argument is <see langword="null"/>.</exception>
-    /// <remarks>
-    /// A sequencer may run <paramref name="tick"/> before its own <c>Schedule</c> returns, and that callback
-    /// may arm its successor. Assigning the returned handle straight into <paramref name="slot"/> would then
-    /// replace - and so cancel - the successor rather than the timer that has already fired. Reserving the
-    /// slot first means the late assignment lands in a reservation the successor has already superseded, and
-    /// the already-fired handle is disposed instead.
-    /// </remarks>
+    /// <remarks>A callback that runs during scheduling can rearm the slot without its successor being canceled.</remarks>
     public static void Arm(SingleReplaceableDisposable slot, ISequencer sequencer, TimeSpan delay, Action tick)
     {
         ArgumentExceptionHelper.ThrowIfNull(slot);

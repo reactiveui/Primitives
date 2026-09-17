@@ -6,11 +6,7 @@ using System.Runtime.CompilerServices;
 
 namespace ReactiveUI.Primitives.Extensions.Operators;
 
-/// <summary>
-/// Fused <c>.Select(selector).Where(x =&gt; x is not null).Select(x =&gt; x!)</c> operator
-/// that applies a transform and emits only non-null results. Replaces the 3-operator
-/// null-filtering chain with a single operator + observer allocation.
-/// </summary>
+/// <summary>Applies <paramref name="selector"/> to each source element and emits only the non-null results; an exception from the selector terminates the sequence.</summary>
 /// <typeparam name="TIn">The source element type.</typeparam>
 /// <typeparam name="TOut">The projected element type.</typeparam>
 /// <param name="source">The source observable.</param>
@@ -28,7 +24,7 @@ public sealed class TrySelectObservable<TIn, TOut>(
         return source.Subscribe(new TrySelectWitness(observer, selector));
     }
 
-    /// <summary>Observer that applies the selector and only forwards non-null results. Exceptions from the selector are routed to <see cref="IObserver{T}.OnError"/>.</summary>
+    /// <summary>Projects values and forwards non-null results, reporting selector exceptions through OnError.</summary>
     /// <param name="downstream">The downstream observer.</param>
     /// <param name="selector">The projection delegate.</param>
     private sealed class TrySelectWitness(

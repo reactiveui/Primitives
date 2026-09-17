@@ -17,10 +17,7 @@ public partial class RxNamesTests
     /// <summary>The narrowest generated multi-source <c>CombineLatest</c> overload.</summary>
     private const int MinMultiSourceArity = 4;
 
-    /// <summary>
-    /// The generated multi-source <c>CombineLatest</c> builders, ordered by arity from
-    /// <see cref="MinMultiSourceArity"/> upwards, so an arity selects its overload without a literal case label.
-    /// </summary>
+    /// <summary>The generated multi-source <c>CombineLatest</c> builders, ordered by arity from <see cref="MinMultiSourceArity"/> upwards.</summary>
     private static readonly Func<CombineLatestSources, IObservable<int>>[] _combineLatestBuilders =
     [
         CombineLatestOfFour,
@@ -127,7 +124,7 @@ public partial class RxNamesTests
         return error is InvalidOperationException;
     }
 
-    /// <summary>A stateful projection that always throws (drives the sink catch path).</summary>
+    /// <summary>A stateful projection that always throws.</summary>
     /// <param name = "state">The unused state.</param>
     /// <param name = "value">The unused value.</param>
     /// <returns>Never returns; always throws.</returns>
@@ -135,7 +132,7 @@ public partial class RxNamesTests
     [SuppressMessage("Maintainability", "SST1461:Remove unread private parameters", Justification = "The signature is fixed by the delegate this method is passed to as a method group.")]
     private static int ThrowProjection(int state, int value) => throw new InvalidOperationException(Boom);
 
-    /// <summary>A stateful predicate that always throws (drives the sink catch path).</summary>
+    /// <summary>A stateful predicate that always throws.</summary>
     /// <param name = "state">The unused state.</param>
     /// <param name = "value">The unused value.</param>
     /// <returns>Never returns; always throws.</returns>
@@ -159,7 +156,7 @@ public partial class RxNamesTests
         return values;
     }
 
-    /// <summary>Combines a source value with an inner value (result selector for the 3-arg SelectMany/FlatMap).</summary>
+    /// <summary>Combines a source value with an inner value.</summary>
     /// <param name = "source">The source value.</param>
     /// <param name = "inner">The inner value.</param>
     /// <returns>The combined value.</returns>
@@ -508,16 +505,13 @@ public partial class RxNamesTests
         return values;
     }
 
-    /// <summary>Builds a source of two int-range inner sources (exercises the synchronous Switch range fast path).</summary>
+    /// <summary>Builds a source of two int-range inner sources.</summary>
     /// <returns>An outer source of two range inners.</returns>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static IObservable<IObservable<int>> RangeInners() =>
         Signal.FromEnumerable([Signal.Sequence(One, Two), Signal.Sequence(Three, Two)]);
 
-    /// <summary>
-    /// Drives a stateful sink through a value, a terminal completion, and then further notifications, reporting
-    /// whether the post-terminal notifications were dropped (exactly one completion, no leaked error).
-    /// </summary>
+    /// <summary>Checks that a stateful sink drops every notification after its first completion.</summary>
     /// <param name = "op">The stateful operator under test.</param>
     /// <returns><see langword="true"/> when notifications after the terminal were dropped.</returns>
     private static bool RunStopGuards(Func<IObservable<int>, IObservable<int>> op)
@@ -537,16 +531,11 @@ public partial class RxNamesTests
         return completed == One && error is null;
     }
 
-    /// <summary>
-    /// The sources of the widest generated CombineLatest overload, named by argument position so every arity can
-    /// be built without indexing into an array.
-    /// </summary>
+    /// <summary>The sources of the widest generated CombineLatest overload, named by argument position.</summary>
     [System.Diagnostics.CodeAnalysis.SuppressMessage(
         "Design",
         "SST2315:A type that owns a disposable should be disposable",
-        Justification =
-            "Test helper that holds the source subjects for a CombineLatest arity test. The subjects live for the "
-            + "duration of the test and the test process owns them; this helper is deliberately not IDisposable.")]
+        Justification = "The test process owns these subjects for the lifetime of the test.")]
     private sealed class CombineLatestSources
     {
         /// <summary>Initializes a new instance of the <see cref="CombineLatestSources"/> class.</summary>
@@ -623,10 +612,7 @@ public partial class RxNamesTests
         public Signal<int> Sixteenth { get; } = new();
     }
 
-    /// <summary>
-    /// An observable whose subscription retains its observer and ignores disposal, letting a test push raw
-    /// notifications (including ones after a terminal notification) to exercise a sink's terminal guards.
-    /// </summary>
+    /// <summary>Retains its observer after disposal so tests can deliver post-terminal notifications.</summary>
     /// <typeparam name = "T">The element type.</typeparam>
     private sealed class ManualSource<T> : IObservable<T>
     {
@@ -655,7 +641,7 @@ public partial class RxNamesTests
         public void Complete() => _observer?.OnCompleted();
     }
 
-    /// <summary>A source that reports it requires current-thread subscription (drives the sink's propagation check).</summary>
+    /// <summary>A source that reports it requires current-thread subscription.</summary>
     /// <typeparam name = "T">The element type.</typeparam>
     private sealed class CurrentThreadSource<T> : IRequireCurrentThread<T>
     {

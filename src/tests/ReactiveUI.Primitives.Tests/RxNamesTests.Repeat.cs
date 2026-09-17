@@ -12,7 +12,7 @@ namespace ReactiveUI.Primitives.Tests;
 /// <summary>Repeat operator parity tests for System.Reactive-compatible names.</summary>
 public partial class RxNamesTests
 {
-    /// <summary>The value four, used to bound the infinite repeat test.</summary>
+    /// <summary>The value four, which bounds the infinite repeat test.</summary>
     private const int Four = 4;
 
     /// <summary>The expected values when a two-value source is repeated twice.</summary>
@@ -281,6 +281,20 @@ public partial class RxNamesTests
         await Assert.That(observer.Values.Count).IsEqualTo(0);
         await Assert.That(observer.Errors.Count).IsEqualTo(0);
         await Assert.That(observer.Completed).IsEqualTo(0);
+    }
+
+    /// <summary>Verifies the coordinator ignores an error for a generation it is not running.</summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    [Test]
+    public async Task RepeatCoordinatorIgnoresErrorForAnInactiveGeneration()
+    {
+        RecordingWitness<int> observer = new();
+        RepeatSourceCoordinator<int> coordinator = new(new ScriptedObservable<int>(static _ => { }), Two, observer);
+
+        using var subscription = coordinator.Run();
+        coordinator.OnError(NegativeOne, new InvalidOperationException("stale"));
+
+        await Assert.That(observer.Errors.Count).IsEqualTo(0);
     }
 
     /// <summary>Verifies Repeat validates null sources and negative counts.</summary>

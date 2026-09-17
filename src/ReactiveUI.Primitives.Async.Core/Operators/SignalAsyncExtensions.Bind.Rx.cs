@@ -16,6 +16,7 @@ public static partial class SignalAsyncExtensions
         /// <typeparam name="TResult">The result element type.</typeparam>
         /// <param name="selector">The projection producing an inner sequence for each value.</param>
         /// <returns>An observable sequence of merged inner values.</returns>
+        /// <exception cref="ArgumentNullException"><paramref name="selector"/> is <see langword="null"/>.</exception>
         public IObservableAsync<TResult> Bind<TResult>(Func<T, IObservableAsync<TResult>> selector)
         {
             ArgumentExceptionHelper.ThrowIfNull(selector);

@@ -4,6 +4,7 @@
 
 using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
+using ReactiveUI.Primitives.Advanced;
 using ReactiveUI.Primitives.Signals;
 
 namespace ReactiveUI.Primitives.Tests;
@@ -98,13 +99,13 @@ public partial class SignalOperatorParityMixinsTests
     /// <summary>Expected result-selector FlatMap values.</summary>
     private static readonly int[] ResultFlatMapExpected = [First + FirstInner, Second + FirstInner];
 
-    /// <summary>Covers count, long-count, distinct fast count, and any helper branches.</summary>
+    /// <summary>The count, long-count, distinct-count, and any helpers report their aggregate.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [SuppressMessage(
         "Concurrency",
         "PSH1313:Call the async overload from an async method",
         Justification =
-            "This test deliberately exercises the synchronous IObservable operator overloads, not their awaitable terminal counterparts.")]
+            "The synchronous IObservable operator overloads are the subject under test.")]
     [Test]
     public async Task AggregateHelpersCoverPredicateDistinctAndAnyPaths()
     {
@@ -160,13 +161,13 @@ public partial class SignalOperatorParityMixinsTests
         await Assert.That(rangeContainsFalse.SequenceEqual(FalseExpected)).IsTrue();
     }
 
-    /// <summary>Covers optimized aggregate observer error paths.</summary>
+    /// <summary>The optimized aggregate observers forward a source error unchanged.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [SuppressMessage(
         "Concurrency",
         "PSH1313:Call the async overload from an async method",
         Justification =
-            "This test deliberately exercises the synchronous IObservable operator overloads, not their awaitable terminal counterparts.")]
+            "The synchronous IObservable operator overloads are the subject under test.")]
     [Test]
     public async Task AggregateHelpersForwardSourceErrors()
     {
@@ -186,7 +187,7 @@ public partial class SignalOperatorParityMixinsTests
         await Assert.That(observed[DistinctErrorIndex]).IsSameReferenceAs(distinctError);
     }
 
-    /// <summary>Covers predicate exceptions for aggregate boolean terminals.</summary>
+    /// <summary>The boolean aggregate terminals forward an exception thrown by the predicate.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
     public async Task AggregateBooleanTerminalsForwardPredicateErrors()
@@ -197,7 +198,7 @@ public partial class SignalOperatorParityMixinsTests
         await Assert.That(observed[0]).IsSameReferenceAs(allError);
     }
 
-    /// <summary>Covers FlatMap queuing while an inner signal is active.</summary>
+    /// <summary>FlatMap queues a later inner signal until the active inner signal completes.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
     public async Task FlatMapQueuesInnerSignalsUntilActiveInnerCompletes()
@@ -220,7 +221,7 @@ public partial class SignalOperatorParityMixinsTests
         await Assert.That(completed).IsEqualTo(1);
     }
 
-    /// <summary>Covers the FlatMap overload with an outer and inner result selector.</summary>
+    /// <summary>The FlatMap result-selector overload projects each outer value with its inner value.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
     public async Task FlatMapResultSelectorProjectsOuterAndInnerValues()
@@ -232,7 +233,7 @@ public partial class SignalOperatorParityMixinsTests
         await Assert.That(values.SequenceEqual(ResultFlatMapExpected)).IsTrue();
     }
 
-    /// <summary>Covers FlatMap selector, inner, and outer error forwarding.</summary>
+    /// <summary>FlatMap forwards a selector, inner, and outer error to the observer.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
     public async Task FlatMapForwardsSelectorInnerAndOuterErrors()
@@ -320,7 +321,7 @@ public partial class SignalOperatorParityMixinsTests
         await Assert.That(countError!).IsSameReferenceAs(expected);
     }
 
-    /// <summary>The predicate terminals cancel up front when handed an already-cancelled token.</summary>
+    /// <summary>The predicate terminals cancel up front when handed a pre-cancelled token.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
     public async Task PredicateTerminalTasksCancelUpFrontOnAnAlreadyCancelledToken()
@@ -334,11 +335,48 @@ public partial class SignalOperatorParityMixinsTests
             .Throws<TaskCanceledException>();
     }
 
+    /// <summary>Count, long-count and distinct signals over a source with no current-thread requirement report none.</summary>
+    /// <returns>A task representing the asynchronous test.</returns>
+    [Test]
+    public async Task AggregateSignals_PlainSource_DoNotRequireCurrentThread()
+    {
+        PlainObservable source = new();
+
+        await Assert.That(((IRequireCurrentThread<int>)source.Count()).IsRequiredSubscribeOnCurrentThread()).IsFalse();
+        await Assert.That(((IRequireCurrentThread<int>)source.Count(static value => value > First)).IsRequiredSubscribeOnCurrentThread()).IsFalse();
+        await Assert.That(((IRequireCurrentThread<long>)source.LongCount()).IsRequiredSubscribeOnCurrentThread()).IsFalse();
+        await Assert.That(((IRequireCurrentThread<long>)source.LongCount(static value => value > First)).IsRequiredSubscribeOnCurrentThread()).IsFalse();
+        await Assert.That(((IRequireCurrentThread<int>)source.DistinctBy(static value => value)).IsRequiredSubscribeOnCurrentThread()).IsFalse();
+    }
+
+    /// <summary>Counting distinct keys honours a supplied key comparer for both count widths.</summary>
+    /// <returns>A task representing the asynchronous test.</returns>
+    [Test]
+    public async Task DistinctByCount_WithComparer_CountsDistinctKeys()
+    {
+        List<int> counts = [];
+        List<long> longCounts = [];
+
+        _ = Signal.Sequence(First, Fourth).DistinctBy(static value => value % Second, EqualityComparer<int>.Default).Count().Subscribe(counts.Add);
+        _ = Signal.Sequence(First, Fourth).DistinctBy(static value => value % Second, EqualityComparer<int>.Default).LongCount().Subscribe(longCounts.Add);
+
+        await Assert.That(counts.SequenceEqual([Second])).IsTrue();
+        await Assert.That(longCounts.SequenceEqual([(long)Second])).IsTrue();
+    }
+
     /// <summary>Returns a scalar signal for the supplied value.</summary>
     /// <param name="value">The value to emit.</param>
     /// <returns>A scalar signal.</returns>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static IObservable<int> ReturnValue(int value) => Signal.Emit(value);
+
+    /// <summary>Source with no current-thread subscription requirement.</summary>
+    private sealed class PlainObservable : IObservable<int>
+    {
+        /// <inheritdoc/>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public IDisposable Subscribe(IObserver<int> observer) => Signal.None<int>().Subscribe(observer);
+    }
 
     /// <summary>Contact reference record with nullable fields.</summary>
     /// <param name="FirstName">The first name.</param>

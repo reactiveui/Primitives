@@ -7,8 +7,6 @@ using System.Runtime.CompilerServices;
 namespace ReactiveUI.Primitives.Async;
 
 /// <summary>Provides the StartWith extension method for asynchronous observable sequences.</summary>
-/// <remarks>StartWith mirrors the System.Reactive naming convention and prepends one or more values
-/// to the beginning of an observable sequence before its own emissions.</remarks>
 public static partial class SignalAsyncExtensions
 {
     /// <summary>StartWith (value-prepending) operators for an observable source sequence.</summary>
@@ -20,8 +18,6 @@ public static partial class SignalAsyncExtensions
         /// <param name="value">The value to prepend to the sequence.</param>
         /// <returns>An observable sequence that emits the specified value first, followed by the elements
         /// of the source sequence.</returns>
-        /// <remarks>This is equivalent to Prepend(T) and follows the System.Reactive
-        /// naming convention.</remarks>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public IObservableAsync<T> StartWith(T value) => new LeadSignal<T>(source, [value]);
 
@@ -29,8 +25,7 @@ public static partial class SignalAsyncExtensions
         /// <param name="values">The values to prepend to the sequence. Cannot be null.</param>
         /// <returns>An observable sequence that emits the specified values first, followed by the elements
         /// of the source sequence.</returns>
-        /// <remarks>This is equivalent to Prepend(IEnumerable{T}) and follows the System.Reactive
-        /// naming convention. Values are emitted in the order they appear in the collection.</remarks>
+        /// <remarks>The values are emitted in enumeration order.</remarks>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public IObservableAsync<T> StartWith(IEnumerable<T> values) => new LeadSignal<T>(source, values);
 
@@ -38,8 +33,7 @@ public static partial class SignalAsyncExtensions
         /// <param name="values">The values to prepend to the sequence.</param>
         /// <returns>An observable sequence that emits the specified values first, followed by the elements
         /// of the source sequence.</returns>
-        /// <remarks>This overload accepts a params array for convenience. Values are emitted in the
-        /// order they appear in the array.</remarks>
+        /// <remarks>The values are emitted in array order.</remarks>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public IObservableAsync<T> StartWith(params T[] values) => new LeadSignal<T>(source, values);
     }

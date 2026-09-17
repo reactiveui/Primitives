@@ -7,9 +7,7 @@ using ReactiveUI.Primitives.Concurrency;
 
 namespace ReactiveUI.Primitives.Extensions.Tests.Operators;
 
-/// <summary>Direct coverage for <c>ScheduledSourceObservable&lt;T&gt;</c>'s
-/// no-op terminal handlers and the <c>EmitState</c> action/transform catch block —
-/// branches the happy-path scheduler tests don't reach.</summary>
+/// <summary>Tests ignored terminal handlers and scheduled action or transform failures.</summary>
 public class ScheduledSourceObservableTests
 {
     /// <summary>Sentinel value used by the emission tests.</summary>
@@ -21,7 +19,7 @@ public class ScheduledSourceObservableTests
     /// <summary>Advance amount that exceeds the window once.</summary>
     private const int AdvancePastWindowTicks = 60;
 
-    /// <summary>Exercises the intentionally-empty <c>OnError</c> body — source errors
+    /// <summary>Exercises the intentionally-empty <c>OnError</c> body - source errors
     /// after a delayed-schedule subscribe are silently dropped, matching the original
     /// <c>Observable.Create</c> + <c>Subscribe(Action&lt;T&gt;)</c> semantics.</summary>
     /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
@@ -39,7 +37,7 @@ public class ScheduledSourceObservableTests
         await Assert.That(results).IsEmpty();
     }
 
-    /// <summary>Exercises the intentionally-empty <c>OnCompleted</c> body — source
+    /// <summary>Exercises the intentionally-empty <c>OnCompleted</c> body - source
     /// completion after a delayed-schedule subscribe is silently dropped.</summary>
     /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
@@ -56,7 +54,7 @@ public class ScheduledSourceObservableTests
         await Assert.That(results).IsEmpty();
     }
 
-    /// <summary>Exercises the <c>EmitState.Emit</c> catch block — when the configured
+    /// <summary>Exercises the <c>EmitState.Emit</c> catch block - when the configured
     /// side-effect throws inside the scheduled callback, the exception is forwarded to
     /// the downstream <c>OnError</c>.</summary>
     /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
@@ -77,7 +75,7 @@ public class ScheduledSourceObservableTests
         await Assert.That(caught).IsSameReferenceAs(expected);
     }
 
-    /// <summary>Exercises the same catch block via the transform overload — when the
+    /// <summary>Exercises the same catch block via the transform overload - when the
     /// transform throws inside the scheduled callback, the exception flows to
     /// downstream <c>OnError</c>.</summary>
     /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>

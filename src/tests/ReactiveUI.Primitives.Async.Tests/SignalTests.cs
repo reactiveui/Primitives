@@ -9,12 +9,6 @@ namespace ReactiveUI.Primitives.Async.Tests;
 /// <summary>Tests for SignalAsync factory, all Signal variants, and SignalExtensions.</summary>
 public partial class SignalTests
 {
-    /// <summary>Seconds a test waits for a notification before giving up.</summary>
-    private const int WaitTimeoutSeconds = 5;
-
-    /// <summary>Maximum time a test waits for a signal notification to arrive.</summary>
-    private static readonly TimeSpan WaitTimeout = TimeSpan.FromSeconds(WaitTimeoutSeconds);
-
 #if NET9_0_OR_GREATER
     /// <summary>Synchronization gate used by tests.</summary>
     private readonly Lock _gate = new();
@@ -54,7 +48,7 @@ public partial class SignalTests
         await signal.OnNextAsync(ThirdValue, CancellationToken.None);
         await signal.OnCompletedAsync(Result.Success);
 
-        await completed.Task.WaitAsync(WaitTimeout);
+        await completed.Task;
 
         await Assert.That(items).IsCollectionEqualTo([FirstValue, SecondValue, ThirdValue]);
     }
@@ -94,7 +88,7 @@ public partial class SignalTests
         await signal.OnNextAsync(SecondValue, CancellationToken.None);
         await signal.OnCompletedAsync(Result.Success);
 
-        await completed.Task.WaitAsync(WaitTimeout);
+        await completed.Task;
 
         await Assert.That(items).Count().IsEqualTo(ExpectedCount);
     }
@@ -126,7 +120,7 @@ public partial class SignalTests
         await signal.OnNextAsync("b", CancellationToken.None);
         await signal.OnCompletedAsync(Result.Success);
 
-        await completed.Task.WaitAsync(WaitTimeout);
+        await completed.Task;
 
         await Assert.That(items).IsCollectionEqualTo(["a", "b"]);
     }
@@ -163,7 +157,7 @@ public partial class SignalTests
         await signal.OnNextAsync(PushedValue, CancellationToken.None);
         await signal.OnCompletedAsync(Result.Success);
 
-        await completed.Task.WaitAsync(WaitTimeout);
+        await completed.Task;
 
         await Assert.That(items).IsCollectionEqualTo([PushedValue]);
     }
@@ -187,7 +181,7 @@ public partial class SignalTests
             });
 
         await signal.OnErrorResumeAsync(new InvalidOperationException("test"), CancellationToken.None);
-        await errorReceived.Task.WaitAsync(WaitTimeout);
+        await errorReceived.Task;
 
         const int ExpectedErrorCount = 1;
         await Assert.That(errors).Count().IsEqualTo(ExpectedErrorCount);
@@ -214,7 +208,7 @@ public partial class SignalTests
             });
 
         await signal.OnCompletedAsync(Result.Success);
-        await completed.Task.WaitAsync(WaitTimeout);
+        await completed.Task;
 
         await Assert.That(completionResult).IsNotNull();
         await Assert.That(completionResult!.Value.IsSuccess).IsTrue();
@@ -240,7 +234,7 @@ public partial class SignalTests
             });
 
         await signal.OnCompletedAsync(Result.Failure(new InvalidOperationException("fatal")));
-        await completed.Task.WaitAsync(WaitTimeout);
+        await completed.Task;
 
         await Assert.That(completionResult).IsNotNull();
         await Assert.That(completionResult!.Value.IsFailure).IsTrue();
@@ -290,7 +284,7 @@ public partial class SignalTests
         await signal.OnNextAsync(SecondValue, CancellationToken.None);
         await signal.OnCompletedAsync(Result.Success);
 
-        await Task.WhenAll(completed1.Task, completed2.Task).WaitAsync(WaitTimeout);
+        await Task.WhenAll(completed1.Task, completed2.Task);
 
         await Assert.That(items1).IsCollectionEqualTo([FirstValue, SecondValue]);
         await Assert.That(items2).IsCollectionEqualTo([FirstValue, SecondValue]);
@@ -326,7 +320,7 @@ public partial class SignalTests
         await observer.OnNextAsync(SecondValue, CancellationToken.None);
         await observer.OnCompletedAsync(Result.Success);
 
-        await completed.Task.WaitAsync(WaitTimeout);
+        await completed.Task;
 
         await Assert.That(items).IsCollectionEqualTo([FirstValue, SecondValue]);
     }

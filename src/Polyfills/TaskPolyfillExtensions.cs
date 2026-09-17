@@ -58,7 +58,7 @@ internal static class TaskPolyfillExtensions
         using var linked = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         if (timeout != Timeout.InfiniteTimeSpan)
         {
-            linked.CancelAfter(timeout);
+            ScheduleTimeout(linked, timeout);
         }
 
         using (linked.Token.Register(static state => ((TaskCompletionSource<bool>)state).TrySetResult(true), signal))
@@ -71,5 +71,12 @@ internal static class TaskPolyfillExtensions
             }
         }
     }
+
+    /// <summary>Schedules cancellation when the timeout elapses.</summary>
+    /// <param name="source">The cancellation source.</param>
+    /// <param name="timeout">The timeout duration.</param>
+    [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
+    [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+    private static void ScheduleTimeout(CancellationTokenSource source, TimeSpan timeout) => source.CancelAfter(timeout);
 }
 #endif

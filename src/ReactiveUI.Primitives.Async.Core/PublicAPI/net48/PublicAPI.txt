@@ -58,6 +58,16 @@ namespace ReactiveUI.Primitives.Async
         System.Threading.Tasks.ValueTask OnErrorResumeAsync(System.Exception error, System.Threading.CancellationToken cancellationToken) { }
         System.Threading.Tasks.ValueTask OnNextAsync(T value, System.Threading.CancellationToken cancellationToken) { }
     }
+    public interface IWitnessAsync<T> : ReactiveUI.Primitives.Async.IObserverAsync<T>, ReactiveUI.Primitives.Async.IWitnessState
+    {
+        System.Threading.Tasks.ValueTask OnCompletedAsyncCore(ReactiveUI.Primitives.Result result) { }
+        System.Threading.Tasks.ValueTask OnErrorResumeAsyncCore(System.Exception error, System.Threading.CancellationToken cancellationToken) { }
+        System.Threading.Tasks.ValueTask OnNextAsyncCore(T value, System.Threading.CancellationToken cancellationToken) { }
+    }
+    public interface IWitnessState : System.IAsyncDisposable
+    {
+        ReactiveUI.Primitives.Async.WitnessAsyncState Witness { get; }
+    }
     public static class OptionalExtensions
     {
         extension<T>(ReactiveUI.Primitives.Optional<T> optional)
@@ -148,27 +158,12 @@ namespace ReactiveUI.Primitives.Async
             public ReactiveUI.Primitives.Async.IObservableAsync<bool> CombineLatestValuesAreAllFalse() { }
             public ReactiveUI.Primitives.Async.IObservableAsync<bool> CombineLatestValuesAreAllTrue() { }
         }
-        extension(System.TimeSpan delay)
-        {
-        }
-        extension<T1>(ReactiveUI.Primitives.Async.IObservableAsync<T1> src1)
-        {
-            public ReactiveUI.Primitives.Async.IObservableAsync<(T1 First, T2 Second)> Zip<T2>(ReactiveUI.Primitives.Async.IObservableAsync<T2> second) { }
-            public ReactiveUI.Primitives.Async.IObservableAsync<TResult> Zip<T2, TResult>(ReactiveUI.Primitives.Async.IObservableAsync<T2> second, System.Func<T1, T2, TResult> resultSelector) { }
-        }
         extension<T1>(ReactiveUI.Primitives.Async.IObservableAsync<T1> src1)
         {
             [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
-            public ReactiveUI.Primitives.Async.IObservableAsync<TResult> CombineLatest<T2, T3, T4, T5, T6, T7, T8, T9, T10, TResult>(ReactiveUI.Primitives.Async.IObservableAsync<T2> src2, ReactiveUI.Primitives.Async.IObservableAsync<T3> src3, ReactiveUI.Primitives.Async.IObservableAsync<T4> src4, ReactiveUI.Primitives.Async.IObservableAsync<T5> src5, ReactiveUI.Primitives.Async.IObservableAsync<T6> src6, ReactiveUI.Primitives.Async.IObservableAsync<T7> src7, ReactiveUI.Primitives.Async.IObservableAsync<T8> src8, ReactiveUI.Primitives.Async.IObservableAsync<T9> src9, ReactiveUI.Primitives.Async.IObservableAsync<T10> src10, System.Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TResult> selector) { }
+            public ReactiveUI.Primitives.Async.IObservableAsync<TResult> CombineLatest<T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TResult>(ReactiveUI.Primitives.Async.IObservableAsync<T2> src2, ReactiveUI.Primitives.Async.IObservableAsync<T3> src3, ReactiveUI.Primitives.Async.IObservableAsync<T4> src4, ReactiveUI.Primitives.Async.IObservableAsync<T5> src5, ReactiveUI.Primitives.Async.IObservableAsync<T6> src6, ReactiveUI.Primitives.Async.IObservableAsync<T7> src7, ReactiveUI.Primitives.Async.IObservableAsync<T8> src8, ReactiveUI.Primitives.Async.IObservableAsync<T9> src9, ReactiveUI.Primitives.Async.IObservableAsync<T10> src10, ReactiveUI.Primitives.Async.IObservableAsync<T11> src11, ReactiveUI.Primitives.Async.IObservableAsync<T12> src12, ReactiveUI.Primitives.Async.IObservableAsync<T13> src13, ReactiveUI.Primitives.Async.IObservableAsync<T14> src14, System.Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TResult> selector) { }
             [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
-            public ReactiveUI.Primitives.Async.IObservableAsync<TResult> SyncLatest<T2, T3, T4, T5, T6, T7, T8, T9, T10, TResult>(ReactiveUI.Primitives.Async.IObservableAsync<T2> src2, ReactiveUI.Primitives.Async.IObservableAsync<T3> src3, ReactiveUI.Primitives.Async.IObservableAsync<T4> src4, ReactiveUI.Primitives.Async.IObservableAsync<T5> src5, ReactiveUI.Primitives.Async.IObservableAsync<T6> src6, ReactiveUI.Primitives.Async.IObservableAsync<T7> src7, ReactiveUI.Primitives.Async.IObservableAsync<T8> src8, ReactiveUI.Primitives.Async.IObservableAsync<T9> src9, ReactiveUI.Primitives.Async.IObservableAsync<T10> src10, System.Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TResult> selector) { }
-        }
-        extension<T1>(ReactiveUI.Primitives.Async.IObservableAsync<T1> src1)
-        {
-            [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
-            public ReactiveUI.Primitives.Async.IObservableAsync<TResult> CombineLatest<T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TResult>(ReactiveUI.Primitives.Async.IObservableAsync<T2> src2, ReactiveUI.Primitives.Async.IObservableAsync<T3> src3, ReactiveUI.Primitives.Async.IObservableAsync<T4> src4, ReactiveUI.Primitives.Async.IObservableAsync<T5> src5, ReactiveUI.Primitives.Async.IObservableAsync<T6> src6, ReactiveUI.Primitives.Async.IObservableAsync<T7> src7, ReactiveUI.Primitives.Async.IObservableAsync<T8> src8, ReactiveUI.Primitives.Async.IObservableAsync<T9> src9, ReactiveUI.Primitives.Async.IObservableAsync<T10> src10, ReactiveUI.Primitives.Async.IObservableAsync<T11> src11, System.Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TResult> selector) { }
-            [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
-            public ReactiveUI.Primitives.Async.IObservableAsync<TResult> SyncLatest<T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TResult>(ReactiveUI.Primitives.Async.IObservableAsync<T2> src2, ReactiveUI.Primitives.Async.IObservableAsync<T3> src3, ReactiveUI.Primitives.Async.IObservableAsync<T4> src4, ReactiveUI.Primitives.Async.IObservableAsync<T5> src5, ReactiveUI.Primitives.Async.IObservableAsync<T6> src6, ReactiveUI.Primitives.Async.IObservableAsync<T7> src7, ReactiveUI.Primitives.Async.IObservableAsync<T8> src8, ReactiveUI.Primitives.Async.IObservableAsync<T9> src9, ReactiveUI.Primitives.Async.IObservableAsync<T10> src10, ReactiveUI.Primitives.Async.IObservableAsync<T11> src11, System.Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TResult> selector) { }
+            public ReactiveUI.Primitives.Async.IObservableAsync<TResult> SyncLatest<T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TResult>(ReactiveUI.Primitives.Async.IObservableAsync<T2> src2, ReactiveUI.Primitives.Async.IObservableAsync<T3> src3, ReactiveUI.Primitives.Async.IObservableAsync<T4> src4, ReactiveUI.Primitives.Async.IObservableAsync<T5> src5, ReactiveUI.Primitives.Async.IObservableAsync<T6> src6, ReactiveUI.Primitives.Async.IObservableAsync<T7> src7, ReactiveUI.Primitives.Async.IObservableAsync<T8> src8, ReactiveUI.Primitives.Async.IObservableAsync<T9> src9, ReactiveUI.Primitives.Async.IObservableAsync<T10> src10, ReactiveUI.Primitives.Async.IObservableAsync<T11> src11, ReactiveUI.Primitives.Async.IObservableAsync<T12> src12, ReactiveUI.Primitives.Async.IObservableAsync<T13> src13, ReactiveUI.Primitives.Async.IObservableAsync<T14> src14, System.Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TResult> selector) { }
         }
         extension<T1>(ReactiveUI.Primitives.Async.IObservableAsync<T1> src1)
         {
@@ -183,6 +178,10 @@ namespace ReactiveUI.Primitives.Async
             public ReactiveUI.Primitives.Async.IObservableAsync<TResult> CombineLatest<T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TResult>(ReactiveUI.Primitives.Async.IObservableAsync<T2> src2, ReactiveUI.Primitives.Async.IObservableAsync<T3> src3, ReactiveUI.Primitives.Async.IObservableAsync<T4> src4, ReactiveUI.Primitives.Async.IObservableAsync<T5> src5, ReactiveUI.Primitives.Async.IObservableAsync<T6> src6, ReactiveUI.Primitives.Async.IObservableAsync<T7> src7, ReactiveUI.Primitives.Async.IObservableAsync<T8> src8, ReactiveUI.Primitives.Async.IObservableAsync<T9> src9, ReactiveUI.Primitives.Async.IObservableAsync<T10> src10, ReactiveUI.Primitives.Async.IObservableAsync<T11> src11, ReactiveUI.Primitives.Async.IObservableAsync<T12> src12, ReactiveUI.Primitives.Async.IObservableAsync<T13> src13, System.Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TResult> selector) { }
             [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
             public ReactiveUI.Primitives.Async.IObservableAsync<TResult> SyncLatest<T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TResult>(ReactiveUI.Primitives.Async.IObservableAsync<T2> src2, ReactiveUI.Primitives.Async.IObservableAsync<T3> src3, ReactiveUI.Primitives.Async.IObservableAsync<T4> src4, ReactiveUI.Primitives.Async.IObservableAsync<T5> src5, ReactiveUI.Primitives.Async.IObservableAsync<T6> src6, ReactiveUI.Primitives.Async.IObservableAsync<T7> src7, ReactiveUI.Primitives.Async.IObservableAsync<T8> src8, ReactiveUI.Primitives.Async.IObservableAsync<T9> src9, ReactiveUI.Primitives.Async.IObservableAsync<T10> src10, ReactiveUI.Primitives.Async.IObservableAsync<T11> src11, ReactiveUI.Primitives.Async.IObservableAsync<T12> src12, ReactiveUI.Primitives.Async.IObservableAsync<T13> src13, System.Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TResult> selector) { }
+        }
+        extension<T1>(ReactiveUI.Primitives.Async.IObservableAsync<T1> src1)
+        {
+            public ReactiveUI.Primitives.Async.IObservableAsync<TResult> Pair<T2, TResult>(ReactiveUI.Primitives.Async.IObservableAsync<T2> second, System.Func<T1, T2, TResult> resultSelector) { }
         }
         extension<T1>(ReactiveUI.Primitives.Async.IObservableAsync<T1> src1)
         {
@@ -210,13 +209,9 @@ namespace ReactiveUI.Primitives.Async
         extension<T1>(ReactiveUI.Primitives.Async.IObservableAsync<T1> src1)
         {
             [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
-            public ReactiveUI.Primitives.Async.IObservableAsync<TResult> CombineLatest<T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TResult>(ReactiveUI.Primitives.Async.IObservableAsync<T2> src2, ReactiveUI.Primitives.Async.IObservableAsync<T3> src3, ReactiveUI.Primitives.Async.IObservableAsync<T4> src4, ReactiveUI.Primitives.Async.IObservableAsync<T5> src5, ReactiveUI.Primitives.Async.IObservableAsync<T6> src6, ReactiveUI.Primitives.Async.IObservableAsync<T7> src7, ReactiveUI.Primitives.Async.IObservableAsync<T8> src8, ReactiveUI.Primitives.Async.IObservableAsync<T9> src9, ReactiveUI.Primitives.Async.IObservableAsync<T10> src10, ReactiveUI.Primitives.Async.IObservableAsync<T11> src11, ReactiveUI.Primitives.Async.IObservableAsync<T12> src12, ReactiveUI.Primitives.Async.IObservableAsync<T13> src13, ReactiveUI.Primitives.Async.IObservableAsync<T14> src14, System.Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TResult> selector) { }
+            public ReactiveUI.Primitives.Async.IObservableAsync<TResult> CombineLatest<T2, T3, TResult>(ReactiveUI.Primitives.Async.IObservableAsync<T2> src2, ReactiveUI.Primitives.Async.IObservableAsync<T3> src3, System.Func<T1, T2, T3, TResult> selector) { }
             [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
-            public ReactiveUI.Primitives.Async.IObservableAsync<TResult> SyncLatest<T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TResult>(ReactiveUI.Primitives.Async.IObservableAsync<T2> src2, ReactiveUI.Primitives.Async.IObservableAsync<T3> src3, ReactiveUI.Primitives.Async.IObservableAsync<T4> src4, ReactiveUI.Primitives.Async.IObservableAsync<T5> src5, ReactiveUI.Primitives.Async.IObservableAsync<T6> src6, ReactiveUI.Primitives.Async.IObservableAsync<T7> src7, ReactiveUI.Primitives.Async.IObservableAsync<T8> src8, ReactiveUI.Primitives.Async.IObservableAsync<T9> src9, ReactiveUI.Primitives.Async.IObservableAsync<T10> src10, ReactiveUI.Primitives.Async.IObservableAsync<T11> src11, ReactiveUI.Primitives.Async.IObservableAsync<T12> src12, ReactiveUI.Primitives.Async.IObservableAsync<T13> src13, ReactiveUI.Primitives.Async.IObservableAsync<T14> src14, System.Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TResult> selector) { }
-        }
-        extension<T1>(ReactiveUI.Primitives.Async.IObservableAsync<T1> src1)
-        {
-            public ReactiveUI.Primitives.Async.IObservableAsync<TResult> Pair<T2, TResult>(ReactiveUI.Primitives.Async.IObservableAsync<T2> second, System.Func<T1, T2, TResult> resultSelector) { }
+            public ReactiveUI.Primitives.Async.IObservableAsync<TResult> SyncLatest<T2, T3, TResult>(ReactiveUI.Primitives.Async.IObservableAsync<T2> src2, ReactiveUI.Primitives.Async.IObservableAsync<T3> src3, System.Func<T1, T2, T3, TResult> selector) { }
         }
         extension<T1>(ReactiveUI.Primitives.Async.IObservableAsync<T1> src1)
         {
@@ -242,13 +237,6 @@ namespace ReactiveUI.Primitives.Async
         extension<T1>(ReactiveUI.Primitives.Async.IObservableAsync<T1> src1)
         {
             [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
-            public ReactiveUI.Primitives.Async.IObservableAsync<TResult> CombineLatest<T2, T3, T4, T5, T6, T7, T8, T9, TResult>(ReactiveUI.Primitives.Async.IObservableAsync<T2> src2, ReactiveUI.Primitives.Async.IObservableAsync<T3> src3, ReactiveUI.Primitives.Async.IObservableAsync<T4> src4, ReactiveUI.Primitives.Async.IObservableAsync<T5> src5, ReactiveUI.Primitives.Async.IObservableAsync<T6> src6, ReactiveUI.Primitives.Async.IObservableAsync<T7> src7, ReactiveUI.Primitives.Async.IObservableAsync<T8> src8, ReactiveUI.Primitives.Async.IObservableAsync<T9> src9, System.Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, TResult> selector) { }
-            [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
-            public ReactiveUI.Primitives.Async.IObservableAsync<TResult> SyncLatest<T2, T3, T4, T5, T6, T7, T8, T9, TResult>(ReactiveUI.Primitives.Async.IObservableAsync<T2> src2, ReactiveUI.Primitives.Async.IObservableAsync<T3> src3, ReactiveUI.Primitives.Async.IObservableAsync<T4> src4, ReactiveUI.Primitives.Async.IObservableAsync<T5> src5, ReactiveUI.Primitives.Async.IObservableAsync<T6> src6, ReactiveUI.Primitives.Async.IObservableAsync<T7> src7, ReactiveUI.Primitives.Async.IObservableAsync<T8> src8, ReactiveUI.Primitives.Async.IObservableAsync<T9> src9, System.Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, TResult> selector) { }
-        }
-        extension<T1>(ReactiveUI.Primitives.Async.IObservableAsync<T1> src1)
-        {
-            [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
             public ReactiveUI.Primitives.Async.IObservableAsync<TResult> CombineLatest<T2, T3, T4, T5, T6, T7, TResult>(ReactiveUI.Primitives.Async.IObservableAsync<T2> src2, ReactiveUI.Primitives.Async.IObservableAsync<T3> src3, ReactiveUI.Primitives.Async.IObservableAsync<T4> src4, ReactiveUI.Primitives.Async.IObservableAsync<T5> src5, ReactiveUI.Primitives.Async.IObservableAsync<T6> src6, ReactiveUI.Primitives.Async.IObservableAsync<T7> src7, System.Func<T1, T2, T3, T4, T5, T6, T7, TResult> selector) { }
             [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
             public ReactiveUI.Primitives.Async.IObservableAsync<TResult> SyncLatest<T2, T3, T4, T5, T6, T7, TResult>(ReactiveUI.Primitives.Async.IObservableAsync<T2> src2, ReactiveUI.Primitives.Async.IObservableAsync<T3> src3, ReactiveUI.Primitives.Async.IObservableAsync<T4> src4, ReactiveUI.Primitives.Async.IObservableAsync<T5> src5, ReactiveUI.Primitives.Async.IObservableAsync<T6> src6, ReactiveUI.Primitives.Async.IObservableAsync<T7> src7, System.Func<T1, T2, T3, T4, T5, T6, T7, TResult> selector) { }
@@ -263,9 +251,28 @@ namespace ReactiveUI.Primitives.Async
         extension<T1>(ReactiveUI.Primitives.Async.IObservableAsync<T1> src1)
         {
             [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
-            public ReactiveUI.Primitives.Async.IObservableAsync<TResult> CombineLatest<T2, T3, TResult>(ReactiveUI.Primitives.Async.IObservableAsync<T2> src2, ReactiveUI.Primitives.Async.IObservableAsync<T3> src3, System.Func<T1, T2, T3, TResult> selector) { }
+            public ReactiveUI.Primitives.Async.IObservableAsync<TResult> CombineLatest<T2, T3, T4, T5, T6, T7, T8, T9, TResult>(ReactiveUI.Primitives.Async.IObservableAsync<T2> src2, ReactiveUI.Primitives.Async.IObservableAsync<T3> src3, ReactiveUI.Primitives.Async.IObservableAsync<T4> src4, ReactiveUI.Primitives.Async.IObservableAsync<T5> src5, ReactiveUI.Primitives.Async.IObservableAsync<T6> src6, ReactiveUI.Primitives.Async.IObservableAsync<T7> src7, ReactiveUI.Primitives.Async.IObservableAsync<T8> src8, ReactiveUI.Primitives.Async.IObservableAsync<T9> src9, System.Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, TResult> selector) { }
             [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
-            public ReactiveUI.Primitives.Async.IObservableAsync<TResult> SyncLatest<T2, T3, TResult>(ReactiveUI.Primitives.Async.IObservableAsync<T2> src2, ReactiveUI.Primitives.Async.IObservableAsync<T3> src3, System.Func<T1, T2, T3, TResult> selector) { }
+            public ReactiveUI.Primitives.Async.IObservableAsync<TResult> SyncLatest<T2, T3, T4, T5, T6, T7, T8, T9, TResult>(ReactiveUI.Primitives.Async.IObservableAsync<T2> src2, ReactiveUI.Primitives.Async.IObservableAsync<T3> src3, ReactiveUI.Primitives.Async.IObservableAsync<T4> src4, ReactiveUI.Primitives.Async.IObservableAsync<T5> src5, ReactiveUI.Primitives.Async.IObservableAsync<T6> src6, ReactiveUI.Primitives.Async.IObservableAsync<T7> src7, ReactiveUI.Primitives.Async.IObservableAsync<T8> src8, ReactiveUI.Primitives.Async.IObservableAsync<T9> src9, System.Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, TResult> selector) { }
+        }
+        extension<T1>(ReactiveUI.Primitives.Async.IObservableAsync<T1> src1)
+        {
+            public ReactiveUI.Primitives.Async.IObservableAsync<(T1 First, T2 Second)> Zip<T2>(ReactiveUI.Primitives.Async.IObservableAsync<T2> second) { }
+            public ReactiveUI.Primitives.Async.IObservableAsync<TResult> Zip<T2, TResult>(ReactiveUI.Primitives.Async.IObservableAsync<T2> second, System.Func<T1, T2, TResult> resultSelector) { }
+        }
+        extension<T1>(ReactiveUI.Primitives.Async.IObservableAsync<T1> src1)
+        {
+            [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+            public ReactiveUI.Primitives.Async.IObservableAsync<TResult> CombineLatest<T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TResult>(ReactiveUI.Primitives.Async.IObservableAsync<T2> src2, ReactiveUI.Primitives.Async.IObservableAsync<T3> src3, ReactiveUI.Primitives.Async.IObservableAsync<T4> src4, ReactiveUI.Primitives.Async.IObservableAsync<T5> src5, ReactiveUI.Primitives.Async.IObservableAsync<T6> src6, ReactiveUI.Primitives.Async.IObservableAsync<T7> src7, ReactiveUI.Primitives.Async.IObservableAsync<T8> src8, ReactiveUI.Primitives.Async.IObservableAsync<T9> src9, ReactiveUI.Primitives.Async.IObservableAsync<T10> src10, ReactiveUI.Primitives.Async.IObservableAsync<T11> src11, System.Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TResult> selector) { }
+            [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+            public ReactiveUI.Primitives.Async.IObservableAsync<TResult> SyncLatest<T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TResult>(ReactiveUI.Primitives.Async.IObservableAsync<T2> src2, ReactiveUI.Primitives.Async.IObservableAsync<T3> src3, ReactiveUI.Primitives.Async.IObservableAsync<T4> src4, ReactiveUI.Primitives.Async.IObservableAsync<T5> src5, ReactiveUI.Primitives.Async.IObservableAsync<T6> src6, ReactiveUI.Primitives.Async.IObservableAsync<T7> src7, ReactiveUI.Primitives.Async.IObservableAsync<T8> src8, ReactiveUI.Primitives.Async.IObservableAsync<T9> src9, ReactiveUI.Primitives.Async.IObservableAsync<T10> src10, ReactiveUI.Primitives.Async.IObservableAsync<T11> src11, System.Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TResult> selector) { }
+        }
+        extension<T1>(ReactiveUI.Primitives.Async.IObservableAsync<T1> src1)
+        {
+            [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+            public ReactiveUI.Primitives.Async.IObservableAsync<TResult> CombineLatest<T2, T3, T4, T5, T6, T7, T8, T9, T10, TResult>(ReactiveUI.Primitives.Async.IObservableAsync<T2> src2, ReactiveUI.Primitives.Async.IObservableAsync<T3> src3, ReactiveUI.Primitives.Async.IObservableAsync<T4> src4, ReactiveUI.Primitives.Async.IObservableAsync<T5> src5, ReactiveUI.Primitives.Async.IObservableAsync<T6> src6, ReactiveUI.Primitives.Async.IObservableAsync<T7> src7, ReactiveUI.Primitives.Async.IObservableAsync<T8> src8, ReactiveUI.Primitives.Async.IObservableAsync<T9> src9, ReactiveUI.Primitives.Async.IObservableAsync<T10> src10, System.Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TResult> selector) { }
+            [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+            public ReactiveUI.Primitives.Async.IObservableAsync<TResult> SyncLatest<T2, T3, T4, T5, T6, T7, T8, T9, T10, TResult>(ReactiveUI.Primitives.Async.IObservableAsync<T2> src2, ReactiveUI.Primitives.Async.IObservableAsync<T3> src3, ReactiveUI.Primitives.Async.IObservableAsync<T4> src4, ReactiveUI.Primitives.Async.IObservableAsync<T5> src5, ReactiveUI.Primitives.Async.IObservableAsync<T6> src6, ReactiveUI.Primitives.Async.IObservableAsync<T7> src7, ReactiveUI.Primitives.Async.IObservableAsync<T8> src8, ReactiveUI.Primitives.Async.IObservableAsync<T9> src9, ReactiveUI.Primitives.Async.IObservableAsync<T10> src10, System.Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TResult> selector) { }
         }
         extension<T>(ReactiveUI.Primitives.Async.ConnectableSignalAsync<T> source)
         {
@@ -301,8 +308,14 @@ namespace ReactiveUI.Primitives.Async
         }
         extension<T>(ReactiveUI.Primitives.Async.IObservableAsync<T> source)
         {
-            public ReactiveUI.Primitives.Async.IObservableAsync<T> Throttle(System.TimeSpan dueTime) { }
-            public ReactiveUI.Primitives.Async.IObservableAsync<T> Throttle(System.TimeSpan dueTime, System.TimeProvider? timeProvider) { }
+            [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+            public System.Collections.Generic.IAsyncEnumerable<T> ToAsyncEnumerable(System.Func<System.Threading.Channels.Channel<T>> channelFactory) { }
+            public System.Collections.Generic.IAsyncEnumerable<T> ToAsyncEnumerable(System.Func<System.Threading.Channels.Channel<T>> channelFactory, System.Func<System.Exception, System.Threading.CancellationToken, System.Threading.Tasks.ValueTask>? onErrorResume) { }
+        }
+        extension<T>(ReactiveUI.Primitives.Async.IObservableAsync<T> source)
+        {
+            public ReactiveUI.Primitives.Async.IObservableAsync<T> Delay(System.TimeSpan delayInterval) { }
+            public ReactiveUI.Primitives.Async.IObservableAsync<T> Delay(System.TimeSpan delayInterval, System.TimeProvider? timeProvider) { }
         }
         extension<T>(ReactiveUI.Primitives.Async.IObservableAsync<T> source)
         {
@@ -317,22 +330,34 @@ namespace ReactiveUI.Primitives.Async
         }
         extension<T>(ReactiveUI.Primitives.Async.IObservableAsync<T> source)
         {
-            public ReactiveUI.Primitives.Async.IObservableAsync<T> Retry() { }
-            public ReactiveUI.Primitives.Async.IObservableAsync<T> Retry(int retryCount) { }
-        }
-        extension<T>(ReactiveUI.Primitives.Async.IObservableAsync<T> source)
-        {
             public ReactiveUI.Primitives.Async.IObservableAsync<T> Catch(System.Func<System.Exception, ReactiveUI.Primitives.Async.IObservableAsync<T>> handler) { }
             public ReactiveUI.Primitives.Async.IObservableAsync<T> Catch(System.Func<System.Exception, ReactiveUI.Primitives.Async.IObservableAsync<T>> handler, System.Func<System.Exception, System.Threading.CancellationToken, System.Threading.Tasks.ValueTask>? onErrorResume) { }
         }
         extension<T>(ReactiveUI.Primitives.Async.IObservableAsync<T> source)
         {
-            public ReactiveUI.Primitives.Async.IObservableAsync<T> Delay(System.TimeSpan delayInterval) { }
-            public ReactiveUI.Primitives.Async.IObservableAsync<T> Delay(System.TimeSpan delayInterval, System.TimeProvider? timeProvider) { }
+            public ReactiveUI.Primitives.Async.IObservableAsync<TResult> Bind<TResult>(System.Func<T, ReactiveUI.Primitives.Async.IObservableAsync<TResult>> selector) { }
         }
         extension<T>(ReactiveUI.Primitives.Async.IObservableAsync<T> source)
         {
-            public ReactiveUI.Primitives.Async.IObservableAsync<TResult> Bind<TResult>(System.Func<T, ReactiveUI.Primitives.Async.IObservableAsync<TResult>> selector) { }
+            public ReactiveUI.Primitives.Async.IObservableAsync<T> Retry() { }
+            public ReactiveUI.Primitives.Async.IObservableAsync<T> Retry(int retryCount) { }
+        }
+        extension<T>(ReactiveUI.Primitives.Async.IObservableAsync<T> source)
+        {
+            [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+            public System.Threading.Tasks.ValueTask<System.IAsyncDisposable> SubscribeAsync() { }
+            [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+            public System.Threading.Tasks.ValueTask<System.IAsyncDisposable> SubscribeAsync(System.Action<T> onNext) { }
+            [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+            public System.Threading.Tasks.ValueTask<System.IAsyncDisposable> SubscribeAsync(System.Func<T, System.Threading.CancellationToken, System.Threading.Tasks.ValueTask> onNextAsync) { }
+            public System.Threading.Tasks.ValueTask<System.IAsyncDisposable> SubscribeAsync(System.Action<T> onNext, System.Threading.CancellationToken cancellationToken) { }
+            [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+            public System.Threading.Tasks.ValueTask<System.IAsyncDisposable> SubscribeAsync(System.Func<T, System.Threading.CancellationToken, System.Threading.Tasks.ValueTask> onNextAsync, System.Func<System.Exception, System.Threading.CancellationToken, System.Threading.Tasks.ValueTask>? onErrorResumeAsync) { }
+            public System.Threading.Tasks.ValueTask<System.IAsyncDisposable> SubscribeAsync(System.Func<T, System.Threading.CancellationToken, System.Threading.Tasks.ValueTask> onNextAsync, System.Threading.CancellationToken cancellationToken) { }
+            [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+            public System.Threading.Tasks.ValueTask<System.IAsyncDisposable> SubscribeAsync(System.Func<T, System.Threading.CancellationToken, System.Threading.Tasks.ValueTask> onNextAsync, System.Func<System.Exception, System.Threading.CancellationToken, System.Threading.Tasks.ValueTask>? onErrorResumeAsync, System.Func<ReactiveUI.Primitives.Result, System.Threading.Tasks.ValueTask>? onCompletedAsync) { }
+            public System.Threading.Tasks.ValueTask<System.IAsyncDisposable> SubscribeAsync(System.Action<T> onNext, System.Action<System.Exception>? onErrorResume, System.Action<ReactiveUI.Primitives.Result>? onCompleted, System.Threading.CancellationToken cancellationToken) { }
+            public System.Threading.Tasks.ValueTask<System.IAsyncDisposable> SubscribeAsync(System.Func<T, System.Threading.CancellationToken, System.Threading.Tasks.ValueTask> onNextAsync, System.Func<System.Exception, System.Threading.CancellationToken, System.Threading.Tasks.ValueTask>? onErrorResumeAsync, System.Func<ReactiveUI.Primitives.Result, System.Threading.Tasks.ValueTask>? onCompletedAsync, System.Threading.CancellationToken cancellationToken) { }
         }
         extension<T>(ReactiveUI.Primitives.Async.IObservableAsync<T> source)
         {
@@ -393,32 +418,12 @@ namespace ReactiveUI.Primitives.Async
         }
         extension<T>(ReactiveUI.Primitives.Async.IObservableAsync<T> source)
         {
-            [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
-            public System.Threading.Tasks.ValueTask<System.IAsyncDisposable> SubscribeAsync() { }
-            [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
-            public System.Threading.Tasks.ValueTask<System.IAsyncDisposable> SubscribeAsync(System.Action<T> onNext) { }
-            [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
-            public System.Threading.Tasks.ValueTask<System.IAsyncDisposable> SubscribeAsync(System.Func<T, System.Threading.CancellationToken, System.Threading.Tasks.ValueTask> onNextAsync) { }
-            public System.Threading.Tasks.ValueTask<System.IAsyncDisposable> SubscribeAsync(System.Action<T> onNext, System.Threading.CancellationToken cancellationToken) { }
-            [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
-            public System.Threading.Tasks.ValueTask<System.IAsyncDisposable> SubscribeAsync(System.Func<T, System.Threading.CancellationToken, System.Threading.Tasks.ValueTask> onNextAsync, System.Func<System.Exception, System.Threading.CancellationToken, System.Threading.Tasks.ValueTask>? onErrorResumeAsync) { }
-            public System.Threading.Tasks.ValueTask<System.IAsyncDisposable> SubscribeAsync(System.Func<T, System.Threading.CancellationToken, System.Threading.Tasks.ValueTask> onNextAsync, System.Threading.CancellationToken cancellationToken) { }
-            [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
-            public System.Threading.Tasks.ValueTask<System.IAsyncDisposable> SubscribeAsync(System.Func<T, System.Threading.CancellationToken, System.Threading.Tasks.ValueTask> onNextAsync, System.Func<System.Exception, System.Threading.CancellationToken, System.Threading.Tasks.ValueTask>? onErrorResumeAsync, System.Func<ReactiveUI.Primitives.Result, System.Threading.Tasks.ValueTask>? onCompletedAsync) { }
-            public System.Threading.Tasks.ValueTask<System.IAsyncDisposable> SubscribeAsync(System.Action<T> onNext, System.Action<System.Exception>? onErrorResume, System.Action<ReactiveUI.Primitives.Result>? onCompleted, System.Threading.CancellationToken cancellationToken) { }
-            public System.Threading.Tasks.ValueTask<System.IAsyncDisposable> SubscribeAsync(System.Func<T, System.Threading.CancellationToken, System.Threading.Tasks.ValueTask> onNextAsync, System.Func<System.Exception, System.Threading.CancellationToken, System.Threading.Tasks.ValueTask>? onErrorResumeAsync, System.Func<ReactiveUI.Primitives.Result, System.Threading.Tasks.ValueTask>? onCompletedAsync, System.Threading.CancellationToken cancellationToken) { }
+            public ReactiveUI.Primitives.Async.IObservableAsync<T> Shift(System.TimeSpan delayInterval) { }
         }
         extension<T>(ReactiveUI.Primitives.Async.IObservableAsync<T> source)
         {
-            [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
-            public ReactiveUI.Primitives.Async.IObservableAsync<T> Do() { }
-            public ReactiveUI.Primitives.Async.IObservableAsync<T> Do(System.Func<T, System.Threading.CancellationToken, System.Threading.Tasks.ValueTask>? onNext) { }
-            public ReactiveUI.Primitives.Async.IObservableAsync<T> Do(System.Action<T>? onNext, System.Action<System.Exception>? onErrorResume, System.Action<ReactiveUI.Primitives.Result>? onCompleted) { }
-            public ReactiveUI.Primitives.Async.IObservableAsync<T> Do(System.Func<T, System.Threading.CancellationToken, System.Threading.Tasks.ValueTask>? onNext, System.Func<System.Exception, System.Threading.CancellationToken, System.Threading.Tasks.ValueTask>? onErrorResume, System.Func<ReactiveUI.Primitives.Result, System.Threading.Tasks.ValueTask>? onCompleted) { }
-            public ReactiveUI.Primitives.Async.IObservableAsync<T> Tap(System.Action<T> onNext) { }
-            [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
-            public ReactiveUI.Primitives.Async.IObservableAsync<T> Tap(System.Action<T> onNext, System.Action<System.Exception> onError, System.Action onCompleted) { }
-            public ReactiveUI.Primitives.Async.IObservableAsync<T> Tap(System.Func<T, System.Threading.CancellationToken, System.Threading.Tasks.ValueTask>? onNext, System.Func<System.Exception, System.Threading.CancellationToken, System.Threading.Tasks.ValueTask>? onErrorResume, System.Func<ReactiveUI.Primitives.Result, System.Threading.Tasks.ValueTask>? onCompleted) { }
+            public ReactiveUI.Primitives.Async.IObservableAsync<T> Throttle(System.TimeSpan dueTime) { }
+            public ReactiveUI.Primitives.Async.IObservableAsync<T> Throttle(System.TimeSpan dueTime, System.TimeProvider? timeProvider) { }
         }
         extension<T>(ReactiveUI.Primitives.Async.IObservableAsync<T> source)
         {
@@ -431,9 +436,24 @@ namespace ReactiveUI.Primitives.Async
         }
         extension<T>(ReactiveUI.Primitives.Async.IObservableAsync<T> source)
         {
+            public ReactiveUI.Primitives.Async.IObservableAsync<T> TakeUntil(ReactiveUI.Primitives.Async.CompletionSignalDelegate stopSignal) { }
+            public ReactiveUI.Primitives.Async.IObservableAsync<T> TakeUntil(System.Func<T, System.Threading.CancellationToken, System.Threading.Tasks.ValueTask<bool>> asyncPredicate) { }
+            public ReactiveUI.Primitives.Async.IObservableAsync<T> TakeUntil(System.Func<T, bool> predicate) { }
             [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
-            public System.Threading.Tasks.ValueTask WaitCompletionAsync() { }
-            public System.Threading.Tasks.ValueTask WaitCompletionAsync(System.Threading.CancellationToken cancellationToken) { }
+            public ReactiveUI.Primitives.Async.IObservableAsync<T> TakeUntil(System.Threading.CancellationToken cancellationToken) { }
+            public ReactiveUI.Primitives.Async.IObservableAsync<T> TakeUntil(System.Threading.Tasks.Task task) { }
+            public ReactiveUI.Primitives.Async.IObservableAsync<T> TakeUntil(ReactiveUI.Primitives.Async.CompletionSignalDelegate stopSignal, ReactiveUI.Primitives.Async.TakeUntilOptions? options) { }
+            public ReactiveUI.Primitives.Async.IObservableAsync<T> TakeUntil(ReactiveUI.Primitives.Async.CompletionSignalDelegate stopSignal, System.Threading.CancellationToken cancellationToken) { }
+            public ReactiveUI.Primitives.Async.IObservableAsync<T> TakeUntil(System.Func<T, System.Threading.CancellationToken, System.Threading.Tasks.ValueTask<bool>> asyncPredicate, System.Threading.CancellationToken cancellationToken) { }
+            public ReactiveUI.Primitives.Async.IObservableAsync<T> TakeUntil(System.Func<T, bool> predicate, System.Threading.CancellationToken cancellationToken) { }
+            public ReactiveUI.Primitives.Async.IObservableAsync<T> TakeUntil(System.Threading.Tasks.Task task, ReactiveUI.Primitives.Async.TakeUntilOptions? options) { }
+            public ReactiveUI.Primitives.Async.IObservableAsync<T> TakeUntil(System.Threading.Tasks.Task task, System.Threading.CancellationToken cancellationToken) { }
+            public ReactiveUI.Primitives.Async.IObservableAsync<T> TakeUntil(ReactiveUI.Primitives.Async.CompletionSignalDelegate stopSignal, ReactiveUI.Primitives.Async.TakeUntilOptions? options, System.Threading.CancellationToken cancellationToken) { }
+            public ReactiveUI.Primitives.Async.IObservableAsync<T> TakeUntil(System.Threading.Tasks.Task task, ReactiveUI.Primitives.Async.TakeUntilOptions? options, System.Threading.CancellationToken cancellationToken) { }
+            public ReactiveUI.Primitives.Async.IObservableAsync<T> TakeUntil<TOther>(ReactiveUI.Primitives.Async.IObservableAsync<TOther> other) { }
+            public ReactiveUI.Primitives.Async.IObservableAsync<T> TakeUntil<TOther>(ReactiveUI.Primitives.Async.IObservableAsync<TOther> other, ReactiveUI.Primitives.Async.TakeUntilOptions? options) { }
+            public ReactiveUI.Primitives.Async.IObservableAsync<T> TakeUntil<TOther>(ReactiveUI.Primitives.Async.IObservableAsync<TOther> other, System.Threading.CancellationToken cancellationToken) { }
+            public ReactiveUI.Primitives.Async.IObservableAsync<T> TakeUntil<TOther>(ReactiveUI.Primitives.Async.IObservableAsync<TOther> other, ReactiveUI.Primitives.Async.TakeUntilOptions? options, System.Threading.CancellationToken cancellationToken) { }
         }
         extension<T>(ReactiveUI.Primitives.Async.IObservableAsync<T> source)
         {
@@ -441,27 +461,14 @@ namespace ReactiveUI.Primitives.Async
         }
         extension<T>(ReactiveUI.Primitives.Async.IObservableAsync<T> source)
         {
-            [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
-            public System.Threading.Tasks.ValueTask<TAcc> AggregateAsync<TAcc>(TAcc seed, System.Func<TAcc, T, System.Threading.CancellationToken, System.Threading.Tasks.ValueTask<TAcc>> accumulator) { }
-            [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
-            public System.Threading.Tasks.ValueTask<TAcc> AggregateAsync<TAcc>(TAcc seed, System.Func<TAcc, T, TAcc> accumulator) { }
-            [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
-            public System.Threading.Tasks.ValueTask<TAcc> AggregateAsync<TAcc>(TAcc seed, System.Func<TAcc, T, System.Threading.CancellationToken, System.Threading.Tasks.ValueTask<TAcc>> accumulator, System.Threading.CancellationToken cancellationToken) { }
-            [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
-            public System.Threading.Tasks.ValueTask<TAcc> AggregateAsync<TAcc>(TAcc seed, System.Func<TAcc, T, TAcc> accumulator, System.Threading.CancellationToken cancellationToken) { }
-            [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
-            public System.Threading.Tasks.ValueTask<TResult> AggregateAsync<TAcc, TResult>(TAcc seed, System.Func<TAcc, T, TAcc> accumulator, System.Func<TAcc, TResult> resultSelector) { }
-            [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
-            public System.Threading.Tasks.ValueTask<TResult> AggregateAsync<TAcc, TResult>(TAcc seed, System.Func<TAcc, T, TAcc> accumulator, System.Func<TAcc, TResult> resultSelector, System.Threading.CancellationToken cancellationToken) { }
-            [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
-            public System.Threading.Tasks.ValueTask<TAcc> ReduceAsync<TAcc>(TAcc seed, System.Func<TAcc, T, System.Threading.CancellationToken, System.Threading.Tasks.ValueTask<TAcc>> accumulator) { }
-            [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
-            public System.Threading.Tasks.ValueTask<TAccumulate> ReduceAsync<TAccumulate>(TAccumulate seed, System.Func<TAccumulate, T, TAccumulate> accumulator) { }
-            public System.Threading.Tasks.ValueTask<TAcc> ReduceAsync<TAcc>(TAcc seed, System.Func<TAcc, T, System.Threading.CancellationToken, System.Threading.Tasks.ValueTask<TAcc>> accumulator, System.Threading.CancellationToken cancellationToken) { }
-            public System.Threading.Tasks.ValueTask<TAcc> ReduceAsync<TAcc>(TAcc seed, System.Func<TAcc, T, TAcc> accumulator, System.Threading.CancellationToken cancellationToken) { }
-            [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
-            public System.Threading.Tasks.ValueTask<TResult> ReduceAsync<TAcc, TResult>(TAcc seed, System.Func<TAcc, T, TAcc> accumulator, System.Func<TAcc, TResult> resultSelector) { }
-            public System.Threading.Tasks.ValueTask<TResult> ReduceAsync<TAcc, TResult>(TAcc seed, System.Func<TAcc, T, TAcc> accumulator, System.Func<TAcc, TResult> resultSelector, System.Threading.CancellationToken cancellationToken) { }
+            public ReactiveUI.Primitives.Async.IObservableAsync<T> CatchAndIgnoreErrorResume(System.Func<System.Exception, ReactiveUI.Primitives.Async.IObservableAsync<T>> handler) { }
+            public ReactiveUI.Primitives.Async.IObservableAsync<T> Recover(System.Func<System.Exception, ReactiveUI.Primitives.Async.IObservableAsync<T>> handler) { }
+            public ReactiveUI.Primitives.Async.IObservableAsync<T> Resume(ReactiveUI.Primitives.Async.IObservableAsync<T> fallback) { }
+        }
+        extension<T>(ReactiveUI.Primitives.Async.IObservableAsync<T> source)
+        {
+            public ReactiveUI.Primitives.Async.IObservableAsync<TResult> FlatMap<TResult>(System.Func<T, ReactiveUI.Primitives.Async.IObservableAsync<TResult>> selector) { }
+            public ReactiveUI.Primitives.Async.IObservableAsync<TResult> FlatMap<TResult>(System.Func<T, System.Threading.CancellationToken, System.Threading.Tasks.ValueTask<ReactiveUI.Primitives.Async.IObservableAsync<TResult>>> selector) { }
         }
         extension<T>(ReactiveUI.Primitives.Async.IObservableAsync<T> source)
         {
@@ -525,9 +532,12 @@ namespace ReactiveUI.Primitives.Async
         }
         extension<T>(ReactiveUI.Primitives.Async.IObservableAsync<T> source)
         {
+            public System.Threading.Tasks.ValueTask<T[]> CollectArrayAsync() { }
             [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
-            public System.Collections.Generic.IAsyncEnumerable<T> ToAsyncEnumerable(System.Func<System.Threading.Channels.Channel<T>> channelFactory) { }
-            public System.Collections.Generic.IAsyncEnumerable<T> ToAsyncEnumerable(System.Func<System.Threading.Channels.Channel<T>> channelFactory, System.Func<System.Exception, System.Threading.CancellationToken, System.Threading.Tasks.ValueTask>? onErrorResume) { }
+            public System.Threading.Tasks.ValueTask<System.Collections.Generic.List<T>> CollectListAsync() { }
+            [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+            public System.Threading.Tasks.ValueTask<System.Collections.Generic.List<T>> ToListAsync() { }
+            public System.Threading.Tasks.ValueTask<System.Collections.Generic.List<T>> ToListAsync(System.Threading.CancellationToken cancellationToken) { }
         }
         extension<T>(ReactiveUI.Primitives.Async.IObservableAsync<T> source)
         {
@@ -542,14 +552,10 @@ namespace ReactiveUI.Primitives.Async
         }
         extension<T>(ReactiveUI.Primitives.Async.IObservableAsync<T> source)
         {
-            [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
-            public System.Threading.Tasks.ValueTask<System.Collections.Generic.Dictionary<TKey, T>> ToDictionaryAsync<TKey>(System.Func<T, TKey> keySelector) where TKey : notnull { }
-            [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
-            public System.Threading.Tasks.ValueTask<System.Collections.Generic.Dictionary<TKey, T>> ToDictionaryAsync<TKey>(System.Func<T, TKey> keySelector, System.Collections.Generic.IEqualityComparer<TKey>? comparer, System.Threading.CancellationToken cancellationToken) where TKey : notnull { }
-            [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
-            public System.Threading.Tasks.ValueTask<System.Collections.Generic.Dictionary<TKey, TValue>> ToDictionaryAsync<TKey, TValue>(System.Func<T, TKey> keySelector, System.Func<T, TValue> elementSelector) where TKey : notnull { }
-            [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
-            public System.Threading.Tasks.ValueTask<System.Collections.Generic.Dictionary<TKey, TValue>> ToDictionaryAsync<TKey, TValue>(System.Func<T, TKey> keySelector, System.Func<T, TValue> elementSelector, System.Collections.Generic.IEqualityComparer<TKey>? comparer, System.Threading.CancellationToken cancellationToken) where TKey : notnull { }
+            public ReactiveUI.Primitives.Async.IObservableAsync<T> Unique() { }
+            public ReactiveUI.Primitives.Async.IObservableAsync<T> Unique(System.Collections.Generic.IEqualityComparer<T> equalityComparer) { }
+            public ReactiveUI.Primitives.Async.IObservableAsync<T> UniqueBy<TKey>(System.Func<T, TKey> keySelector) { }
+            public ReactiveUI.Primitives.Async.IObservableAsync<T> UniqueBy<TKey>(System.Func<T, TKey> keySelector, System.Collections.Generic.IEqualityComparer<TKey> equalityComparer) { }
         }
         extension<T>(ReactiveUI.Primitives.Async.IObservableAsync<T> source)
         {
@@ -559,17 +565,16 @@ namespace ReactiveUI.Primitives.Async
             [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
             public System.Threading.Tasks.ValueTask<bool> AnyAsync() { }
             [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+            public System.Threading.Tasks.ValueTask<bool> AnyAsync(System.Func<T, bool> predicate) { }
+            [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
             public System.Threading.Tasks.ValueTask<bool> AnyAsync(System.Threading.CancellationToken cancellationToken) { }
             public System.Threading.Tasks.ValueTask<bool> AnyAsync(System.Func<T, bool>? predicate, System.Threading.CancellationToken cancellationToken) { }
         }
         extension<T>(ReactiveUI.Primitives.Async.IObservableAsync<T> source)
         {
-            public System.Threading.Tasks.ValueTask<T[]> CollectArrayAsync() { }
             [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
-            public System.Threading.Tasks.ValueTask<System.Collections.Generic.List<T>> CollectListAsync() { }
-            [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
-            public System.Threading.Tasks.ValueTask<System.Collections.Generic.List<T>> ToListAsync() { }
-            public System.Threading.Tasks.ValueTask<System.Collections.Generic.List<T>> ToListAsync(System.Threading.CancellationToken cancellationToken) { }
+            public System.Threading.Tasks.ValueTask WaitCompletionAsync() { }
+            public System.Threading.Tasks.ValueTask WaitCompletionAsync(System.Threading.CancellationToken cancellationToken) { }
         }
         extension<T>(ReactiveUI.Primitives.Async.IObservableAsync<T> source)
         {
@@ -577,24 +582,41 @@ namespace ReactiveUI.Primitives.Async
         }
         extension<T>(ReactiveUI.Primitives.Async.IObservableAsync<T> source)
         {
-            public ReactiveUI.Primitives.Async.IObservableAsync<T> Unique() { }
-            public ReactiveUI.Primitives.Async.IObservableAsync<T> Unique(System.Collections.Generic.IEqualityComparer<T> equalityComparer) { }
-            public ReactiveUI.Primitives.Async.IObservableAsync<T> UniqueBy<TKey>(System.Func<T, TKey> keySelector) { }
-            public ReactiveUI.Primitives.Async.IObservableAsync<T> UniqueBy<TKey>(System.Func<T, TKey> keySelector, System.Collections.Generic.IEqualityComparer<TKey> equalityComparer) { }
-        }
-        extension<T>(ReactiveUI.Primitives.Async.IObservableAsync<T> source)
-        {
-            public ReactiveUI.Primitives.Async.IObservableAsync<TResult> FlatMap<TResult>(System.Func<T, ReactiveUI.Primitives.Async.IObservableAsync<TResult>> selector) { }
-            public ReactiveUI.Primitives.Async.IObservableAsync<TResult> FlatMap<TResult>(System.Func<T, System.Threading.CancellationToken, System.Threading.Tasks.ValueTask<ReactiveUI.Primitives.Async.IObservableAsync<TResult>>> selector) { }
-        }
-        extension<T>(ReactiveUI.Primitives.Async.IObservableAsync<T> source)
-        {
-            public ReactiveUI.Primitives.Async.IObservableAsync<T> Shift(System.TimeSpan delayInterval) { }
-        }
-        extension<T>(ReactiveUI.Primitives.Async.IObservableAsync<T> source)
-        {
             public ReactiveUI.Primitives.Async.IObservableAsync<TAcc> Fold<TAcc>(TAcc seed, System.Func<TAcc, T, System.Threading.CancellationToken, System.Threading.Tasks.ValueTask<TAcc>> accumulator) { }
             public ReactiveUI.Primitives.Async.IObservableAsync<TAcc> Fold<TAcc>(TAcc seed, System.Func<TAcc, T, TAcc> accumulator) { }
+        }
+        extension<T>(ReactiveUI.Primitives.Async.IObservableAsync<T> source)
+        {
+            [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+            public System.Threading.Tasks.ValueTask<TAcc> AggregateAsync<TAcc>(TAcc seed, System.Func<TAcc, T, System.Threading.CancellationToken, System.Threading.Tasks.ValueTask<TAcc>> accumulator) { }
+            [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+            public System.Threading.Tasks.ValueTask<TAcc> AggregateAsync<TAcc>(TAcc seed, System.Func<TAcc, T, TAcc> accumulator) { }
+            [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+            public System.Threading.Tasks.ValueTask<TAcc> AggregateAsync<TAcc>(TAcc seed, System.Func<TAcc, T, System.Threading.CancellationToken, System.Threading.Tasks.ValueTask<TAcc>> accumulator, System.Threading.CancellationToken cancellationToken) { }
+            [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+            public System.Threading.Tasks.ValueTask<TAcc> AggregateAsync<TAcc>(TAcc seed, System.Func<TAcc, T, TAcc> accumulator, System.Threading.CancellationToken cancellationToken) { }
+            [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+            public System.Threading.Tasks.ValueTask<TResult> AggregateAsync<TAcc, TResult>(TAcc seed, System.Func<TAcc, T, TAcc> accumulator, System.Func<TAcc, TResult> resultSelector) { }
+            [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+            public System.Threading.Tasks.ValueTask<TResult> AggregateAsync<TAcc, TResult>(TAcc seed, System.Func<TAcc, T, TAcc> accumulator, System.Func<TAcc, TResult> resultSelector, System.Threading.CancellationToken cancellationToken) { }
+            [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+            public System.Threading.Tasks.ValueTask<TAcc> ReduceAsync<TAcc>(TAcc seed, System.Func<TAcc, T, System.Threading.CancellationToken, System.Threading.Tasks.ValueTask<TAcc>> accumulator) { }
+            [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+            public System.Threading.Tasks.ValueTask<TAccumulate> ReduceAsync<TAccumulate>(TAccumulate seed, System.Func<TAccumulate, T, TAccumulate> accumulator) { }
+            public System.Threading.Tasks.ValueTask<TAcc> ReduceAsync<TAcc>(TAcc seed, System.Func<TAcc, T, System.Threading.CancellationToken, System.Threading.Tasks.ValueTask<TAcc>> accumulator, System.Threading.CancellationToken cancellationToken) { }
+            public System.Threading.Tasks.ValueTask<TAcc> ReduceAsync<TAcc>(TAcc seed, System.Func<TAcc, T, TAcc> accumulator, System.Threading.CancellationToken cancellationToken) { }
+            [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+            public System.Threading.Tasks.ValueTask<TResult> ReduceAsync<TAcc, TResult>(TAcc seed, System.Func<TAcc, T, TAcc> accumulator, System.Func<TAcc, TResult> resultSelector) { }
+            public System.Threading.Tasks.ValueTask<TResult> ReduceAsync<TAcc, TResult>(TAcc seed, System.Func<TAcc, T, TAcc> accumulator, System.Func<TAcc, TResult> resultSelector, System.Threading.CancellationToken cancellationToken) { }
+        }
+        extension<T>(ReactiveUI.Primitives.Async.IObservableAsync<T> source)
+        {
+            [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+            public System.Threading.Tasks.ValueTask ForEachAsync(System.Action<T> onNext) { }
+            [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+            public System.Threading.Tasks.ValueTask ForEachAsync(System.Func<T, System.Threading.CancellationToken, System.Threading.Tasks.ValueTask> onNextAsync) { }
+            public System.Threading.Tasks.ValueTask ForEachAsync(System.Action<T> onNext, System.Threading.CancellationToken cancellationToken) { }
+            public System.Threading.Tasks.ValueTask ForEachAsync(System.Func<T, System.Threading.CancellationToken, System.Threading.Tasks.ValueTask> onNextAsync, System.Threading.CancellationToken cancellationToken) { }
         }
         extension<T>(ReactiveUI.Primitives.Async.IObservableAsync<T> source)
         {
@@ -610,30 +632,25 @@ namespace ReactiveUI.Primitives.Async
         }
         extension<T>(ReactiveUI.Primitives.Async.IObservableAsync<T> source)
         {
-            public ReactiveUI.Primitives.Async.IObservableAsync<T> CatchAndIgnoreErrorResume(System.Func<System.Exception, ReactiveUI.Primitives.Async.IObservableAsync<T>> handler) { }
-            public ReactiveUI.Primitives.Async.IObservableAsync<T> Recover(System.Func<System.Exception, ReactiveUI.Primitives.Async.IObservableAsync<T>> handler) { }
-            public ReactiveUI.Primitives.Async.IObservableAsync<T> Resume(ReactiveUI.Primitives.Async.IObservableAsync<T> fallback) { }
+            [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+            public ReactiveUI.Primitives.Async.IObservableAsync<T> Do() { }
+            public ReactiveUI.Primitives.Async.IObservableAsync<T> Do(System.Func<T, System.Threading.CancellationToken, System.Threading.Tasks.ValueTask>? onNext) { }
+            public ReactiveUI.Primitives.Async.IObservableAsync<T> Do(System.Action<T>? onNext, System.Action<System.Exception>? onErrorResume, System.Action<ReactiveUI.Primitives.Result>? onCompleted) { }
+            public ReactiveUI.Primitives.Async.IObservableAsync<T> Do(System.Func<T, System.Threading.CancellationToken, System.Threading.Tasks.ValueTask>? onNext, System.Func<System.Exception, System.Threading.CancellationToken, System.Threading.Tasks.ValueTask>? onErrorResume, System.Func<ReactiveUI.Primitives.Result, System.Threading.Tasks.ValueTask>? onCompleted) { }
+            public ReactiveUI.Primitives.Async.IObservableAsync<T> Tap(System.Action<T> onNext) { }
+            [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+            public ReactiveUI.Primitives.Async.IObservableAsync<T> Tap(System.Action<T> onNext, System.Action<System.Exception> onError, System.Action onCompleted) { }
+            public ReactiveUI.Primitives.Async.IObservableAsync<T> Tap(System.Func<T, System.Threading.CancellationToken, System.Threading.Tasks.ValueTask>? onNext, System.Func<System.Exception, System.Threading.CancellationToken, System.Threading.Tasks.ValueTask>? onErrorResume, System.Func<ReactiveUI.Primitives.Result, System.Threading.Tasks.ValueTask>? onCompleted) { }
         }
         extension<T>(ReactiveUI.Primitives.Async.IObservableAsync<T> source)
         {
-            public ReactiveUI.Primitives.Async.IObservableAsync<T> TakeUntil(ReactiveUI.Primitives.Async.CompletionSignalDelegate stopSignal) { }
-            public ReactiveUI.Primitives.Async.IObservableAsync<T> TakeUntil(System.Func<T, System.Threading.CancellationToken, System.Threading.Tasks.ValueTask<bool>> asyncPredicate) { }
-            public ReactiveUI.Primitives.Async.IObservableAsync<T> TakeUntil(System.Func<T, bool> predicate) { }
             [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
-            public ReactiveUI.Primitives.Async.IObservableAsync<T> TakeUntil(System.Threading.CancellationToken cancellationToken) { }
-            public ReactiveUI.Primitives.Async.IObservableAsync<T> TakeUntil(System.Threading.Tasks.Task task) { }
-            public ReactiveUI.Primitives.Async.IObservableAsync<T> TakeUntil(ReactiveUI.Primitives.Async.CompletionSignalDelegate stopSignal, ReactiveUI.Primitives.Async.TakeUntilOptions? options) { }
-            public ReactiveUI.Primitives.Async.IObservableAsync<T> TakeUntil(ReactiveUI.Primitives.Async.CompletionSignalDelegate stopSignal, System.Threading.CancellationToken cancellationToken) { }
-            public ReactiveUI.Primitives.Async.IObservableAsync<T> TakeUntil(System.Func<T, System.Threading.CancellationToken, System.Threading.Tasks.ValueTask<bool>> asyncPredicate, System.Threading.CancellationToken cancellationToken) { }
-            public ReactiveUI.Primitives.Async.IObservableAsync<T> TakeUntil(System.Func<T, bool> predicate, System.Threading.CancellationToken cancellationToken) { }
-            public ReactiveUI.Primitives.Async.IObservableAsync<T> TakeUntil(System.Threading.Tasks.Task task, ReactiveUI.Primitives.Async.TakeUntilOptions? options) { }
-            public ReactiveUI.Primitives.Async.IObservableAsync<T> TakeUntil(System.Threading.Tasks.Task task, System.Threading.CancellationToken cancellationToken) { }
-            public ReactiveUI.Primitives.Async.IObservableAsync<T> TakeUntil(ReactiveUI.Primitives.Async.CompletionSignalDelegate stopSignal, ReactiveUI.Primitives.Async.TakeUntilOptions? options, System.Threading.CancellationToken cancellationToken) { }
-            public ReactiveUI.Primitives.Async.IObservableAsync<T> TakeUntil(System.Threading.Tasks.Task task, ReactiveUI.Primitives.Async.TakeUntilOptions? options, System.Threading.CancellationToken cancellationToken) { }
-            public ReactiveUI.Primitives.Async.IObservableAsync<T> TakeUntil<TOther>(ReactiveUI.Primitives.Async.IObservableAsync<TOther> other) { }
-            public ReactiveUI.Primitives.Async.IObservableAsync<T> TakeUntil<TOther>(ReactiveUI.Primitives.Async.IObservableAsync<TOther> other, ReactiveUI.Primitives.Async.TakeUntilOptions? options) { }
-            public ReactiveUI.Primitives.Async.IObservableAsync<T> TakeUntil<TOther>(ReactiveUI.Primitives.Async.IObservableAsync<TOther> other, System.Threading.CancellationToken cancellationToken) { }
-            public ReactiveUI.Primitives.Async.IObservableAsync<T> TakeUntil<TOther>(ReactiveUI.Primitives.Async.IObservableAsync<TOther> other, ReactiveUI.Primitives.Async.TakeUntilOptions? options, System.Threading.CancellationToken cancellationToken) { }
+            public ReactiveUI.Primitives.Async.IObservableAsync<T> Probe(System.TimeSpan period) { }
+            public ReactiveUI.Primitives.Async.IObservableAsync<T> Probe(System.TimeSpan period, System.TimeProvider? timeProvider) { }
+            [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+            public ReactiveUI.Primitives.Async.IObservableAsync<T> Sample(System.TimeSpan interval) { }
+            [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+            public ReactiveUI.Primitives.Async.IObservableAsync<T> Sample(System.TimeSpan interval, System.TimeProvider? timeProvider) { }
         }
         extension<T>(ReactiveUI.Primitives.Async.IObservableAsync<T> source)
         {
@@ -659,16 +676,19 @@ namespace ReactiveUI.Primitives.Async
         }
         extension<T>(ReactiveUI.Primitives.Async.IObservableAsync<T> source)
         {
-            public ReactiveUI.Primitives.Async.IObservableAsync<T> OnErrorResumeAsFailure() { }
+            [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+            public System.Threading.Tasks.ValueTask<System.Collections.Generic.Dictionary<TKey, T>> ToDictionaryAsync<TKey>(System.Func<T, TKey> keySelector) where TKey : notnull { }
+            [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+            public System.Threading.Tasks.ValueTask<System.Collections.Generic.Dictionary<TKey, T>> ToDictionaryAsync<TKey>(System.Func<T, TKey> keySelector, System.Collections.Generic.IEqualityComparer<TKey>? comparer, System.Threading.CancellationToken cancellationToken) where TKey : notnull { }
+            [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+            public System.Threading.Tasks.ValueTask<System.Collections.Generic.Dictionary<TKey, TValue>> ToDictionaryAsync<TKey, TValue>(System.Func<T, TKey> keySelector, System.Func<T, TValue> elementSelector) where TKey : notnull { }
+            [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+            public System.Threading.Tasks.ValueTask<System.Collections.Generic.Dictionary<TKey, TValue>> ToDictionaryAsync<TKey, TValue>(System.Func<T, TKey> keySelector, System.Func<T, TValue> elementSelector, System.Collections.Generic.IEqualityComparer<TKey>? comparer, System.Threading.CancellationToken cancellationToken) where TKey : notnull { }
         }
         extension<T>(ReactiveUI.Primitives.Async.IObservableAsync<T> source)
         {
-            [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
-            public System.Threading.Tasks.ValueTask ForEachAsync(System.Action<T> onNext) { }
-            [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
-            public System.Threading.Tasks.ValueTask ForEachAsync(System.Func<T, System.Threading.CancellationToken, System.Threading.Tasks.ValueTask> onNextAsync) { }
-            public System.Threading.Tasks.ValueTask ForEachAsync(System.Action<T> onNext, System.Threading.CancellationToken cancellationToken) { }
-            public System.Threading.Tasks.ValueTask ForEachAsync(System.Func<T, System.Threading.CancellationToken, System.Threading.Tasks.ValueTask> onNextAsync, System.Threading.CancellationToken cancellationToken) { }
+            public ReactiveUI.Primitives.Async.IObservableAsync<T> OnDispose(System.Action disposeAction) { }
+            public ReactiveUI.Primitives.Async.IObservableAsync<T> OnDispose(System.Func<System.Threading.Tasks.ValueTask> disposeAction) { }
         }
         extension<T>(ReactiveUI.Primitives.Async.IObservableAsync<T> source)
         {
@@ -685,8 +705,7 @@ namespace ReactiveUI.Primitives.Async
         }
         extension<T>(ReactiveUI.Primitives.Async.IObservableAsync<T> source)
         {
-            public ReactiveUI.Primitives.Async.IObservableAsync<T> OnDispose(System.Action disposeAction) { }
-            public ReactiveUI.Primitives.Async.IObservableAsync<T> OnDispose(System.Func<System.Threading.Tasks.ValueTask> disposeAction) { }
+            public ReactiveUI.Primitives.Async.IObservableAsync<T> OnErrorResumeAsFailure() { }
         }
         extension<T>(ReactiveUI.Primitives.Async.IObservableAsync<T> source)
         {
@@ -799,13 +818,13 @@ namespace ReactiveUI.Primitives.Async
         }
         extension<TSource>(System.Collections.Generic.IEnumerable<ReactiveUI.Primitives.Async.IObservableAsync<TSource>> sources)
         {
-            public ReactiveUI.Primitives.Async.IObservableAsync<System.Collections.Generic.IReadOnlyList<TSource>> CombineLatest() { }
-            public ReactiveUI.Primitives.Async.IObservableAsync<TResult> CombineLatest<TResult>(System.Func<System.Collections.Generic.IReadOnlyList<TSource>, TResult> resultSelector) { }
+            public ReactiveUI.Primitives.Async.IObservableAsync<System.Collections.Generic.IReadOnlyList<TSource>> SyncLatest() { }
+            public ReactiveUI.Primitives.Async.IObservableAsync<TResult> SyncLatest<TResult>(System.Func<System.Collections.Generic.IReadOnlyList<TSource>, TResult> resultSelector) { }
         }
         extension<TSource>(System.Collections.Generic.IEnumerable<ReactiveUI.Primitives.Async.IObservableAsync<TSource>> sources)
         {
-            public ReactiveUI.Primitives.Async.IObservableAsync<System.Collections.Generic.IReadOnlyList<TSource>> SyncLatest() { }
-            public ReactiveUI.Primitives.Async.IObservableAsync<TResult> SyncLatest<TResult>(System.Func<System.Collections.Generic.IReadOnlyList<TSource>, TResult> resultSelector) { }
+            public ReactiveUI.Primitives.Async.IObservableAsync<System.Collections.Generic.IReadOnlyList<TSource>> CombineLatest() { }
+            public ReactiveUI.Primitives.Async.IObservableAsync<TResult> CombineLatest<TResult>(System.Func<System.Collections.Generic.IReadOnlyList<TSource>, TResult> resultSelector) { }
         }
         extension<TValue>(ReactiveUI.Primitives.Async.IObservableAsync<TValue> source)
         {
@@ -836,26 +855,28 @@ namespace ReactiveUI.Primitives.Async
     {
         public static void Register(System.Action<System.Exception> unhandledExceptionHandler) { }
     }
-    [System.Diagnostics.DebuggerDisplay("WitnessAsync: Disposed = {_disposed}, CallState = {_callState}")]
-    public abstract class WitnessAsync<T> : ReactiveUI.Primitives.Async.Advanced.IReentrantAsyncDisposable, ReactiveUI.Primitives.Async.IObserverAsync<T>
+    public static class WitnessAsync
     {
-        protected WitnessAsync() { }
-        protected WitnessAsync(System.Threading.CancellationToken externalLink) { }
-        public System.Threading.CancellationToken InternalDisposedToken { get; }
-        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
-        public System.Threading.Tasks.ValueTask AssignSourceSubscriptionAsync(System.IAsyncDisposable? value) { }
-        public System.Threading.Tasks.ValueTask DisposeAsync() { }
-        protected virtual System.Threading.Tasks.ValueTask DisposeAsyncCore() { }
-        protected void LinkExternalCancellation(System.Threading.CancellationToken external) { }
-        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
-        public void LinkUpstreamCancellation(System.Threading.CancellationToken upstream) { }
-        public System.Threading.Tasks.ValueTask OnCompletedAsync(ReactiveUI.Primitives.Result result) { }
-        protected abstract System.Threading.Tasks.ValueTask OnCompletedAsyncCore(ReactiveUI.Primitives.Result result) { }
-        public System.Threading.Tasks.ValueTask OnErrorResumeAsync(System.Exception error, System.Threading.CancellationToken cancellationToken) { }
-        protected abstract System.Threading.Tasks.ValueTask OnErrorResumeAsyncCore(System.Exception error, System.Threading.CancellationToken cancellationToken) { }
-        public System.Threading.Tasks.ValueTask OnNextAsync(T value, System.Threading.CancellationToken cancellationToken) { }
-        protected abstract System.Threading.Tasks.ValueTask OnNextAsyncCore(T value, System.Threading.CancellationToken cancellationToken) { }
-        System.Threading.Tasks.ValueTask ReactiveUI.Primitives.Async.Advanced.IReentrantAsyncDisposable.DisposeFromNotificationAsync() { }
+        public static System.Threading.Tasks.ValueTask DisposeFromNotificationAsync(ReactiveUI.Primitives.Async.IWitnessState witness) { }
+        public static System.Threading.Tasks.ValueTask DisposeStateAsync(ReactiveUI.Primitives.Async.IWitnessState witness) { }
+        public static System.Threading.Tasks.ValueTask OnCompletedAsync<T>(ReactiveUI.Primitives.Async.IWitnessAsync<T> witness, ReactiveUI.Primitives.Result result) { }
+        public static System.Threading.Tasks.ValueTask OnErrorResumeAsync<T>(ReactiveUI.Primitives.Async.IWitnessAsync<T> witness, System.Exception error, System.Threading.CancellationToken cancellationToken) { }
+        public static System.Threading.Tasks.ValueTask OnNextAsync<T>(ReactiveUI.Primitives.Async.IWitnessAsync<T> witness, T value, System.Threading.CancellationToken cancellationToken) { }
+    }
+    public static class WitnessAsyncExtensions
+    {
+        extension(ReactiveUI.Primitives.Async.IWitnessState witness)
+        {
+            public System.Threading.CancellationToken InternalDisposedToken { get; }
+            [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+            public System.Threading.Tasks.ValueTask AssignSourceSubscriptionAsync(System.IAsyncDisposable? value) { }
+            public void LinkUpstreamCancellation(System.Threading.CancellationToken upstream) { }
+        }
+    }
+    [System.Diagnostics.DebuggerDisplay("WitnessAsyncState: Disposed = {_disposed}, CallState = {_callState}")]
+    public record struct WitnessAsyncState : System.IEquatable<ReactiveUI.Primitives.Async.WitnessAsyncState>
+    {
+        public WitnessAsyncState(System.Threading.CancellationToken externalLink) { }
     }
 }
 namespace ReactiveUI.Primitives.Async.Advanced
@@ -867,10 +888,14 @@ namespace ReactiveUI.Primitives.Async.Advanced
         System.Threading.Tasks.ValueTask<System.IAsyncDisposable> ReactiveUI.Primitives.Async.IObservableAsync<T>.SubscribeAsync(ReactiveUI.Primitives.Async.IObserverAsync<T> observer, System.Threading.CancellationToken cancellationToken) { }
     }
     [System.Diagnostics.DebuggerDisplay("AsyncEnumerableSubscription: Source = {Source}")]
-    public sealed class AsyncEnumerableSubscription<T> : ReactiveUI.Primitives.Async.Advanced.TaskSignalSubscription<T>
+    public sealed class AsyncEnumerableSubscription<T> : ReactiveUI.Primitives.Async.Advanced.ITaskSignalJob<T>, System.IAsyncDisposable
     {
         public AsyncEnumerableSubscription(ReactiveUI.Primitives.Async.IObserverAsync<T> observer, System.Collections.Generic.IAsyncEnumerable<T> source) { }
-        protected override System.Threading.Tasks.ValueTask ExecuteAsyncCore(ReactiveUI.Primitives.Async.IObserverAsync<T> observer, System.Threading.CancellationToken cancellationToken) { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public System.Threading.Tasks.ValueTask DisposeAsync() { }
+        System.Threading.Tasks.ValueTask ReactiveUI.Primitives.Async.Advanced.ITaskSignalJob<T>.ExecuteAsync(ReactiveUI.Primitives.Async.IObserverAsync<T> observer, System.Threading.CancellationToken cancellationToken) { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public void Start() { }
     }
     [System.Diagnostics.DebuggerDisplay("AsyncSerialGate: OwnerThreadId = {_ownerThreadId}, Waiters = {_waiters}, RecursionDepth = {_recursionDepth}")]
     public sealed class AsyncSerialGate : System.IDisposable
@@ -879,6 +904,7 @@ namespace ReactiveUI.Primitives.Async.Advanced
         public void Dispose() { }
         [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
         public System.Threading.Tasks.ValueTask<ReactiveUI.Primitives.Async.Advanced.AsyncSerialGate.Lease> EnterAsync() { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
         public System.Threading.Tasks.ValueTask<ReactiveUI.Primitives.Async.Advanced.AsyncSerialGate.Lease> EnterAsync(System.Threading.CancellationToken cancellationToken) { }
         [System.Diagnostics.DebuggerDisplay("Lease: Parent = {_parent}")]
         public readonly record struct Lease : System.IDisposable, System.IEquatable<ReactiveUI.Primitives.Async.Advanced.AsyncSerialGate.Lease>
@@ -894,13 +920,31 @@ namespace ReactiveUI.Primitives.Async.Advanced
         public BackgroundJobSignal(System.Func<ReactiveUI.Primitives.Async.IObserverAsync<T>, System.Threading.CancellationToken, System.Threading.Tasks.ValueTask> job, bool startSynchronously, System.Threading.Tasks.TaskScheduler? taskScheduler) { }
         System.Threading.Tasks.ValueTask<System.IAsyncDisposable> ReactiveUI.Primitives.Async.IObservableAsync<T>.SubscribeAsync(ReactiveUI.Primitives.Async.IObserverAsync<T> observer, System.Threading.CancellationToken cancellationToken) { }
     }
-    [System.Diagnostics.DebuggerDisplay("CallbackWitnessAsync: HasDisposed = {HasDisposed}")]
-    public sealed class CallbackWitnessAsync<T> : ReactiveUI.Primitives.Async.WitnessAsync<T>
+    public sealed class CallbackSignalAsync<T> : ReactiveUI.Primitives.Async.IObservableAsync<T>
+    {
+        public CallbackSignalAsync(System.Func<ReactiveUI.Primitives.Async.IObserverAsync<T>, System.Threading.CancellationToken, System.Threading.Tasks.ValueTask<System.IAsyncDisposable>> subscribeAsync) { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        System.Threading.Tasks.ValueTask<System.IAsyncDisposable> ReactiveUI.Primitives.Async.IObservableAsync<T>.SubscribeAsync(ReactiveUI.Primitives.Async.IObserverAsync<T> observer, System.Threading.CancellationToken cancellationToken) { }
+    }
+    [System.Diagnostics.DebuggerDisplay("CallbackWitnessAsync: {_witness}")]
+    public sealed class CallbackWitnessAsync<T> : ReactiveUI.Primitives.Async.IWitnessAsync<T>
     {
         public CallbackWitnessAsync(System.Func<T, System.Threading.CancellationToken, System.Threading.Tasks.ValueTask> onNextAsync, System.Func<System.Exception, System.Threading.CancellationToken, System.Threading.Tasks.ValueTask>? onErrorResumeAsync = null, System.Func<ReactiveUI.Primitives.Result, System.Threading.Tasks.ValueTask>? onCompletedAsync = null) { }
-        protected override System.Threading.Tasks.ValueTask OnCompletedAsyncCore(ReactiveUI.Primitives.Result result) { }
-        protected override System.Threading.Tasks.ValueTask OnErrorResumeAsyncCore(System.Exception error, System.Threading.CancellationToken cancellationToken) { }
-        protected override System.Threading.Tasks.ValueTask OnNextAsyncCore(T value, System.Threading.CancellationToken cancellationToken) { }
+        ReactiveUI.Primitives.Async.WitnessAsyncState ReactiveUI.Primitives.Async.IWitnessState.Witness { get; }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public System.Threading.Tasks.ValueTask DisposeAsync() { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public System.Threading.Tasks.ValueTask OnCompletedAsync(ReactiveUI.Primitives.Result result) { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public System.Threading.Tasks.ValueTask OnErrorResumeAsync(System.Exception error, System.Threading.CancellationToken cancellationToken) { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public System.Threading.Tasks.ValueTask OnNextAsync(T value, System.Threading.CancellationToken cancellationToken) { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        System.Threading.Tasks.ValueTask ReactiveUI.Primitives.Async.IWitnessAsync<T>.OnCompletedAsyncCore(ReactiveUI.Primitives.Result result) { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        System.Threading.Tasks.ValueTask ReactiveUI.Primitives.Async.IWitnessAsync<T>.OnErrorResumeAsyncCore(System.Exception error, System.Threading.CancellationToken cancellationToken) { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        System.Threading.Tasks.ValueTask ReactiveUI.Primitives.Async.IWitnessAsync<T>.OnNextAsyncCore(T value, System.Threading.CancellationToken cancellationToken) { }
     }
     [System.Diagnostics.DebuggerDisplay("DoOnSubscribeAsyncSignal: Source = {Source}, Action = {Action}")]
     public sealed class DoOnSubscribeAsyncSignal<T> : ReactiveUI.Primitives.Async.IObservableAsync<T>
@@ -921,10 +965,14 @@ namespace ReactiveUI.Primitives.Async.Advanced
         System.Threading.Tasks.ValueTask<System.IAsyncDisposable> ReactiveUI.Primitives.Async.IObservableAsync<T>.SubscribeAsync(ReactiveUI.Primitives.Async.IObserverAsync<T> observer, System.Threading.CancellationToken cancellationToken) { }
     }
     [System.Diagnostics.DebuggerDisplay("EnumerableSubscription: Source = {Source}")]
-    public sealed class EnumerableSubscription<T> : ReactiveUI.Primitives.Async.Advanced.TaskSignalSubscription<T>
+    public sealed class EnumerableSubscription<T> : ReactiveUI.Primitives.Async.Advanced.ITaskSignalJob<T>, System.IAsyncDisposable
     {
         public EnumerableSubscription(ReactiveUI.Primitives.Async.IObserverAsync<T> observer, System.Collections.Generic.IEnumerable<T> source) { }
-        protected override System.Threading.Tasks.ValueTask ExecuteAsyncCore(ReactiveUI.Primitives.Async.IObserverAsync<T> observer, System.Threading.CancellationToken cancellationToken) { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public System.Threading.Tasks.ValueTask DisposeAsync() { }
+        System.Threading.Tasks.ValueTask ReactiveUI.Primitives.Async.Advanced.ITaskSignalJob<T>.ExecuteAsync(ReactiveUI.Primitives.Async.IObserverAsync<T> observer, System.Threading.CancellationToken cancellationToken) { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public void Start() { }
     }
     [System.Diagnostics.DebuggerDisplay("FlatMapCoordinator: ActiveInnerCount = {ActiveInnerCount}, OuterCompleted = {OuterCompleted}, Disposed = {Disposed}")]
     public sealed class FlatMapCoordinator<TResult> : System.IAsyncDisposable
@@ -950,29 +998,40 @@ namespace ReactiveUI.Primitives.Async.Advanced
         System.Threading.Tasks.ValueTask<System.IAsyncDisposable> ReactiveUI.Primitives.Async.IObservableAsync<TResult>.SubscribeAsync(ReactiveUI.Primitives.Async.IObserverAsync<TResult> observer, System.Threading.CancellationToken cancellationToken) { }
     }
     [System.Diagnostics.DebuggerDisplay("FlatMapWitness: Coordinator = {Coordinator}")]
-    public sealed class FlatMapWitness<TResult> : ReactiveUI.Primitives.Async.WitnessAsync<TResult>
+    public sealed class FlatMapWitness<TResult> : ReactiveUI.Primitives.Async.IWitnessAsync<TResult>
     {
         public FlatMapWitness(ReactiveUI.Primitives.Async.Advanced.FlatMapCoordinator<TResult> coordinator) { }
-        protected override System.Threading.Tasks.ValueTask OnCompletedAsyncCore(ReactiveUI.Primitives.Result result) { }
-        protected override System.Threading.Tasks.ValueTask OnErrorResumeAsyncCore(System.Exception error, System.Threading.CancellationToken cancellationToken) { }
-        protected override System.Threading.Tasks.ValueTask OnNextAsyncCore(TResult value, System.Threading.CancellationToken cancellationToken) { }
+        ReactiveUI.Primitives.Async.WitnessAsyncState ReactiveUI.Primitives.Async.IWitnessState.Witness { get; }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public System.Threading.Tasks.ValueTask DisposeAsync() { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public System.Threading.Tasks.ValueTask OnCompletedAsync(ReactiveUI.Primitives.Result result) { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public System.Threading.Tasks.ValueTask OnErrorResumeAsync(System.Exception error, System.Threading.CancellationToken cancellationToken) { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public System.Threading.Tasks.ValueTask OnNextAsync(TResult value, System.Threading.CancellationToken cancellationToken) { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        System.Threading.Tasks.ValueTask ReactiveUI.Primitives.Async.IWitnessAsync<TResult>.OnCompletedAsyncCore(ReactiveUI.Primitives.Result result) { }
+        System.Threading.Tasks.ValueTask ReactiveUI.Primitives.Async.IWitnessAsync<TResult>.OnErrorResumeAsyncCore(System.Exception error, System.Threading.CancellationToken cancellationToken) { }
+        System.Threading.Tasks.ValueTask ReactiveUI.Primitives.Async.IWitnessAsync<TResult>.OnNextAsyncCore(TResult value, System.Threading.CancellationToken cancellationToken) { }
     }
     [System.Diagnostics.DebuggerDisplay("FlatMapWitness: Coordinator = {Coordinator}, SyncSelector = {SyncSelector}, AsyncSelector = {AsyncSelector}")]
-    public sealed class FlatMapWitness<TSource, TResult> : ReactiveUI.Primitives.Async.WitnessAsync<TSource>
+    public sealed class FlatMapWitness<TSource, TResult> : ReactiveUI.Primitives.Async.IWitnessAsync<TSource>
     {
         public FlatMapWitness(ReactiveUI.Primitives.Async.Advanced.FlatMapCoordinator<TResult> coordinator, System.Func<TSource, ReactiveUI.Primitives.Async.IObservableAsync<TResult>>? syncSelector, System.Func<TSource, System.Threading.CancellationToken, System.Threading.Tasks.ValueTask<ReactiveUI.Primitives.Async.IObservableAsync<TResult>>>? asyncSelector) { }
-        protected override System.Threading.Tasks.ValueTask OnCompletedAsyncCore(ReactiveUI.Primitives.Result result) { }
-        protected override System.Threading.Tasks.ValueTask OnErrorResumeAsyncCore(System.Exception error, System.Threading.CancellationToken cancellationToken) { }
-        protected override System.Threading.Tasks.ValueTask OnNextAsyncCore(TSource value, System.Threading.CancellationToken cancellationToken) { }
-    }
-    [System.Diagnostics.DebuggerDisplay("ForwardingWitnessAsync: Downstream = {Downstream}")]
-    public class ForwardingWitnessAsync<T> : ReactiveUI.Primitives.Async.WitnessAsync<T>
-    {
-        protected ForwardingWitnessAsync(ReactiveUI.Primitives.Async.IObserverAsync<T> downstream) { }
-        protected ReactiveUI.Primitives.Async.IObserverAsync<T> Downstream { get; }
-        protected override System.Threading.Tasks.ValueTask OnCompletedAsyncCore(ReactiveUI.Primitives.Result result) { }
-        protected override System.Threading.Tasks.ValueTask OnErrorResumeAsyncCore(System.Exception error, System.Threading.CancellationToken cancellationToken) { }
-        protected override System.Threading.Tasks.ValueTask OnNextAsyncCore(T value, System.Threading.CancellationToken cancellationToken) { }
+        ReactiveUI.Primitives.Async.WitnessAsyncState ReactiveUI.Primitives.Async.IWitnessState.Witness { get; }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public System.Threading.Tasks.ValueTask DisposeAsync() { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public System.Threading.Tasks.ValueTask OnCompletedAsync(ReactiveUI.Primitives.Result result) { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public System.Threading.Tasks.ValueTask OnErrorResumeAsync(System.Exception error, System.Threading.CancellationToken cancellationToken) { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public System.Threading.Tasks.ValueTask OnNextAsync(TSource value, System.Threading.CancellationToken cancellationToken) { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        System.Threading.Tasks.ValueTask ReactiveUI.Primitives.Async.IWitnessAsync<TSource>.OnCompletedAsyncCore(ReactiveUI.Primitives.Result result) { }
+        System.Threading.Tasks.ValueTask ReactiveUI.Primitives.Async.IWitnessAsync<TSource>.OnErrorResumeAsyncCore(System.Exception error, System.Threading.CancellationToken cancellationToken) { }
+        System.Threading.Tasks.ValueTask ReactiveUI.Primitives.Async.IWitnessAsync<TSource>.OnNextAsyncCore(TSource value, System.Threading.CancellationToken cancellationToken) { }
     }
     [System.Diagnostics.DebuggerDisplay("FromAsyncSignal: Factory = {Factory}")]
     public sealed class FromAsyncSignal<T> : ReactiveUI.Primitives.Async.IObservableAsync<T>
@@ -981,14 +1040,24 @@ namespace ReactiveUI.Primitives.Async.Advanced
         System.Threading.Tasks.ValueTask<System.IAsyncDisposable> ReactiveUI.Primitives.Async.IObservableAsync<T>.SubscribeAsync(ReactiveUI.Primitives.Async.IObserverAsync<T> observer, System.Threading.CancellationToken cancellationToken) { }
     }
     [System.Diagnostics.DebuggerDisplay("FromAsyncSubscription: Factory = {Factory}")]
-    public sealed class FromAsyncSubscription<T> : ReactiveUI.Primitives.Async.Advanced.TaskSignalSubscription<T>
+    public sealed class FromAsyncSubscription<T> : ReactiveUI.Primitives.Async.Advanced.ITaskSignalJob<T>, System.IAsyncDisposable
     {
         public FromAsyncSubscription(ReactiveUI.Primitives.Async.IObserverAsync<T> observer, System.Func<System.Threading.CancellationToken, System.Threading.Tasks.ValueTask<T>> factory) { }
-        protected override System.Threading.Tasks.ValueTask ExecuteAsyncCore(ReactiveUI.Primitives.Async.IObserverAsync<T> observer, System.Threading.CancellationToken cancellationToken) { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public System.Threading.Tasks.ValueTask DisposeAsync() { }
+        System.Threading.Tasks.ValueTask ReactiveUI.Primitives.Async.Advanced.ITaskSignalJob<T>.ExecuteAsync(ReactiveUI.Primitives.Async.IObserverAsync<T> observer, System.Threading.CancellationToken cancellationToken) { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public void Start() { }
     }
-    public interface IReentrantAsyncDisposable
+    public interface ISyncLatestCoordinator<TResult> : System.IAsyncDisposable
     {
-        System.Threading.Tasks.ValueTask DisposeFromNotificationAsync() { }
+        ReactiveUI.Primitives.Async.Advanced.SyncLatestLifecycle<TResult> Lifecycle { get; }
+        System.Threading.Tasks.ValueTask EmitLatestAsync() { }
+        System.Threading.Tasks.ValueTask<System.IAsyncDisposable> SubscribeAtAsync(int index, System.Threading.CancellationToken cancellationToken) { }
+    }
+    public interface ITaskSignalJob<T>
+    {
+        System.Threading.Tasks.ValueTask ExecuteAsync(ReactiveUI.Primitives.Async.IObserverAsync<T> observer, System.Threading.CancellationToken cancellationToken) { }
     }
     [System.Diagnostics.DebuggerDisplay("IntervalSignal: Period = {Period}, TimeProvider = {TimeProvider}")]
     public sealed class IntervalSignal : ReactiveUI.Primitives.Async.IObservableAsync<long>
@@ -997,10 +1066,14 @@ namespace ReactiveUI.Primitives.Async.Advanced
         System.Threading.Tasks.ValueTask<System.IAsyncDisposable> ReactiveUI.Primitives.Async.IObservableAsync<System.Int64>.SubscribeAsync(ReactiveUI.Primitives.Async.IObserverAsync<long> observer, System.Threading.CancellationToken cancellationToken) { }
     }
     [System.Diagnostics.DebuggerDisplay("IntervalSubscription: Period = {Period}, TimeProvider = {TimeProvider}")]
-    public sealed class IntervalSubscription : ReactiveUI.Primitives.Async.Advanced.TaskSignalSubscription<long>
+    public sealed class IntervalSubscription : ReactiveUI.Primitives.Async.Advanced.ITaskSignalJob<long>, System.IAsyncDisposable
     {
         public IntervalSubscription(ReactiveUI.Primitives.Async.IObserverAsync<long> observer, System.TimeSpan period, System.TimeProvider? timeProvider) { }
-        protected override System.Threading.Tasks.ValueTask ExecuteAsyncCore(ReactiveUI.Primitives.Async.IObserverAsync<long> observer, System.Threading.CancellationToken cancellationToken) { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public System.Threading.Tasks.ValueTask DisposeAsync() { }
+        System.Threading.Tasks.ValueTask ReactiveUI.Primitives.Async.Advanced.ITaskSignalJob<System.Int64>.ExecuteAsync(ReactiveUI.Primitives.Async.IObserverAsync<long> observer, System.Threading.CancellationToken cancellationToken) { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public void Start() { }
     }
     [System.Diagnostics.DebuggerDisplay("LeadSignal: Source = {Source}, Values = {Values}")]
     public sealed class LeadSignal<T> : ReactiveUI.Primitives.Async.IObservableAsync<T>
@@ -1023,12 +1096,22 @@ namespace ReactiveUI.Primitives.Async.Advanced
         System.Threading.Tasks.ValueTask<System.IAsyncDisposable> ReactiveUI.Primitives.Async.IObservableAsync<T>.SubscribeAsync(ReactiveUI.Primitives.Async.IObserverAsync<T> observer, System.Threading.CancellationToken cancellationToken) { }
     }
     [System.Diagnostics.DebuggerDisplay("LogErrorsWitness: Downstream = {Downstream}, Logger = {Logger}")]
-    public sealed class LogErrorsWitness<T> : ReactiveUI.Primitives.Async.WitnessAsync<T>
+    public sealed class LogErrorsWitness<T> : ReactiveUI.Primitives.Async.IWitnessAsync<T>
     {
         public LogErrorsWitness(ReactiveUI.Primitives.Async.IObserverAsync<T> downstream, System.Action<System.Exception> logger) { }
-        protected override System.Threading.Tasks.ValueTask OnCompletedAsyncCore(ReactiveUI.Primitives.Result result) { }
-        protected override System.Threading.Tasks.ValueTask OnErrorResumeAsyncCore(System.Exception error, System.Threading.CancellationToken cancellationToken) { }
-        protected override System.Threading.Tasks.ValueTask OnNextAsyncCore(T value, System.Threading.CancellationToken cancellationToken) { }
+        ReactiveUI.Primitives.Async.WitnessAsyncState ReactiveUI.Primitives.Async.IWitnessState.Witness { get; }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public System.Threading.Tasks.ValueTask DisposeAsync() { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public System.Threading.Tasks.ValueTask OnCompletedAsync(ReactiveUI.Primitives.Result result) { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public System.Threading.Tasks.ValueTask OnErrorResumeAsync(System.Exception error, System.Threading.CancellationToken cancellationToken) { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public System.Threading.Tasks.ValueTask OnNextAsync(T value, System.Threading.CancellationToken cancellationToken) { }
+        System.Threading.Tasks.ValueTask ReactiveUI.Primitives.Async.IWitnessAsync<T>.OnCompletedAsyncCore(ReactiveUI.Primitives.Result result) { }
+        System.Threading.Tasks.ValueTask ReactiveUI.Primitives.Async.IWitnessAsync<T>.OnErrorResumeAsyncCore(System.Exception error, System.Threading.CancellationToken cancellationToken) { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        System.Threading.Tasks.ValueTask ReactiveUI.Primitives.Async.IWitnessAsync<T>.OnNextAsyncCore(T value, System.Threading.CancellationToken cancellationToken) { }
     }
     [System.Diagnostics.DebuggerDisplay("PooledDelaySource: Completed = {_completed}, Timer = {_timer}")]
     public sealed class PooledDelaySource : System.Threading.Tasks.Sources.IValueTaskSource
@@ -1061,16 +1144,44 @@ namespace ReactiveUI.Primitives.Async.Advanced
         public System.Threading.Tasks.ValueTask SubscribeOnceAsync() { }
     }
     [System.Diagnostics.DebuggerDisplay("ReattemptWitness: Subscription = {Subscription}")]
-    public sealed class ReattemptWitness<T> : ReactiveUI.Primitives.Async.WitnessAsync<T>
+    public sealed class ReattemptWitness<T> : ReactiveUI.Primitives.Async.IWitnessAsync<T>
     {
         public ReattemptWitness(ReactiveUI.Primitives.Async.Advanced.ReattemptSubscription<T> subscription) { }
-        protected override System.Threading.Tasks.ValueTask OnCompletedAsyncCore(ReactiveUI.Primitives.Result result) { }
-        protected override System.Threading.Tasks.ValueTask OnErrorResumeAsyncCore(System.Exception error, System.Threading.CancellationToken cancellationToken) { }
-        protected override System.Threading.Tasks.ValueTask OnNextAsyncCore(T value, System.Threading.CancellationToken cancellationToken) { }
+        ReactiveUI.Primitives.Async.WitnessAsyncState ReactiveUI.Primitives.Async.IWitnessState.Witness { get; }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public System.Threading.Tasks.ValueTask DisposeAsync() { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public System.Threading.Tasks.ValueTask OnCompletedAsync(ReactiveUI.Primitives.Result result) { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public System.Threading.Tasks.ValueTask OnErrorResumeAsync(System.Exception error, System.Threading.CancellationToken cancellationToken) { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public System.Threading.Tasks.ValueTask OnNextAsync(T value, System.Threading.CancellationToken cancellationToken) { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        System.Threading.Tasks.ValueTask ReactiveUI.Primitives.Async.IWitnessAsync<T>.OnCompletedAsyncCore(ReactiveUI.Primitives.Result result) { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        System.Threading.Tasks.ValueTask ReactiveUI.Primitives.Async.IWitnessAsync<T>.OnErrorResumeAsyncCore(System.Exception error, System.Threading.CancellationToken cancellationToken) { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        System.Threading.Tasks.ValueTask ReactiveUI.Primitives.Async.IWitnessAsync<T>.OnNextAsyncCore(T value, System.Threading.CancellationToken cancellationToken) { }
     }
-    public sealed class RelayWitnessAsync<T> : ReactiveUI.Primitives.Async.Advanced.ForwardingWitnessAsync<T>
+    [System.Diagnostics.DebuggerDisplay("RelayWitnessAsync: {_witness}")]
+    public sealed class RelayWitnessAsync<T> : ReactiveUI.Primitives.Async.IWitnessAsync<T>
     {
         public RelayWitnessAsync(ReactiveUI.Primitives.Async.IObserverAsync<T> observer) { }
+        ReactiveUI.Primitives.Async.WitnessAsyncState ReactiveUI.Primitives.Async.IWitnessState.Witness { get; }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public System.Threading.Tasks.ValueTask DisposeAsync() { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public System.Threading.Tasks.ValueTask OnCompletedAsync(ReactiveUI.Primitives.Result result) { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public System.Threading.Tasks.ValueTask OnErrorResumeAsync(System.Exception error, System.Threading.CancellationToken cancellationToken) { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public System.Threading.Tasks.ValueTask OnNextAsync(T value, System.Threading.CancellationToken cancellationToken) { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        System.Threading.Tasks.ValueTask ReactiveUI.Primitives.Async.IWitnessAsync<T>.OnCompletedAsyncCore(ReactiveUI.Primitives.Result result) { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        System.Threading.Tasks.ValueTask ReactiveUI.Primitives.Async.IWitnessAsync<T>.OnErrorResumeAsyncCore(System.Exception error, System.Threading.CancellationToken cancellationToken) { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        System.Threading.Tasks.ValueTask ReactiveUI.Primitives.Async.IWitnessAsync<T>.OnNextAsyncCore(T value, System.Threading.CancellationToken cancellationToken) { }
     }
     [System.Diagnostics.DebuggerDisplay("SequenceSignal: StartValue = {StartValue}, Count = {Count}")]
     public sealed class SequenceSignal : ReactiveUI.Primitives.Async.IObservableAsync<int>
@@ -1079,18 +1190,34 @@ namespace ReactiveUI.Primitives.Async.Advanced
         System.Threading.Tasks.ValueTask<System.IAsyncDisposable> ReactiveUI.Primitives.Async.IObservableAsync<System.Int32>.SubscribeAsync(ReactiveUI.Primitives.Async.IObserverAsync<int> observer, System.Threading.CancellationToken cancellationToken) { }
     }
     [System.Diagnostics.DebuggerDisplay("SequenceSubscription: StartValue = {StartValue}, Count = {Count}")]
-    public sealed class SequenceSubscription : ReactiveUI.Primitives.Async.Advanced.TaskSignalSubscription<int>
+    public sealed class SequenceSubscription : ReactiveUI.Primitives.Async.Advanced.ITaskSignalJob<int>, System.IAsyncDisposable
     {
         public SequenceSubscription(ReactiveUI.Primitives.Async.IObserverAsync<int> observer, int start, int count) { }
-        protected override System.Threading.Tasks.ValueTask ExecuteAsyncCore(ReactiveUI.Primitives.Async.IObserverAsync<int> observer, System.Threading.CancellationToken cancellationToken) { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public System.Threading.Tasks.ValueTask DisposeAsync() { }
+        System.Threading.Tasks.ValueTask ReactiveUI.Primitives.Async.Advanced.ITaskSignalJob<System.Int32>.ExecuteAsync(ReactiveUI.Primitives.Async.IObserverAsync<int> observer, System.Threading.CancellationToken cancellationToken) { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public void Start() { }
     }
     [System.Diagnostics.DebuggerDisplay("SingleElementWitness: HasValue = {_hasValue}, Value = {_value}")]
-    public sealed class SingleElementWitness<T> : ReactiveUI.Primitives.Async.Advanced.TaskResultWitnessAsyncBase<T, T?>
+    public sealed class SingleElementWitness<T> : ReactiveUI.Primitives.Async.IWitnessAsync<T>
     {
         public SingleElementWitness(System.Func<T, bool>? predicate, bool requireExactlyOne, T? defaultValue, System.Threading.CancellationToken cancellationToken) { }
-        protected override System.Threading.Tasks.ValueTask OnCompletedAsyncCore(ReactiveUI.Primitives.Result result) { }
-        protected override System.Threading.Tasks.ValueTask OnErrorResumeAsyncCore(System.Exception error, System.Threading.CancellationToken cancellationToken) { }
-        protected override System.Threading.Tasks.ValueTask OnNextAsyncCore(T value, System.Threading.CancellationToken cancellationToken) { }
+        ReactiveUI.Primitives.Async.WitnessAsyncState ReactiveUI.Primitives.Async.IWitnessState.Witness { get; }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public System.Threading.Tasks.ValueTask<T?> AwaitResultAsync() { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public System.Threading.Tasks.ValueTask DisposeAsync() { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public System.Threading.Tasks.ValueTask OnCompletedAsync(ReactiveUI.Primitives.Result result) { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public System.Threading.Tasks.ValueTask OnErrorResumeAsync(System.Exception error, System.Threading.CancellationToken cancellationToken) { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public System.Threading.Tasks.ValueTask OnNextAsync(T value, System.Threading.CancellationToken cancellationToken) { }
+        System.Threading.Tasks.ValueTask ReactiveUI.Primitives.Async.IWitnessAsync<T>.OnCompletedAsyncCore(ReactiveUI.Primitives.Result result) { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        System.Threading.Tasks.ValueTask ReactiveUI.Primitives.Async.IWitnessAsync<T>.OnErrorResumeAsyncCore(System.Exception error, System.Threading.CancellationToken cancellationToken) { }
+        System.Threading.Tasks.ValueTask ReactiveUI.Primitives.Async.IWitnessAsync<T>.OnNextAsyncCore(T value, System.Threading.CancellationToken cancellationToken) { }
     }
     [System.Diagnostics.DebuggerDisplay("StartSignal: Function = {Function}, TaskScheduler = {TaskScheduler}")]
     public sealed class StartSignal<TResult> : ReactiveUI.Primitives.Async.IObservableAsync<TResult>
@@ -1099,16 +1226,26 @@ namespace ReactiveUI.Primitives.Async.Advanced
         System.Threading.Tasks.ValueTask<System.IAsyncDisposable> ReactiveUI.Primitives.Async.IObservableAsync<TResult>.SubscribeAsync(ReactiveUI.Primitives.Async.IObserverAsync<TResult> observer, System.Threading.CancellationToken cancellationToken) { }
     }
     [System.Diagnostics.DebuggerDisplay("StartSubscription: Function = {Function}, TaskScheduler = {TaskScheduler}")]
-    public sealed class StartSubscription<TResult> : ReactiveUI.Primitives.Async.Advanced.TaskSignalSubscription<TResult>
+    public sealed class StartSubscription<TResult> : ReactiveUI.Primitives.Async.Advanced.ITaskSignalJob<TResult>, System.IAsyncDisposable
     {
         public StartSubscription(ReactiveUI.Primitives.Async.IObserverAsync<TResult> observer, System.Func<TResult> function, System.Threading.Tasks.TaskScheduler? taskScheduler) { }
-        protected override System.Threading.Tasks.ValueTask ExecuteAsyncCore(ReactiveUI.Primitives.Async.IObserverAsync<TResult> observer, System.Threading.CancellationToken cancellationToken) { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public System.Threading.Tasks.ValueTask DisposeAsync() { }
+        System.Threading.Tasks.ValueTask ReactiveUI.Primitives.Async.Advanced.ITaskSignalJob<TResult>.ExecuteAsync(ReactiveUI.Primitives.Async.IObserverAsync<TResult> observer, System.Threading.CancellationToken cancellationToken) { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public void Start() { }
     }
     [System.Diagnostics.DebuggerDisplay("SyncLatest10Coordinator: SourceCount = {SourceCount}, Sources = {Sources}")]
-    public sealed class SyncLatest10Coordinator<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TResult> : ReactiveUI.Primitives.Async.Advanced.SyncLatestCoordinatorBase<TResult>
+    public sealed class SyncLatest10Coordinator<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TResult> : ReactiveUI.Primitives.Async.Advanced.ISyncLatestCoordinator<TResult>
     {
         public SyncLatest10Coordinator(ReactiveUI.Primitives.Async.IObserverAsync<TResult> observer, ReactiveUI.Primitives.Async.Advanced.SyncLatest10State<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> sources, System.Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TResult> selector) { }
-        protected override System.Threading.Tasks.ValueTask<System.IAsyncDisposable> SubscribeAtAsync(int index, System.Threading.CancellationToken cancellationToken) { }
+        public ReactiveUI.Primitives.Async.Advanced.SyncLatestLifecycle<TResult> Lifecycle { get; }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public System.Threading.Tasks.ValueTask DisposeAsync() { }
+        public System.Threading.Tasks.ValueTask EmitLatestAsync() { }
+        public System.Threading.Tasks.ValueTask<System.IAsyncDisposable> SubscribeAtAsync(int index, System.Threading.CancellationToken cancellationToken) { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public System.Threading.Tasks.ValueTask SubscribeSourcesAsync(System.Threading.CancellationToken cancellationToken) { }
     }
     [System.Diagnostics.DebuggerDisplay("SyncLatest10Signal: Sources = {Sources}, Selector = {Selector}")]
     public sealed class SyncLatest10Signal<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TResult> : ReactiveUI.Primitives.Async.IObservableAsync<TResult>
@@ -1132,10 +1269,16 @@ namespace ReactiveUI.Primitives.Async.Advanced
         public ReactiveUI.Primitives.Async.IObservableAsync<T9> Source9 { get; init; }
     }
     [System.Diagnostics.DebuggerDisplay("SyncLatest11Coordinator: SourceCount = {SourceCount}, Sources = {Sources}")]
-    public sealed class SyncLatest11Coordinator<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TResult> : ReactiveUI.Primitives.Async.Advanced.SyncLatestCoordinatorBase<TResult>
+    public sealed class SyncLatest11Coordinator<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TResult> : ReactiveUI.Primitives.Async.Advanced.ISyncLatestCoordinator<TResult>
     {
         public SyncLatest11Coordinator(ReactiveUI.Primitives.Async.IObserverAsync<TResult> observer, ReactiveUI.Primitives.Async.Advanced.SyncLatest11State<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> sources, System.Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TResult> selector) { }
-        protected override System.Threading.Tasks.ValueTask<System.IAsyncDisposable> SubscribeAtAsync(int index, System.Threading.CancellationToken cancellationToken) { }
+        public ReactiveUI.Primitives.Async.Advanced.SyncLatestLifecycle<TResult> Lifecycle { get; }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public System.Threading.Tasks.ValueTask DisposeAsync() { }
+        public System.Threading.Tasks.ValueTask EmitLatestAsync() { }
+        public System.Threading.Tasks.ValueTask<System.IAsyncDisposable> SubscribeAtAsync(int index, System.Threading.CancellationToken cancellationToken) { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public System.Threading.Tasks.ValueTask SubscribeSourcesAsync(System.Threading.CancellationToken cancellationToken) { }
     }
     [System.Diagnostics.DebuggerDisplay("SyncLatest11Signal: Sources = {Sources}, Selector = {Selector}")]
     public sealed class SyncLatest11Signal<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TResult> : ReactiveUI.Primitives.Async.IObservableAsync<TResult>
@@ -1160,10 +1303,16 @@ namespace ReactiveUI.Primitives.Async.Advanced
         public ReactiveUI.Primitives.Async.IObservableAsync<T9> Source9 { get; init; }
     }
     [System.Diagnostics.DebuggerDisplay("SyncLatest12Coordinator: Sources = {Sources}, Lifecycle = {Lifecycle}")]
-    public sealed class SyncLatest12Coordinator<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TResult> : ReactiveUI.Primitives.Async.Advanced.SyncLatestCoordinatorBase<TResult>
+    public sealed class SyncLatest12Coordinator<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TResult> : ReactiveUI.Primitives.Async.Advanced.ISyncLatestCoordinator<TResult>
     {
         public SyncLatest12Coordinator(ReactiveUI.Primitives.Async.IObserverAsync<TResult> observer, ReactiveUI.Primitives.Async.Advanced.SyncLatest12State<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> sources, System.Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TResult> selector) { }
-        protected override System.Threading.Tasks.ValueTask<System.IAsyncDisposable> SubscribeAtAsync(int index, System.Threading.CancellationToken cancellationToken) { }
+        public ReactiveUI.Primitives.Async.Advanced.SyncLatestLifecycle<TResult> Lifecycle { get; }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public System.Threading.Tasks.ValueTask DisposeAsync() { }
+        public System.Threading.Tasks.ValueTask EmitLatestAsync() { }
+        public System.Threading.Tasks.ValueTask<System.IAsyncDisposable> SubscribeAtAsync(int index, System.Threading.CancellationToken cancellationToken) { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public System.Threading.Tasks.ValueTask SubscribeSourcesAsync(System.Threading.CancellationToken cancellationToken) { }
     }
     [System.Diagnostics.DebuggerDisplay("SyncLatest12Signal: Sources = {Sources}")]
     public sealed class SyncLatest12Signal<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TResult> : ReactiveUI.Primitives.Async.IObservableAsync<TResult>
@@ -1189,10 +1338,16 @@ namespace ReactiveUI.Primitives.Async.Advanced
         public ReactiveUI.Primitives.Async.IObservableAsync<T9> Source9 { get; init; }
     }
     [System.Diagnostics.DebuggerDisplay("SyncLatest13Coordinator: Value1 = {Value1}, Value13 = {Value13}")]
-    public sealed class SyncLatest13Coordinator<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TResult> : ReactiveUI.Primitives.Async.Advanced.SyncLatestCoordinatorBase<TResult>
+    public sealed class SyncLatest13Coordinator<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TResult> : ReactiveUI.Primitives.Async.Advanced.ISyncLatestCoordinator<TResult>
     {
         public SyncLatest13Coordinator(ReactiveUI.Primitives.Async.IObserverAsync<TResult> observer, ReactiveUI.Primitives.Async.Advanced.SyncLatest13State<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> sources, System.Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TResult> selector) { }
-        protected override System.Threading.Tasks.ValueTask<System.IAsyncDisposable> SubscribeAtAsync(int index, System.Threading.CancellationToken cancellationToken) { }
+        public ReactiveUI.Primitives.Async.Advanced.SyncLatestLifecycle<TResult> Lifecycle { get; }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public System.Threading.Tasks.ValueTask DisposeAsync() { }
+        public System.Threading.Tasks.ValueTask EmitLatestAsync() { }
+        public System.Threading.Tasks.ValueTask<System.IAsyncDisposable> SubscribeAtAsync(int index, System.Threading.CancellationToken cancellationToken) { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public System.Threading.Tasks.ValueTask SubscribeSourcesAsync(System.Threading.CancellationToken cancellationToken) { }
     }
     [System.Diagnostics.DebuggerDisplay("SyncLatest13Signal: Sources = {Sources}, Selector = {Selector}")]
     public sealed class SyncLatest13Signal<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TResult> : ReactiveUI.Primitives.Async.IObservableAsync<TResult>
@@ -1219,10 +1374,16 @@ namespace ReactiveUI.Primitives.Async.Advanced
         public ReactiveUI.Primitives.Async.IObservableAsync<T9> Source9 { get; init; }
     }
     [System.Diagnostics.DebuggerDisplay("SyncLatest14Coordinator: Sources = {Sources}, Lifecycle = {Lifecycle}")]
-    public sealed class SyncLatest14Coordinator<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TResult> : ReactiveUI.Primitives.Async.Advanced.SyncLatestCoordinatorBase<TResult>
+    public sealed class SyncLatest14Coordinator<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TResult> : ReactiveUI.Primitives.Async.Advanced.ISyncLatestCoordinator<TResult>
     {
         public SyncLatest14Coordinator(ReactiveUI.Primitives.Async.IObserverAsync<TResult> observer, ReactiveUI.Primitives.Async.Advanced.SyncLatest14State<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> sources, System.Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TResult> selector) { }
-        protected override System.Threading.Tasks.ValueTask<System.IAsyncDisposable> SubscribeAtAsync(int index, System.Threading.CancellationToken cancellationToken) { }
+        public ReactiveUI.Primitives.Async.Advanced.SyncLatestLifecycle<TResult> Lifecycle { get; }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public System.Threading.Tasks.ValueTask DisposeAsync() { }
+        public System.Threading.Tasks.ValueTask EmitLatestAsync() { }
+        public System.Threading.Tasks.ValueTask<System.IAsyncDisposable> SubscribeAtAsync(int index, System.Threading.CancellationToken cancellationToken) { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public System.Threading.Tasks.ValueTask SubscribeSourcesAsync(System.Threading.CancellationToken cancellationToken) { }
     }
     [System.Diagnostics.DebuggerDisplay("SyncLatest14Signal: Sources = {Sources}, Selector = {Selector}")]
     public sealed class SyncLatest14Signal<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TResult> : ReactiveUI.Primitives.Async.IObservableAsync<TResult>
@@ -1250,10 +1411,16 @@ namespace ReactiveUI.Primitives.Async.Advanced
         public ReactiveUI.Primitives.Async.IObservableAsync<T9> Source9 { get; init; }
     }
     [System.Diagnostics.DebuggerDisplay("SyncLatest15Coordinator: Value1 = {Value1}, Value15 = {Value15}")]
-    public sealed class SyncLatest15Coordinator<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TResult> : ReactiveUI.Primitives.Async.Advanced.SyncLatestCoordinatorBase<TResult>
+    public sealed class SyncLatest15Coordinator<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TResult> : ReactiveUI.Primitives.Async.Advanced.ISyncLatestCoordinator<TResult>
     {
         public SyncLatest15Coordinator(ReactiveUI.Primitives.Async.IObserverAsync<TResult> observer, ReactiveUI.Primitives.Async.Advanced.SyncLatest15State<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15> sources, System.Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TResult> selector) { }
-        protected override System.Threading.Tasks.ValueTask<System.IAsyncDisposable> SubscribeAtAsync(int index, System.Threading.CancellationToken cancellationToken) { }
+        public ReactiveUI.Primitives.Async.Advanced.SyncLatestLifecycle<TResult> Lifecycle { get; }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public System.Threading.Tasks.ValueTask DisposeAsync() { }
+        public System.Threading.Tasks.ValueTask EmitLatestAsync() { }
+        public System.Threading.Tasks.ValueTask<System.IAsyncDisposable> SubscribeAtAsync(int index, System.Threading.CancellationToken cancellationToken) { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public System.Threading.Tasks.ValueTask SubscribeSourcesAsync(System.Threading.CancellationToken cancellationToken) { }
     }
     [System.Diagnostics.DebuggerDisplay("SyncLatest15Signal: Sources = {Sources}, Selector = {Selector}")]
     public sealed class SyncLatest15Signal<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TResult> : ReactiveUI.Primitives.Async.IObservableAsync<TResult>
@@ -1282,10 +1449,16 @@ namespace ReactiveUI.Primitives.Async.Advanced
         public ReactiveUI.Primitives.Async.IObservableAsync<T9> Source9 { get; init; }
     }
     [System.Diagnostics.DebuggerDisplay("SyncLatest16Coordinator: Value1 = {Value1}, Value16 = {Value16}")]
-    public sealed class SyncLatest16Coordinator<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, TResult> : ReactiveUI.Primitives.Async.Advanced.SyncLatestCoordinatorBase<TResult>
+    public sealed class SyncLatest16Coordinator<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, TResult> : ReactiveUI.Primitives.Async.Advanced.ISyncLatestCoordinator<TResult>
     {
         public SyncLatest16Coordinator(ReactiveUI.Primitives.Async.IObserverAsync<TResult> observer, ReactiveUI.Primitives.Async.Advanced.SyncLatest16State<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16> sources, System.Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, TResult> selector) { }
-        protected override System.Threading.Tasks.ValueTask<System.IAsyncDisposable> SubscribeAtAsync(int index, System.Threading.CancellationToken cancellationToken) { }
+        public ReactiveUI.Primitives.Async.Advanced.SyncLatestLifecycle<TResult> Lifecycle { get; }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public System.Threading.Tasks.ValueTask DisposeAsync() { }
+        public System.Threading.Tasks.ValueTask EmitLatestAsync() { }
+        public System.Threading.Tasks.ValueTask<System.IAsyncDisposable> SubscribeAtAsync(int index, System.Threading.CancellationToken cancellationToken) { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public System.Threading.Tasks.ValueTask SubscribeSourcesAsync(System.Threading.CancellationToken cancellationToken) { }
     }
     [System.Diagnostics.DebuggerDisplay("SyncLatest16Signal: Sources = {Sources}, Selector = {Selector}")]
     public sealed class SyncLatest16Signal<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, TResult> : ReactiveUI.Primitives.Async.IObservableAsync<TResult>
@@ -1315,10 +1488,16 @@ namespace ReactiveUI.Primitives.Async.Advanced
         public ReactiveUI.Primitives.Async.IObservableAsync<T9> Source9 { get; init; }
     }
     [System.Diagnostics.DebuggerDisplay("SyncLatest2Coordinator: Sources = {Sources}, Selector = {Selector}")]
-    public sealed class SyncLatest2Coordinator<T1, T2, TResult> : ReactiveUI.Primitives.Async.Advanced.SyncLatestCoordinatorBase<TResult>
+    public sealed class SyncLatest2Coordinator<T1, T2, TResult> : ReactiveUI.Primitives.Async.Advanced.ISyncLatestCoordinator<TResult>
     {
         public SyncLatest2Coordinator(ReactiveUI.Primitives.Async.IObserverAsync<TResult> observer, ReactiveUI.Primitives.Async.Advanced.SyncLatest2State<T1, T2> sources, System.Func<T1, T2, TResult> selector) { }
-        protected override System.Threading.Tasks.ValueTask<System.IAsyncDisposable> SubscribeAtAsync(int index, System.Threading.CancellationToken cancellationToken) { }
+        public ReactiveUI.Primitives.Async.Advanced.SyncLatestLifecycle<TResult> Lifecycle { get; }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public System.Threading.Tasks.ValueTask DisposeAsync() { }
+        public System.Threading.Tasks.ValueTask EmitLatestAsync() { }
+        public System.Threading.Tasks.ValueTask<System.IAsyncDisposable> SubscribeAtAsync(int index, System.Threading.CancellationToken cancellationToken) { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public System.Threading.Tasks.ValueTask SubscribeSourcesAsync(System.Threading.CancellationToken cancellationToken) { }
     }
     [System.Diagnostics.DebuggerDisplay("SyncLatest2Signal: Sources = {Sources}, Selector = {Selector}")]
     public sealed class SyncLatest2Signal<T1, T2, TResult> : ReactiveUI.Primitives.Async.IObservableAsync<TResult>
@@ -1334,10 +1513,16 @@ namespace ReactiveUI.Primitives.Async.Advanced
         public ReactiveUI.Primitives.Async.IObservableAsync<T2> Source2 { get; init; }
     }
     [System.Diagnostics.DebuggerDisplay("SyncLatest3Coordinator: Value1 = {Value1}, Value3 = {Value3}")]
-    public sealed class SyncLatest3Coordinator<T1, T2, T3, TResult> : ReactiveUI.Primitives.Async.Advanced.SyncLatestCoordinatorBase<TResult>
+    public sealed class SyncLatest3Coordinator<T1, T2, T3, TResult> : ReactiveUI.Primitives.Async.Advanced.ISyncLatestCoordinator<TResult>
     {
         public SyncLatest3Coordinator(ReactiveUI.Primitives.Async.IObserverAsync<TResult> observer, ReactiveUI.Primitives.Async.Advanced.SyncLatest3State<T1, T2, T3> sources, System.Func<T1, T2, T3, TResult> selector) { }
-        protected override System.Threading.Tasks.ValueTask<System.IAsyncDisposable> SubscribeAtAsync(int index, System.Threading.CancellationToken cancellationToken) { }
+        public ReactiveUI.Primitives.Async.Advanced.SyncLatestLifecycle<TResult> Lifecycle { get; }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public System.Threading.Tasks.ValueTask DisposeAsync() { }
+        public System.Threading.Tasks.ValueTask EmitLatestAsync() { }
+        public System.Threading.Tasks.ValueTask<System.IAsyncDisposable> SubscribeAtAsync(int index, System.Threading.CancellationToken cancellationToken) { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public System.Threading.Tasks.ValueTask SubscribeSourcesAsync(System.Threading.CancellationToken cancellationToken) { }
     }
     [System.Diagnostics.DebuggerDisplay("SyncLatest3Signal: Sources = {Sources}, Selector = {Selector}")]
     public sealed class SyncLatest3Signal<T1, T2, T3, TResult> : ReactiveUI.Primitives.Async.IObservableAsync<TResult>
@@ -1354,10 +1539,16 @@ namespace ReactiveUI.Primitives.Async.Advanced
         public ReactiveUI.Primitives.Async.IObservableAsync<T3> Source3 { get; init; }
     }
     [System.Diagnostics.DebuggerDisplay("SyncLatest4Coordinator: Value1 = {Value1}, Value4 = {Value4}")]
-    public sealed class SyncLatest4Coordinator<T1, T2, T3, T4, TResult> : ReactiveUI.Primitives.Async.Advanced.SyncLatestCoordinatorBase<TResult>
+    public sealed class SyncLatest4Coordinator<T1, T2, T3, T4, TResult> : ReactiveUI.Primitives.Async.Advanced.ISyncLatestCoordinator<TResult>
     {
         public SyncLatest4Coordinator(ReactiveUI.Primitives.Async.IObserverAsync<TResult> observer, ReactiveUI.Primitives.Async.Advanced.SyncLatest4State<T1, T2, T3, T4> sources, System.Func<T1, T2, T3, T4, TResult> selector) { }
-        protected override System.Threading.Tasks.ValueTask<System.IAsyncDisposable> SubscribeAtAsync(int index, System.Threading.CancellationToken cancellationToken) { }
+        public ReactiveUI.Primitives.Async.Advanced.SyncLatestLifecycle<TResult> Lifecycle { get; }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public System.Threading.Tasks.ValueTask DisposeAsync() { }
+        public System.Threading.Tasks.ValueTask EmitLatestAsync() { }
+        public System.Threading.Tasks.ValueTask<System.IAsyncDisposable> SubscribeAtAsync(int index, System.Threading.CancellationToken cancellationToken) { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public System.Threading.Tasks.ValueTask SubscribeSourcesAsync(System.Threading.CancellationToken cancellationToken) { }
     }
     [System.Diagnostics.DebuggerDisplay("SyncLatest4Signal: Sources = {Sources}, Selector = {Selector}")]
     public sealed class SyncLatest4Signal<T1, T2, T3, T4, TResult> : ReactiveUI.Primitives.Async.IObservableAsync<TResult>
@@ -1375,10 +1566,16 @@ namespace ReactiveUI.Primitives.Async.Advanced
         public ReactiveUI.Primitives.Async.IObservableAsync<T4> Source4 { get; init; }
     }
     [System.Diagnostics.DebuggerDisplay("SyncLatest5Coordinator: Value1 = {Value1}, Value5 = {Value5}")]
-    public sealed class SyncLatest5Coordinator<T1, T2, T3, T4, T5, TResult> : ReactiveUI.Primitives.Async.Advanced.SyncLatestCoordinatorBase<TResult>
+    public sealed class SyncLatest5Coordinator<T1, T2, T3, T4, T5, TResult> : ReactiveUI.Primitives.Async.Advanced.ISyncLatestCoordinator<TResult>
     {
         public SyncLatest5Coordinator(ReactiveUI.Primitives.Async.IObserverAsync<TResult> observer, ReactiveUI.Primitives.Async.Advanced.SyncLatest5State<T1, T2, T3, T4, T5> sources, System.Func<T1, T2, T3, T4, T5, TResult> selector) { }
-        protected override System.Threading.Tasks.ValueTask<System.IAsyncDisposable> SubscribeAtAsync(int index, System.Threading.CancellationToken cancellationToken) { }
+        public ReactiveUI.Primitives.Async.Advanced.SyncLatestLifecycle<TResult> Lifecycle { get; }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public System.Threading.Tasks.ValueTask DisposeAsync() { }
+        public System.Threading.Tasks.ValueTask EmitLatestAsync() { }
+        public System.Threading.Tasks.ValueTask<System.IAsyncDisposable> SubscribeAtAsync(int index, System.Threading.CancellationToken cancellationToken) { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public System.Threading.Tasks.ValueTask SubscribeSourcesAsync(System.Threading.CancellationToken cancellationToken) { }
     }
     [System.Diagnostics.DebuggerDisplay("SyncLatest5Signal: Sources = {Sources}, Selector = {Selector}")]
     public sealed class SyncLatest5Signal<T1, T2, T3, T4, T5, TResult> : ReactiveUI.Primitives.Async.IObservableAsync<TResult>
@@ -1397,10 +1594,16 @@ namespace ReactiveUI.Primitives.Async.Advanced
         public ReactiveUI.Primitives.Async.IObservableAsync<T5> Source5 { get; init; }
     }
     [System.Diagnostics.DebuggerDisplay("SyncLatest6Coordinator: Value1 = {Value1}, Value6 = {Value6}")]
-    public sealed class SyncLatest6Coordinator<T1, T2, T3, T4, T5, T6, TResult> : ReactiveUI.Primitives.Async.Advanced.SyncLatestCoordinatorBase<TResult>
+    public sealed class SyncLatest6Coordinator<T1, T2, T3, T4, T5, T6, TResult> : ReactiveUI.Primitives.Async.Advanced.ISyncLatestCoordinator<TResult>
     {
         public SyncLatest6Coordinator(ReactiveUI.Primitives.Async.IObserverAsync<TResult> observer, ReactiveUI.Primitives.Async.Advanced.SyncLatest6State<T1, T2, T3, T4, T5, T6> sources, System.Func<T1, T2, T3, T4, T5, T6, TResult> selector) { }
-        protected override System.Threading.Tasks.ValueTask<System.IAsyncDisposable> SubscribeAtAsync(int index, System.Threading.CancellationToken cancellationToken) { }
+        public ReactiveUI.Primitives.Async.Advanced.SyncLatestLifecycle<TResult> Lifecycle { get; }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public System.Threading.Tasks.ValueTask DisposeAsync() { }
+        public System.Threading.Tasks.ValueTask EmitLatestAsync() { }
+        public System.Threading.Tasks.ValueTask<System.IAsyncDisposable> SubscribeAtAsync(int index, System.Threading.CancellationToken cancellationToken) { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public System.Threading.Tasks.ValueTask SubscribeSourcesAsync(System.Threading.CancellationToken cancellationToken) { }
     }
     [System.Diagnostics.DebuggerDisplay("SyncLatest6Signal: Sources = {Sources}, Selector = {Selector}")]
     public sealed class SyncLatest6Signal<T1, T2, T3, T4, T5, T6, TResult> : ReactiveUI.Primitives.Async.IObservableAsync<TResult>
@@ -1420,10 +1623,16 @@ namespace ReactiveUI.Primitives.Async.Advanced
         public ReactiveUI.Primitives.Async.IObservableAsync<T6> Source6 { get; init; }
     }
     [System.Diagnostics.DebuggerDisplay("SyncLatest7Coordinator: Sources = {Sources}, Selector = {Selector}")]
-    public sealed class SyncLatest7Coordinator<T1, T2, T3, T4, T5, T6, T7, TResult> : ReactiveUI.Primitives.Async.Advanced.SyncLatestCoordinatorBase<TResult>
+    public sealed class SyncLatest7Coordinator<T1, T2, T3, T4, T5, T6, T7, TResult> : ReactiveUI.Primitives.Async.Advanced.ISyncLatestCoordinator<TResult>
     {
         public SyncLatest7Coordinator(ReactiveUI.Primitives.Async.IObserverAsync<TResult> observer, ReactiveUI.Primitives.Async.Advanced.SyncLatest7State<T1, T2, T3, T4, T5, T6, T7> sources, System.Func<T1, T2, T3, T4, T5, T6, T7, TResult> selector) { }
-        protected override System.Threading.Tasks.ValueTask<System.IAsyncDisposable> SubscribeAtAsync(int index, System.Threading.CancellationToken cancellationToken) { }
+        public ReactiveUI.Primitives.Async.Advanced.SyncLatestLifecycle<TResult> Lifecycle { get; }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public System.Threading.Tasks.ValueTask DisposeAsync() { }
+        public System.Threading.Tasks.ValueTask EmitLatestAsync() { }
+        public System.Threading.Tasks.ValueTask<System.IAsyncDisposable> SubscribeAtAsync(int index, System.Threading.CancellationToken cancellationToken) { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public System.Threading.Tasks.ValueTask SubscribeSourcesAsync(System.Threading.CancellationToken cancellationToken) { }
     }
     [System.Diagnostics.DebuggerDisplay("SyncLatest7Signal: Sources = {Sources}, Selector = {Selector}")]
     public sealed class SyncLatest7Signal<T1, T2, T3, T4, T5, T6, T7, TResult> : ReactiveUI.Primitives.Async.IObservableAsync<TResult>
@@ -1444,10 +1653,16 @@ namespace ReactiveUI.Primitives.Async.Advanced
         public ReactiveUI.Primitives.Async.IObservableAsync<T7> Source7 { get; init; }
     }
     [System.Diagnostics.DebuggerDisplay("SyncLatest8Coordinator: Sources = {Sources}, Selector = {Selector}")]
-    public sealed class SyncLatest8Coordinator<T1, T2, T3, T4, T5, T6, T7, T8, TResult> : ReactiveUI.Primitives.Async.Advanced.SyncLatestCoordinatorBase<TResult>
+    public sealed class SyncLatest8Coordinator<T1, T2, T3, T4, T5, T6, T7, T8, TResult> : ReactiveUI.Primitives.Async.Advanced.ISyncLatestCoordinator<TResult>
     {
         public SyncLatest8Coordinator(ReactiveUI.Primitives.Async.IObserverAsync<TResult> observer, ReactiveUI.Primitives.Async.Advanced.SyncLatest8State<T1, T2, T3, T4, T5, T6, T7, T8> sources, System.Func<T1, T2, T3, T4, T5, T6, T7, T8, TResult> selector) { }
-        protected override System.Threading.Tasks.ValueTask<System.IAsyncDisposable> SubscribeAtAsync(int index, System.Threading.CancellationToken cancellationToken) { }
+        public ReactiveUI.Primitives.Async.Advanced.SyncLatestLifecycle<TResult> Lifecycle { get; }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public System.Threading.Tasks.ValueTask DisposeAsync() { }
+        public System.Threading.Tasks.ValueTask EmitLatestAsync() { }
+        public System.Threading.Tasks.ValueTask<System.IAsyncDisposable> SubscribeAtAsync(int index, System.Threading.CancellationToken cancellationToken) { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public System.Threading.Tasks.ValueTask SubscribeSourcesAsync(System.Threading.CancellationToken cancellationToken) { }
     }
     [System.Diagnostics.DebuggerDisplay("SyncLatest8Signal: Sources = {Sources}, Selector = {Selector}")]
     public sealed class SyncLatest8Signal<T1, T2, T3, T4, T5, T6, T7, T8, TResult> : ReactiveUI.Primitives.Async.IObservableAsync<TResult>
@@ -1469,10 +1684,16 @@ namespace ReactiveUI.Primitives.Async.Advanced
         public ReactiveUI.Primitives.Async.IObservableAsync<T8> Source8 { get; init; }
     }
     [System.Diagnostics.DebuggerDisplay("SyncLatest9Coordinator: Value1 = {Value1}, Value9 = {Value9}")]
-    public sealed class SyncLatest9Coordinator<T1, T2, T3, T4, T5, T6, T7, T8, T9, TResult> : ReactiveUI.Primitives.Async.Advanced.SyncLatestCoordinatorBase<TResult>
+    public sealed class SyncLatest9Coordinator<T1, T2, T3, T4, T5, T6, T7, T8, T9, TResult> : ReactiveUI.Primitives.Async.Advanced.ISyncLatestCoordinator<TResult>
     {
         public SyncLatest9Coordinator(ReactiveUI.Primitives.Async.IObserverAsync<TResult> observer, ReactiveUI.Primitives.Async.Advanced.SyncLatest9State<T1, T2, T3, T4, T5, T6, T7, T8, T9> sources, System.Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, TResult> selector) { }
-        protected override System.Threading.Tasks.ValueTask<System.IAsyncDisposable> SubscribeAtAsync(int index, System.Threading.CancellationToken cancellationToken) { }
+        public ReactiveUI.Primitives.Async.Advanced.SyncLatestLifecycle<TResult> Lifecycle { get; }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public System.Threading.Tasks.ValueTask DisposeAsync() { }
+        public System.Threading.Tasks.ValueTask EmitLatestAsync() { }
+        public System.Threading.Tasks.ValueTask<System.IAsyncDisposable> SubscribeAtAsync(int index, System.Threading.CancellationToken cancellationToken) { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public System.Threading.Tasks.ValueTask SubscribeSourcesAsync(System.Threading.CancellationToken cancellationToken) { }
     }
     [System.Diagnostics.DebuggerDisplay("SyncLatest9Signal: Sources = {Sources}, Selector = {Selector}")]
     public sealed class SyncLatest9Signal<T1, T2, T3, T4, T5, T6, T7, T8, T9, TResult> : ReactiveUI.Primitives.Async.IObservableAsync<TResult>
@@ -1494,13 +1715,16 @@ namespace ReactiveUI.Primitives.Async.Advanced
         public ReactiveUI.Primitives.Async.IObservableAsync<T8> Source8 { get; init; }
         public ReactiveUI.Primitives.Async.IObservableAsync<T9> Source9 { get; init; }
     }
-    [System.Diagnostics.DebuggerDisplay("SyncLatestCoordinatorBase: SourceCount = {Lifecycle.Subscriptions.Length}, HasDisposed = {Lifecycle.HasDisposed}")]
-    public abstract class SyncLatestCoordinatorBase<TResult> : System.IAsyncDisposable
+    public static class SyncLatestCoordinatorExtensions
     {
-        protected SyncLatestCoordinatorBase(ReactiveUI.Primitives.Async.IObserverAsync<TResult> observer, int sourceCount) { }
-        public System.Threading.Tasks.ValueTask DisposeAsync() { }
-        protected abstract System.Threading.Tasks.ValueTask<System.IAsyncDisposable> SubscribeAtAsync(int index, System.Threading.CancellationToken cancellationToken) { }
-        public System.Threading.Tasks.ValueTask SubscribeSourcesAsync(System.Threading.CancellationToken cancellationToken) { }
+        extension<TResult>(ReactiveUI.Primitives.Async.Advanced.ISyncLatestCoordinator<TResult> coordinator)
+        {
+            public System.Threading.Tasks.ValueTask SubscribeSourcesAsync(System.Threading.CancellationToken cancellationToken) { }
+        }
+        extension<TSource>(ReactiveUI.Primitives.Async.IObservableAsync<TSource> source)
+        {
+            public System.Threading.Tasks.ValueTask<System.IAsyncDisposable> SubscribeToSlotAsync<TResult>(ReactiveUI.Primitives.Async.Advanced.ISyncLatestCoordinator<TResult> coordinator, int sourceIndex, System.Action<TSource> recordValue, System.Threading.CancellationToken cancellationToken) { }
+        }
     }
     [System.Diagnostics.DebuggerDisplay("SyncLatestEnumerableCoordinator: Sources = {Sources.Length}, Completed = {_completedCount}, Disposed = {_disposed}")]
     public sealed class SyncLatestEnumerableCoordinator<TSource, TResult> : System.IAsyncDisposable
@@ -1529,12 +1753,23 @@ namespace ReactiveUI.Primitives.Async.Advanced
         [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
         public System.Threading.Tasks.ValueTask OnNextAsync(TSource value, System.Threading.CancellationToken cancellationToken) { }
     }
-    public sealed class SyncLatestIndexedWitness<TSource, TResult> : ReactiveUI.Primitives.Async.WitnessAsync<TSource>
+    [System.Diagnostics.DebuggerDisplay("SyncLatestIndexedWitness: {_witness}")]
+    public sealed class SyncLatestIndexedWitness<TSource, TResult> : ReactiveUI.Primitives.Async.IWitnessAsync<TSource>
     {
-        public SyncLatestIndexedWitness(ReactiveUI.Primitives.Async.Advanced.SyncLatestCoordinatorBase<TResult> parent, int sourceBit, System.Action<TSource> recordValue) { }
-        protected override System.Threading.Tasks.ValueTask OnCompletedAsyncCore(ReactiveUI.Primitives.Result result) { }
-        protected override System.Threading.Tasks.ValueTask OnErrorResumeAsyncCore(System.Exception error, System.Threading.CancellationToken cancellationToken) { }
-        protected override System.Threading.Tasks.ValueTask OnNextAsyncCore(TSource value, System.Threading.CancellationToken cancellationToken) { }
+        public SyncLatestIndexedWitness(ReactiveUI.Primitives.Async.Advanced.ISyncLatestCoordinator<TResult> parent, int sourceBit, System.Action<TSource> recordValue) { }
+        ReactiveUI.Primitives.Async.WitnessAsyncState ReactiveUI.Primitives.Async.IWitnessState.Witness { get; }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public System.Threading.Tasks.ValueTask DisposeAsync() { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public System.Threading.Tasks.ValueTask OnCompletedAsync(ReactiveUI.Primitives.Result result) { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public System.Threading.Tasks.ValueTask OnErrorResumeAsync(System.Exception error, System.Threading.CancellationToken cancellationToken) { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public System.Threading.Tasks.ValueTask OnNextAsync(TSource value, System.Threading.CancellationToken cancellationToken) { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        System.Threading.Tasks.ValueTask ReactiveUI.Primitives.Async.IWitnessAsync<TSource>.OnCompletedAsyncCore(ReactiveUI.Primitives.Result result) { }
+        System.Threading.Tasks.ValueTask ReactiveUI.Primitives.Async.IWitnessAsync<TSource>.OnErrorResumeAsyncCore(System.Exception error, System.Threading.CancellationToken cancellationToken) { }
+        System.Threading.Tasks.ValueTask ReactiveUI.Primitives.Async.IWitnessAsync<TSource>.OnNextAsyncCore(TSource value, System.Threading.CancellationToken cancellationToken) { }
     }
     [System.Diagnostics.DebuggerDisplay("SyncLatestLifecycle: SourceCount = {Subscriptions.Length}, HasDisposed = {HasDisposed}")]
     public sealed class SyncLatestLifecycle<TResult> : System.IAsyncDisposable
@@ -1551,38 +1786,66 @@ namespace ReactiveUI.Primitives.Async.Advanced
         public System.Threading.Tasks.ValueTask OnErrorResumeAsync(System.Exception error) { }
         public System.Threading.Tasks.ValueTask OnSourceCompletedAsync(ReactiveUI.Primitives.Result result, int doneBit) { }
     }
-    public sealed class SyncLatestWitness<TSource, TResult> : ReactiveUI.Primitives.Async.WitnessAsync<TSource>
+    public static class SyncLatestSlot
     {
-        public SyncLatestWitness(ReactiveUI.Primitives.Async.Advanced.SyncLatestCoordinatorBase<TResult> parent, int sourceBit, System.Action<TSource> recordValue) { }
-        protected override System.Threading.Tasks.ValueTask OnCompletedAsyncCore(ReactiveUI.Primitives.Result result) { }
-        protected override System.Threading.Tasks.ValueTask OnErrorResumeAsyncCore(System.Exception error, System.Threading.CancellationToken cancellationToken) { }
-        protected override System.Threading.Tasks.ValueTask OnNextAsyncCore(TSource value, System.Threading.CancellationToken cancellationToken) { }
+        public static ReactiveUI.Primitives.Async.Advanced.SyncLatestIndexedWitness<TSource, TResult> CreateWitness<TSource, TResult>(ReactiveUI.Primitives.Async.Advanced.ISyncLatestCoordinator<TResult> coordinator, int sourceIndex, System.Action<TSource> recordValue) { }
+    }
+    [System.Diagnostics.DebuggerDisplay("SyncLatestWitness: {_witness}")]
+    public sealed class SyncLatestWitness<TSource, TResult> : ReactiveUI.Primitives.Async.IWitnessAsync<TSource>
+    {
+        public SyncLatestWitness(ReactiveUI.Primitives.Async.Advanced.ISyncLatestCoordinator<TResult> parent, int sourceBit, System.Action<TSource> recordValue) { }
+        ReactiveUI.Primitives.Async.WitnessAsyncState ReactiveUI.Primitives.Async.IWitnessState.Witness { get; }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public System.Threading.Tasks.ValueTask DisposeAsync() { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public System.Threading.Tasks.ValueTask OnCompletedAsync(ReactiveUI.Primitives.Result result) { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public System.Threading.Tasks.ValueTask OnErrorResumeAsync(System.Exception error, System.Threading.CancellationToken cancellationToken) { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public System.Threading.Tasks.ValueTask OnNextAsync(TSource value, System.Threading.CancellationToken cancellationToken) { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        System.Threading.Tasks.ValueTask ReactiveUI.Primitives.Async.IWitnessAsync<TSource>.OnCompletedAsyncCore(ReactiveUI.Primitives.Result result) { }
+        System.Threading.Tasks.ValueTask ReactiveUI.Primitives.Async.IWitnessAsync<TSource>.OnErrorResumeAsyncCore(System.Exception error, System.Threading.CancellationToken cancellationToken) { }
+        System.Threading.Tasks.ValueTask ReactiveUI.Primitives.Async.IWitnessAsync<TSource>.OnNextAsyncCore(TSource value, System.Threading.CancellationToken cancellationToken) { }
     }
     [System.Diagnostics.DebuggerDisplay("TakeUntilLifecycle: Observer = {_observer}, DisposeRequested = {DisposeToken.IsCancellationRequested}")]
     public sealed class TakeUntilLifecycle<T> : System.IAsyncDisposable
     {
         public TakeUntilLifecycle(ReactiveUI.Primitives.Async.IObserverAsync<T> observer) { }
         public System.Threading.CancellationToken DisposeToken { get; }
+        public System.Threading.CancellationTokenRegistration CompleteWhenCancelled(System.Threading.CancellationToken stopToken) { }
         public System.Threading.Tasks.ValueTask DisposeAsync() { }
         public void LinkExternalCancellation(System.Threading.CancellationToken external) { }
         public System.Threading.Tasks.ValueTask RelayCompletionAsync(ReactiveUI.Primitives.Result result) { }
         public System.Threading.Tasks.ValueTask RelayErrorAsync(System.Exception error) { }
         public System.Threading.Tasks.ValueTask RelayNextAsync(T value) { }
     }
-    public sealed class TakeUntilSourceWitness<T> : ReactiveUI.Primitives.Async.WitnessAsync<T>
+    [System.Diagnostics.DebuggerDisplay("TakeUntilSourceWitness: {_witness}")]
+    public sealed class TakeUntilSourceWitness<T> : ReactiveUI.Primitives.Async.IWitnessAsync<T>
     {
         public TakeUntilSourceWitness(ReactiveUI.Primitives.Async.Advanced.TakeUntilLifecycle<T> lifecycle) { }
-        protected override System.Threading.Tasks.ValueTask OnCompletedAsyncCore(ReactiveUI.Primitives.Result result) { }
-        protected override System.Threading.Tasks.ValueTask OnErrorResumeAsyncCore(System.Exception error, System.Threading.CancellationToken cancellationToken) { }
-        protected override System.Threading.Tasks.ValueTask OnNextAsyncCore(T value, System.Threading.CancellationToken cancellationToken) { }
+        ReactiveUI.Primitives.Async.WitnessAsyncState ReactiveUI.Primitives.Async.IWitnessState.Witness { get; }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public System.Threading.Tasks.ValueTask DisposeAsync() { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public System.Threading.Tasks.ValueTask OnCompletedAsync(ReactiveUI.Primitives.Result result) { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public System.Threading.Tasks.ValueTask OnErrorResumeAsync(System.Exception error, System.Threading.CancellationToken cancellationToken) { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public System.Threading.Tasks.ValueTask OnNextAsync(T value, System.Threading.CancellationToken cancellationToken) { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        System.Threading.Tasks.ValueTask ReactiveUI.Primitives.Async.IWitnessAsync<T>.OnCompletedAsyncCore(ReactiveUI.Primitives.Result result) { }
+        System.Threading.Tasks.ValueTask ReactiveUI.Primitives.Async.IWitnessAsync<T>.OnErrorResumeAsyncCore(System.Exception error, System.Threading.CancellationToken cancellationToken) { }
+        System.Threading.Tasks.ValueTask ReactiveUI.Primitives.Async.IWitnessAsync<T>.OnNextAsyncCore(T value, System.Threading.CancellationToken cancellationToken) { }
     }
     [System.Diagnostics.DebuggerDisplay("TaskResultCompletionSource: IsCompleted = {_taskSource.Task.IsCompleted}")]
     public sealed class TaskResultCompletionSource<T>
     {
         public TaskResultCompletionSource(System.Threading.CancellationToken cancellationToken) { }
         public System.Threading.Tasks.ValueTask<T> AwaitResultAsync(System.IAsyncDisposable owner) { }
-        public System.Threading.Tasks.ValueTask SetExceptionAndDisposeAsync(System.Exception exception, ReactiveUI.Primitives.Async.Advanced.IReentrantAsyncDisposable owner) { }
-        public System.Threading.Tasks.ValueTask SetResultAndDisposeAsync(T value, ReactiveUI.Primitives.Async.Advanced.IReentrantAsyncDisposable owner) { }
+        public System.Threading.Tasks.ValueTask CompleteAndDisposeAsync(ReactiveUI.Primitives.Result result, T value, ReactiveUI.Primitives.Async.IWitnessState owner) { }
+        public System.Threading.Tasks.ValueTask SetExceptionAndDisposeAsync(System.Exception exception, ReactiveUI.Primitives.Async.IWitnessState owner) { }
+        public System.Threading.Tasks.ValueTask SetResultAndDisposeAsync(T value, ReactiveUI.Primitives.Async.IWitnessState owner) { }
     }
     [System.Diagnostics.DebuggerDisplay("TaskResultSignal: Task = {Task}")]
     public sealed class TaskResultSignal<T> : ReactiveUI.Primitives.Async.IObservableAsync<T>
@@ -1591,32 +1854,39 @@ namespace ReactiveUI.Primitives.Async.Advanced
         System.Threading.Tasks.ValueTask<System.IAsyncDisposable> ReactiveUI.Primitives.Async.IObservableAsync<T>.SubscribeAsync(ReactiveUI.Primitives.Async.IObserverAsync<T> observer, System.Threading.CancellationToken cancellationToken) { }
     }
     [System.Diagnostics.DebuggerDisplay("TaskResultSubscription: Task = {Task}")]
-    public sealed class TaskResultSubscription<T> : ReactiveUI.Primitives.Async.Advanced.TaskSignalSubscription<T>
+    public sealed class TaskResultSubscription<T> : ReactiveUI.Primitives.Async.Advanced.ITaskSignalJob<T>, System.IAsyncDisposable
     {
         public TaskResultSubscription(ReactiveUI.Primitives.Async.IObserverAsync<T> observer, System.Threading.Tasks.Task<T> task) { }
-        protected override System.Threading.Tasks.ValueTask ExecuteAsyncCore(ReactiveUI.Primitives.Async.IObserverAsync<T> observer, System.Threading.CancellationToken cancellationToken) { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public System.Threading.Tasks.ValueTask DisposeAsync() { }
+        System.Threading.Tasks.ValueTask ReactiveUI.Primitives.Async.Advanced.ITaskSignalJob<T>.ExecuteAsync(ReactiveUI.Primitives.Async.IObserverAsync<T> observer, System.Threading.CancellationToken cancellationToken) { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public void Start() { }
     }
-    [System.Diagnostics.DebuggerDisplay("TaskResultWitnessAsyncBase: Completion = {_completion}")]
-    public abstract class TaskResultWitnessAsyncBase<T, TTaskValue> : ReactiveUI.Primitives.Async.WitnessAsync<T>
+    [System.Diagnostics.DebuggerDisplay("TaskSignalState: Disposed = {_disposed}, Started = {_run != null}")]
+    public sealed class TaskSignalState : System.IAsyncDisposable, System.IDisposable
     {
-        protected TaskResultWitnessAsyncBase(System.Threading.CancellationToken cancellationToken) { }
+        public TaskSignalState() { }
+        public void Dispose() { }
+        public System.Threading.Tasks.ValueTask DisposeAsync() { }
         [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
-        public System.Threading.Tasks.ValueTask<TTaskValue> AwaitResultAsync() { }
-        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
-        protected System.Threading.Tasks.ValueTask SetExceptionAndDisposeAsync(System.Exception e) { }
-        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
-        protected System.Threading.Tasks.ValueTask SetResultAndDisposeAsync(TTaskValue value) { }
+        public void Start<TJob, T>(TJob job, ReactiveUI.Primitives.Async.IObserverAsync<T> observer) where TJob : ReactiveUI.Primitives.Async.Advanced.ITaskSignalJob<T> { }
+        public static System.Threading.Tasks.ValueTask CompleteWithFailureAsync<T>(ReactiveUI.Primitives.Async.IObserverAsync<T> observer, System.Exception error) { }
+        public static System.Threading.Tasks.ValueTask ExecuteAsync<TJob, T>(TJob job, ReactiveUI.Primitives.Async.IObserverAsync<T> observer, System.Threading.CancellationToken cancellationToken) where TJob : ReactiveUI.Primitives.Async.Advanced.ITaskSignalJob<T> { }
     }
     public static class TaskSignalSubscription
     {
         public static ReactiveUI.Primitives.Async.Advanced.TaskSignalSubscription<T> StartNew<T>(System.Func<ReactiveUI.Primitives.Async.IObserverAsync<T>, System.Threading.CancellationToken, System.Threading.Tasks.ValueTask> executeAsyncCore, ReactiveUI.Primitives.Async.IObserverAsync<T> observer) { }
     }
-    [System.Diagnostics.DebuggerDisplay("TaskSignalSubscription: Disposed = {_disposed}, Completed = {_tcs.Task.IsCompleted}")]
-    public abstract class TaskSignalSubscription<T> : System.IAsyncDisposable
+    [System.Diagnostics.DebuggerDisplay("TaskSignalSubscription: {_task}")]
+    public sealed class TaskSignalSubscription<T> : ReactiveUI.Primitives.Async.Advanced.ITaskSignalJob<T>, System.IAsyncDisposable
     {
-        protected TaskSignalSubscription(ReactiveUI.Primitives.Async.IObserverAsync<T> observer) { }
+        public TaskSignalSubscription(System.Func<ReactiveUI.Primitives.Async.IObserverAsync<T>, System.Threading.CancellationToken, System.Threading.Tasks.ValueTask> executeAsyncCore, ReactiveUI.Primitives.Async.IObserverAsync<T> downstream) { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
         public System.Threading.Tasks.ValueTask DisposeAsync() { }
-        protected abstract System.Threading.Tasks.ValueTask ExecuteAsyncCore(ReactiveUI.Primitives.Async.IObserverAsync<T> observer, System.Threading.CancellationToken cancellationToken) { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        System.Threading.Tasks.ValueTask ReactiveUI.Primitives.Async.Advanced.ITaskSignalJob<T>.ExecuteAsync(ReactiveUI.Primitives.Async.IObserverAsync<T> observer, System.Threading.CancellationToken cancellationToken) { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
         public void Start() { }
     }
     [System.Diagnostics.DebuggerDisplay("TimerSignal: DueTime = {DueTime}, Period = {Period}")]
@@ -1626,10 +1896,14 @@ namespace ReactiveUI.Primitives.Async.Advanced
         System.Threading.Tasks.ValueTask<System.IAsyncDisposable> ReactiveUI.Primitives.Async.IObservableAsync<System.Int64>.SubscribeAsync(ReactiveUI.Primitives.Async.IObserverAsync<long> observer, System.Threading.CancellationToken cancellationToken) { }
     }
     [System.Diagnostics.DebuggerDisplay("TimerSubscription: DueTime = {DueTime}, Period = {Period}")]
-    public sealed class TimerSubscription : ReactiveUI.Primitives.Async.Advanced.TaskSignalSubscription<long>
+    public sealed class TimerSubscription : ReactiveUI.Primitives.Async.Advanced.ITaskSignalJob<long>, System.IAsyncDisposable
     {
         public TimerSubscription(ReactiveUI.Primitives.Async.IObserverAsync<long> observer, System.TimeSpan dueTime, System.TimeSpan? period, System.TimeProvider timeProvider) { }
-        protected override System.Threading.Tasks.ValueTask ExecuteAsyncCore(ReactiveUI.Primitives.Async.IObserverAsync<long> observer, System.Threading.CancellationToken cancellationToken) { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public System.Threading.Tasks.ValueTask DisposeAsync() { }
+        System.Threading.Tasks.ValueTask ReactiveUI.Primitives.Async.Advanced.ITaskSignalJob<System.Int64>.ExecuteAsync(ReactiveUI.Primitives.Async.IObserverAsync<long> observer, System.Threading.CancellationToken cancellationToken) { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public void Start() { }
     }
     [System.Diagnostics.DebuggerDisplay("UsingSignal: ResourceFactory = {ResourceFactory}, SignalFactory = {SignalFactory}")]
     public sealed class UsingSignal<TResource, T> : ReactiveUI.Primitives.Async.IObservableAsync<T> where TResource : System.IAsyncDisposable
@@ -1638,10 +1912,27 @@ namespace ReactiveUI.Primitives.Async.Advanced
         System.Threading.Tasks.ValueTask<System.IAsyncDisposable> ReactiveUI.Primitives.Async.IObservableAsync<T>.SubscribeAsync(ReactiveUI.Primitives.Async.IObserverAsync<T> observer, System.Threading.CancellationToken cancellationToken) { }
     }
     [System.Diagnostics.DebuggerDisplay("UsingWitness: Resource = {Resource}")]
-    public sealed class UsingWitness<TResource, T> : ReactiveUI.Primitives.Async.Advanced.ForwardingWitnessAsync<T> where TResource : System.IAsyncDisposable
+    public sealed class UsingWitness<TResource, T> : ReactiveUI.Primitives.Async.IWitnessAsync<T> where TResource : System.IAsyncDisposable
     {
         public UsingWitness(ReactiveUI.Primitives.Async.IObserverAsync<T> observer, TResource resource) { }
-        protected override System.Threading.Tasks.ValueTask DisposeAsyncCore() { }
+        ReactiveUI.Primitives.Async.WitnessAsyncState ReactiveUI.Primitives.Async.IWitnessState.Witness { get; }
+        public System.Threading.Tasks.ValueTask DisposeAsync() { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public System.Threading.Tasks.ValueTask OnCompletedAsync(ReactiveUI.Primitives.Result result) { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public System.Threading.Tasks.ValueTask OnErrorResumeAsync(System.Exception error, System.Threading.CancellationToken cancellationToken) { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public System.Threading.Tasks.ValueTask OnNextAsync(T value, System.Threading.CancellationToken cancellationToken) { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        System.Threading.Tasks.ValueTask ReactiveUI.Primitives.Async.IWitnessAsync<T>.OnCompletedAsyncCore(ReactiveUI.Primitives.Result result) { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        System.Threading.Tasks.ValueTask ReactiveUI.Primitives.Async.IWitnessAsync<T>.OnErrorResumeAsyncCore(System.Exception error, System.Threading.CancellationToken cancellationToken) { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        System.Threading.Tasks.ValueTask ReactiveUI.Primitives.Async.IWitnessAsync<T>.OnNextAsyncCore(T value, System.Threading.CancellationToken cancellationToken) { }
+    }
+    public static class WitnessSubscription
+    {
+        public static System.Threading.Tasks.ValueTask<System.IAsyncDisposable> SubscribeAsync<TSource, TResult>(ReactiveUI.Primitives.Async.IObservableAsync<TSource> source, ReactiveUI.Primitives.Async.IWitnessAsync<TSource> witness, ReactiveUI.Primitives.Async.IObserverAsync<TResult> observer, System.Threading.CancellationToken cancellationToken) { }
     }
 }
 namespace ReactiveUI.Primitives.Async.Disposables
@@ -1659,7 +1950,7 @@ namespace ReactiveUI.Primitives.Async.Disposables
         public static System.Threading.Tasks.ValueTask DisposeAsync(ref System.IAsyncDisposable? slot) { }
         [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
         public static bool IsDisposed(System.IAsyncDisposable? slot) { }
-        [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
         public static System.Threading.Tasks.ValueTask SwapAsync(ref System.IAsyncDisposable? slot, System.IAsyncDisposable? value) { }
     }
     [System.Diagnostics.DebuggerDisplay("MultipleDisposableAsync: Count = {_count}, IsDisposed = {_isDisposed}")]
@@ -1701,13 +1992,12 @@ namespace ReactiveUI.Primitives.Async.Disposables
 }
 namespace ReactiveUI.Primitives.Async.Helpers
 {
-    [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
     public static class DisposalHelper
     {
     }
-    [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
     public static class FireAndForgetHelper
     {
+        [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
         public static void Run(System.Func<System.Threading.Tasks.ValueTask> action) { }
     }
     public static class SubscriptionHelper

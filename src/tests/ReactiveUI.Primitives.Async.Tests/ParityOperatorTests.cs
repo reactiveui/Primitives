@@ -8,11 +8,8 @@ using AsyncObs = ReactiveUI.Primitives.Async.SignalAsync;
 namespace ReactiveUI.Primitives.Async.Tests;
 
 /// <summary>Tests for async parity helpers that mirror the synchronous helper surface in the repository.</summary>
-public class ParityOperatorTests
+public partial class ParityOperatorTests
 {
-    /// <summary>Seconds a test waits for a notification before giving up.</summary>
-    private const int WaitTimeoutSeconds = 5;
-
     /// <summary>Sentinel value (42) used by tests.</summary>
     private const int CanonicalAnswer = 42;
 
@@ -42,9 +39,6 @@ public class ParityOperatorTests
 
     /// <summary>Window used by the throttle and debounce timing tests.</summary>
     private static readonly TimeSpan ThrottleWindow = TimeSpan.FromMilliseconds(50);
-
-    /// <summary>Maximum time a test waits for an emission to arrive.</summary>
-    private static readonly TimeSpan WaitTimeout = TimeSpan.FromSeconds(WaitTimeoutSeconds);
 
     /// <summary>Tests that WhereIsNotNull filters null values and narrows the result type.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
@@ -397,8 +391,6 @@ public class ParityOperatorTests
         var emitTask = signal.OnNextAsync(1, CancellationToken.None).AsTask();
 
         // Emit values 2 and 3 while the action for value 1 is still running - these should be dropped
-        // We need a small yield to ensure value 1's handler has started
-        await Task.Yield();
         await signal.OnNextAsync(DroppedValueA, CancellationToken.None);
         await signal.OnNextAsync(DroppedValueB, CancellationToken.None);
 
@@ -520,110 +512,6 @@ public class ParityOperatorTests
         await Assert.That(result).IsCollectionEqualTo([FirstMatch]);
     }
 
-    /// <summary>Tests that ObserveOnSafe with a null AsyncContext returns the source unchanged.</summary>
-    /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
-    [Test]
-    public async Task WhenObserveOnSafeAsyncContext_WithNull_ThenReturnsSourceUnchanged()
-    {
-        var source = AsyncObs.Return(1);
-
-        var observed = source.ObserveOnSafe((AsyncContext?)null);
-
-        var result = await observed.FirstAsync();
-        await Assert.That(result).IsEqualTo(1);
-    }
-
-    /// <summary>Tests that ObserveOnSafe with a non-null AsyncContext applies ObserveOn.</summary>
-    /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
-    [Test]
-    public async Task WhenObserveOnSafeAsyncContext_WithValue_ThenAppliesObserveOn()
-    {
-        var context = AsyncContext.Default;
-
-        var result = await AsyncObs.Return(CanonicalAnswer)
-            .ObserveOnSafe(context)
-            .FirstAsync();
-
-        await Assert.That(result).IsEqualTo(CanonicalAnswer);
-    }
-
-    /// <summary>Tests that ObserveOnSafe with a null TaskScheduler returns the source unchanged.</summary>
-    /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
-    [Test]
-    public async Task WhenObserveOnSafeTaskScheduler_WithNull_ThenReturnsSourceUnchanged()
-    {
-        var source = AsyncObs.Return(1);
-
-        var observed = source.ObserveOnSafe((TaskScheduler?)null);
-
-        var result = await observed.FirstAsync();
-        await Assert.That(result).IsEqualTo(1);
-    }
-
-    /// <summary>Tests that ObserveOnSafe with a non-null TaskScheduler applies ObserveOn.</summary>
-    /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
-    [Test]
-    public async Task WhenObserveOnSafeTaskScheduler_WithValue_ThenAppliesObserveOn()
-    {
-        var result = await AsyncObs.Return(CanonicalAnswer)
-            .ObserveOnSafe(TaskScheduler.Default)
-            .FirstAsync();
-
-        await Assert.That(result).IsEqualTo(CanonicalAnswer);
-    }
-
-    /// <summary>Tests that ObserveOnIf with true condition applies ObserveOn with AsyncContext.</summary>
-    /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
-    [Test]
-    public async Task WhenObserveOnIfAsyncContext_WithTrueCondition_ThenAppliesObserveOn()
-    {
-        var context = AsyncContext.Default;
-
-        var result = await AsyncObs.Return(CanonicalAnswer)
-            .ObserveOnIf(true, context)
-            .FirstAsync();
-
-        await Assert.That(result).IsEqualTo(CanonicalAnswer);
-    }
-
-    /// <summary>Tests that ObserveOnIf with false condition returns the source unchanged for AsyncContext.</summary>
-    /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
-    [Test]
-    public async Task WhenObserveOnIfAsyncContext_WithFalseCondition_ThenReturnsSourceUnchanged()
-    {
-        var context = AsyncContext.Default;
-
-        var result = await AsyncObs.Return(CanonicalAnswer)
-            .ObserveOnIf(false, context)
-            .FirstAsync();
-
-        await Assert.That(result).IsEqualTo(CanonicalAnswer);
-    }
-
-    /// <summary>Tests that ObserveOnIf with true condition applies ObserveOn with TaskScheduler.</summary>
-    /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
-    [Test]
-    public async Task WhenObserveOnIfTaskScheduler_WithTrueCondition_ThenAppliesObserveOn()
-    {
-        var result = await AsyncObs.Return(CanonicalAnswer)
-            .ObserveOnIf(true, TaskScheduler.Default)
-            .FirstAsync();
-
-        await Assert.That(result).IsEqualTo(CanonicalAnswer);
-    }
-
-    /// <summary>Tests that ObserveOnIf with false condition returns the source unchanged for TaskScheduler.</summary>
-    /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
-    [Test]
-    public async Task WhenObserveOnIfTaskScheduler_WithFalseCondition_ThenReturnsSourceUnchanged()
-    {
-        var result = await AsyncObs.Return(CanonicalAnswer)
-            .ObserveOnIf(false, TaskScheduler.Default)
-            .FirstAsync();
-
-        await Assert.That(result).IsEqualTo(CanonicalAnswer);
-    }
-
     /// <summary>Tests that ReplayLastOnSubscribe replays the initial value and subsequent source values.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
@@ -641,12 +529,13 @@ public class ParityOperatorTests
     [Test]
     public async Task WhenThrottleDistinct_ThenEmitsDistinctThrottledValues()
     {
+        ManualTimeProvider time = new();
         var signal = Signal.Create<int>();
         List<int> results = [];
         TaskCompletionSource firstReceived = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
         await using var sub = await signal.Values
-            .ThrottleDistinct(ThrottleWindow)
+            .ThrottleDistinct(ThrottleWindow, time)
             .SubscribeAsync(
                 (value, _) =>
                 {
@@ -656,19 +545,15 @@ public class ParityOperatorTests
                 },
                 null);
 
-        // Emit duplicate values quickly - DistinctUntilChanged collapses them
         await signal.OnNextAsync(1, CancellationToken.None);
         await signal.OnNextAsync(1, CancellationToken.None);
-
-        // Wait for throttle to emit the first distinct value
-        var received = await AsyncTestHelpers.WaitForConditionAsync(
-            () => results.Count >= 1,
-            WaitTimeout);
+        await Assert.That(results).IsEmpty();
+        await time.FireNextAsync();
+        await firstReceived.Task;
 
         await signal.OnCompletedAsync(Result.Success);
 
-        await Assert.That(received).IsTrue();
-        await Assert.That(results[0]).IsEqualTo(1);
+        await Assert.That(results).IsCollectionEqualTo([1]);
     }
 
     /// <summary>Tests that the async ScanWithInitial overload emits the seed followed by accumulated values.</summary>
@@ -721,31 +606,29 @@ public class ParityOperatorTests
     public async Task WhenDebounceUntil_WithConditionFalse_ThenDelaysEmission()
     {
         const int UnreachableThreshold = 100;
-
+        ManualTimeProvider time = new();
+        TaskCompletionSource received = new(TaskCreationOptions.RunContinuationsAsynchronously);
         var signal = Signal.Create<int>();
         List<int> results = [];
 
         await using var sub = await signal.Values
-            .DebounceUntil(ThrottleWindow, static v => v > UnreachableThreshold)
+            .DebounceUntil(ThrottleWindow, static v => v > UnreachableThreshold, time)
             .SubscribeAsync(
                 (value, _) =>
                 {
                     results.Add(value);
+                    IgnoredResult.Of(received.TrySetResult());
                     return default;
                 },
                 null);
 
-        // Value 1 does not satisfy condition, should be delayed by 50ms
         await signal.OnNextAsync(1, CancellationToken.None);
-
-        // Wait for the delayed value to arrive
-        var received = await AsyncTestHelpers.WaitForConditionAsync(
-            () => results.Count >= 1,
-            WaitTimeout);
+        await Assert.That(results).IsEmpty();
+        await time.FireNextAsync();
+        await received.Task;
 
         await signal.OnCompletedAsync(Result.Success);
 
-        await Assert.That(received).IsTrue();
         await Assert.That(results[0]).IsEqualTo(1);
     }
 
@@ -1082,9 +965,7 @@ public class ParityOperatorTests
         var emit1Task = source.EmitNext(1).AsTask();
 
         // Wait until the action for value 1 has actually started.
-        await AsyncTestHelpers.WaitForConditionAsync(
-            () => Volatile.Read(ref actionStarted) >= 1,
-            WaitTimeout);
+        await Assert.That(Volatile.Read(ref actionStarted) >= 1).IsTrue();
 
         // Emit value 2 while value 1 is still processing - it should be dropped.
         await source.EmitNext(DroppedValue);

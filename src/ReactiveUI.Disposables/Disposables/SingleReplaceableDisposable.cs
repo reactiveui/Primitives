@@ -2,20 +2,16 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Runtime.CompilerServices;
+
 namespace ReactiveUI.Primitives.Disposables;
 
 /// <summary>A disposable slot whose inner disposable can be replaced, disposing the previous one.</summary>
-[System.Diagnostics.DebuggerDisplay("{DebuggerDisplay,nq}")]
-public class SingleReplaceableDisposable : IsDisposed
+[System.Diagnostics.DebuggerDisplay("SingleReplaceableDisposable: IsDisposed = {IsDisposed}")]
+public sealed class SingleReplaceableDisposable : IsDisposed
 {
-    /// <summary>Marker used once the slot has been disposed.</summary>
-    private static readonly IDisposable DisposedSentinel = new DisposedMarker();
-
-    /// <summary>Action invoked before disposal.</summary>
-    private readonly Action? _action;
-
-    /// <summary>Current disposable or the disposed marker.</summary>
-    private IDisposable? _disposable;
+    /// <summary>The slot state.</summary>
+    private ReplaceableState _state;
 
     /// <summary>Initializes a new instance of the <see cref="SingleReplaceableDisposable"/> class.</summary>
     public SingleReplaceableDisposable()
@@ -24,8 +20,7 @@ public class SingleReplaceableDisposable : IsDisposed
 
     /// <summary>Initializes a new instance of the <see cref="SingleReplaceableDisposable"/> class.</summary>
     /// <param name="action">The action.</param>
-    public SingleReplaceableDisposable(Action? action) =>
-        _action = action;
+    public SingleReplaceableDisposable(Action? action) => _state = new(action);
 
     /// <summary>Initializes a new instance of the <see cref="SingleReplaceableDisposable"/> class.</summary>
     /// <param name="disposable">The disposable.</param>
@@ -38,80 +33,25 @@ public class SingleReplaceableDisposable : IsDisposed
     /// <param name="disposable">The disposable.</param>
     /// <param name="action">The action to call before disposal.</param>
     public SingleReplaceableDisposable(IDisposable disposable, Action? action)
-    {
-        _action = action;
-        Create(disposable);
-    }
+        : this(action) => _state.Create(disposable);
 
     /// <summary>Gets a value indicating whether this instance is disposed.</summary>
-    /// <value>
-    ///   <c>true</c> if this instance is disposed; otherwise, <c>false</c>.
-    /// </value>
-    public bool IsDisposed => ReferenceEquals(Volatile.Read(ref _disposable), DisposedSentinel);
+    public bool IsDisposed => _state.IsDisposed;
 
-    /// <summary>Gets the debugger display text.</summary>
-    [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
-    [System.Diagnostics.DebuggerBrowsable(System.Diagnostics.DebuggerBrowsableState.Never)]
-    private string DebuggerDisplay => ToString() ?? string.Empty;
+    /// <summary>Assigns the inner disposable and disposes the value it displaces; once this slot is disposed the incoming value is disposed instead.</summary>
+    /// <param name="disposable">The disposable to take as the new inner value.</param>
+    /// <exception cref="ArgumentNullException"><paramref name="disposable"/> is <see langword="null"/>.</exception>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public void Create(IDisposable disposable) => _state.Create(disposable);
 
-    /// <summary>Creates the specified disposable.</summary>
-    /// <param name="disposable">The disposable.</param>
-    /// <exception cref="ArgumentExceptionHelper"><paramref name="disposable"/> is <see langword="null"/>.</exception>
-    public void Create(IDisposable disposable)
-    {
-        ArgumentExceptionHelper.ThrowIfNull(disposable);
+    /// <summary>Disposes the inner value, invokes the constructor-supplied action and blocks further assignments; repeated calls have no further effect.</summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public void Dispose() => _state.Dispose();
 
-        while (true)
-        {
-            var current = Volatile.Read(ref _disposable);
-            if (ReferenceEquals(current, DisposedSentinel))
-            {
-                disposable.Dispose();
-                _action?.Invoke();
-                return;
-            }
-
-            if (!ReferenceEquals(Interlocked.CompareExchange(ref _disposable, disposable, current), current))
-            {
-                continue;
-            }
-
-            current?.Dispose();
-            return;
-        }
-    }
-
-    /// <summary>Performs application-defined tasks associated with freeing, releasing, or resetting unmanaged resources.</summary>
-    public void Dispose()
-    {
-        // Do not change this code. Put cleanup code in 'Dispose(bool disposing)' method
-        Dispose(true);
-        GC.SuppressFinalize(this);
-    }
-
-    /// <summary>Releases unmanaged and - optionally - managed resources.</summary>
-    /// <param name="disposing"><c>true</c> to release both managed and unmanaged resources; <c>false</c> to release only unmanaged resources.</param>
-    protected virtual void Dispose(bool disposing)
-    {
-        var old = Interlocked.Exchange(ref _disposable, DisposedSentinel);
-        if (ReferenceEquals(old, DisposedSentinel))
-        {
-            return;
-        }
-
-        old?.Dispose();
-        _action?.Invoke();
-    }
-
-    /// <summary>Disposable marker for disposed slots.</summary>
-    [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
-    private sealed class DisposedMarker : IDisposable
-    {
-        /// <inheritdoc/>
-        public void Dispose()
-        {
-            // Intentionally empty: a reference-identity sentinel marking an already-disposed slot. It is only
-            // ever compared with ReferenceEquals and never itself disposed, so this body is unreachable.
-        }
-    }
+    /// <summary>Replaces the observed value, or disposes the incoming value when the slot is closed.</summary>
+    /// <param name="current">The observed slot value.</param>
+    /// <param name="disposable">The incoming disposable.</param>
+    /// <returns>True when the incoming value was handled; false when the observed slot was stale.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    internal bool TryCreate(IDisposable? current, IDisposable disposable) => _state.TryCreate(current, disposable);
 }

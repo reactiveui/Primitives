@@ -3,19 +3,19 @@
 // See the LICENSE file in the project root for full license information.
 
 using BenchmarkDotNet.Attributes;
-using BenchmarkDotNet.Diagnosers;
+
 using ReactiveUI.Primitives.Signals;
 
 namespace ReactiveUI.Primitives.Benchmarks;
 
 /// <summary>
-/// GC-verbose allocation profile for the stateful single-source operators converted to dedicated
-/// single-source sinks. Pairs with <see cref="OperatorStatefulFilterBenchmarks"/>; the
-/// EventPipe trace captures per-subscription allocations on the subscribe-and-drain path.
+/// GC-verbose allocation profile for the stateful single-source operators, pairing with
+/// <see cref="OperatorStatefulFilterBenchmarks"/>. The EventPipe trace captures per-subscription
+/// allocations on the subscribe-and-drain path.
 /// </summary>
 [ShortRunJob]
 [MemoryDiagnoser]
-[EventPipeProfiler(EventPipeProfile.GcVerbose)]
+
 public class OperatorStatefulFilterGcProfileBenchmarks
 {
     /// <summary>The starting value of each benchmarked sequence.</summary>

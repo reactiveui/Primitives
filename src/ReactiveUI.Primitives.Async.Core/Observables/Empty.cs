@@ -9,23 +9,16 @@ using ReactiveUI.Primitives.Async.Disposables;
 namespace ReactiveUI.Primitives.Async;
 
 /// <summary>Provides factory methods for creating asynchronous observable sequences.</summary>
-/// <remarks>The SignalAsync class contains static methods for constructing instances of asynchronous
-/// observables. Use these methods to create observable sequences that support asynchronous notification
-/// patterns.</remarks>
 public static partial class SignalAsync
 {
     /// <summary>Creates an observable sequence that completes immediately without emitting any items.</summary>
     /// <typeparam name="T">The type of elements in the observable sequence.</typeparam>
     /// <returns>An observable sequence of type <typeparamref name="T"/> that completes immediately without producing any values.</returns>
-    /// <remarks>This method is useful for representing an empty sequence in asynchronous or reactive
-    /// scenarios. The returned sequence signals completion to observers as soon as it is subscribed to.
-    /// The returned instance is a process-wide singleton per element type — no allocation occurs after the
-    /// first call for a given <typeparamref name="T"/>.</remarks>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     [SuppressMessage(
         "Design",
         "SST2307:Generic method type parameters should be inferable from the parameters",
-        Justification = "Public factory API — caller specifies T explicitly: SignalAsync.Empty<int>().")]
+        Justification = "There are no parameters to infer from; the caller states the element type: SignalAsync.None<int>().")]
     public static IObservableAsync<T> None<T>() => EmptySignalAsync<T>.Instance;
 
     /// <summary>Creates an observable sequence that completes immediately without emitting any items.</summary>
@@ -35,14 +28,10 @@ public static partial class SignalAsync
     [SuppressMessage(
         "Design",
         "SST2307:Generic method type parameters should be inferable from the parameters",
-        Justification = "Public factory API — caller specifies T explicitly: SignalAsync.Empty<int>().")]
+        Justification = "There are no parameters to infer from; the caller states the element type: SignalAsync.Empty<int>().")]
     public static IObservableAsync<T> Empty<T>() => EmptySignalAsync<T>.Instance;
 
-    /// <summary>
-    /// Dedicated singleton observable that signals immediate successful completion on subscribe. Replaces the
-    /// previous <c>Create&lt;T&gt;((observer, _) =&gt; ...)</c> + <see cref="DisposableAsync.Empty"/> shape with a
-    /// per-T cached instance — no anonymous observable wrapper, no closure, no per-subscribe allocation.
-    /// </summary>
+    /// <summary>Signals successful completion on subscribe and hands back <see cref="DisposableAsync.Empty"/>, from a cached instance per element type.</summary>
     /// <typeparam name="T">The element type of the empty sequence.</typeparam>
     internal sealed class EmptySignalAsync<T> : IObservableAsync<T>
     {

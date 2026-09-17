@@ -6,10 +6,7 @@ using ReactiveUI.Primitives.Signals;
 
 namespace ReactiveUI.Primitives.Tests;
 
-/// <summary>
-/// Verifies the System.Reactive alias overloads that take only a subset of the observer callbacks, an explicit
-/// comparer, or an explicit gate — the shapes the data-driven parity rows do not reach.
-/// </summary>
+/// <summary>Verifies the System.Reactive alias overloads taking a callback subset, an explicit comparer, or a gate.</summary>
 public partial class RxNamesTests
 {
     /// <summary>Verifies the two-callback <c>Do</c> overloads run only the callbacks they were given.</summary>

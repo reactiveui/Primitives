@@ -11,7 +11,7 @@ public sealed class StartSignal<TResult> : IObservableAsync<TResult>
 {
     /// <summary>Initializes a new instance of the <see cref="StartSignal{TResult}"/> class.</summary>
     /// <param name="function">The function to invoke.</param>
-    /// <param name="taskScheduler">The optional scheduler used to invoke the function.</param>
+    /// <param name="taskScheduler">The optional scheduler that invokes the function; <see langword="null"/> invokes it inline.</param>
     public StartSignal(Func<TResult> function, TaskScheduler? taskScheduler)
     {
         ArgumentExceptionHelper.ThrowIfNull(function);
@@ -23,7 +23,7 @@ public sealed class StartSignal<TResult> : IObservableAsync<TResult>
     /// <summary>Gets the function to invoke.</summary>
     private Func<TResult> Function { get; }
 
-    /// <summary>Gets the optional scheduler used to invoke the function.</summary>
+    /// <summary>Gets the optional scheduler that invokes the function.</summary>
     private TaskScheduler? TaskScheduler { get; }
 
     /// <inheritdoc/>

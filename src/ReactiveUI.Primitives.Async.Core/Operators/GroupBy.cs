@@ -2,17 +2,17 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Diagnostics;
 using System.Runtime.CompilerServices;
+using System.Runtime.ExceptionServices;
 using ReactiveUI.Primitives.Async.Disposables;
+using ReactiveUI.Primitives.Async.Helpers;
 using ReactiveUI.Primitives.Async.Signals;
 using AsyncSignalFactory = ReactiveUI.Primitives.Async.Signals.Signal;
 
 namespace ReactiveUI.Primitives.Async;
 
 /// <summary>Provides extension methods for creating and manipulating asynchronous observable sequences.</summary>
-/// <remarks>The methods in this class enable advanced operations on asynchronous observables, such as grouping
-/// elements by key. These extensions are intended for use with types implementing asynchronous observation patterns,
-/// allowing developers to compose and transform streams of data in a reactive manner.</remarks>
 public static partial class SignalAsyncExtensions
 {
     /// <summary>Grouping operators for an observable source sequence.</summary>
@@ -24,10 +24,9 @@ public static partial class SignalAsyncExtensions
         /// <typeparam name="TKey">The type of the key returned by the key selector function. Must be non-nullable.</typeparam>
         /// <param name="keySelector">A function to extract the key for each element in the source sequence.</param>
         /// <returns>An asynchronous observable sequence of grouped observables, each containing elements that share a common key.</returns>
-        /// <exception cref="ArgumentExceptionHelper">Thrown if <paramref name="keySelector"/> is null.</exception>
-        /// <remarks>Each group in the resulting sequence corresponds to a unique key produced by the key
-        /// selector. The groups are emitted as soon as their first element is encountered in the source sequence. The
-        /// returned grouped observables can be subscribed to independently.</remarks>
+        /// <exception cref="ArgumentNullException"><paramref name="keySelector"/> is <see langword="null"/>.</exception>
+        /// <remarks>A group is emitted when its first element arrives, and each grouped observable can be subscribed
+        /// independently.</remarks>
         public IObservableAsync<GroupedAsyncSignal<TKey, TValue>> GroupBy<TKey>(Func<TValue, TKey> keySelector)
             where TKey : notnull
         {
@@ -40,21 +39,16 @@ public static partial class SignalAsyncExtensions
                 static _ => AsyncSignalFactory.Create<TValue>());
         }
 
-        /// <summary>
-        /// Groups the elements of an asynchronous observable sequence according to a specified key selector function and
-        /// returns an observable sequence of grouped observables.
-        /// </summary>
+        /// <summary>Groups the elements of an asynchronous observable sequence according to a specified key selector function and returns an observable sequence of grouped observables.</summary>
         /// <typeparam name="TKey">The type of the key returned by the key selector function. Must be non-null.</typeparam>
         /// <param name="keySelector">A function to extract the key for each element in the source sequence.</param>
         /// <param name="groupSignalSelector">A function that provides a signal for each group, given its key. Used to control how elements are published
         /// within each group.</param>
         /// <returns>An asynchronous observable sequence containing grouped observables, each representing a collection of elements
         /// that share a common key.</returns>
-        /// <exception cref="ArgumentExceptionHelper">Thrown if <paramref name="keySelector"/> is null.</exception>
-        /// <remarks>Each group in the resulting sequence is represented by a <see
-        /// cref="GroupedAsyncSignal{TKey, TValue}"/>, which exposes the group's key and an observable sequence of its
-        /// elements. The <paramref name="groupSignalSelector"/> parameter allows customization of the signal used for
-        /// each group, which can affect how elements are buffered or multicast within the group.</remarks>
+        /// <exception cref="ArgumentNullException"><paramref name="keySelector"/> is <see langword="null"/>.</exception>
+        /// <remarks>The signal returned by <paramref name="groupSignalSelector"/> decides how a group's elements are
+        /// buffered or multicast to its subscribers.</remarks>
         public IObservableAsync<GroupedAsyncSignal<TKey, TValue>> GroupBy<TKey>(
             Func<TValue, TKey> keySelector,
             Func<TKey, ISignalAsync<TValue>> groupSignalSelector)
@@ -93,29 +87,61 @@ public static partial class SignalAsyncExtensions
             CancellationToken cancellationToken)
         {
             GroupingCoordinator subscription = new(this, observer);
+            ExceptionDispatchInfo failure;
             try
             {
                 return await subscription.SubscribeSourcesAsync(cancellationToken).ConfigureAwait(false);
             }
-            catch
+            catch (Exception e)
             {
-                await subscription.DisposeAsync().ConfigureAwait(false);
-                throw;
+                failure = ExceptionDispatchInfo.Capture(e);
             }
+
+            await subscription.DisposeAsync().ConfigureAwait(false);
+            return CapturedFailure.Rethrow<IAsyncDisposable>(failure);
         }
 
         /// <summary>Observer subscription that tracks groups by key, creating new grouped observables as new keys are encountered.</summary>
         /// <param name="parent">The parent GroupBy observable that provides the key selector and signal factory.</param>
         /// <param name="observer">The downstream observer to receive grouped observables.</param>
+        [DebuggerDisplay("GroupingCoordinator: {_witness}")]
         internal sealed class GroupingCoordinator(
             GroupByAsyncSignal<TKey, TValue> parent,
-            IObserverAsync<GroupedAsyncSignal<TKey, TValue>> observer) : WitnessAsync<TValue>
+            IObserverAsync<GroupedAsyncSignal<TKey, TValue>> observer) : IWitnessAsync<TValue>
         {
             /// <summary>The composite disposable that tracks all group subscription disposables.</summary>
             private readonly MultipleDisposableAsync _disposables = new();
 
             /// <summary>A dictionary mapping each encountered key to its corresponding group signal.</summary>
             private Dictionary<TKey, ISignalAsync<TValue>> _signalsByKey = [];
+
+            /// <summary>The notification gate, cancellation link and disposal state.</summary>
+            private WitnessAsyncState _witness;
+
+            /// <inheritdoc/>
+            ref WitnessAsyncState IWitnessState.Witness => ref _witness;
+
+            /// <inheritdoc/>
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public ValueTask OnNextAsync(TValue value, CancellationToken cancellationToken) =>
+                WitnessAsync.OnNextAsync(this, value, cancellationToken);
+
+            /// <inheritdoc/>
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public ValueTask OnErrorResumeAsync(Exception error, CancellationToken cancellationToken) =>
+                WitnessAsync.OnErrorResumeAsync(this, error, cancellationToken);
+
+            /// <inheritdoc/>
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public ValueTask OnCompletedAsync(Result result) => WitnessAsync.OnCompletedAsync(this, result);
+
+            /// <summary>Disposes all tracked group subscriptions.</summary>
+            /// <returns>A task representing the asynchronous disposal operation.</returns>
+            public async ValueTask DisposeAsync()
+            {
+                await WitnessAsync.DisposeStateAsync(this).ConfigureAwait(false);
+                await _disposables.DisposeAsync().ConfigureAwait(false);
+            }
 
             /// <summary>Subscribes this observer to the parent's source sequence.</summary>
             /// <param name="cancellationToken">A token to cancel the subscription.</param>
@@ -128,7 +154,7 @@ public static partial class SignalAsyncExtensions
             /// <param name="value">The element to route.</param>
             /// <param name="cancellationToken">A token to cancel the operation.</param>
             /// <returns>A task representing the asynchronous operation.</returns>
-            protected override async ValueTask OnNextAsyncCore(TValue value, CancellationToken cancellationToken)
+            async ValueTask IWitnessAsync<TValue>.OnNextAsyncCore(TValue value, CancellationToken cancellationToken)
             {
                 var key = parent._keySelector(value);
                 if (!_signalsByKey.TryGetValue(key, out var signal))
@@ -136,13 +162,12 @@ public static partial class SignalAsyncExtensions
                     signal = parent._groupSignalSelector(key);
                     _signalsByKey.Add(key, signal);
 
-                    // We use the cancellationToken passed from the source subscription.
                     await observer.OnNextAsync(
                         new(
                             key,
                             signal.Values,
                             _disposables,
-                            InternalDisposedToken),
+                            this.InternalDisposedToken),
                         cancellationToken).ConfigureAwait(false);
                 }
 
@@ -153,13 +178,14 @@ public static partial class SignalAsyncExtensions
             /// <param name="error">The error to forward.</param>
             /// <param name="cancellationToken">A token to cancel the operation.</param>
             /// <returns>A task representing the asynchronous operation.</returns>
-            protected override ValueTask OnErrorResumeAsyncCore(Exception error, CancellationToken cancellationToken) =>
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            ValueTask IWitnessAsync<TValue>.OnErrorResumeAsyncCore(Exception error, CancellationToken cancellationToken) =>
                 observer.OnErrorResumeAsync(error, cancellationToken);
 
             /// <summary>Completes all group signals and then completes the downstream observer.</summary>
             /// <param name="result">The completion result.</param>
             /// <returns>A task representing the asynchronous operation.</returns>
-            protected override async ValueTask OnCompletedAsyncCore(Result result)
+            async ValueTask IWitnessAsync<TValue>.OnCompletedAsyncCore(Result result)
             {
                 var signals = _signalsByKey.Values;
                 _signalsByKey = null!;
@@ -169,14 +195,6 @@ public static partial class SignalAsyncExtensions
                 }
 
                 await observer.OnCompletedAsync(result).ConfigureAwait(false);
-            }
-
-            /// <summary>Disposes all tracked group subscriptions.</summary>
-            /// <returns>A task representing the asynchronous disposal operation.</returns>
-            protected override async ValueTask DisposeAsyncCore()
-            {
-                await base.DisposeAsyncCore().ConfigureAwait(false);
-                await _disposables.DisposeAsync().ConfigureAwait(false);
             }
         }
     }

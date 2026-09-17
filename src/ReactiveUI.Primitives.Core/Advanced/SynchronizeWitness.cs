@@ -6,12 +6,7 @@ using System.Runtime.CompilerServices;
 
 namespace ReactiveUI.Primitives.Advanced;
 
-/// <summary>
-/// Observer that serializes notifications behind a gate so downstream operators always observe the
-/// single-threaded <c>OnNext*</c> then <c>OnError</c>|<c>OnCompleted</c> grammar they depend on, even when the
-/// upstream source delivers concurrently. Stateful sinks (counting, distinct, buffering) rely on that
-/// grammar; placing one of these ahead of them is the supported way to consume a non-conformant source.
-/// </summary>
+/// <summary>Serializes concurrent observer notifications so values precede a single terminal notification.</summary>
 /// <typeparam name="T">The value type.</typeparam>
 [System.Diagnostics.DebuggerDisplay("SynchronizeWitness: Observer = {_observer}, Subscription = {_subscription}")]
 public sealed class SynchronizeWitness<T> : IObserver<T>, IDisposable
@@ -41,6 +36,9 @@ public sealed class SynchronizeWitness<T> : IObserver<T>, IDisposable
         _gate = gate;
     }
 
+    /// <summary>Gets the gate serializing downstream notifications.</summary>
+    internal Lock Gate => _gate;
+
     /// <inheritdoc/>
     public void OnNext(T value)
     {
@@ -68,7 +66,7 @@ public sealed class SynchronizeWitness<T> : IObserver<T>, IDisposable
         }
     }
 
-    /// <summary>Assigns the upstream subscription, disposing it if one is already held.</summary>
+    /// <summary>Assigns the upstream subscription, disposing the incoming one when this sink holds a subscription or has been disposed.</summary>
     /// <param name="subscription">The upstream subscription.</param>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void SetSubscription(IDisposable subscription) => SinkSubscription.Set(ref _subscription, subscription);

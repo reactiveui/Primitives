@@ -7,10 +7,7 @@
 
 namespace ReactiveUI.Primitives.Async.Tests;
 
-/// <summary>
-/// Test executor that saves and restores the <see cref="UnhandledExceptionHandler"/> global state
-/// around each test, ensuring test isolation for tests that register custom handlers.
-/// </summary>
+/// <summary>Saves and restores the <see cref="UnhandledExceptionHandler"/> global state around each test.</summary>
 public sealed class UnhandledExceptionTestExecutor : ITestExecutor
 {
     /// <inheritdoc/>

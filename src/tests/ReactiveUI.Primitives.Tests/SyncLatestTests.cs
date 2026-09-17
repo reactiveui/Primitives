@@ -6,11 +6,7 @@ using ReactiveUI.Primitives.Signals;
 
 namespace ReactiveUI.Primitives.Tests;
 
-/// <summary>
-/// Verifies the multi-source <c>SyncLatest</c> combinators for three through nine sources: a result is
-/// withheld until every source has produced a value, each source lands in its own selector parameter, and a
-/// later value from any source replaces only that source's contribution.
-/// </summary>
+/// <summary>Verifies the three- through nine-source <c>SyncLatest</c> combinators over their latest values.</summary>
 public partial class SyncLatestTests
 {
     /// <summary>The number of sources combined by the three-source overload.</summary>
@@ -192,10 +188,7 @@ public partial class SyncLatestTests
         await Assert.That(sources[0].HasObservers).IsFalse();
     }
 
-    /// <summary>
-    /// Verifies the combined sequence ignores every notification a source delivers after the sequence has
-    /// terminated, and ignores a duplicate completion from a single source.
-    /// </summary>
+    /// <summary>Verifies the combined sequence ignores every notification a source delivers after it terminates.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
     public async Task SyncLatestIgnoresSourceNotificationsDeliveredAfterTheCombinedSequenceTerminates()
@@ -226,10 +219,7 @@ public partial class SyncLatestTests
         await Assert.That(witness.Errors.Count).IsEqualTo(0);
     }
 
-    /// <summary>
-    /// Verifies a source that throws while being subscribed tears down the sources already subscribed and
-    /// surfaces the original failure to the caller.
-    /// </summary>
+    /// <summary>Verifies a source that throws on subscribe tears down the sources it has subscribed and rethrows.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
     public async Task SyncLatestUnsubscribesEarlierSourcesWhenALaterSourceThrowsOnSubscribe()
@@ -261,11 +251,7 @@ public partial class SyncLatestTests
         return sources;
     }
 
-    /// <summary>
-    /// Drives every source and asserts the combined sequence: nothing is emitted until the final source
-    /// produces its first value, the first result carries each source's value in its own selector position,
-    /// and a later value on the first source replaces only that source's contribution.
-    /// </summary>
+    /// <summary>Checks first-value synchronization, selector positions, and replacement of one source's latest value.</summary>
     /// <param name="sources">The subjects feeding the combinator, in selector-parameter order.</param>
     /// <param name="results">The results recorded from the combined sequence.</param>
     /// <returns>A task representing the asynchronous operation.</returns>

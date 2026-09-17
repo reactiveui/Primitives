@@ -7,19 +7,7 @@ using System.Runtime.CompilerServices;
 
 namespace ReactiveUI.Primitives.ObservableEvents.Benchmarks;
 
-/// <summary>Builds the consumer source the generator is measured against.</summary>
-/// <remarks>
-/// <para>
-/// Every host carries one of each delegate shape the generator handles - the conventional sender and arguments
-/// pair, a parameterless action, a single payload, a multi-parameter delegate that becomes a tuple, and a
-/// task-returning handler - because the per-event work differs between them and a corpus of only the easy shape
-/// would flatter the emitter.
-/// </para>
-/// <para>
-/// One host per file, as real code is laid out. That is what makes the incremental cases mean what they claim:
-/// editing one host has to be editing one file, or the measurement is of re-parsing the whole corpus instead.
-/// </para>
-/// </remarks>
+/// <summary>Builds one event host per file, with every supported delegate shape.</summary>
 internal static class EventCorpus
 {
     /// <summary>The file name of the shared declarations every host file depends on.</summary>
@@ -38,6 +26,30 @@ internal static class EventCorpus
 
     /// <summary>The file name the unrelated source is given.</summary>
     internal const string UnrelatedFileName = "Unrelated.cs";
+
+    /// <summary>The file name the unservable requests are given.</summary>
+    internal const string UnservableFileName = "Unservable.cs";
+
+    /// <summary>Static requests for a host without events and for a generic host, which the generator reports instead of wrapping.</summary>
+    internal const string UnservableSource = """
+        using ReactiveUI.Primitives.ObservableEvents;
+
+        [assembly: GenerateStaticEventObservables(typeof(Corpus.EventlessHost))]
+        [assembly: GenerateStaticEventObservables(typeof(Corpus.GenericHost<>))]
+
+        namespace Corpus
+        {
+            public static class EventlessHost
+            {
+                public static int Value => 1;
+            }
+
+            public static class GenericHost<T>
+            {
+                public static event System.Action<T>? Changed;
+            }
+        }
+        """;
 
     /// <summary>The delegates, static host, and static request every host file shares.</summary>
     private const string SharedSource = """
@@ -84,13 +96,9 @@ internal static class EventCorpus
         return files;
     }
 
-    /// <summary>Builds one host's file with an extra event on it.</summary>
+    /// <summary>Changes one host's events while preserving its activation signature.</summary>
     /// <param name="index">The host index.</param>
     /// <returns>The file text.</returns>
-    /// <remarks>
-    /// The edit that has to invalidate exactly one wrapper: the activation overload's signature is untouched, every
-    /// other host is untouched, and only this host's own generated file has anything new to say.
-    /// </remarks>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal static string HostSourceWithAddedEvent(int index) => HostSource(index, true);
 

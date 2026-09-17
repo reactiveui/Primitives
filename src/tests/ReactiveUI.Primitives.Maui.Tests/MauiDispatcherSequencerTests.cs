@@ -2,20 +2,16 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
-using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using Microsoft.Maui.Dispatching;
 using ReactiveUI.Primitives.Concurrency;
 
 namespace ReactiveUI.Primitives.Maui.Tests;
 
-/// <summary>
-/// Tests for <see cref="MauiDispatcherSequencer"/>, exercised through a fake <see cref="IDispatcher"/>
-/// so the immediate and time-based dispatch paths run deterministically on any platform.
-/// </summary>
+/// <summary>Tests <see cref="MauiDispatcherSequencer"/>'s immediate and time-based dispatch paths through a fake <see cref="IDispatcher"/>.</summary>
 public sealed class MauiDispatcherSequencerTests
 {
-    /// <summary>Expected values produced by an immediate burst, used to verify FIFO order.</summary>
+    /// <summary>The values an immediate burst produces, in the FIFO order asserted.</summary>
     private static readonly int[] ExpectedBurst = [1, 2, 3];
 
     /// <summary>Verifies the constructor rejects a null dispatcher.</summary>
@@ -54,10 +50,7 @@ public sealed class MauiDispatcherSequencerTests
         await Assert.That(dispatcher.DispatchDelayedCount).IsEqualTo(0);
     }
 
-    /// <summary>
-    /// Verifies work due in the future routes through <see cref="IDispatcher.DispatchDelayed(TimeSpan, Action)"/>
-    /// with a positive delay, and runs on the dispatcher without the thread-pool marshal hop.
-    /// </summary>
+    /// <summary>Verifies future work routes through <see cref="IDispatcher.DispatchDelayed(TimeSpan, Action)"/> with a positive delay.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
     [Test]
     public async Task DelayedScheduleUsesDispatchDelayed()
@@ -66,15 +59,14 @@ public sealed class MauiDispatcherSequencerTests
         MauiDispatcherSequencer sequencer = new(dispatcher);
         var executed = false;
 
-        var due = sequencer.Timestamp + Stopwatch.Frequency; // ~1 second into the future.
-        sequencer.Schedule(new DelegateWorkItem(() => executed = true), due);
+        sequencer.Schedule(new DelegateWorkItem(() => executed = true), long.MaxValue);
 
         await Assert.That(executed).IsTrue();
         await Assert.That(dispatcher.DispatchDelayedCount).IsEqualTo(1);
         await Assert.That(dispatcher.LastDelay).IsGreaterThan(TimeSpan.Zero);
     }
 
-    /// <summary>Verifies a due timestamp at or before now takes the immediate path rather than the delayed timer.</summary>
+    /// <summary>Verifies a due timestamp that is not in the future takes the immediate path rather than the delayed timer.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
     [Test]
     public async Task PastDueTimestampUsesImmediatePath()
@@ -83,7 +75,8 @@ public sealed class MauiDispatcherSequencerTests
         MauiDispatcherSequencer sequencer = new(dispatcher);
         var executed = false;
 
-        var due = sequencer.Timestamp - Stopwatch.Frequency; // already elapsed.
+        // A timestamp read before the call cannot be later than the monotonic clock the sequencer reads inside it.
+        var due = sequencer.Timestamp;
         sequencer.Schedule(new DelegateWorkItem(() => executed = true), due);
 
         await Assert.That(executed).IsTrue();
@@ -106,7 +99,7 @@ public sealed class MauiDispatcherSequencerTests
             sequencer.Schedule(new DelegateWorkItem(() => values.Add(captured)));
         }
 
-        await Assert.That(values).IsEquivalentTo(ExpectedBurst, EqualityComparer<int>.Default);
+        await Assert.That(values).IsEquivalentTo(ExpectedBurst, EqualityComparer<int>.Default, TUnit.Assertions.Enums.CollectionOrdering.Matching);
     }
 
     /// <summary>Verifies the sequencer surfaces the shared dispatch clock through both clock properties.</summary>

@@ -2,6 +2,9 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Runtime.CompilerServices;
+using ReactiveUI.Primitives.Extensions;
+
 #if REACTIVE_SHIM
 namespace ReactiveUI.Primitives.Reactive.Advanced;
 #else
@@ -10,14 +13,27 @@ namespace ReactiveUI.Primitives.Advanced;
 
 /// <summary>Mediates latest-inner subscription switching for <see cref="SwitchSignal{T}"/>.</summary>
 /// <typeparam name="T">The value type.</typeparam>
+/// <remarks>
+/// The gate only guards the generation bookkeeping: a notification is accepted or dropped and queued on a
+/// <see cref="SerializedDelivery{T}"/> under it, then delivered after it is released, so no lock is held while the observer,
+/// an inner subscription or its disposal runs. A notification raised by the delivering thread itself is delivered after
+/// the observer returns. A terminal notification raised before <see cref="Dispose"/> is still delivered and, since disposal
+/// does not wait, can reach the observer on the delivering thread just after <see cref="Dispose"/> returns.
+/// </remarks>
 [System.Diagnostics.DebuggerDisplay("SwitchWitness: Version = {_version}, IsDone = {IsDone}")]
 public sealed class SwitchWitness<T> : IDisposable
 {
-    /// <summary>The synchronization gate.</summary>
+    /// <summary>Guards the generation bookkeeping; never held while user code runs.</summary>
     private readonly Lock _gate = new();
+
+    /// <summary>Serializes downstream deliveries.</summary>
+    private SerializedDelivery<T> _delivery = new();
 
     /// <summary>The current inner source version.</summary>
     private int _version;
+
+    /// <summary>The subscription to the current inner source; guarded by the gate.</summary>
+    private IDisposable? _inner;
 
     /// <summary>Initializes a new instance of the <see cref="SwitchWitness{T}"/> class.</summary>
     /// <param name="observer">The downstream observer.</param>
@@ -26,11 +42,8 @@ public sealed class SwitchWitness<T> : IDisposable
     /// <summary>Gets the downstream observer.</summary>
     private IObserver<T> Observer { get; }
 
-    /// <summary>Gets the active subscriptions.</summary>
+    /// <summary>Gets the outer subscription.</summary>
     private MultipleDisposable Subscriptions { get; } = [];
-
-    /// <summary>Gets the active inner subscription slot.</summary>
-    private SingleReplaceableDisposable InnerSlot { get; } = new();
 
     /// <summary>Gets or sets a value indicating whether the outer source completed.</summary>
     private bool IsOuterCompleted { get; set; }
@@ -38,13 +51,21 @@ public sealed class SwitchWitness<T> : IDisposable
     /// <summary>Gets or sets a value indicating whether an inner source is active.</summary>
     private bool IsInnerActive { get; set; }
 
-    /// <summary>Gets or sets a value indicating whether a terminal notification has been emitted.</summary>
+    /// <summary>Gets or sets a value indicating whether a terminal notification has been queued or the witness disposed.</summary>
     private bool IsDone { get; set; }
 
     /// <inheritdoc/>
     public void Dispose()
     {
-        InnerSlot.Dispose();
+        IDisposable? inner;
+        lock (_gate)
+        {
+            IsDone = true;
+            inner = _inner;
+            _inner = null;
+        }
+
+        inner?.Dispose();
         Subscriptions.Dispose();
     }
 
@@ -53,7 +74,6 @@ public sealed class SwitchWitness<T> : IDisposable
     /// <returns>The observer that owns the subscriptions.</returns>
     public SwitchWitness<T> Run(IObservable<IObservable<T>> sources)
     {
-        Subscriptions.Add(InnerSlot);
         Subscriptions.Add(sources.Subscribe(OnSource, OnOuterError, OnOuterCompleted));
         return this;
     }
@@ -80,31 +100,22 @@ public sealed class SwitchWitness<T> : IDisposable
             error => OnError(current, error),
             () => OnCompleted(current));
 
-        // Subscribing can push a value downstream synchronously, and a downstream handler is free to feed the
-        // outer source again. That re-enters OnSource, installs a newer generation, and only then returns here.
-        // Installing unconditionally at that point would replace the newer subscription with this stale one and
-        // dispose it, leaving a subscription whose notifications are all filtered out by version - the sequence
-        // would then never produce another value nor complete. Only the generation that is still current may
-        // occupy the slot; a superseded one disposes itself, outside the gate.
-        var superseded = false;
+        // Only the newest subscription is kept, whichever order overlapping subscriptions return in.
+        IDisposable? displaced;
         lock (_gate)
         {
             if (IsDone || current != _version)
             {
-                superseded = true;
+                displaced = subscription;
             }
             else
             {
-                InnerSlot.Create(subscription);
+                displaced = _inner;
+                _inner = subscription;
             }
         }
 
-        if (!superseded)
-        {
-            return;
-        }
-
-        subscription.Dispose();
+        displaced?.Dispose();
     }
 
     /// <summary>Marks the outer source complete.</summary>
@@ -118,8 +129,13 @@ public sealed class SwitchWitness<T> : IDisposable
             }
 
             IsOuterCompleted = true;
-            TryComplete();
+            if (!TryPostCompletion())
+            {
+                return;
+            }
         }
+
+        _delivery.Flush(new PendingDrain(this));
     }
 
     /// <summary>Forwards the outer source error once.</summary>
@@ -134,8 +150,10 @@ public sealed class SwitchWitness<T> : IDisposable
             }
 
             IsDone = true;
-            Observer.OnError(error);
+            _ = _delivery.PostError(error);
         }
+
+        _delivery.Flush(new PendingDrain(this));
     }
 
     /// <summary>Forwards a current inner value.</summary>
@@ -150,8 +168,10 @@ public sealed class SwitchWitness<T> : IDisposable
                 return;
             }
 
-            Observer.OnNext(value);
+            _ = _delivery.Post(value);
         }
+
+        _delivery.Flush(new PendingDrain(this));
     }
 
     /// <summary>Forwards a current inner error.</summary>
@@ -167,8 +187,10 @@ public sealed class SwitchWitness<T> : IDisposable
             }
 
             IsDone = true;
-            Observer.OnError(error);
+            _ = _delivery.PostError(error);
         }
+
+        _delivery.Flush(new PendingDrain(this));
     }
 
     /// <summary>Marks a current inner source complete.</summary>
@@ -183,19 +205,34 @@ public sealed class SwitchWitness<T> : IDisposable
             }
 
             IsInnerActive = false;
-            TryComplete();
+            if (!TryPostCompletion())
+            {
+                return;
+            }
         }
+
+        _delivery.Flush(new PendingDrain(this));
     }
 
-    /// <summary>Completes once the outer source and current inner source are done.</summary>
-    private void TryComplete()
+    /// <summary>Queues completion once the outer source and current inner source are done; called under the gate.</summary>
+    /// <returns><see langword="true"/> when completion was queued.</returns>
+    private bool TryPostCompletion()
     {
-        if (IsDone || !IsOuterCompleted || IsInnerActive)
+        if (!IsOuterCompleted || IsInnerActive)
         {
-            return;
+            return false;
         }
 
         IsDone = true;
-        Observer.OnCompleted();
+        return _delivery.PostCompleted();
+    }
+
+    /// <summary>Drains this witness's queued notifications for the delivery gate.</summary>
+    /// <param name="Owner">The witness.</param>
+    private readonly record struct PendingDrain(SwitchWitness<T> Owner) : IDrainTarget
+    {
+        /// <inheritdoc/>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void Drain() => _ = Owner._delivery.DrainTo(Owner.Observer);
     }
 }

@@ -19,7 +19,7 @@ public sealed class RepeatSourceWitness<T> : IObserver<T>
     /// <summary>The source subscription generation.</summary>
     private readonly int _generation;
 
-    /// <summary>Tracks whether this source subscription has already terminated.</summary>
+    /// <summary>Latches to <c>1</c> once this source subscription has terminated.</summary>
     private int _terminated;
 
     /// <summary>Initializes a new instance of the <see cref="RepeatSourceWitness{T}"/> class.</summary>

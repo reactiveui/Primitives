@@ -2,6 +2,8 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Runtime.CompilerServices;
+
 namespace ReactiveUI.Primitives.Async.Advanced;
 
 /// <summary>Coordinates subscriptions and latest-value emission for the arity-6 <c>SyncLatest</c> operator.</summary>
@@ -13,7 +15,7 @@ namespace ReactiveUI.Primitives.Async.Advanced;
 /// <typeparam name="T6">Element type of source 6.</typeparam>
 /// <typeparam name="TResult">The projected element type.</typeparam>
 [System.Diagnostics.DebuggerDisplay("SyncLatest6Coordinator: Value1 = {Value1}, Value6 = {Value6}")]
-public sealed class SyncLatest6Coordinator<T1, T2, T3, T4, T5, T6, TResult> : SyncLatestCoordinatorBase<TResult>
+public sealed class SyncLatest6Coordinator<T1, T2, T3, T4, T5, T6, TResult> : ISyncLatestCoordinator<TResult>
 {
     /// <summary>Number of upstream sources this coordinator combines.</summary>
     private const int SourceCount = 6;
@@ -59,11 +61,14 @@ public sealed class SyncLatest6Coordinator<T1, T2, T3, T4, T5, T6, TResult> : Sy
         IObserverAsync<TResult> observer,
         SyncLatest6State<T1, T2, T3, T4, T5, T6> sources,
         Func<T1, T2, T3, T4, T5, T6, TResult> selector)
-        : base(observer, SourceCount)
     {
+        Lifecycle = new(observer, SourceCount);
         Sources = sources;
         Selector = selector;
     }
+
+    /// <inheritdoc/>
+    public SyncLatestLifecycle<TResult> Lifecycle { get; }
 
     /// <summary>Gets the bundled source observables.</summary>
     private SyncLatest6State<T1, T2, T3, T4, T5, T6> Sources { get; }
@@ -90,7 +95,18 @@ public sealed class SyncLatest6Coordinator<T1, T2, T3, T4, T5, T6, TResult> : Sy
     private Optional<T6> Value6 { get; set; } = Optional<T6>.Empty;
 
     /// <inheritdoc/>
-    internal override ValueTask EmitLatestAsync()
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public ValueTask DisposeAsync() => Lifecycle.DisposeAsync();
+
+    /// <summary>Subscribes to every source in index order.</summary>
+    /// <param name="cancellationToken">A token to cancel the subscription.</param>
+    /// <returns>A task representing the asynchronous subscribe operation.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public ValueTask SubscribeSourcesAsync(CancellationToken cancellationToken) =>
+        SyncLatestCoordinator.SubscribeSourcesAsync(this, cancellationToken);
+
+    /// <inheritdoc/>
+    public ValueTask EmitLatestAsync()
     {
         if (!TryReadValues(out var values))
         {
@@ -108,7 +124,7 @@ public sealed class SyncLatest6Coordinator<T1, T2, T3, T4, T5, T6, TResult> : Sy
     }
 
     /// <inheritdoc/>
-    protected override ValueTask<IAsyncDisposable> SubscribeAtAsync(int index, CancellationToken cancellationToken) =>
+    public ValueTask<IAsyncDisposable> SubscribeAtAsync(int index, CancellationToken cancellationToken) =>
         index switch
         {
             Source1Index => Sources.Source1.SubscribeAsync(new SyncLatestWitness<T1, TResult>(this, Source1Bit, value => Value1 = new(value)), cancellationToken),
@@ -119,10 +135,7 @@ public sealed class SyncLatest6Coordinator<T1, T2, T3, T4, T5, T6, TResult> : Sy
             _ => Sources.Source6.SubscribeAsync(new SyncLatestWitness<T6, TResult>(this, Source6Bit, value => Value6 = new(value)), cancellationToken)
         };
 
-    /// <summary>
-    /// Reads every source's latest value into a single snapshot. Returns <see langword="false"/>
-    /// until every source has produced at least one value.
-    /// </summary>
+    /// <summary>Reads every source's latest value into a single snapshot.</summary>
     /// <param name="values">When the method returns <see langword="true"/>, the snapshot.</param>
     /// <returns><see langword="true"/> when every source has produced a value; otherwise <see langword="false"/>.</returns>
     private bool TryReadValues(out (T1 V1, T2 V2, T3 V3, T4 V4, T5 V5, T6 V6) values)

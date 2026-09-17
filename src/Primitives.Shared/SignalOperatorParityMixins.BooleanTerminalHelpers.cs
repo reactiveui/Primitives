@@ -11,7 +11,7 @@ namespace ReactiveUI.Primitives;
 /// <summary>Private helper types for boolean terminal parity operators.</summary>
 public static partial class LinqExtensions
 {
-    /// <summary>Predicate all operator implemented without delegate observer wrappers.</summary>
+    /// <summary>Emits whether every source value matches a predicate.</summary>
     /// <typeparam name="T">The source value type.</typeparam>
     /// <param name="source">The source observable.</param>
     /// <param name="predicate">The predicate.</param>
@@ -38,9 +38,6 @@ public static partial class LinqExtensions
                 return EmptyDisposable.Instance;
             }
 
-            // The first value the predicate rejects settles this operator, so it must own the source subscription
-            // before the source starts producing. A current-thread source drains its trampoline inside its own
-            // Subscribe, so on an endless source the sink would never be handed the subscription it needs to stop it.
             if (!IsRequiredSubscribeOnCurrentThread() || !CurrentThreadSequencer.IsScheduleRequired)
             {
                 return SubscribeCore(observer);
@@ -98,7 +95,7 @@ public static partial class LinqExtensions
         }
     }
 
-    /// <summary>Contains operator implemented without composing Any and comparer closures.</summary>
+    /// <summary>Emits whether the source produced a value equal to the one sought.</summary>
     /// <typeparam name="T">The source value type.</typeparam>
     /// <param name="source">The source observable.</param>
     /// <param name="value">The value to locate.</param>
@@ -129,8 +126,6 @@ public static partial class LinqExtensions
                 return EmptyDisposable.Instance;
             }
 
-            // The value being sought settles this operator the moment it arrives, so it must own the source
-            // subscription before the source starts producing. See AllPredicateSignal for the livelock without this.
             if (!IsRequiredSubscribeOnCurrentThread() || !CurrentThreadSequencer.IsScheduleRequired)
             {
                 return SubscribeCore(observer);

@@ -14,10 +14,7 @@ public class UsingFuncObservableTests
     /// <summary>Sentinel result emitted by the happy-path test.</summary>
     private const int Sentinel = 42;
 
-    /// <summary>Longest a test waits for an asynchronous signal before failing.</summary>
-    private static readonly TimeSpan GuardTimeout = TimeSpan.FromSeconds(5);
-
-    /// <summary>Verifies the happy path — the function's result is emitted, completion fires,
+    /// <summary>Verifies the happy path - the function's result is emitted, completion fires,
     /// and the resource is disposed exactly once.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
@@ -35,7 +32,7 @@ public class UsingFuncObservableTests
         await Assert.That(resource.DisposeCount).IsEqualTo(1);
     }
 
-    /// <summary>Verifies the secondary-dispose-failure swallow branch — when the function
+    /// <summary>Verifies the secondary-dispose-failure swallow branch - when the function
     /// throws AND the resource also throws on Dispose, the primary function exception is
     /// forwarded and the dispose failure is silently swallowed.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
@@ -58,15 +55,17 @@ public class UsingFuncObservableTests
     [Test]
     public async Task WhenSchedulerPathFunctionThrows_ThenForwardsErrorAndDisposes()
     {
+        VirtualClock scheduler = new();
         CountingDisposable resource = new();
         TaskCompletionSource<Exception> faulted = new(TaskCreationOptions.RunContinuationsAsynchronously);
         InvalidOperationException expected = new("scheduler function failed");
 
         using var sub = resource
-            .Using(new Func<CountingDisposable, int>(_ => throw expected), TaskPoolSequencer.Default)
+            .Using(new Func<CountingDisposable, int>(_ => throw expected), scheduler)
             .Subscribe(static _ => { }, ex => faulted.TrySetResult(ex));
+        scheduler.Start();
 
-        var caught = await faulted.Task.WaitAsync(GuardTimeout);
+        var caught = await faulted.Task;
         await Assert.That(caught).IsSameReferenceAs(expected);
         await Assert.That(resource.DisposeCount).IsEqualTo(1);
     }

@@ -9,10 +9,7 @@ using RxObservable = System.Reactive.Linq.Observable;
 
 namespace ReactiveUI.Primitives.Benchmarks;
 
-/// <summary>
-/// Benchmarks the async terminal variants (CollectListAsync, FirstOrDefaultAsync,
-/// LastOrDefaultAsync) against their System.Reactive and R3 task-returning equivalents.
-/// </summary>
+/// <summary>Benchmarks the async terminal variants (CollectListAsync, FirstOrDefaultAsync, LastOrDefaultAsync) against their System.Reactive and R3 task-returning equivalents.</summary>
 [MemoryDiagnoser]
 public class TerminalAsyncVariantBenchmarks
 {
