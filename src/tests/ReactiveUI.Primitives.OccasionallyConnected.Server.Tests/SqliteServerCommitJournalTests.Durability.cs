@@ -511,6 +511,27 @@ public sealed partial class SqliteServerCommitJournalTests
         return new(connection, transaction);
     }
 
+    /// <summary>Reopens the crashed writer's journal with native SQLite failure details.</summary>
+    /// <param name="databasePath">The SQLite database path.</param>
+    /// <returns>The recovered journal.</returns>
+    /// <exception cref="InvalidOperationException">SQLite could not reopen the journal after the child exited.</exception>
+    private static SqliteServerCommitJournal ReopenJournalAfterCrash(string databasePath)
+    {
+        try
+        {
+            return CreateJournal(databasePath);
+        }
+        catch (SqliteException exception)
+        {
+            throw new InvalidOperationException(
+                string.Create(
+                    CultureInfo.InvariantCulture,
+                    $"Crash recovery failed: SQLite code {exception.SqliteErrorCode}, "
+                    + $"extended code {exception.SqliteExtendedErrorCode}, database '{databasePath}'."),
+                exception);
+        }
+    }
+
     /// <summary>Runs a crash child until it publishes its signal, then kills it.</summary>
     /// <param name="databasePath">The SQLite database path.</param>
     /// <param name="signalPath">The signal path.</param>
