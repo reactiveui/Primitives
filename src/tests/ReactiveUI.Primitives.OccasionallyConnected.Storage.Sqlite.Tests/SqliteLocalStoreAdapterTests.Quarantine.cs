@@ -17,21 +17,6 @@ public sealed partial class SqliteLocalStoreAdapterTests
     /// <summary>The byte length exposed by SQLite when integer payload evidence is coerced to text.</summary>
     private const int CoercedIntegerPayloadLength = 3;
 
-    /// <summary>The raw evidence contract column index.</summary>
-    private const int RawEvidenceContractIndex = 0;
-
-    /// <summary>The raw evidence schema column index.</summary>
-    private const int RawEvidenceSchemaIndex = 1;
-
-    /// <summary>The raw evidence content type column index.</summary>
-    private const int RawEvidenceContentTypeIndex = 2;
-
-    /// <summary>The raw evidence payload column index.</summary>
-    private const int RawEvidencePayloadIndex = 3;
-
-    /// <summary>The raw evidence payload hash column index.</summary>
-    private const int RawEvidencePayloadHashIndex = 4;
-
     /// <summary>Verifies a quarantine marker persists across reopen and blocks upload leasing.</summary>
     /// <returns>A task that represents the asynchronous test.</returns>
     [Test]

@@ -205,11 +205,11 @@ public sealed partial class SqliteLocalCommitStoreTests
         var snapshot = new SnapshotMutation(Stream, CreatePayload(OptimisticInitialText), FormatVersion: 1, ExpectedRevision: 0);
         var migratedEvent = CreateRemoteEvent(FirstRemoteCursor);
         await using (var connection = OpenRawConnection(database.Path))
-        await using (var transaction = connection.BeginTransaction())
+        await using (var transaction = (SqliteTransaction)await connection.BeginTransactionAsync())
         {
             CreatePreAuthoritativeLocalCommitSchema(connection, transaction);
             InsertPreAuthoritativeLocalCommitRows(connection, transaction, subscriptionId, operation, snapshot, migratedEvent);
-            transaction.Commit();
+            await transaction.CommitAsync();
         }
 
         using (var bound = new SqliteLocalCommitStore(database.Path))
@@ -278,14 +278,14 @@ public sealed partial class SqliteLocalCommitStoreTests
             AuthoritativeState = CreatePayload(AuthoritativeInitialText),
         };
         await using (var connection = OpenRawConnection(database.Path))
-        await using (var transaction = connection.BeginTransaction())
+        await using (var transaction = (SqliteTransaction)await connection.BeginTransactionAsync())
         {
             SchemaSixFixture.Create(connection, transaction);
             _ = SqliteClientIdentityBinding.BindOrValidate(connection, transaction, StoreIdentity, FirstBindingClientId);
             InsertLegacyLocalCommitRows(connection, transaction, subscriptionId, operation, snapshot);
             SqliteLocalCommitSql.InsertInitialOperationState(connection, transaction, StoreIdentity, operation, operation.TimestampUtc);
             SetOperationState(connection, transaction, operation.OperationId, SyncOperationState.Synchronized);
-            transaction.Commit();
+            await transaction.CommitAsync();
         }
 
         using var migrated = new SqliteLocalCommitStore(database.Path);
@@ -468,11 +468,11 @@ public sealed partial class SqliteLocalCommitStoreTests
     {
         using var database = TempDatabase.Create();
         await using (var connection = OpenRawConnection(database.Path))
-        await using (var transaction = connection.BeginTransaction())
+        await using (var transaction = (SqliteTransaction)await connection.BeginTransactionAsync())
         {
             CreatePreAuthoritativeLocalCommitSchema(connection, transaction);
             SetSchemaMetadataVersion(connection, transaction, SchemaVersion);
-            transaction.Commit();
+            await transaction.CommitAsync();
         }
 
         Action initialize = () =>
@@ -484,7 +484,8 @@ public sealed partial class SqliteLocalCommitStoreTests
         await using var reopened = OpenRawConnection(database.Path);
         await using var command = reopened.CreateCommand();
         command.CommandText = "SELECT COUNT(*) FROM sqlite_master WHERE name IN ('oc_snapshot_authoritative_states', 'oc_outbox_authoritative_mutations');";
-        await Assert.That(Convert.ToInt64(command.ExecuteScalar(), System.Globalization.CultureInfo.InvariantCulture)).IsEqualTo(0);
+        var tableCount = Convert.ToInt64(await command.ExecuteScalarAsync(), System.Globalization.CultureInfo.InvariantCulture);
+        await Assert.That(tableCount).IsEqualTo(0);
     }
 
     /// <summary>Creates a snapshot mutation.</summary>

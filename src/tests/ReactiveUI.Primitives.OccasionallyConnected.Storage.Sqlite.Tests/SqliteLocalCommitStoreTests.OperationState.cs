@@ -217,10 +217,10 @@ public sealed partial class SqliteLocalCommitStoreTests
         var operation = CreateOperation(clientSequence: 1);
         await using (var connection = OpenRawConnection(database.Path))
         {
-            await using var transaction = connection.BeginTransaction();
+            await using var transaction = (SqliteTransaction)await connection.BeginTransactionAsync();
             SqliteStoreSchemaTests.CreateLeaseSchema(connection, transaction);
             InsertLegacyLocalCommitRows(connection, transaction, subscriptionId, operation, CreateSnapshotMutation(expectedRevision: 0));
-            transaction.Commit();
+            await transaction.CommitAsync();
         }
 
         using var store = CreateInitializedStore(database.Path);
@@ -313,12 +313,12 @@ public sealed partial class SqliteLocalCommitStoreTests
         var attemptOperation = CommitOperation(attemptStore, Stream, clientSequence: 1, OperationPayloadText);
         var attemptLease = RequireBatch(await LeaseSingleBatch(attemptStore, new(Stream, 1, DefaultLeaseBytes, TimeSpan.FromMinutes(1))));
         await using var attemptBlocker = OpenRawConnection(attemptDatabase.Path);
-        await using var attemptTransaction = attemptBlocker.BeginTransaction(System.Data.IsolationLevel.Serializable, deferred: false);
+        await using var attemptTransaction = (SqliteTransaction)await attemptBlocker.BeginTransactionAsync(System.Data.IsolationLevel.Serializable);
         InsertBlockingIdentity(attemptBlocker, attemptTransaction);
 
         await Assert.That(() => attemptStore.TryBeginRemoteAttempt(attemptLease.LeaseId, attemptOperation.OperationId, FirstAttempt, CancellationToken.None))
             .ThrowsExactly<TimeoutException>();
-        attemptTransaction.Rollback();
+        await attemptTransaction.RollbackAsync();
 
         using var resultDatabase = TempDatabase.Create();
         using var resultStore = CreateInitializedStore(resultDatabase.Path);
@@ -328,12 +328,12 @@ public sealed partial class SqliteLocalCommitStoreTests
             resultLease.LeaseId,
             new OperationSyncResult(resultOperation.OperationId, OperationResultKind.Accepted, null, "v1"));
         await using var resultBlocker = OpenRawConnection(resultDatabase.Path);
-        await using var resultTransaction = resultBlocker.BeginTransaction(System.Data.IsolationLevel.Serializable, deferred: false);
+        await using var resultTransaction = (SqliteTransaction)await resultBlocker.BeginTransactionAsync(System.Data.IsolationLevel.Serializable);
         InsertBlockingIdentity(resultBlocker, resultTransaction);
 
         await Assert.That(async () => await resultStore.ApplySyncResultAsync(resultLease.LeaseId, result, CancellationToken.None))
             .ThrowsExactly<TimeoutException>();
-        resultTransaction.Rollback();
+        await resultTransaction.RollbackAsync();
 
         await Assert.That(attemptStore.GetOperationStatus(attemptOperation.OperationId, CancellationToken.None)?.Attempt).IsEqualTo(0);
         await Assert.That(resultStore.GetOperationStatus(resultOperation.OperationId, CancellationToken.None)?.State)
@@ -351,13 +351,13 @@ public sealed partial class SqliteLocalCommitStoreTests
         var operation = CommitOperation(store, Stream, clientSequence: 1, OperationPayloadText);
         var lease = RequireBatch(await LeaseSingleBatch(store, new(Stream, 1, DefaultLeaseBytes, TimeSpan.FromMinutes(1))));
         await using var blocker = OpenRawConnection(database.Path);
-        await using var transaction = blocker.BeginTransaction();
+        await using var transaction = (SqliteTransaction)await blocker.BeginTransactionAsync();
         InsertBlockingIdentity(blocker, transaction);
         var validationSample = clock.SignalNextRead();
         var blockedAttempt = Task.Run(() => store.TryBeginRemoteAttempt(lease.LeaseId, operation.OperationId, FirstAttempt, CancellationToken.None));
 
         clock.Advance(TimeSpan.FromMinutes(LeaseExpiryAdvanceMinutes));
-        transaction.Rollback();
+        await transaction.RollbackAsync();
         await validationSample.WaitAsync(TestTimeout);
 
         await Assert.That(async () => await blockedAttempt).ThrowsExactly<InvalidOperationException>();
@@ -378,13 +378,13 @@ public sealed partial class SqliteLocalCommitStoreTests
             lease.LeaseId,
             new OperationSyncResult(operation.OperationId, OperationResultKind.Accepted, null, "v1"));
         await using var blocker = OpenRawConnection(database.Path);
-        await using var transaction = blocker.BeginTransaction();
+        await using var transaction = (SqliteTransaction)await blocker.BeginTransactionAsync();
         InsertBlockingIdentity(blocker, transaction);
         var validationSample = clock.SignalNextRead();
         var blockedApply = Task.Run(async () => await store.ApplySyncResultAsync(lease.LeaseId, result, CancellationToken.None));
 
         clock.Advance(TimeSpan.FromMinutes(LeaseExpiryAdvanceMinutes));
-        transaction.Rollback();
+        await transaction.RollbackAsync();
         await validationSample.WaitAsync(TestTimeout);
 
         await Assert.That(async () => await blockedApply).ThrowsExactly<InvalidOperationException>();
@@ -710,7 +710,7 @@ public sealed partial class SqliteLocalCommitStoreTests
         using var store = CreateInitializedStore(database.Path);
         var operation = CommitOperation(store, Stream, clientSequence: 1, OperationPayloadText);
         await using var connection = OpenRawConnection(database.Path);
-        await using var transaction = connection.BeginTransaction();
+        await using var transaction = (SqliteTransaction)await connection.BeginTransactionAsync();
         var result = CreateSyncResult(
             Guid.NewGuid(),
             new OperationSyncResult(operation.OperationId, (OperationResultKind)UndefinedEnumValue, "OC.Invalid", null));
@@ -726,7 +726,7 @@ public sealed partial class SqliteLocalCommitStoreTests
     {
         using var database = TempDatabase.Create();
         await using var connection = OpenRawConnection(database.Path);
-        await using var transaction = connection.BeginTransaction();
+        await using var transaction = (SqliteTransaction)await connection.BeginTransactionAsync();
         SqliteStoreSchemaTests.CreateLeaseSchema(connection, transaction);
         SetSchemaMetadataVersion(connection, transaction, SchemaVersion);
 

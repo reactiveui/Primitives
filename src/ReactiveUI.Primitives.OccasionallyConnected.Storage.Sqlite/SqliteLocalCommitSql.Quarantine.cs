@@ -522,10 +522,8 @@ internal static partial class SqliteLocalCommitSql
     /// <param name="expected">The expected storage type.</param>
     /// <param name="message">The failure message.</param>
     /// <exception cref="InvalidOperationException">The storage class does not match.</exception>
-    private static void ValidateStorageType(SqliteDataReader reader, int storageTypeIndex, string expected, string message)
-    {
+    private static void ValidateStorageType(SqliteDataReader reader, int storageTypeIndex, string expected, string message) =>
         _ = IsStorageType(reader, storageTypeIndex, expected) ? true : throw new InvalidOperationException(message);
-    }
 
     /// <summary>Determines whether a projected storage class matches an expected value.</summary>
     /// <param name="reader">The reader.</param>

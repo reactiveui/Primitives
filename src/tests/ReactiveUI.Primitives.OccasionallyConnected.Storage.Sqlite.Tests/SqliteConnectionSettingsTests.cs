@@ -17,7 +17,7 @@ public sealed class SqliteConnectionSettingsTests
     {
         var connectionString = new SqliteConnectionStringBuilder { DataSource = ":memory:", Mode = SqliteOpenMode.Memory, Pooling = false }.ToString();
         await using var connection = new SqliteConnection(connectionString);
-        connection.Open();
+        await connection.OpenAsync();
 
         Action action = () => SqliteConnectionSettings.ConfigureDurability(connection);
 

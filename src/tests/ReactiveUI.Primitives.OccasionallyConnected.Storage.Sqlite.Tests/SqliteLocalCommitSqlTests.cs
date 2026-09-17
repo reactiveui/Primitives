@@ -30,13 +30,13 @@ public sealed class SqliteLocalCommitSqlTests
     {
         using var database = TempDatabase.Create();
         await using var connection = OpenRawConnection(database.Path);
-        await using (var transaction = connection.BeginTransaction())
+        await using (var transaction = (SqliteTransaction)await connection.BeginTransactionAsync())
         {
             SqliteStoreSchema.CreateLocalCommitSchema(connection, transaction);
-            transaction.Commit();
+            await transaction.CommitAsync();
         }
 
-        await using var readTransaction = connection.BeginTransaction();
+        await using var readTransaction = (SqliteTransaction)await connection.BeginTransactionAsync();
         Action action = () => SqliteLocalCommitSql.ReadStreamState(connection, readTransaction, StoreIdentity, new("sensor/missing"));
 
         await Assert.That(action).ThrowsExactly<InvalidOperationException>();
@@ -49,7 +49,7 @@ public sealed class SqliteLocalCommitSqlTests
     {
         using var database = TempDatabase.Create();
         await using var connection = OpenRawConnection(database.Path);
-        await using var transaction = connection.BeginTransaction();
+        await using var transaction = (SqliteTransaction)await connection.BeginTransactionAsync();
         SqliteStoreSchema.CreateLocalCommitSchema(connection, transaction);
         EnsureStream(connection, transaction);
         var remoteEvent = CreateRemoteEvent(Cursor);
@@ -67,7 +67,7 @@ public sealed class SqliteLocalCommitSqlTests
     {
         using var database = TempDatabase.Create();
         await using var connection = OpenRawConnection(database.Path);
-        await using var transaction = connection.BeginTransaction();
+        await using var transaction = (SqliteTransaction)await connection.BeginTransactionAsync();
         SqliteStoreSchema.CreateLocalCommitSchema(connection, transaction);
         EnsureStream(connection, transaction);
         CreateInboxServerCursorUniqueIndex(connection, transaction);
@@ -85,7 +85,7 @@ public sealed class SqliteLocalCommitSqlTests
     {
         using var database = TempDatabase.Create();
         await using var connection = OpenRawConnection(database.Path);
-        await using var transaction = connection.BeginTransaction();
+        await using var transaction = (SqliteTransaction)await connection.BeginTransactionAsync();
         SqliteStoreSchema.CreateLocalCommitSchema(connection, transaction);
 
         Action missingStream = () => SqliteLocalCommitSql.InsertInboxEvent(connection, transaction, StoreIdentity, CreateRemoteEvent(Cursor), DateTimeOffset.UnixEpoch);

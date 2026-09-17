@@ -357,7 +357,7 @@ public sealed partial class SqliteLocalStoreAdapterTests
         _ = await adapter.GetOrCreateSubscriptionIdAsync(Stream, null, CancellationToken.None);
         var operation = CreateOperation(FirstClientSequence);
         await using var blocker = OpenRawConnection(database.Path);
-        await using var transaction = blocker.BeginTransaction();
+        await using var transaction = (SqliteTransaction)await blocker.BeginTransactionAsync();
         InsertBlockingIdentity(blocker, transaction);
         var commitTask = adapter.CommitLocalOperationAsync(operation, CreateSnapshotMutation(expectedRevision: 0), CancellationToken.None).AsTask();
         var originalEventId = Guid.NewGuid();
@@ -365,7 +365,7 @@ public sealed partial class SqliteLocalStoreAdapterTests
 
         var unappliedTask = adapter.GetUnappliedEventIdsAsync(Stream, eventIds, CancellationToken.None).AsTask();
         eventIds[0] = Guid.Empty;
-        transaction.Rollback();
+        await transaction.RollbackAsync();
         _ = await commitTask.WaitAsync(GuardTimeout);
         var unapplied = await unappliedTask.WaitAsync(GuardTimeout);
 

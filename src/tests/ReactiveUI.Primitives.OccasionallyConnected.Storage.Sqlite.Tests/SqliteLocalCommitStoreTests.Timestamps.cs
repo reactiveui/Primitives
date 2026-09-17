@@ -32,7 +32,7 @@ public sealed partial class SqliteLocalCommitStoreTests
         await using var command = connection.CreateCommand();
         command.CommandText = "SELECT committed_at_utc FROM oc_inbox WHERE event_id = $eventId;";
         _ = command.Parameters.AddWithValue("$eventId", remoteEvent.EventId.ToString("D"));
-        var timestamp = command.ExecuteScalar() as string;
+        var timestamp = await command.ExecuteScalarAsync() as string;
         await Assert.That(timestamp).IsEqualTo(clock.GetUtcNow().ToString("O", CultureInfo.InvariantCulture));
         await Assert.That(timestamp).IsNotEqualTo(remoteEvent.CommittedAtUtc.ToString("O", CultureInfo.InvariantCulture));
     }
