@@ -34,6 +34,13 @@
         <Project Path="ReactiveUI.Primitives.Wpf/ReactiveUI.Primitives.Wpf.csproj" />
         <Project Path="ReactiveUI.Primitives/ReactiveUI.Primitives.csproj" />
     </Folder>
+    <Folder Name="/OccasionallyConnected/">
+        <Project Path="ReactiveUI.Primitives.OccasionallyConnected.Core/ReactiveUI.Primitives.OccasionallyConnected.Core.csproj" />
+        <Project Path="ReactiveUI.Primitives.OccasionallyConnected.Server/ReactiveUI.Primitives.OccasionallyConnected.Server.csproj" />
+        <Project Path="ReactiveUI.Primitives.OccasionallyConnected.Storage.Sqlite/ReactiveUI.Primitives.OccasionallyConnected.Storage.Sqlite.csproj" />
+        <Project Path="ReactiveUI.Primitives.OccasionallyConnected.Transport.Http/ReactiveUI.Primitives.OccasionallyConnected.Transport.Http.csproj" />
+        <Project Path="ReactiveUI.Primitives.OccasionallyConnected/ReactiveUI.Primitives.OccasionallyConnected.csproj" />
+    </Folder>
     <Folder Name="/Reactive/">
         <Project Path="ReactiveUI.Primitives.Avalonia.Reactive/ReactiveUI.Primitives.Avalonia.Reactive.csproj" />
         <Project Path="ReactiveUI.Primitives.Async.Reactive/ReactiveUI.Primitives.Async.Reactive.csproj" />
@@ -80,11 +87,6 @@
     <Project Path="ReactiveUI.Disposables/ReactiveUI.Disposables.csproj" />
     <Project Path="ReactiveUI.Primitives.Async.Core/ReactiveUI.Primitives.Async.Core.csproj" />
     <Project Path="ReactiveUI.Primitives.Core/ReactiveUI.Primitives.Core.csproj" />
-    <Project Path="ReactiveUI.Primitives.OccasionallyConnected.Core/ReactiveUI.Primitives.OccasionallyConnected.Core.csproj" />
-    <Project Path="ReactiveUI.Primitives.OccasionallyConnected.Server/ReactiveUI.Primitives.OccasionallyConnected.Server.csproj" />
-    <Project Path="ReactiveUI.Primitives.OccasionallyConnected.Transport.Http/ReactiveUI.Primitives.OccasionallyConnected.Transport.Http.csproj" />
-    <Project Path="ReactiveUI.Primitives.OccasionallyConnected.Storage.Sqlite/ReactiveUI.Primitives.OccasionallyConnected.Storage.Sqlite.csproj" />
-    <Project Path="ReactiveUI.Primitives.OccasionallyConnected/ReactiveUI.Primitives.OccasionallyConnected.csproj" />
     <Project Path="ReactiveUI.Primitives.ObservableEvents/ReactiveUI.Primitives.ObservableEvents.csproj" />
     <Project Path="ReactiveUI.Primitives.R3Bridge.Generator/ReactiveUI.Primitives.R3Bridge.Generator.csproj" />
 </Solution>
