@@ -23,7 +23,7 @@ internal static class ServerSnapshotRecoveryJournalOperations
         return CaptureOperationKeys(request.Subscription, request.RecoveryRequest);
     }
 
-    /// <summary>Creates canonical fingerprints for the current pending operations.</summary>
+    /// <summary>Creates canonical fingerprints for the current pending and replay-only operations.</summary>
     /// <param name="streamKey">The trusted stream key.</param>
     /// <param name="subscription">The trusted subscription identity.</param>
     /// <param name="request">The bounded recovery request.</param>
@@ -35,14 +35,10 @@ internal static class ServerSnapshotRecoveryJournalOperations
         RemoteSnapshotRecoveryRequest request,
         SnapshotRecoveryLimits limits)
     {
-        var operations = request.PendingOperations;
-        var fingerprints = new ServerCommitFingerprint[operations.Count];
+        var fingerprints = new ServerCommitFingerprint[GetOperationUnionCount(request)];
         var budget = GetCanonicalFingerprintBudget(limits);
-        for (var index = 0; index < operations.Count; index++)
-        {
-            var operation = operations[index];
-            fingerprints[index] = new(CanonicalOperationFingerprint.Compute(streamKey.TenantId, subscription.ClientId, operation, budget));
-        }
+        CaptureOperationRoleFingerprints(streamKey, subscription, request.PendingOperations, budget, fingerprints, 0);
+        CaptureOperationRoleFingerprints(streamKey, subscription, request.ReplayOperations, budget, fingerprints, request.PendingOperations.Count);
 
         return fingerprints;
     }
@@ -139,32 +135,75 @@ internal static class ServerSnapshotRecoveryJournalOperations
             return false;
         }
 
+        Dictionary<OperationId, ServerSnapshotOperationDisposition> serverByOperation = [with(capacity: server.Count)];
         for (var index = 0; index < server.Count; index++)
         {
-            if (server[index].OperationId != remote[index].OperationId
-                || server[index].Kind != remote[index].Kind
-                || !Equals(server[index].Result, remote[index].Result))
+            var serverDisposition = server[index];
+            if (serverByOperation.ContainsKey(serverDisposition.OperationId))
+            {
+                return false;
+            }
+
+            serverByOperation.Add(serverDisposition.OperationId, serverDisposition);
+        }
+
+        HashSet<OperationId> matchedOperations = [];
+        for (var index = 0; index < remote.Count; index++)
+        {
+            if (!RemoteDispositionMatches(serverByOperation, matchedOperations, remote[index]))
             {
                 return false;
             }
         }
 
-        return true;
+        return matchedOperations.Count == serverByOperation.Count;
     }
 
     /// <summary>Checks whether the offer request is still bound to the exact recovery request that produced the view.</summary>
     /// <param name="request">The offer request.</param>
-    /// <returns>Whether the current request matches the captured stream, expired cursor and pending operation intents.</returns>
+    /// <returns>Whether the current request matches the captured stream, expired cursor and requested operation intents.</returns>
     internal static bool OfferRequestMatchesView(ServerSnapshotOfferRequest request)
     {
         if (request.View.Snapshot.StreamKey != request.StreamKey
+            || request.View.CapturedPendingOperationCount != request.RecoveryRequest.PendingOperations.Count
             || !string.Equals(request.View.RequestedExpiredCursor, request.RecoveryRequest.ExpiredCursor, StringComparison.Ordinal))
         {
             return false;
         }
 
         var currentFingerprints = CaptureOperationFingerprints(request.StreamKey, request.Subscription, request.RecoveryRequest, request.Limits);
-        return OperationFingerprintsMatch(request.View, request.RecoveryRequest.PendingOperations, currentFingerprints);
+        return OperationFingerprintsMatch(request.View, request.RecoveryRequest, currentFingerprints)
+            && ReplayOnlyProofsAreAccepted(request.View, request.RecoveryRequest);
+    }
+
+    /// <summary>Checks whether every replay-only operation has retained accepted proof.</summary>
+    /// <param name="view">The captured view.</param>
+    /// <param name="request">The recovery request.</param>
+    /// <returns>Whether replay-only proof is complete and accepted.</returns>
+    internal static bool ReplayOnlyProofsAreAccepted(ServerSnapshotRecoveryView view, RemoteSnapshotRecoveryRequest request)
+    {
+        var replayOperations = request.ReplayOperations;
+        var replayStart = view.CapturedPendingOperationCount;
+        if (replayStart != request.PendingOperations.Count
+            || view.OperationDispositions.Count != replayStart + replayOperations.Count)
+        {
+            return false;
+        }
+
+        for (var index = 0; index < replayOperations.Count; index++)
+        {
+            var disposition = view.OperationDispositions[replayStart + index];
+            var result = disposition.Result;
+            if (disposition.OperationId != replayOperations[index].OperationId
+                || disposition.Kind != SnapshotOperationDispositionKind.IncludedAccepted
+                || result is null
+                || result.Kind != OperationResultKind.Accepted)
+            {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     /// <summary>Checks whether two payload envelopes are identical without relying on reference identity.</summary>
@@ -221,8 +260,9 @@ internal static class ServerSnapshotRecoveryJournalOperations
 
     /// <summary>Validates a snapshot cursor offer request before durable mutation.</summary>
     /// <param name="request">The offer request.</param>
+    /// <returns>Whether the remote recovery result is structurally valid for the current request.</returns>
     /// <exception cref="ArgumentException">The request is malformed or not bound to the authenticated subscription.</exception>
-    internal static void ValidateOfferRequest(ServerSnapshotOfferRequest request)
+    internal static bool ValidateOfferRequest(ServerSnapshotOfferRequest request)
     {
         ArgumentExceptionHelper.ThrowIfNull(request);
         ServerCommitJournalGuard.ValidateStreamKey(request.StreamKey);
@@ -238,8 +278,43 @@ internal static class ServerSnapshotRecoveryJournalOperations
             throw new ArgumentException("The snapshot recovery offer request is not bound to the authenticated subscription.", nameof(request));
         }
 
-        SnapshotRecoveryValidator.Validate(request.RecoveryRequest, request.RecoveryResult, request.Limits);
+        SnapshotRecoveryValidator.Validate(request.RecoveryRequest, request.Limits);
+        return RecoveryResultIsValid(request);
     }
+
+    /// <summary>Checks whether a recovered result is structurally valid for the offer request.</summary>
+    /// <param name="request">The offer request.</param>
+    /// <returns>Whether the result is valid.</returns>
+    private static bool RecoveryResultIsValid(ServerSnapshotOfferRequest request)
+    {
+        try
+        {
+            SnapshotRecoveryValidator.Validate(request.RecoveryRequest, request.RecoveryResult, request.Limits);
+            return true;
+        }
+        catch (EncoderFallbackException)
+        {
+            return false;
+        }
+        catch (ArgumentException)
+        {
+            return false;
+        }
+    }
+
+    /// <summary>Checks whether one remote disposition matches a captured server disposition exactly once.</summary>
+    /// <param name="serverByOperation">The captured server dispositions by operation id.</param>
+    /// <param name="matchedOperations">The already matched operation ids.</param>
+    /// <param name="remoteDisposition">The remote disposition to validate.</param>
+    /// <returns>Whether the remote disposition matches the captured proof.</returns>
+    private static bool RemoteDispositionMatches(
+        Dictionary<OperationId, ServerSnapshotOperationDisposition> serverByOperation,
+        HashSet<OperationId> matchedOperations,
+        SnapshotOperationDisposition remoteDisposition) =>
+        matchedOperations.Add(remoteDisposition.OperationId)
+        && serverByOperation.TryGetValue(remoteDisposition.OperationId, out var serverDisposition)
+        && serverDisposition.Kind == remoteDisposition.Kind
+        && Equals(serverDisposition.Result, remoteDisposition.Result);
 
     /// <summary>Creates a positive disposition from a retained ledger entry.</summary>
     /// <param name="entry">The retained entry.</param>
@@ -261,41 +336,106 @@ internal static class ServerSnapshotRecoveryJournalOperations
     private static ServerSnapshotOperationDisposition CreateUnknownDisposition(OperationId operationId) =>
         new() { OperationId = operationId, Kind = SnapshotOperationDispositionKind.Unknown, Result = null, Fingerprint = null };
 
-    /// <summary>Creates operation keys for pending operations.</summary>
+    /// <summary>Creates operation keys for pending and replay-only operations.</summary>
     /// <param name="subscription">The trusted subscription identity.</param>
     /// <param name="request">The recovery request.</param>
     /// <returns>The trusted operation keys.</returns>
     private static ServerOperationKey[] CaptureOperationKeys(ServerSubscriptionIdentity subscription, RemoteSnapshotRecoveryRequest request)
     {
-        var operations = request.PendingOperations;
-        var keys = new ServerOperationKey[operations.Count];
-        for (var index = 0; index < operations.Count; index++)
-        {
-            keys[index] = new(subscription.ClientId, operations[index].OperationId);
-        }
+        var keys = new ServerOperationKey[GetOperationUnionCount(request)];
+        CaptureOperationRoleKeys(subscription, request.PendingOperations, keys, 0);
+        CaptureOperationRoleKeys(subscription, request.ReplayOperations, keys, request.PendingOperations.Count);
 
         return keys;
     }
 
-    /// <summary>Checks whether current pending operations match the captured operation ids and fingerprints.</summary>
+    /// <summary>Checks whether current pending and replay-only operations match captured operation ids and fingerprints.</summary>
     /// <param name="view">The captured view.</param>
-    /// <param name="operations">The current pending operations.</param>
+    /// <param name="request">The current recovery request.</param>
     /// <param name="currentFingerprints">The current operation fingerprints.</param>
     /// <returns>Whether the request is unchanged.</returns>
     private static bool OperationFingerprintsMatch(
         ServerSnapshotRecoveryView view,
-        IReadOnlyList<SyncOperation> operations,
+        RemoteSnapshotRecoveryRequest request,
         ServerCommitFingerprint[] currentFingerprints)
     {
-        if (view.OperationDispositions.Count != operations.Count || view.OperationFingerprints.Count != operations.Count)
+        if (view.OperationDispositions.Count != currentFingerprints.Length
+            || view.OperationFingerprints.Count != currentFingerprints.Length
+            || currentFingerprints.Length != GetOperationUnionCount(request))
         {
             return false;
         }
 
+        return OperationRoleFingerprintsMatch(view, request.PendingOperations, currentFingerprints, 0)
+            && OperationRoleFingerprintsMatch(view, request.ReplayOperations, currentFingerprints, request.PendingOperations.Count);
+    }
+
+    /// <summary>Gets the combined pending and replay-only operation count.</summary>
+    /// <param name="request">The recovery request.</param>
+    /// <returns>The operation count.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static int GetOperationUnionCount(RemoteSnapshotRecoveryRequest request) =>
+        request.PendingOperations.Count + request.ReplayOperations.Count;
+
+    /// <summary>Captures canonical fingerprints for one operation role.</summary>
+    /// <param name="streamKey">The trusted stream key.</param>
+    /// <param name="subscription">The trusted subscription identity.</param>
+    /// <param name="operations">The role operations.</param>
+    /// <param name="budget">The canonical fingerprint byte budget.</param>
+    /// <param name="fingerprints">The target fingerprint array.</param>
+    /// <param name="offset">The target offset.</param>
+    private static void CaptureOperationRoleFingerprints(
+        ServerStreamKey streamKey,
+        ServerSubscriptionIdentity subscription,
+        IReadOnlyList<SyncOperation> operations,
+        int budget,
+        ServerCommitFingerprint[] fingerprints,
+        int offset)
+    {
         for (var index = 0; index < operations.Count; index++)
         {
-            if (view.OperationDispositions[index].OperationId != operations[index].OperationId
-                || !view.OperationFingerprints[index].Matches(currentFingerprints[index]))
+            fingerprints[offset + index] = new(CanonicalOperationFingerprint.Compute(
+                streamKey.TenantId,
+                subscription.ClientId,
+                operations[index],
+                budget));
+        }
+    }
+
+    /// <summary>Captures operation keys for one operation role.</summary>
+    /// <param name="subscription">The trusted subscription identity.</param>
+    /// <param name="operations">The role operations.</param>
+    /// <param name="keys">The target key array.</param>
+    /// <param name="offset">The target offset.</param>
+    private static void CaptureOperationRoleKeys(
+        ServerSubscriptionIdentity subscription,
+        IReadOnlyList<SyncOperation> operations,
+        ServerOperationKey[] keys,
+        int offset)
+    {
+        for (var index = 0; index < operations.Count; index++)
+        {
+            keys[offset + index] = new(subscription.ClientId, operations[index].OperationId);
+        }
+    }
+
+    /// <summary>Checks whether one operation role matches captured operation ids and fingerprints.</summary>
+    /// <param name="view">The captured view.</param>
+    /// <param name="operations">The role operations.</param>
+    /// <param name="currentFingerprints">The current operation fingerprints.</param>
+    /// <param name="offset">The role offset.</param>
+    /// <returns>Whether the operation role is unchanged.</returns>
+    private static bool OperationRoleFingerprintsMatch(
+        ServerSnapshotRecoveryView view,
+        IReadOnlyList<SyncOperation> operations,
+        ServerCommitFingerprint[] currentFingerprints,
+        int offset)
+    {
+        for (var index = 0; index < operations.Count; index++)
+        {
+            var unionIndex = offset + index;
+            if (view.OperationDispositions[unionIndex].OperationId != operations[index].OperationId
+                || !view.OperationFingerprints[unionIndex].Matches(currentFingerprints[unionIndex]))
             {
                 return false;
             }
