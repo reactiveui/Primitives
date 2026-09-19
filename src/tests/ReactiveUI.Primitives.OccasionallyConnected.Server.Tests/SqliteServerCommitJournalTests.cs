@@ -96,6 +96,15 @@ public sealed partial class SqliteServerCommitJournalTests
     /// <summary>The child mode for crashing with uncommitted raw rows.</summary>
     private const string CrashBeforeCommitMode = "before-commit";
 
+    /// <summary>The SQLite write-ahead log file suffix.</summary>
+    private const string WriteAheadLogFileSuffix = "-wal";
+
+    /// <summary>The SQLite shared-memory file suffix.</summary>
+    private const string SharedMemoryFileSuffix = "-shm";
+
+    /// <summary>The SQLite rollback journal file suffix.</summary>
+    private const string RollbackJournalFileSuffix = "-journal";
+
     /// <summary>The signal file polling interval in milliseconds.</summary>
     private const int SignalPollIntervalMilliseconds = 100;
 
@@ -543,9 +552,9 @@ public sealed partial class SqliteServerCommitJournalTests
         var signalPath = System.IO.Path.ChangeExtension(database.Path, $"after-{Guid.NewGuid():N}.signal");
         var operationId = OperationKey(FirstOperationSeed).OperationId.Value;
 
-        await RunCrashChildUntilSignalAsync(database.Path, signalPath, operationId, CrashAfterCommitMode);
+        var childOutput = await RunCrashChildUntilSignalAsync(database.Path, signalPath, operationId, CrashAfterCommitMode);
 
-        using var reopened = ReopenJournalAfterCrash(database.Path);
+        using var reopened = ReopenJournalAfterCrash(database.Path, childOutput);
         var key = new ServerOperationKey(Client, new(operationId));
         var replay = reopened.Read(StreamKey(), [key]);
 
@@ -569,9 +578,9 @@ public sealed partial class SqliteServerCommitJournalTests
             await Assert.That(initialized.StreamCount).IsEqualTo(0);
         }
 
-        await RunCrashChildUntilSignalAsync(database.Path, signalPath, operationId, CrashBeforeCommitMode);
+        var childOutput = await RunCrashChildUntilSignalAsync(database.Path, signalPath, operationId, CrashBeforeCommitMode);
 
-        using var reopened = ReopenJournalAfterCrash(database.Path);
+        using var reopened = ReopenJournalAfterCrash(database.Path, childOutput);
         await Assert.That(reopened.StreamCount).IsEqualTo(0);
         await Assert.That(reopened.LedgerEntryCount).IsEqualTo(0);
         await Assert.That(reopened.EventCount).IsEqualTo(0);
