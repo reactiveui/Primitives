@@ -510,7 +510,12 @@ public sealed class ReplayNonceRegistryTests
             throw new TimeoutException("The clock callback did not finish.");
         };
 
-        var request = Task.Run(() => registry.IsReplay(Tenant, Client, Nonce, Start, CreateRequest()));
+        var request = Task.Factory.StartNew(
+            static state => ((ReplayNonceRegistry)state!).IsReplay(Tenant, Client, Nonce, Start, CreateRequest()),
+            registry,
+            CancellationToken.None,
+            TaskCreationOptions.LongRunning,
+            TaskScheduler.Default);
         await entered.Task.WaitAsync(GuardTimeout);
         try
         {
