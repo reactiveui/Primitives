@@ -153,6 +153,7 @@ internal sealed class InMemoryServerCommitJournal : IServerCommitJournal, IServe
                 SubscriptionState = state,
                 ExpiredCursorOffer = expiredCursorOffer,
                 RequestedExpiredCursor = request.RecoveryRequest.ExpiredCursor,
+                CapturedPendingOperationCount = request.RecoveryRequest.PendingOperations.Count,
                 OperationDispositions = ServerSnapshotRecoveryJournalOperations.CreateOperationDispositions(snapshot, operationKeys, fingerprints),
                 OperationFingerprints = fingerprints,
             };
@@ -164,8 +165,8 @@ internal sealed class InMemoryServerCommitJournal : IServerCommitJournal, IServe
     /// <returns>The offer result.</returns>
     internal ServerSnapshotOfferResult TryOfferSnapshot(ServerSnapshotOfferRequest request)
     {
-        ServerSnapshotRecoveryJournalOperations.ValidateOfferRequest(request);
-        if (!ServerSnapshotRecoveryJournalOperations.OfferRequestMatchesView(request)
+        if (!ServerSnapshotRecoveryJournalOperations.ValidateOfferRequest(request)
+            || !ServerSnapshotRecoveryJournalOperations.OfferRequestMatchesView(request)
             || !ServerSnapshotRecoveryJournalOperations.RecoveryResultMatchesView(request.View, request.RecoveryResult))
         {
             return CreateSnapshotOfferResult(ServerSnapshotOfferStatus.ValidationRejected, null, null);

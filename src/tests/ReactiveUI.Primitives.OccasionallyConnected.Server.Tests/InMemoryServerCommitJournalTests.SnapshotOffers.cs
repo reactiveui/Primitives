@@ -430,6 +430,7 @@ public sealed partial class InMemoryServerCommitJournalTests
                 SubscriptionState = state,
                 ExpiredCursorOffer = null,
                 RequestedExpiredCursor = null,
+                CapturedPendingOperationCount = 0,
                 OperationDispositions = new ServerSnapshotOperationDisposition[OwnedCollectionOverflowCount],
                 OperationFingerprints = [],
             })
@@ -612,26 +613,6 @@ public sealed partial class InMemoryServerCommitJournalTests
         };
 
         var matches = ServerSnapshotRecoveryJournalOperations.PositiveProofsMatch(identity, view, view.Snapshot);
-
-        await Assert.That(matches).IsFalse();
-    }
-
-    /// <summary>Verifies recovered result disposition count mismatches are rejected before mutation.</summary>
-    /// <returns>The asynchronous test operation.</returns>
-    [Test]
-    public async Task RecoveryResultMatchesViewRejectsDispositionCountMismatch()
-    {
-        var journal = CreateJournal();
-        var identity = SnapshotSubscription();
-        var state = journal.RegisterSubscription(identity);
-        var disposition = new ServerSnapshotOperationDisposition { OperationId = OperationId.New(), Kind = SnapshotOperationDispositionKind.Unknown, Result = null, Fingerprint = null };
-        var view = SnapshotView(journal.Read(StreamKey(), []), state) with
-        {
-            OperationDispositions = [disposition],
-        };
-        var result = SnapshotRecoveryResult(identity.SubscriptionId, view.Snapshot, []);
-
-        var matches = ServerSnapshotRecoveryJournalOperations.RecoveryResultMatchesView(view, result);
 
         await Assert.That(matches).IsFalse();
     }

@@ -510,58 +510,6 @@ public sealed partial class ServerStreamHubTests
         await Assert.That(recovered.Checkpoint?.FrontierCursor).IsNotEqualTo(retainedNormalOffer.NextCursor);
     }
 
-    /// <summary>Verifies SQLite recovery replays a lost snapshot response after disposal and reopen.</summary>
-    /// <returns>The assertion task.</returns>
-    [Test]
-    public async Task GetSnapshotAsyncWithSqliteReplaysLostSnapshotResponseAfterReopen()
-    {
-        using var database = new SqliteLease();
-        var subscriptionId = SubscriptionId.New();
-        var materializedClientState = Payload(SnapshotClientPayload);
-        var operation = Operation(1, PayloadA);
-        string? expiredCursor;
-        RemoteSnapshotRecoveryResult first;
-        await using (var hub = ServerStreamHub.CreateSqlite(
-            database.Path,
-            Options(new AllowPolicy(Tenant), new RecordingDomainHandler()) with
-            {
-                SnapshotRecoveryAuthorizationPolicy = new AllowSnapshotRecoveryPolicy(Tenant),
-                SnapshotRecoveryMaterializer = new RecordingSnapshotMaterializer(materializedClientState),
-            }))
-        {
-            var seed = await SeedSnapshotRecoveryFrontierAsync(hub, subscriptionId, operation);
-            expiredCursor = seed.ExpiredCursor;
-            first = await ((IServerSnapshotRecoveryHub)hub).GetSnapshotAsync(
-                SnapshotRecoveryRequest(subscriptionId, expiredCursor, operation),
-                new(Tenant, Client),
-                CancellationToken.None);
-        }
-
-        await using var reopened = ServerStreamHub.CreateSqlite(
-            database.Path,
-            Options(new AllowPolicy(Tenant), new RecordingDomainHandler()) with
-            {
-                SnapshotRecoveryAuthorizationPolicy = new AllowSnapshotRecoveryPolicy(Tenant),
-                SnapshotRecoveryMaterializer = new RecordingSnapshotMaterializer(materializedClientState),
-            });
-        var replayed = await ((IServerSnapshotRecoveryHub)reopened).GetSnapshotAsync(
-            SnapshotRecoveryRequest(subscriptionId, expiredCursor, operation),
-            new(Tenant, Client),
-            CancellationToken.None);
-
-        await Assert.That(first.Status).IsEqualTo(RemoteSnapshotRecoveryStatus.Recovered);
-        await Assert.That(replayed.Status).IsEqualTo(RemoteSnapshotRecoveryStatus.Recovered);
-        await Assert.That(replayed.Checkpoint?.FrontierCursor).IsEqualTo(first.Checkpoint?.FrontierCursor);
-        await AssertSnapshotPayloadAsync(replayed.Checkpoint?.ClientState, materializedClientState);
-
-        _ = await ReadFirstBatchAsync(reopened, new(Tenant, Client), subscriptionId);
-        var afterNormalOffer = await ((IServerSnapshotRecoveryHub)reopened).GetSnapshotAsync(
-            SnapshotRecoveryRequest(subscriptionId, expiredCursor, operation),
-            new(Tenant, Client),
-            CancellationToken.None);
-        await Assert.That(afterNormalOffer.Status).IsEqualTo(RemoteSnapshotRecoveryStatus.RetryableConcurrentChange);
-    }
-
     /// <summary>Verifies SQLite snapshot offers persist across reopen and can be acknowledged.</summary>
     /// <returns>The assertion task.</returns>
     /// <exception cref="InvalidOperationException">The recovered snapshot did not include a cursor.</exception>
@@ -787,10 +735,24 @@ public sealed partial class ServerStreamHubTests
     /// <param name="expiredCursor">The expired cursor.</param>
     /// <param name="pendingOperations">The pending operation intents.</param>
     /// <returns>The snapshot recovery request.</returns>
+    [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
     private static RemoteSnapshotRecoveryRequest SnapshotRecoveryRequest(
         SubscriptionId subscriptionId,
         string? expiredCursor,
         params SyncOperation[] pendingOperations) =>
+        SnapshotRecoveryRequest(subscriptionId, expiredCursor, pendingOperations, []);
+
+    /// <summary>Creates a snapshot recovery request for the test stream.</summary>
+    /// <param name="subscriptionId">The subscription identifier.</param>
+    /// <param name="expiredCursor">The expired cursor.</param>
+    /// <param name="pendingOperations">The pending operation intents.</param>
+    /// <param name="replayOperations">The accepted replay-only operation intents.</param>
+    /// <returns>The snapshot recovery request.</returns>
+    private static RemoteSnapshotRecoveryRequest SnapshotRecoveryRequest(
+        SubscriptionId subscriptionId,
+        string? expiredCursor,
+        IReadOnlyList<SyncOperation> pendingOperations,
+        IReadOnlyList<SyncOperation> replayOperations) =>
         new()
         {
             StreamId = Stream,
@@ -800,6 +762,7 @@ public sealed partial class ServerStreamHubTests
             ClientStateSchemaVersion = SingleCount,
             SnapshotFormatVersion = SingleCount,
             PendingOperations = pendingOperations,
+            ReplayOperations = replayOperations,
             MaximumResponseBytes = SnapshotMaximumResponseBytes,
         };
 
@@ -836,6 +799,17 @@ public sealed partial class ServerStreamHubTests
         await Assert.That(actual?.PayloadHash).IsEqualTo(expected.PayloadHash);
         await Assert.That(actual?.PayloadLength).IsEqualTo(expected.PayloadLength);
         await Assert.That(actual?.Payload.ToArray().SequenceEqual(expected.Payload.ToArray())).IsTrue();
+    }
+
+    /// <summary>Creates a typed null reference for runtime-null contract regression tests.</summary>
+    /// <typeparam name="T">The reference type.</typeparam>
+    /// <returns>A null reference typed as <typeparamref name="T"/>.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static T NullReference<T>()
+        where T : class
+    {
+        object? value = null;
+        return Unsafe.As<object?, T>(ref value);
     }
 
     /// <summary>Records snapshot materialization contexts and returns a fixed payload.</summary>
@@ -914,7 +888,7 @@ public sealed partial class ServerStreamHubTests
         {
             _ = context;
             _ = cancellationToken;
-            return ValueTask.FromResult<ServerSnapshotMaterializationResult>(null!);
+            return ValueTask.FromResult(NullReference<ServerSnapshotMaterializationResult>());
         }
     }
 

@@ -19,6 +19,9 @@ internal sealed record ServerSnapshotRecoveryView
     /// <summary>Gets the expired cursor value that was present on the recovery request that produced this view.</summary>
     internal required string? RequestedExpiredCursor { get; init; }
 
+    /// <summary>Gets the number of pending operations captured before replay-only operations in this view.</summary>
+    internal required int CapturedPendingOperationCount { get; init; }
+
     /// <summary>Gets dispositions from trusted retained ledger entries for the requested operations.</summary>
     internal required IReadOnlyList<ServerSnapshotOperationDisposition> OperationDispositions
     {
@@ -26,7 +29,7 @@ internal sealed record ServerSnapshotRecoveryView
         init => field = ServerSnapshotRecoveryCollectionCopy.List(value, nameof(OperationDispositions));
     }
 
-    /// <summary>Gets canonical fingerprints for every requested pending operation, including unknown dispositions.</summary>
+    /// <summary>Gets canonical fingerprints for the ordered pending plus replay-only operation union.</summary>
     internal required IReadOnlyList<ServerCommitFingerprint> OperationFingerprints
     {
         get;
