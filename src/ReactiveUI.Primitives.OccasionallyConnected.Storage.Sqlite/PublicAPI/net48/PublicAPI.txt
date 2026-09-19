@@ -2,13 +2,14 @@
 namespace ReactiveUI.Primitives.OccasionallyConnected.Storage.Sqlite;
 
 [System.Diagnostics.DebuggerDisplay("Capabilities = {Capabilities}")]
-public sealed class SqliteLocalStoreAdapter : ReactiveUI.Primitives.OccasionallyConnected.ILocalPayloadQuarantineStore, ReactiveUI.Primitives.OccasionallyConnected.ILocalSnapshotRecoveryStore, ReactiveUI.Primitives.OccasionallyConnected.ILocalStoreAdapter
+public sealed class SqliteLocalStoreAdapter : ReactiveUI.Primitives.OccasionallyConnected.ILocalPayloadQuarantineStore, ReactiveUI.Primitives.OccasionallyConnected.ILocalSnapshotRecoveryCaptureStore, ReactiveUI.Primitives.OccasionallyConnected.ILocalSnapshotRecoveryStore, ReactiveUI.Primitives.OccasionallyConnected.ILocalStoreAdapter
 {
     public SqliteLocalStoreAdapter(string databasePath) { }
     public SqliteLocalStoreAdapter(string databasePath, ReactiveUI.Primitives.OccasionallyConnected.Storage.Sqlite.SqliteLocalStoreAdapterOptions options) { }
     public ReactiveUI.Primitives.OccasionallyConnected.LocalStoreCapabilities Capabilities { get; }
     public System.Threading.Tasks.ValueTask<ReactiveUI.Primitives.OccasionallyConnected.RemoteApplyResult> ApplyRemoteBatchAsync(ReactiveUI.Primitives.OccasionallyConnected.RemoteEventBatch batch, ReactiveUI.Primitives.OccasionallyConnected.SnapshotMutation snapshotMutation, System.Threading.CancellationToken cancellationToken) { }
     public System.Threading.Tasks.ValueTask<ReactiveUI.Primitives.OccasionallyConnected.LocalSnapshotRecoveryResult> ApplySnapshotRecoveryAsync(ReactiveUI.Primitives.OccasionallyConnected.LocalSnapshotRecoveryMutation mutation, System.Threading.CancellationToken cancellationToken) { }
+    public System.Threading.Tasks.ValueTask<ReactiveUI.Primitives.OccasionallyConnected.LocalSnapshotRecoveryCapture> CaptureSnapshotRecoveryAsync(ReactiveUI.Primitives.OccasionallyConnected.LocalSnapshotRecoveryCaptureRequest request, System.Threading.CancellationToken cancellationToken) { }
     public System.Threading.Tasks.ValueTask ApplySyncResultAsync(System.Guid leaseId, ReactiveUI.Primitives.OccasionallyConnected.RemoteSyncResult result, System.Threading.CancellationToken cancellationToken) { }
     public System.Threading.Tasks.ValueTask<System.Collections.Generic.IReadOnlyList<ReactiveUI.Primitives.OccasionallyConnected.LocalSnapshot>> ApplySyncResultAsync(System.Guid leaseId, ReactiveUI.Primitives.OccasionallyConnected.RemoteSyncResult result, System.Collections.Generic.IReadOnlyList<ReactiveUI.Primitives.OccasionallyConnected.SnapshotMutation> snapshotMutations, System.Threading.CancellationToken cancellationToken) { }
     public System.Threading.Tasks.ValueTask<ReactiveUI.Primitives.OccasionallyConnected.LocalSnapshot> DeadLetterOperationAsync(System.Guid leaseId, ReactiveUI.Primitives.OccasionallyConnected.OperationId operationId, string reasonCode, ReactiveUI.Primitives.OccasionallyConnected.SnapshotMutation snapshotMutation, System.Threading.CancellationToken cancellationToken) { }

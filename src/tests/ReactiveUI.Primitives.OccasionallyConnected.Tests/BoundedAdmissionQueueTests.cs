@@ -488,17 +488,21 @@ public sealed partial class BoundedAdmissionQueueTests
     [Test]
     public async Task EnqueueAsyncCustomDataProducerDoesNotBypassBlockedDataProducer()
     {
-        using var queue = new BoundedAdmissionQueue<string>(
+        Task<BoundedAdmissionResult<string>> firstData;
+        using (var queue = new BoundedAdmissionQueue<string>(
             new BoundedAdmissionQueueOptions(TwoItems, TwoBytes, TwoBlockedProducers, OneItem, OneByte),
-            static (_, _) => BoundedAdmissionDecision.DropNewest);
+            static (_, _) => BoundedAdmissionDecision.DropNewest))
+        {
+            await queue.EnqueueAsync(ResidentDataValue, OneByte, durable: false, control: false);
+            firstData = queue.EnqueueAsync(FirstDataValue, OneByte, durable: true, control: false, strategy: BufferStrategy.Block);
 
-        await queue.EnqueueAsync(ResidentDataValue, OneByte, durable: false, control: false);
-        var firstData = queue.EnqueueAsync(FirstDataValue, OneByte, durable: true, control: false, strategy: BufferStrategy.Block);
+            Func<Task> laterData = () => queue.EnqueueAsync("later-data", OneByte, durable: false, control: false, strategy: BufferStrategy.Custom);
 
-        Func<Task> laterData = () => queue.EnqueueAsync("later-data", OneByte, durable: false, control: false, strategy: BufferStrategy.Custom);
+            await Assert.That(laterData).ThrowsExactly<BoundedAdmissionRejectedException>();
+            await Assert.That(firstData.IsCompleted).IsFalse();
+        }
 
-        await Assert.That(laterData).ThrowsExactly<BoundedAdmissionRejectedException>();
-        await Assert.That(firstData.IsCompleted).IsFalse();
+        await Assert.That(firstData).ThrowsExactly<ObjectDisposedException>();
     }
 
     /// <summary>Verifies cancellation after blocked admission cannot change the committed result.</summary>
@@ -587,15 +591,19 @@ public sealed partial class BoundedAdmissionQueueTests
     [Test]
     public async Task EnqueueAsyncBlockRejectsWhenBlockedProducerLimitIsReached()
     {
-        using var queue = new BoundedAdmissionQueue<string>(new BoundedAdmissionQueueOptions(OneItem, OneByte, OneBlockedProducer));
+        Task<BoundedAdmissionResult<string>> firstWaiter;
+        using (var queue = new BoundedAdmissionQueue<string>(new BoundedAdmissionQueueOptions(OneItem, OneByte, OneBlockedProducer)))
+        {
+            await queue.EnqueueAsync("a", OneByte, durable: true, control: false);
+            firstWaiter = queue.EnqueueAsync("first-waiter", OneByte, durable: true, control: false, strategy: BufferStrategy.Block);
 
-        await queue.EnqueueAsync("a", OneByte, durable: true, control: false);
-        var firstWaiter = queue.EnqueueAsync("first-waiter", OneByte, durable: true, control: false, strategy: BufferStrategy.Block);
+            Func<Task> action = () => queue.EnqueueAsync("second-waiter", OneByte, durable: true, control: false, strategy: BufferStrategy.Block);
 
-        Func<Task> action = () => queue.EnqueueAsync("second-waiter", OneByte, durable: true, control: false, strategy: BufferStrategy.Block);
+            await Assert.That(action).ThrowsExactly<BoundedAdmissionRejectedException>();
+            await Assert.That(firstWaiter.IsCompleted).IsFalse();
+        }
 
-        await Assert.That(action).ThrowsExactly<BoundedAdmissionRejectedException>();
-        await Assert.That(firstWaiter.IsCompleted).IsFalse();
+        await Assert.That(firstWaiter).ThrowsExactly<ObjectDisposedException>();
     }
 
     /// <summary>Verifies only blocked producers that fit are released after a dequeue.</summary>
@@ -603,17 +611,21 @@ public sealed partial class BoundedAdmissionQueueTests
     [Test]
     public async Task TryDequeueReleasesOnlyBlockedProducersThatFit()
     {
-        using var queue = new BoundedAdmissionQueue<string>(new BoundedAdmissionQueueOptions(TwoItems, TwoBytes, TwoBlockedProducers));
+        Task<BoundedAdmissionResult<string>> secondWaiter;
+        using (var queue = new BoundedAdmissionQueue<string>(new BoundedAdmissionQueueOptions(TwoItems, TwoBytes, TwoBlockedProducers)))
+        {
+            await queue.EnqueueAsync("a", OneByte, durable: true, control: false);
+            await queue.EnqueueAsync("b", OneByte, durable: true, control: false);
+            var firstWaiter = queue.EnqueueAsync("c", OneByte, durable: true, control: false, strategy: BufferStrategy.Block);
+            secondWaiter = queue.EnqueueAsync("d", OneByte, durable: true, control: false, strategy: BufferStrategy.Block);
 
-        await queue.EnqueueAsync("a", OneByte, durable: true, control: false);
-        await queue.EnqueueAsync("b", OneByte, durable: true, control: false);
-        var firstWaiter = queue.EnqueueAsync("c", OneByte, durable: true, control: false, strategy: BufferStrategy.Block);
-        var secondWaiter = queue.EnqueueAsync("d", OneByte, durable: true, control: false, strategy: BufferStrategy.Block);
+            await Assert.That(queue.TryDequeue(out var item)).IsTrue();
+            await Assert.That(item.Value).IsEqualTo("a");
+            await Assert.That(await firstWaiter.WaitAsync(GuardTimeout)).IsNotEqualTo(default);
+            await Assert.That(secondWaiter.IsCompleted).IsFalse();
+        }
 
-        await Assert.That(queue.TryDequeue(out var item)).IsTrue();
-        await Assert.That(item.Value).IsEqualTo("a");
-        await Assert.That(await firstWaiter.WaitAsync(GuardTimeout)).IsNotEqualTo(default);
-        await Assert.That(secondWaiter.IsCompleted).IsFalse();
+        await Assert.That(secondWaiter).ThrowsExactly<ObjectDisposedException>();
     }
 
     /// <summary>Verifies control producers can use reserved capacity behind a blocked data head.</summary>
@@ -621,21 +633,25 @@ public sealed partial class BoundedAdmissionQueueTests
     [Test]
     public async Task TryDequeueReleasesControlProducerBehindBlockedDataProducer()
     {
-        using var queue = new BoundedAdmissionQueue<string>(
-            new BoundedAdmissionQueueOptions(TwoItems, TwoBytes, TwoBlockedProducers, OneItem, OneByte));
+        Task<BoundedAdmissionResult<string>> blockedData;
+        using (var queue = new BoundedAdmissionQueue<string>(
+            new BoundedAdmissionQueueOptions(TwoItems, TwoBytes, TwoBlockedProducers, OneItem, OneByte)))
+        {
+            await queue.EnqueueAsync(ControlValue, OneByte, durable: true, control: true);
+            await queue.EnqueueAsync("data", OneByte, durable: true, control: false);
+            blockedData = queue.EnqueueAsync("blocked-data", OneByte, durable: true, control: false, strategy: BufferStrategy.Block);
+            var blockedControl = queue.EnqueueAsync("blocked-control", OneByte, durable: true, control: true, strategy: BufferStrategy.Block);
 
-        await queue.EnqueueAsync(ControlValue, OneByte, durable: true, control: true);
-        await queue.EnqueueAsync("data", OneByte, durable: true, control: false);
-        var blockedData = queue.EnqueueAsync("blocked-data", OneByte, durable: true, control: false, strategy: BufferStrategy.Block);
-        var blockedControl = queue.EnqueueAsync("blocked-control", OneByte, durable: true, control: true, strategy: BufferStrategy.Block);
+            await Assert.That(queue.TryDequeue(out var item)).IsTrue();
+            await Assert.That(item.Value).IsEqualTo(ControlValue);
 
-        await Assert.That(queue.TryDequeue(out var item)).IsTrue();
-        await Assert.That(item.Value).IsEqualTo(ControlValue);
+            var result = await blockedControl.WaitAsync(GuardTimeout);
 
-        var result = await blockedControl.WaitAsync(GuardTimeout);
+            await Assert.That(result.Item.Value).IsEqualTo("blocked-control");
+            await Assert.That(blockedData.IsCompleted).IsFalse();
+        }
 
-        await Assert.That(result.Item.Value).IsEqualTo("blocked-control");
-        await Assert.That(blockedData.IsCompleted).IsFalse();
+        await Assert.That(blockedData).ThrowsExactly<ObjectDisposedException>();
     }
 
     /// <summary>Verifies later control producers preserve FIFO behind an earlier blocked control producer.</summary>
@@ -643,17 +659,23 @@ public sealed partial class BoundedAdmissionQueueTests
     [Test]
     public async Task TryDequeueDoesNotReleaseControlProducerBehindBlockedControlProducer()
     {
-        using var queue = new BoundedAdmissionQueue<string>(new BoundedAdmissionQueueOptions(TwoItems, TwoBytes, TwoBlockedProducers));
+        Task<BoundedAdmissionResult<string>> firstControl;
+        Task<BoundedAdmissionResult<string>> secondControl;
+        using (var queue = new BoundedAdmissionQueue<string>(new BoundedAdmissionQueueOptions(TwoItems, TwoBytes, TwoBlockedProducers)))
+        {
+            await queue.EnqueueAsync("data", OneByte, durable: true, control: false);
+            await queue.EnqueueAsync("control", OneByte, durable: true, control: true);
+            firstControl = queue.EnqueueAsync("first-control", TwoBytes, durable: true, control: true, strategy: BufferStrategy.Block);
+            secondControl = queue.EnqueueAsync("second-control", OneByte, durable: true, control: true, strategy: BufferStrategy.Block);
 
-        await queue.EnqueueAsync("data", OneByte, durable: true, control: false);
-        await queue.EnqueueAsync("control", OneByte, durable: true, control: true);
-        var firstControl = queue.EnqueueAsync("first-control", TwoBytes, durable: true, control: true, strategy: BufferStrategy.Block);
-        var secondControl = queue.EnqueueAsync("second-control", OneByte, durable: true, control: true, strategy: BufferStrategy.Block);
+            await Assert.That(queue.TryDequeue(out var item)).IsTrue();
+            await Assert.That(item.Value).IsEqualTo("data");
+            await Assert.That(firstControl.IsCompleted).IsFalse();
+            await Assert.That(secondControl.IsCompleted).IsFalse();
+        }
 
-        await Assert.That(queue.TryDequeue(out var item)).IsTrue();
-        await Assert.That(item.Value).IsEqualTo("data");
-        await Assert.That(firstControl.IsCompleted).IsFalse();
-        await Assert.That(secondControl.IsCompleted).IsFalse();
+        await Assert.That(firstControl).ThrowsExactly<ObjectDisposedException>();
+        await Assert.That(secondControl).ThrowsExactly<ObjectDisposedException>();
     }
 
     /// <summary>Verifies block strategy rejects work that can never fit the configured capacity.</summary>

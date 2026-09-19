@@ -10,6 +10,18 @@ namespace ReactiveUI.Primitives.OccasionallyConnected.Storage.Sqlite;
 public sealed partial class SqliteLocalStoreAdapter
 {
     /// <inheritdoc/>
+    public ValueTask<LocalSnapshotRecoveryCapture> CaptureSnapshotRecoveryAsync(
+        LocalSnapshotRecoveryCaptureRequest request,
+        CancellationToken cancellationToken)
+    {
+        ArgumentExceptionHelper.ThrowIfNull(request);
+        return new(ExecuteAsync(
+            token => _store.CaptureSnapshotRecovery(request, token),
+            _sizing.RecoveryBytes(request.StreamId),
+            cancellationToken));
+    }
+
+    /// <inheritdoc/>
     public async ValueTask<LocalSnapshotRecoveryResult> ApplySnapshotRecoveryAsync(
         LocalSnapshotRecoveryMutation mutation,
         CancellationToken cancellationToken)
