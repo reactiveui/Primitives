@@ -27,20 +27,27 @@ public sealed partial class FairStreamSchedulerTests
         }
 
         clock.Block = true;
-        var operation = Task.Run(() =>
-        {
-            if (acquire)
+        var operation = Task.Factory.StartNew(
+            static state =>
             {
-                _ = scheduler.TryAcquire(out _);
-            }
-            else
-            {
-                scheduler.Ready(stream, NormalPriority, DateTimeOffset.UnixEpoch);
-            }
-        });
+                var (target, streamId, shouldAcquire) = ((FairStreamScheduler, StreamId, bool))
+                    (state ?? throw new InvalidOperationException("The scheduler task state is required."));
+                if (shouldAcquire)
+                {
+                    _ = target.TryAcquire(out _);
+                }
+                else
+                {
+                    target.Ready(streamId, NormalPriority, DateTimeOffset.UnixEpoch);
+                }
+            },
+            (scheduler, stream, acquire),
+            CancellationToken.None,
+            TaskCreationOptions.LongRunning,
+            TaskScheduler.Default);
         try
         {
-            await Assert.That(clock.Entered.Wait(GuardTimeout)).IsTrue();
+            await clock.Entered.Task.WaitAsync(GuardTimeout);
             var count = await Task.Run(() => scheduler.RegisteredStreamCount).WaitAsync(GuardTimeout);
             await Assert.That(count).IsEqualTo(1);
         }
@@ -76,7 +83,7 @@ public sealed partial class FairStreamSchedulerTests
         private readonly ManualResetEventSlim _release = new();
 
         /// <summary>Gets the callback entry signal.</summary>
-        public ManualResetEventSlim Entered { get; } = new();
+        public TaskCompletionSource Entered { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
         /// <summary>Gets or sets whether the callback waits.</summary>
         public bool Block { get; set; }
@@ -86,7 +93,7 @@ public sealed partial class FairStreamSchedulerTests
         {
             if (Block)
             {
-                Entered.Set();
+                _ = Entered.TrySetResult();
                 _release.Wait();
             }
 
@@ -98,10 +105,7 @@ public sealed partial class FairStreamSchedulerTests
         public void Release() => _release.Set();
 
         /// <inheritdoc/>
-        public void Dispose()
-        {
-            Entered.Dispose();
-            _release.Dispose();
-        }
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void Dispose() => _release.Dispose();
     }
 }
