@@ -449,7 +449,7 @@ public sealed partial class LoopbackTransportAdapterTests
     public async Task DisposeCancellationCallbackCanReenterAdmissionWithoutDeadlock()
     {
         TaskCompletionSource entered = new(TaskCreationOptions.RunContinuationsAsynchronously);
-        TaskCompletionSource callbackCompleted = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        TaskCompletionSource<Task> callbackCompleted = new(TaskCreationOptions.RunContinuationsAsynchronously);
         var acknowledgement = new ReceiveAcknowledgement(SubscriptionId.New(), Stream, NextCursor);
         IRemoteTransportSession? capturedSession = null;
         var hub = new RecordingHub
@@ -470,7 +470,8 @@ public sealed partial class LoopbackTransportAdapterTests
         await entered.Task.WaitAsync(GateTimeout).ConfigureAwait(false);
         await capturedSession.DisposeAsync();
 
-        await callbackCompleted.Task.WaitAsync(GateTimeout).ConfigureAwait(false);
+        var acknowledgementTask = await callbackCompleted.Task.WaitAsync(GateTimeout).ConfigureAwait(false);
+        await Assert.That(acknowledgementTask).ThrowsExactly<ObjectDisposedException>();
         await AssertCancelsAsync(push);
     }
 
@@ -966,20 +967,14 @@ public sealed partial class LoopbackTransportAdapterTests
 
         try
         {
-            if (context.Session is not null)
-            {
-                _ = context.Session.AcknowledgeAsync(context.Acknowledgement, CancellationToken.None).AsTask();
-            }
+            var acknowledgement = context.Session is null
+                ? Task.CompletedTask
+                : context.Session.AcknowledgeAsync(context.Acknowledgement, CancellationToken.None).AsTask();
+            _ = context.Completed.TrySetResult(acknowledgement);
         }
-        catch (ObjectDisposedException)
+        catch (InvalidOperationException exception)
         {
-        }
-        catch (InvalidOperationException)
-        {
-        }
-        finally
-        {
-            _ = context.Completed.TrySetResult();
+            _ = context.Completed.TrySetResult(Task.FromException(exception));
         }
     }
 

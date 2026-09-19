@@ -213,6 +213,22 @@ internal sealed class SqliteLocalStoreAdapterSizing
         return Add(bytes, QuarantineEvidenceBytes(request.Evidence));
     }
 
+    /// <summary>Computes retained input bytes for snapshot recovery.</summary>
+    /// <param name="mutation">The recovery mutation.</param>
+    /// <returns>The retained bytes.</returns>
+    internal long SnapshotRecoveryBytes(LocalSnapshotRecoveryMutation mutation)
+    {
+        ArgumentExceptionHelper.ThrowIfNull(mutation);
+        var bytes = Add(ObjectHeaderBytes, StreamIdBytes(mutation.StreamId));
+        bytes = Add(bytes, GuidBytes + LongBytes + IntBytes);
+        bytes = Add(bytes, StringBytes(mutation.ExpectedPreviousCursor));
+        bytes = Add(bytes, StringBytes(mutation.Checkpoint.FrontierCursor));
+        bytes = Add(bytes, StringBytes(mutation.Checkpoint.ServerVersion));
+        bytes = Add(bytes, PayloadBytes(mutation.Checkpoint.ClientState));
+        bytes = Add(bytes, PayloadBytes(mutation.OptimisticState));
+        return Add(bytes, CollectionBytes(mutation.OperationDispositions, SnapshotOperationDispositionBytes));
+    }
+
     /// <summary>Computes retained input bytes for a stream identifier.</summary>
     /// <param name="streamId">The stream identifier.</param>
     /// <returns>The retained bytes.</returns>
@@ -269,6 +285,16 @@ internal sealed class SqliteLocalStoreAdapterSizing
         var bytes = Add(ObjectHeaderBytes, Add(StringBytes(completion.Origin.ClientId), GuidBytes));
         bytes = Add(bytes, ObjectHeaderBytes + IntBytes);
         return Add(bytes, GuidBytes * (long)completion.EventIds.Count);
+    }
+
+    /// <summary>Computes retained input bytes for a snapshot recovery disposition.</summary>
+    /// <param name="disposition">The disposition.</param>
+    /// <returns>The retained bytes.</returns>
+    private long SnapshotOperationDispositionBytes(SnapshotOperationDisposition disposition)
+    {
+        ArgumentExceptionHelper.ThrowIfNull(disposition);
+        var bytes = Add(ObjectHeaderBytes, GuidBytes + IntBytes);
+        return Add(bytes, disposition.Result is null ? NullableMarkerBytes : OperationSyncResultBytes(disposition.Result));
     }
 
     /// <summary>Computes retained input bytes for an operation sync result.</summary>

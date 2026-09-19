@@ -88,6 +88,88 @@ internal static class SqliteLocalCommitValidation
         throw new ArgumentException("SubscriptionId must be non-empty.", nameof(subscriptionId));
     }
 
+    /// <summary>Validates snapshot recovery input shape.</summary>
+    /// <param name="mutation">The recovery mutation.</param>
+    /// <exception cref="ArgumentException">The recovery mutation is malformed.</exception>
+    /// <exception cref="ArgumentNullException">A required value is null.</exception>
+    /// <exception cref="ArgumentOutOfRangeException">A numeric value is outside the supported range.</exception>
+    /// <exception cref="InvalidOperationException">The recovery revision would overflow.</exception>
+    internal static void ValidateSnapshotRecoveryMutationShape(LocalSnapshotRecoveryMutation mutation)
+    {
+        ArgumentExceptionHelper.ThrowIfNull(mutation);
+        ValidateRecoveryInput(mutation.StreamId, mutation.SubscriptionId);
+        ArgumentExceptionHelper.ThrowIfNull(mutation.Checkpoint);
+        ValidateRecoveryInput(mutation.Checkpoint.StreamId, mutation.Checkpoint.SubscriptionId);
+        if (mutation.Checkpoint.StreamId != mutation.StreamId || mutation.Checkpoint.SubscriptionId != mutation.SubscriptionId)
+        {
+            throw new ArgumentException("Snapshot recovery checkpoint must match the recovered stream and subscription.", nameof(mutation));
+        }
+
+        if (mutation.ExpectedPreviousCursor is not null)
+        {
+            ThrowIfBlank(mutation.ExpectedPreviousCursor, nameof(mutation), "Snapshot recovery previous cursor must be non-empty when supplied.");
+        }
+
+        ThrowIfBlank(mutation.Checkpoint.FrontierCursor, nameof(mutation), "Snapshot recovery checkpoint must include a frontier cursor.");
+        ThrowIfBlank(mutation.Checkpoint.ServerVersion, nameof(mutation), "Snapshot recovery checkpoint must include a server version.");
+        ValidatePayload(mutation.Checkpoint.ClientState, nameof(mutation));
+        ValidatePayload(mutation.OptimisticState, nameof(mutation));
+        if (mutation.ExpectedRevision < 0)
+        {
+            throw new ArgumentOutOfRangeException(nameof(mutation), mutation.ExpectedRevision, "Expected revision must be non-negative.");
+        }
+
+        if (mutation.ExpectedRevision == long.MaxValue)
+        {
+            throw new InvalidOperationException("The next durable snapshot revision would overflow.");
+        }
+
+        ValidateSnapshotFormatVersion(mutation.SnapshotFormatVersion, nameof(mutation));
+        ValidateSnapshotFormatVersion(mutation.Checkpoint.SnapshotFormatVersion, nameof(mutation));
+        ArgumentExceptionHelper.ThrowIfNull(mutation.OperationDispositions);
+        for (var index = 0; index < mutation.OperationDispositions.Count; index++)
+        {
+            ValidateSnapshotRecoveryDisposition(mutation.OperationDispositions[index]);
+        }
+    }
+
+    /// <summary>Validates a snapshot recovery operation disposition.</summary>
+    /// <param name="disposition">The disposition.</param>
+    /// <exception cref="ArgumentException">The disposition is malformed.</exception>
+    /// <exception cref="ArgumentNullException">The disposition is null.</exception>
+    internal static void ValidateSnapshotRecoveryDisposition(SnapshotOperationDisposition disposition)
+    {
+        ArgumentExceptionHelper.ThrowIfNull(disposition);
+        ValidateOperationId(disposition.OperationId, nameof(disposition));
+        if (disposition.Kind == SnapshotOperationDispositionKind.Unknown)
+        {
+            if (disposition.Result is null)
+            {
+                return;
+            }
+
+            throw new ArgumentException("Unknown snapshot recovery dispositions must not include a result.", nameof(disposition));
+        }
+
+        if (disposition.Result is not { } result || result.OperationId != disposition.OperationId)
+        {
+            throw new ArgumentException("Snapshot recovery result proof must match the disposition operation.", nameof(disposition));
+        }
+
+        if (disposition.Kind == SnapshotOperationDispositionKind.IncludedAccepted
+            && result.Kind is OperationResultKind.Accepted or OperationResultKind.Conflict)
+        {
+            return;
+        }
+
+        if (disposition.Kind == SnapshotOperationDispositionKind.TerminalRejected && result.Kind == OperationResultKind.Rejected)
+        {
+            return;
+        }
+
+        throw new ArgumentException("Snapshot recovery disposition result proof is not valid for the requested disposition kind.", nameof(disposition));
+    }
+
     /// <summary>Validates remote inbox lookup input.</summary>
     /// <param name="streamId">The stream identifier.</param>
     /// <param name="eventIds">The remote event identifiers.</param>
@@ -475,6 +557,20 @@ internal static class SqliteLocalCommitValidation
         }
 
         throw new ArgumentException(message, parameterName);
+    }
+
+    /// <summary>Validates a snapshot format version.</summary>
+    /// <param name="snapshotFormatVersion">The snapshot format version.</param>
+    /// <param name="parameterName">The parameter name.</param>
+    /// <exception cref="ArgumentOutOfRangeException">The version is not positive.</exception>
+    private static void ValidateSnapshotFormatVersion(int snapshotFormatVersion, string parameterName)
+    {
+        if (snapshotFormatVersion > 0)
+        {
+            return;
+        }
+
+        throw new ArgumentOutOfRangeException(parameterName, snapshotFormatVersion, "Snapshot format version must be positive.");
     }
 
     /// <summary>Computes a canonical SHA-256 payload hash.</summary>
