@@ -146,5 +146,5 @@ public sealed partial class LoopbackTransportAdapterTests
     private sealed record ReentrantAcknowledgeContext(
         IRemoteTransportSession? Session,
         ReceiveAcknowledgement Acknowledgement,
-        TaskCompletionSource Completed);
+        TaskCompletionSource<Task> Completed);
 }

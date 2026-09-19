@@ -169,6 +169,10 @@ public interface ILocalPayloadQuarantineStore
     System.Threading.Tasks.ValueTask<ReactiveUI.Primitives.OccasionallyConnected.LocalPayloadQuarantineRecord?> GetPayloadQuarantineAsync(ReactiveUI.Primitives.OccasionallyConnected.StreamId streamId, System.Threading.CancellationToken cancellationToken) { }
     System.Threading.Tasks.ValueTask<ReactiveUI.Primitives.OccasionallyConnected.LocalPayloadQuarantineResult> QuarantinePayloadAsync(ReactiveUI.Primitives.OccasionallyConnected.LocalPayloadQuarantineRequest request, System.Threading.CancellationToken cancellationToken) { }
 }
+public interface ILocalSnapshotRecoveryCaptureStore
+{
+    System.Threading.Tasks.ValueTask<ReactiveUI.Primitives.OccasionallyConnected.LocalSnapshotRecoveryCapture> CaptureSnapshotRecoveryAsync(ReactiveUI.Primitives.OccasionallyConnected.LocalSnapshotRecoveryCaptureRequest request, System.Threading.CancellationToken cancellationToken) { }
+}
 public interface ILocalSnapshotRecoveryStore
 {
     System.Threading.Tasks.ValueTask<ReactiveUI.Primitives.OccasionallyConnected.LocalSnapshotRecoveryResult> ApplySnapshotRecoveryAsync(ReactiveUI.Primitives.OccasionallyConnected.LocalSnapshotRecoveryMutation mutation, System.Threading.CancellationToken cancellationToken) { }
@@ -586,6 +590,24 @@ public record LocalSnapshot : System.IEquatable<ReactiveUI.Primitives.Occasional
     public string? ServerCursor { get; init; }
     public ReactiveUI.Primitives.OccasionallyConnected.PayloadEnvelope State { get; init; }
     public ReactiveUI.Primitives.OccasionallyConnected.StreamId StreamId { get; init; }
+}
+[System.Diagnostics.DebuggerDisplay("{StreamId,nq} {SubscriptionId,nq}")]
+public record LocalSnapshotRecoveryCapture : System.IEquatable<ReactiveUI.Primitives.OccasionallyConnected.LocalSnapshotRecoveryCapture>
+{
+    public required long NextClientSequence { get; init; }
+    public System.Collections.Generic.IReadOnlyList<ReactiveUI.Primitives.OccasionallyConnected.SyncOperation> PendingOperations { get; init; }
+    public System.Collections.Generic.IReadOnlyList<ReactiveUI.Primitives.OccasionallyConnected.SyncOperation> ReplayOperations { get; init; }
+    public string? ServerCursor { get; init; }
+    public ReactiveUI.Primitives.OccasionallyConnected.LocalSnapshot? Snapshot { get; init; }
+    public required ReactiveUI.Primitives.OccasionallyConnected.StreamId StreamId { get; init; }
+    public required ReactiveUI.Primitives.OccasionallyConnected.SubscriptionId SubscriptionId { get; init; }
+}
+[System.Diagnostics.DebuggerDisplay("{StreamId,nq} {SubscriptionId,nq}")]
+public record LocalSnapshotRecoveryCaptureRequest : System.IEquatable<ReactiveUI.Primitives.OccasionallyConnected.LocalSnapshotRecoveryCaptureRequest>
+{
+    public required ReactiveUI.Primitives.OccasionallyConnected.SnapshotRecoveryLimits Limits { get; init; }
+    public required ReactiveUI.Primitives.OccasionallyConnected.StreamId StreamId { get; init; }
+    public required ReactiveUI.Primitives.OccasionallyConnected.SubscriptionId SubscriptionId { get; init; }
 }
 [System.Diagnostics.DebuggerDisplay("{StreamId,nq} {SnapshotFormatVersion,nq}")]
 public record LocalSnapshotRecoveryMutation : System.IEquatable<ReactiveUI.Primitives.OccasionallyConnected.LocalSnapshotRecoveryMutation>
@@ -1172,6 +1194,17 @@ public enum SnapshotOperationDispositionKind
     IncludedAccepted = 0,
     TerminalRejected = 1,
     Unknown = 2,
+}
+[System.Diagnostics.DebuggerDisplay("{LimitName,nq}: {Observed} > {Maximum}")]
+public sealed class SnapshotRecoveryCapacityExceededException : System.InvalidOperationException
+{
+    public SnapshotRecoveryCapacityExceededException() { }
+    public SnapshotRecoveryCapacityExceededException(string limitName, long maximum, long observed) { }
+    public SnapshotRecoveryCapacityExceededException(string message) { }
+    public SnapshotRecoveryCapacityExceededException(string message, System.Exception innerException) { }
+    public string LimitName { get; }
+    public long Maximum { get; }
+    public long Observed { get; }
 }
 [System.Diagnostics.DebuggerDisplay("Pending={MaximumPendingOperations,nq}; Bytes={MaximumLogicalBytes,nq}")]
 public record SnapshotRecoveryLimits : System.IEquatable<ReactiveUI.Primitives.OccasionallyConnected.SnapshotRecoveryLimits>
