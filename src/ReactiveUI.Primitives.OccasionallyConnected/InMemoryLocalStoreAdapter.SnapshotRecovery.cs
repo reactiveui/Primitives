@@ -22,6 +22,20 @@ internal sealed partial class InMemoryLocalStoreAdapter
         CancellationToken cancellationToken) =>
         new(ApplySnapshotRecoveryCore(mutation, cancellationToken));
 
+    /// <summary>Compares operation matches by recovery role and client sequence.</summary>
+    /// <param name="left">The first match.</param>
+    /// <param name="right">The second match.</param>
+    /// <returns>The comparison result.</returns>
+    private static int CompareSnapshotRecoveryOperationMatch(SnapshotRecoveryOperationMatch left, SnapshotRecoveryOperationMatch right)
+    {
+        if (left.ReplayOnly != right.ReplayOnly)
+        {
+            return left.ReplayOnly ? 1 : -1;
+        }
+
+        return CompareOperationRecordSequence(left.Record, right.Record);
+    }
+
     /// <summary>Applies snapshot recovery synchronously behind the ValueTask interface.</summary>
     /// <param name="mutation">The recovery mutation.</param>
     /// <param name="cancellationToken">The cancellation token.</param>
@@ -124,9 +138,9 @@ internal sealed partial class InMemoryLocalStoreAdapter
         DateTimeOffset nowUtc,
         CancellationToken cancellationToken)
     {
-        var pending = GetSnapshotRecoveryPendingRecords(mutation.StreamId, cancellationToken);
-        ValidateSnapshotRecoveryDispositions(pending, dispositions);
-        var expiredLeaseIds = GetSnapshotRecoveryExpiredLeaseIds(pending, nowUtc);
+        var matches = CaptureSnapshotRecoveryOperationRoles(mutation.StreamId, dispositions, cancellationToken);
+        ValidateSnapshotRecoveryDispositions(matches, dispositions);
+        var expiredLeaseIds = GetSnapshotRecoveryExpiredLeaseIds(matches, nowUtc);
         var capacity = AddCapacity(
             new(0, checked(StringBytes(mutation.Checkpoint.FrontierCursor) - StringBytes(stream.ServerCursor))),
             CapacityDifference(LocalSnapshotCapacity(stream.Snapshot), LocalSnapshotCapacity(nextSnapshot)));
@@ -137,9 +151,11 @@ internal sealed partial class InMemoryLocalStoreAdapter
         for (var index = 0; index < dispositions.Length; index++)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            var record = pending[index];
+            var match = matches[index];
+            var replayOnlyDisposition = match.ReplayOnly;
+            var record = match.Record;
             var disposition = dispositions[index];
-            var change = CreateSnapshotRecoveryOperationChange(record, in disposition, expiredLeaseIds, nowUtc);
+            var change = CreateSnapshotRecoveryOperationChange(record, in disposition, replayOnlyDisposition, expiredLeaseIds, nowUtc);
             changes[index] = change;
             capacity = AddCapacity(
                 capacity,
@@ -157,7 +173,7 @@ internal sealed partial class InMemoryLocalStoreAdapter
                 capacity = AddCapacity(capacity, InclusionCapacity());
             }
 
-            CountSnapshotRecoveryDisposition(disposition.Kind, ref included, ref terminal, ref preserved);
+            CountSnapshotRecoveryDisposition(in disposition, replayOnlyDisposition, ref included, ref terminal, ref preserved);
         }
 
         for (var index = 0; index < expiredLeaseIds.Length; index++)
@@ -172,12 +188,14 @@ internal sealed partial class InMemoryLocalStoreAdapter
     /// <summary>Creates the operation mutation for one recovery disposition.</summary>
     /// <param name="record">The operation record.</param>
     /// <param name="disposition">The disposition.</param>
+    /// <param name="replayOnly">Whether the disposition targets replay-only receive inclusion.</param>
     /// <param name="expiredLeaseIds">The expired leases committed with recovery.</param>
     /// <param name="nowUtc">The sampled time.</param>
     /// <returns>The operation change.</returns>
     private SnapshotRecoveryOperationChange CreateSnapshotRecoveryOperationChange(
         OperationRecord record,
         in SnapshotRecoveryDisposition disposition,
+        bool replayOnly,
         Guid[] expiredLeaseIds,
         DateTimeOffset nowUtc)
     {
@@ -190,11 +208,15 @@ internal sealed partial class InMemoryLocalStoreAdapter
         var addInclusion = false;
         if (disposition.Kind == SnapshotOperationDispositionKind.IncludedAccepted)
         {
-            status = CreateStatus(record.Operation, GetResultState(disposition.ResultKind), record.Attempt, nowUtc, disposition.ReasonCode);
-            retryState = null;
-            leaseId = null;
-            leaseExpiresAtUtc = null;
-            terminalAtUtc = GetTerminalTimestamp(status, record.TerminalAtUtc, nowUtc);
+            if (!replayOnly)
+            {
+                status = CreateStatus(record.Operation, GetResultState(disposition.ResultKind), record.Attempt, nowUtc, disposition.ReasonCode);
+                retryState = null;
+                leaseId = null;
+                leaseExpiresAtUtc = null;
+                terminalAtUtc = GetTerminalTimestamp(status, record.TerminalAtUtc, nowUtc);
+            }
+
             addInclusion = !_includedOperations.Contains(record.Operation.OperationId);
         }
         else if (disposition.Kind == SnapshotOperationDispositionKind.TerminalRejected)
@@ -210,16 +232,21 @@ internal sealed partial class InMemoryLocalStoreAdapter
     }
 
     /// <summary>Finds expired leases after rejecting active ownership.</summary>
-    /// <param name="pending">The pending records.</param>
+    /// <param name="matches">The selected recovery operation matches.</param>
     /// <param name="nowUtc">The sampled time.</param>
     /// <returns>The expired leases to remove during commit.</returns>
     /// <exception cref="InvalidOperationException">A pending operation is actively leased.</exception>
-    private Guid[] GetSnapshotRecoveryExpiredLeaseIds(List<OperationRecord> pending, DateTimeOffset nowUtc)
+    private Guid[] GetSnapshotRecoveryExpiredLeaseIds(List<SnapshotRecoveryOperationMatch> matches, DateTimeOffset nowUtc)
     {
         List<Guid> expiredLeaseIds = [];
-        for (var index = 0; index < pending.Count; index++)
+        for (var index = 0; index < matches.Count; index++)
         {
-            var leaseId = pending[index].LeaseId;
+            if (matches[index].ReplayOnly)
+            {
+                continue;
+            }
+
+            var leaseId = matches[index].Record.LeaseId;
             if (!leaseId.HasValue)
             {
                 continue;
@@ -240,24 +267,45 @@ internal sealed partial class InMemoryLocalStoreAdapter
         return [.. expiredLeaseIds];
     }
 
-    /// <summary>Returns pending records for recovery using the same durable recovery convention.</summary>
+    /// <summary>Captures pending and replay-only operations in one bounded pass.</summary>
     /// <param name="streamId">The stream identifier.</param>
+    /// <param name="dispositions">The captured recovery dispositions.</param>
     /// <param name="cancellationToken">The cancellation token.</param>
-    /// <returns>The pending records.</returns>
-    private List<OperationRecord> GetSnapshotRecoveryPendingRecords(StreamId streamId, CancellationToken cancellationToken)
+    /// <returns>The selected operation matches in normalized recovery order.</returns>
+    /// <exception cref="ArgumentException">The local recovery frontier exceeds the advertised dispositions.</exception>
+    private List<SnapshotRecoveryOperationMatch> CaptureSnapshotRecoveryOperationRoles(
+        StreamId streamId,
+        SnapshotRecoveryDisposition[] dispositions,
+        CancellationToken cancellationToken)
     {
-        var records = GetStreamOperations(streamId);
-        List<OperationRecord> pending = [];
-        for (var index = 0; index < records.Count; index++)
+        List<SnapshotRecoveryOperationMatch> matches = [];
+        foreach (var pair in _operations)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            if (ShouldRecoverPendingOperation(records[index]))
+            var record = pair.Value;
+            if (record.Operation.StreamId != streamId)
             {
-                pending.Add(records[index]);
+                continue;
             }
+
+            var pendingVisible = ShouldRecoverPendingOperation(record);
+            var included = _includedOperations.Contains(record.Operation.OperationId);
+            var replayOnly = !pendingVisible && ShouldRecoverReplayOperation(record, included);
+            if (!pendingVisible && !replayOnly)
+            {
+                continue;
+            }
+
+            if (matches.Count == dispositions.Length)
+            {
+                throw new ArgumentException("Snapshot recovery dispositions must exactly match local recovery operations.", nameof(dispositions));
+            }
+
+            matches.Add(new(record, replayOnly));
         }
 
-        return pending;
+        matches.Sort(CompareSnapshotRecoveryOperationMatch);
+        return matches;
     }
 
     /// <summary>Reserves finite recovery capture capacity before allocating owned buffers.</summary>
@@ -270,8 +318,8 @@ internal sealed partial class InMemoryLocalStoreAdapter
     /// <exception cref="QueueCapacityExceededException">Active recovery planning exceeds configured bounds.</exception>
     /// <remarks>
     /// <see cref="LocalSnapshotRecoveryMutation"/> already owns the public disposition list. This reservation bounds
-    /// adapter-owned planning collections created for the transaction: validated dispositions, pending record
-    /// references, operation changes, duplicate tracking, and expired lease identifiers. Encoded bytes are logical
+    /// adapter-owned planning collections created for the transaction: validated dispositions, selected operation
+    /// matches, operation changes, duplicate tracking, and expired lease identifiers. Encoded bytes are logical
     /// GUID and count fields used to share the same finite admission model as retained store records.
     /// </remarks>
     private CapacityUsage ReserveSnapshotRecovery(int count, CancellationToken cancellationToken)
@@ -320,6 +368,11 @@ internal sealed partial class InMemoryLocalStoreAdapter
         SnapshotOperationDispositionKind Kind,
         OperationResultKind ResultKind,
         string? ReasonCode);
+
+    /// <summary>Describes a selected recovery operation and whether it is replay-only.</summary>
+    /// <param name="Record">The operation record.</param>
+    /// <param name="ReplayOnly">Whether the operation is replay-only receive inclusion.</param>
+    private readonly record struct SnapshotRecoveryOperationMatch(OperationRecord Record, bool ReplayOnly);
 
     /// <summary>Describes one operation change inside a snapshot recovery transaction.</summary>
     /// <param name="Record">The operation record.</param>
