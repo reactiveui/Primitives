@@ -11,7 +11,7 @@ using ReactiveUI.Primitives.OccasionallyConnected;
 namespace ReactiveUI.Primitives.OccasionallyConnected.Storage.Sqlite;
 
 /// <summary>Persists local commit and recovery state in SQLite.</summary>
-internal sealed class SqliteLocalCommitStore : IDisposable
+internal sealed partial class SqliteLocalCommitStore : IDisposable
 {
     /// <summary>The first valid client sequence.</summary>
     private const long FirstClientSequence = 1;
