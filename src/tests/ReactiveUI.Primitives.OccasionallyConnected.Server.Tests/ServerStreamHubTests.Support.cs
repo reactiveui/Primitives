@@ -56,6 +56,20 @@ public sealed partial class ServerStreamHubTests
         }
     }
 
+    /// <summary>Accepts operations and advances state without producing receive events.</summary>
+    private sealed class NoEventDomainHandler : IServerDomainHandler
+    {
+        /// <inheritdoc/>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public ValueTask<ServerDomainApplyResult> ApplyAsync(
+            ServerDomainApplyContext context,
+            CancellationToken cancellationToken)
+        {
+            _ = cancellationToken;
+            return ValueTask.FromResult(new ServerDomainApplyResult { NewState = new(context.Operation.StreamId, context.Resolution.ServerVersion, context.Operation.Payload), Events = [] });
+        }
+    }
+
     /// <summary>Blocks a domain call until released by the test.</summary>
     private sealed class BlockingDomainHandler : IServerDomainHandler
     {

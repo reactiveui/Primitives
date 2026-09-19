@@ -58,7 +58,7 @@ public sealed partial class InMemoryServerCommitJournalTests
         await Assert.That(view.OperationDispositions[0].Kind).IsEqualTo(SnapshotOperationDispositionKind.IncludedAccepted);
     }
 
-    /// <summary>Verifies an identical snapshot offer retry replays the retained proof without charging capacity again.</summary>
+    /// <summary>Verifies an identical snapshot offer retry replays through the hub mapper without charging capacity again.</summary>
     /// <returns>The asynchronous test operation.</returns>
     [Test]
     public async Task SnapshotOfferRetryReplaysWithoutMutationOrCapacityCharge()
@@ -77,9 +77,12 @@ public sealed partial class InMemoryServerCommitJournalTests
 
         var first = ((IServerSnapshotRecoveryJournal)journal).TryOfferSnapshot(offer);
         var retry = ((IServerSnapshotRecoveryJournal)journal).TryOfferSnapshot(offer);
+        var mapped = ServerStreamHub.MapOfferResult(retry, offer.RecoveryResult);
 
         await Assert.That(first.Status).IsEqualTo(ServerSnapshotOfferStatus.Offered);
         await Assert.That(retry.Status).IsEqualTo(ServerSnapshotOfferStatus.AlreadyOffered);
+        await Assert.That(mapped.Status).IsEqualTo(RemoteSnapshotRecoveryStatus.Recovered);
+        await Assert.That(mapped.Checkpoint).IsNotNull();
         await Assert.That(retry.SubscriptionState?.Revision).IsEqualTo(first.SubscriptionState?.Revision);
         await Assert.That(retry.Cursor).IsEqualTo(first.Cursor);
     }
@@ -709,6 +712,59 @@ public sealed partial class InMemoryServerCommitJournalTests
         await Assert.That(result.Status).IsEqualTo(ServerSnapshotOfferStatus.ValidationRejected);
         await Assert.That(after.Revision).IsEqualTo(state.Revision);
         await Assert.That(after.OfferCount).IsEqualTo(state.OfferCount);
+    }
+
+    /// <summary>Verifies validation-rejected durable snapshot offers map to a fail-closed public recovery result.</summary>
+    /// <returns>The asynchronous test operation.</returns>
+    /// <exception cref="InvalidOperationException">A recovered snapshot offer did not include a checkpoint.</exception>
+    [Test]
+    public async Task SnapshotOfferValidationRejectedMapsToFailClosedRecoveryResult()
+    {
+        var journal = CreateJournal();
+        var key = OperationKey(FirstOperationSeed);
+        var identity = SnapshotSubscription();
+        _ = journal.TryCommit(Plan(
+            0,
+            State(FirstVersion),
+            Stamp(key),
+            Entry(key, OperationResultKind.Accepted, FirstOperationSeed)));
+        var state = journal.RegisterSubscription(identity);
+        var snapshot = journal.Read(StreamKey(), [key]);
+        var request = SnapshotRequest(identity.SubscriptionId, []);
+        var offer = CreateSnapshotOffer(identity, SnapshotView(snapshot, state), request, snapshot);
+        var checkpoint = offer.RecoveryResult.Checkpoint
+            ?? throw new InvalidOperationException("A recovered snapshot offer must include a checkpoint.");
+        var validationRejected = ((IServerSnapshotRecoveryJournal)journal).TryOfferSnapshot(offer with
+        {
+            RecoveryResult = offer.RecoveryResult with
+            {
+                Checkpoint = checkpoint with
+                {
+                    FrontierCursor = ServerReceiveGroupCursor.Create(StreamKey(), DoubleEntryCount),
+                },
+            },
+        });
+
+        var mapped = ServerStreamHub.MapOfferResult(validationRejected, offer.RecoveryResult);
+
+        await Assert.That(validationRejected.Status).IsEqualTo(ServerSnapshotOfferStatus.ValidationRejected);
+        await Assert.That(mapped.Status).IsEqualTo(RemoteSnapshotRecoveryStatus.ValidationRejected);
+        await Assert.That(mapped.ReasonCode).IsEqualTo("snapshot.validation_rejected");
+        await Assert.That(mapped.Checkpoint).IsNull();
+    }
+
+    /// <summary>Verifies unknown durable snapshot offer statuses map to fail-closed validation rejection.</summary>
+    /// <returns>The asynchronous test operation.</returns>
+    [Test]
+    public async Task UnknownSnapshotOfferStatusMapsToFailClosedRecoveryResult()
+    {
+        var mapped = ServerStreamHub.MapOfferResult(
+            new() { Status = (ServerSnapshotOfferStatus)int.MaxValue, SubscriptionState = null, Cursor = null },
+            new() { Status = RemoteSnapshotRecoveryStatus.Recovered });
+
+        await Assert.That(mapped.Status).IsEqualTo(RemoteSnapshotRecoveryStatus.ValidationRejected);
+        await Assert.That(mapped.ReasonCode).IsEqualTo("snapshot.validation_rejected");
+        await Assert.That(mapped.Checkpoint).IsNull();
     }
 
     /// <summary>Verifies mismatched recovered operation proofs are rejected before mutation.</summary>

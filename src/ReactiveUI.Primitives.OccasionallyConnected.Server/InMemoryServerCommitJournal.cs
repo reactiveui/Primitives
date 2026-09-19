@@ -458,14 +458,29 @@ internal sealed class InMemoryServerCommitJournal : IServerCommitJournal, IServe
         var checkpoint = request.RecoveryResult.Checkpoint;
         return viewState is not null
             && checkpoint is not null
-            && viewState.Revision < long.MaxValue
+            && SnapshotOfferRevisionMatches(offer, viewState)
             && offer.SnapshotStreamRevision == request.View.Snapshot.Revision
             && offer.SnapshotLastEventSequence == request.View.Snapshot.LastEventSequence
             && offer.SnapshotSubscriptionGeneration == viewState.Generation
-            && offer.SnapshotOriginatingSubscriptionRevision == viewState.Revision
-            && offer.SnapshotIssuedSubscriptionRevision == viewState.Revision + 1
             && offer.SnapshotFormatVersion == checkpoint.SnapshotFormatVersion
             && ServerSnapshotRecoveryJournalOperations.PayloadMatches(offer.SnapshotClientState, checkpoint.ClientState);
+    }
+
+    /// <summary>Checks whether a retained snapshot offer is bound to this capture or its issued lost-response retry.</summary>
+    /// <param name="offer">The retained offer.</param>
+    /// <param name="viewState">The captured subscription state.</param>
+    /// <returns>Whether the revision fence matches.</returns>
+    private static bool SnapshotOfferRevisionMatches(ServerSubscriptionOffer offer, ServerSubscriptionState viewState)
+    {
+        if (offer.SnapshotOriginatingSubscriptionRevision is not { } origin
+            || offer.SnapshotIssuedSubscriptionRevision is not { } issued
+            || origin == long.MaxValue)
+        {
+            return false;
+        }
+
+        return (viewState.Revision == origin || viewState.Revision == issued)
+            && issued == origin + 1;
     }
 
     /// <summary>Allocates the next durable subscription generation.</summary>

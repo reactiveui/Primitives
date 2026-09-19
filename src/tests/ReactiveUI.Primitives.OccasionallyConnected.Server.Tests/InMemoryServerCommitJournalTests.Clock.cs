@@ -19,12 +19,30 @@ public sealed partial class InMemoryServerCommitJournalTests
         var journal = new InMemoryServerCommitJournal(new() { TimeProvider = clock, OperationRetention = retention });
         var key = OperationKey(FirstOperationSeed);
         var plan = Plan(0, State(FirstVersion), Stamp(key), Entry(key, OperationResultKind.Accepted, FirstOperationSeed));
-        var pendingCommit = Task.Run(() => journal.TryCommit(plan));
+        var pendingCommit = Task.Factory.StartNew(
+            static state =>
+            {
+                var context = ((InMemoryServerCommitJournal Journal, ServerCommitPlan Plan))state!;
+                return context.Journal.TryCommit(context.Plan);
+            },
+            (Journal: journal, Plan: plan),
+            CancellationToken.None,
+            TaskCreationOptions.LongRunning,
+            TaskScheduler.Default);
         var later = Start + retention;
         try
         {
             await entered.Task.WaitAsync(GuardTimeout);
-            var compacted = await Task.Run(() => journal.Compact(later)).WaitAsync(GuardTimeout);
+            var compacted = await Task.Factory.StartNew(
+                static state =>
+                {
+                    var context = ((InMemoryServerCommitJournal Journal, DateTimeOffset Later))state!;
+                    return context.Journal.Compact(context.Later);
+                },
+                (Journal: journal, Later: later),
+                CancellationToken.None,
+                TaskCreationOptions.LongRunning,
+                TaskScheduler.Default).WaitAsync(GuardTimeout);
             await Assert.That(compacted).IsEqualTo(0);
         }
         finally
