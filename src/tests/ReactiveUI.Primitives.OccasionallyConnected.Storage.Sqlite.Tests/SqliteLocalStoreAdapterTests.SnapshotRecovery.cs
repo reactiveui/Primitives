@@ -681,26 +681,137 @@ public sealed partial class SqliteLocalStoreAdapterTests
         await Assert.That(recovered.PendingOperations.Count).IsEqualTo(SixPendingOperations);
     }
 
-    /// <summary>Verifies conflict result proofs map to durable conflict state during recovery.</summary>
+    /// <summary>Verifies accepted replay-only work gets durable receive inclusion during snapshot recovery.</summary>
     /// <returns>The asynchronous test.</returns>
     [Test]
-    public async Task WhenSnapshotRecoveryIncludesConflict_ThenOperationStateBecomesConflict()
+    public async Task WhenSnapshotRecoveryIncludesAcceptedReplayOnlyOperation_ThenReceiveInclusionSurvivesRestart()
     {
         using var database = TempDatabase.Create();
-        await using var adapter = CreateAdapter(database.Path);
-        await adapter.InitializeAsync(new(StoreIdentity, SchemaVersion, false), CancellationToken.None);
-        var subscriptionId = await adapter.GetOrCreateSubscriptionIdAsync(Stream, null, CancellationToken.None);
-        var operation = await adapter.CommitLocalOperationAsync(CreateOperation(FirstClientSequence), CreateSnapshotMutation(0), CancellationToken.None);
-        var mutation = CreateSnapshotRecoveryMutation(
-            subscriptionId,
-            expectedRevision: FirstClientSequence,
-            expectedCursor: null,
-            [IncludedSnapshotDisposition(operation.OperationId, OperationResultKind.Conflict)]);
+        SubscriptionId subscriptionId;
+        OperationId operationId;
+        await using (var setup = CreateAdapter(database.Path))
+        {
+            await setup.InitializeAsync(new(StoreIdentity, SchemaVersion, false), CancellationToken.None);
+            subscriptionId = await setup.GetOrCreateSubscriptionIdAsync(Stream, null, CancellationToken.None);
+            var operation = await setup.CommitLocalOperationAsync(CreateOperation(FirstClientSequence), CreateSnapshotMutation(0), CancellationToken.None);
+            operationId = operation.OperationId;
+            await CompleteUploadAsync(setup, operationId, OperationResultKind.Accepted);
+        }
 
-        _ = await RequireSnapshotRecoveryStore(adapter).ApplySnapshotRecoveryAsync(mutation, CancellationToken.None);
-        var status = await adapter.GetOperationStatusAsync(operation.OperationId, CancellationToken.None);
+        await using (var adapter = CreateAdapter(database.Path))
+        {
+            await adapter.InitializeAsync(new(StoreIdentity, SchemaVersion, false), CancellationToken.None);
+            var before = await adapter.RecoverStreamAsync(Stream, subscriptionId, CancellationToken.None);
+            var mutation = CreateSnapshotRecoveryMutation(
+                subscriptionId,
+                expectedRevision: FirstClientSequence,
+                expectedCursor: null,
+                [IncludedSnapshotDisposition(operationId, OperationResultKind.Accepted)]);
+
+            await Assert.That(before.PendingOperations.Count).IsEqualTo(0);
+            await Assert.That(before.ReplayOperations.Count).IsEqualTo(1);
+            await Assert.That(before.ReplayOperations[0].OperationId).IsEqualTo(operationId);
+            var result = await RequireSnapshotRecoveryStore(adapter).ApplySnapshotRecoveryAsync(mutation, CancellationToken.None);
+
+            await Assert.That(result.IncludedOperationCount).IsEqualTo(1);
+            await Assert.That(result.TerminalOperationCount).IsEqualTo(0);
+            await Assert.That(result.PreservedPendingOperationCount).IsEqualTo(0);
+        }
+
+        await using var reopened = CreateAdapter(database.Path);
+        await reopened.InitializeAsync(new(StoreIdentity, SchemaVersion, false), CancellationToken.None);
+        var recovered = await reopened.RecoverStreamAsync(Stream, subscriptionId, CancellationToken.None);
+        var status = await reopened.GetOperationStatusAsync(operationId, CancellationToken.None);
+
+        await Assert.That(status?.State).IsEqualTo(SyncOperationState.Synchronized);
+        await Assert.That(recovered.ServerCursor).IsEqualTo(SnapshotRecoveryCursor);
+        await Assert.That(recovered.PendingOperations.Count).IsEqualTo(0);
+        await Assert.That(recovered.ReplayOperations.Count).IsEqualTo(0);
+    }
+
+    /// <summary>Verifies unproven replay-only work cannot be removed from durable replay recovery.</summary>
+    /// <returns>The asynchronous test.</returns>
+    [Test]
+    public async Task WhenSnapshotRecoveryReplayOnlyProofIsUnknown_ThenSqliteStateIsUnchangedAfterRestart()
+    {
+        using var database = TempDatabase.Create();
+        SubscriptionId subscriptionId;
+        OperationId operationId;
+        await using (var setup = CreateAdapter(database.Path))
+        {
+            await setup.InitializeAsync(new(StoreIdentity, SchemaVersion, false), CancellationToken.None);
+            subscriptionId = await setup.GetOrCreateSubscriptionIdAsync(Stream, null, CancellationToken.None);
+            var operation = await setup.CommitLocalOperationAsync(CreateOperation(FirstClientSequence), CreateSnapshotMutation(0), CancellationToken.None);
+            operationId = operation.OperationId;
+            await CompleteUploadAsync(setup, operationId, OperationResultKind.Accepted);
+        }
+
+        await using (var adapter = CreateAdapter(database.Path))
+        {
+            await adapter.InitializeAsync(new(StoreIdentity, SchemaVersion, false), CancellationToken.None);
+            var before = await adapter.RecoverStreamAsync(Stream, subscriptionId, CancellationToken.None);
+            var mutation = CreateSnapshotRecoveryMutation(
+                subscriptionId,
+                expectedRevision: FirstClientSequence,
+                expectedCursor: null,
+                [UnknownSnapshotDisposition(operationId)]);
+
+            await Assert.That(before.PendingOperations.Count).IsEqualTo(0);
+            await Assert.That(before.ReplayOperations.Count).IsEqualTo(1);
+            await Assert.That(before.ReplayOperations[0].OperationId).IsEqualTo(operationId);
+            Func<Task> apply = () => RequireSnapshotRecoveryStore(adapter).ApplySnapshotRecoveryAsync(mutation, CancellationToken.None).AsTask();
+
+            await Assert.That(apply).ThrowsExactly<ArgumentException>();
+        }
+
+        await using var reopened = CreateAdapter(database.Path);
+        await reopened.InitializeAsync(new(StoreIdentity, SchemaVersion, false), CancellationToken.None);
+        var recovered = await reopened.RecoverStreamAsync(Stream, subscriptionId, CancellationToken.None);
+        var status = await reopened.GetOperationStatusAsync(operationId, CancellationToken.None);
+
+        await Assert.That(status?.State).IsEqualTo(SyncOperationState.Synchronized);
+        await Assert.That(recovered.ServerCursor).IsNull();
+        await Assert.That(recovered.PendingOperations.Count).IsEqualTo(0);
+        await Assert.That(recovered.ReplayOperations.Count).IsEqualTo(1);
+        await Assert.That(recovered.ReplayOperations[0].OperationId).IsEqualTo(operationId);
+    }
+
+    /// <summary>Verifies conflict result proofs preserve pending counts but still suppress replay after restart.</summary>
+    /// <returns>The asynchronous test.</returns>
+    [Test]
+    public async Task WhenSnapshotRecoveryIncludesConflict_ThenCountsPreservedAndReplayStaysSuppressed()
+    {
+        using var database = TempDatabase.Create();
+        SubscriptionId subscriptionId;
+        OperationId operationId;
+        await using (var adapter = CreateAdapter(database.Path))
+        {
+            await adapter.InitializeAsync(new(StoreIdentity, SchemaVersion, false), CancellationToken.None);
+            subscriptionId = await adapter.GetOrCreateSubscriptionIdAsync(Stream, null, CancellationToken.None);
+            var operation = await adapter.CommitLocalOperationAsync(CreateOperation(FirstClientSequence), CreateSnapshotMutation(0), CancellationToken.None);
+            operationId = operation.OperationId;
+            var mutation = CreateSnapshotRecoveryMutation(
+                subscriptionId,
+                expectedRevision: FirstClientSequence,
+                expectedCursor: null,
+                [IncludedSnapshotDisposition(operationId, OperationResultKind.Conflict)]);
+
+            var result = await RequireSnapshotRecoveryStore(adapter).ApplySnapshotRecoveryAsync(mutation, CancellationToken.None);
+
+            await Assert.That(result.IncludedOperationCount).IsEqualTo(0);
+            await Assert.That(result.TerminalOperationCount).IsEqualTo(0);
+            await Assert.That(result.PreservedPendingOperationCount).IsEqualTo(1);
+        }
+
+        await using var reopened = CreateAdapter(database.Path);
+        await reopened.InitializeAsync(new(StoreIdentity, SchemaVersion, false), CancellationToken.None);
+        var status = await reopened.GetOperationStatusAsync(operationId, CancellationToken.None);
+        var recovered = await reopened.RecoverStreamAsync(Stream, subscriptionId, CancellationToken.None);
 
         await Assert.That(status?.State).IsEqualTo(SyncOperationState.Conflict);
+        await Assert.That(recovered.PendingOperations.Count).IsEqualTo(1);
+        await Assert.That(recovered.PendingOperations[0].OperationId).IsEqualTo(operationId);
+        await Assert.That(recovered.ReplayOperations.Count).IsEqualTo(0);
     }
 
     /// <summary>Verifies disposition membership count and duplicate errors preserve durable state.</summary>
@@ -837,5 +948,24 @@ public sealed partial class SqliteLocalStoreAdapterTests
         await Assert.That(recovered.ServerCursor).IsNull();
         await Assert.That(recovered.PendingOperations.Count).IsEqualTo(1);
         await Assert.That(status?.State).IsEqualTo(SyncOperationState.QueuedForUpload);
+    }
+
+    /// <summary>Completes one leased operation upload without recording authoritative receive inclusion.</summary>
+    /// <param name="adapter">The adapter.</param>
+    /// <param name="operationId">The operation identifier.</param>
+    /// <param name="kind">The operation result kind.</param>
+    /// <returns>The asynchronous task.</returns>
+    private static async Task CompleteUploadAsync(
+        SqliteLocalStoreAdapter adapter,
+        OperationId operationId,
+        OperationResultKind kind)
+    {
+        var lease = await ReadSingleLeaseAsync(adapter, new(Stream, FirstAttempt, NormalWorkerBytes, TimeSpan.FromMinutes(1)));
+        var result = new RemoteSyncResult(
+            lease.LeaseId,
+            [new(operationId, kind, null, ServerVersion)],
+            null,
+            null);
+        await adapter.ApplySyncResultAsync(lease.LeaseId, result, CancellationToken.None);
     }
 }

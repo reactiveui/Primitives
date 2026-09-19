@@ -34,23 +34,26 @@ internal sealed partial class InMemoryLocalStoreAdapter
     }
 
     /// <summary>Counts one validated disposition for the recovery result.</summary>
-    /// <param name="kind">The disposition kind.</param>
+    /// <param name="disposition">The disposition.</param>
+    /// <param name="replayOnly">Whether the disposition targets a replay-only operation.</param>
     /// <param name="included">The included accepted count.</param>
     /// <param name="terminal">The terminal rejected count.</param>
     /// <param name="preserved">The preserved pending count.</param>
     private static void CountSnapshotRecoveryDisposition(
-        SnapshotOperationDispositionKind kind,
+        in SnapshotRecoveryDisposition disposition,
+        bool replayOnly,
         ref int included,
         ref int terminal,
         ref int preserved)
     {
-        if (kind == SnapshotOperationDispositionKind.IncludedAccepted)
+        if (disposition.Kind == SnapshotOperationDispositionKind.IncludedAccepted
+            && (replayOnly || disposition.ResultKind == OperationResultKind.Accepted))
         {
             included++;
             return;
         }
 
-        if (kind == SnapshotOperationDispositionKind.TerminalRejected)
+        if (disposition.Kind == SnapshotOperationDispositionKind.TerminalRejected)
         {
             terminal++;
             return;
@@ -230,33 +233,49 @@ internal sealed partial class InMemoryLocalStoreAdapter
         throw new ArgumentOutOfRangeException(parameterName, snapshotFormatVersion, "Snapshot format version must be positive.");
     }
 
-    /// <summary>Validates that recovery dispositions exactly match pending operations in order.</summary>
-    /// <param name="pending">The pending operation records.</param>
+    /// <summary>Validates that recovery dispositions exactly match pending then replay-only operations in order.</summary>
+    /// <param name="matches">The selected recovery operation matches.</param>
     /// <param name="dispositions">The validated dispositions.</param>
-    /// <exception cref="ArgumentException">The dispositions do not match the pending operation frontier.</exception>
+    /// <exception cref="ArgumentException">The dispositions do not match the local recovery frontier.</exception>
     private static void ValidateSnapshotRecoveryDispositions(
-        List<OperationRecord> pending,
+        List<SnapshotRecoveryOperationMatch> matches,
         SnapshotRecoveryDisposition[] dispositions)
     {
-        if (pending.Count != dispositions.Length)
+        if (matches.Count != dispositions.Length)
         {
-            throw new ArgumentException("Snapshot recovery dispositions must exactly match pending operations.", nameof(dispositions));
+            throw new ArgumentException("Snapshot recovery dispositions must exactly match local recovery operations.", nameof(dispositions));
         }
 
         HashSet<OperationId> seen = [];
         for (var index = 0; index < dispositions.Length; index++)
         {
-            if (!seen.Add(dispositions[index].OperationId))
+            var disposition = dispositions[index];
+            if (!seen.Add(disposition.OperationId))
             {
                 throw new ArgumentException("Snapshot recovery dispositions must not contain duplicate operations.", nameof(dispositions));
             }
 
-            if (pending[index].Operation.OperationId == dispositions[index].OperationId)
+            var match = matches[index];
+            if (match.Record.Operation.OperationId != disposition.OperationId)
+            {
+                var message = match.ReplayOnly
+                    ? "Snapshot recovery dispositions must preserve replay operation order after pending operations."
+                    : "Snapshot recovery dispositions must preserve pending operation order.";
+                throw new ArgumentException(message, nameof(dispositions));
+            }
+
+            if (!match.ReplayOnly)
             {
                 continue;
             }
 
-            throw new ArgumentException("Snapshot recovery dispositions must preserve pending operation order.", nameof(dispositions));
+            if (disposition.Kind == SnapshotOperationDispositionKind.IncludedAccepted
+                && disposition.ResultKind == OperationResultKind.Accepted)
+            {
+                continue;
+            }
+
+            throw new ArgumentException("Replay-only snapshot recovery dispositions must carry accepted inclusion proof.", nameof(dispositions));
         }
     }
 
