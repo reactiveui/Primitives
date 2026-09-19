@@ -958,6 +958,7 @@ public record RemoteSnapshotRecoveryRequest : System.IEquatable<ReactiveUI.Primi
     public required string? ExpiredCursor { get; init; }
     public required long MaximumResponseBytes { get; init; }
     public required System.Collections.Generic.IReadOnlyList<ReactiveUI.Primitives.OccasionallyConnected.SyncOperation> PendingOperations { get; init; }
+    public System.Collections.Generic.IReadOnlyList<ReactiveUI.Primitives.OccasionallyConnected.SyncOperation> ReplayOperations { get; init; }
     public required int SnapshotFormatVersion { get; init; }
     public required ReactiveUI.Primitives.OccasionallyConnected.StreamId StreamId { get; init; }
     public required ReactiveUI.Primitives.OccasionallyConnected.SubscriptionId SubscriptionId { get; init; }

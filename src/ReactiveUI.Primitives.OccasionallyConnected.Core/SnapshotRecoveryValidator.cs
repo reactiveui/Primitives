@@ -34,7 +34,7 @@ public static class SnapshotRecoveryValidator
         ArgumentExceptionHelper.ThrowIfNull(request);
         ValidateLimits(limits);
         var logicalBytes = ValidateRequestHeader(request, limits);
-        logicalBytes += ValidateOperations(request.PendingOperations, request.StreamId, limits);
+        logicalBytes += ValidateOperations(request.PendingOperations, request.ReplayOperations, request.StreamId, limits);
         ThrowIfLogicalBytesExceeded(logicalBytes, limits.MaximumLogicalBytes, nameof(request));
     }
 
@@ -73,7 +73,7 @@ public static class SnapshotRecoveryValidator
         }
 
         logicalBytes += ValidateCheckpoint(result.Checkpoint, request, limits);
-        logicalBytes += ValidateDispositions(dispositions, request.PendingOperations, limits);
+        logicalBytes += ValidateDispositions(dispositions, request.PendingOperations, request.ReplayOperations, limits);
         ThrowIfLogicalBytesExceeded(logicalBytes, request.MaximumResponseBytes, nameof(result));
         ThrowIfLogicalBytesExceeded(logicalBytes, limits.MaximumLogicalBytes, nameof(result));
     }
@@ -102,6 +102,7 @@ public static class SnapshotRecoveryValidator
         ValidateRecoveredBinding(mutation, recovered);
 
         var request = CreateBindingRequest(mutation, recovered, limits);
+        Validate(request, limits);
         logicalBytes += ValidateCheckpoint(mutation.Checkpoint, request, limits);
         if (mutation.Checkpoint.SnapshotFormatVersion != mutation.SnapshotFormatVersion)
         {
@@ -111,7 +112,7 @@ public static class SnapshotRecoveryValidator
         logicalBytes += ValidatePayload(mutation.OptimisticState, limits);
         ValidateOptimisticPayload(mutation);
 
-        logicalBytes += ValidateDispositions(mutation.OperationDispositions, recovered.PendingOperations, limits);
+        logicalBytes += ValidateDispositions(mutation.OperationDispositions, recovered.PendingOperations, recovered.ReplayOperations, limits);
         ThrowIfLogicalBytesExceeded(logicalBytes, limits.MaximumLogicalBytes, nameof(mutation));
     }
 
@@ -162,7 +163,7 @@ public static class SnapshotRecoveryValidator
     /// <exception cref="ArgumentOutOfRangeException">A numeric request limit or version is invalid.</exception>
     private static long ValidateRequestHeader(RemoteSnapshotRecoveryRequest request, SnapshotRecoveryLimits limits)
     {
-        if (request.SubscriptionId.Value == Guid.Empty || request.PendingOperations is null)
+        if (request.SubscriptionId.Value == Guid.Empty || request.PendingOperations is null || request.ReplayOperations is null)
         {
             throw new ArgumentException("The snapshot recovery request identity is malformed.", nameof(request));
         }
@@ -185,29 +186,56 @@ public static class SnapshotRecoveryValidator
         return logicalBytes;
     }
 
-    /// <summary>Validates every pending operation in one bounded recovery request.</summary>
+    /// <summary>Validates every pending and replay operation in one bounded recovery request.</summary>
     /// <param name="operations">The pending operations.</param>
+    /// <param name="replayOperations">The replay operations.</param>
     /// <param name="streamId">The expected stream identifier.</param>
     /// <param name="limits">The configured limits.</param>
     /// <returns>The operation logical byte count.</returns>
     /// <exception cref="ArgumentException">An operation is malformed, duplicated, foreign, or over a limit.</exception>
-    private static long ValidateOperations(IReadOnlyList<SyncOperation> operations, StreamId streamId, SnapshotRecoveryLimits limits)
+    private static long ValidateOperations(
+        IReadOnlyList<SyncOperation> operations,
+        IReadOnlyList<SyncOperation> replayOperations,
+        StreamId streamId,
+        SnapshotRecoveryLimits limits)
     {
-        var count = operations.Count;
-        if (count > limits.MaximumPendingOperations)
+        var totalCount = operations.Count + replayOperations.Count;
+        if (totalCount > limits.MaximumPendingOperations)
         {
             throw new ArgumentException("The snapshot recovery request exceeds the pending operation limit.", nameof(operations));
         }
 
-        var logicalBytes = Int32LogicalBytes;
+        var logicalBytes = Int32LogicalBytes + Int32LogicalBytes;
         HashSet<OperationId> operationIds = [];
         HashSet<long> clientSequences = [];
-        for (var index = 0; index < count; index++)
+        logicalBytes += ValidateOperationRole(operations, streamId, limits, operationIds, clientSequences);
+        logicalBytes += ValidateOperationRole(replayOperations, streamId, limits, operationIds, clientSequences);
+
+        return logicalBytes;
+    }
+
+    /// <summary>Validates one operation role in a bounded recovery request.</summary>
+    /// <param name="operations">The role operations.</param>
+    /// <param name="streamId">The expected stream identifier.</param>
+    /// <param name="limits">The configured limits.</param>
+    /// <param name="operationIds">The operation ids already used by earlier roles.</param>
+    /// <param name="clientSequences">The client sequences already used by earlier roles.</param>
+    /// <returns>The operation role logical byte count.</returns>
+    /// <exception cref="ArgumentException">An operation is malformed, duplicated, foreign, or over a limit.</exception>
+    private static long ValidateOperationRole(
+        IReadOnlyList<SyncOperation> operations,
+        StreamId streamId,
+        SnapshotRecoveryLimits limits,
+        HashSet<OperationId> operationIds,
+        HashSet<long> clientSequences)
+    {
+        var logicalBytes = 0L;
+        for (var index = 0; index < operations.Count; index++)
         {
             var operation = operations[index];
             if (IsMalformedOperation(operation, streamId))
             {
-                throw new ArgumentException("A snapshot recovery pending operation is malformed.", nameof(operations));
+                throw new ArgumentException("A snapshot recovery operation is malformed.", nameof(operations));
             }
 
             operation.Policy.Validate();
@@ -273,6 +301,7 @@ public static class SnapshotRecoveryValidator
         RecoveredStream recovered,
         SnapshotRecoveryLimits limits)
     {
+        ValidateRecoveredOperationCounts(recovered, limits);
         ValidateRecoveredOperationStreams(mutation, recovered);
 
         return new()
@@ -284,6 +313,7 @@ public static class SnapshotRecoveryValidator
             ClientStateSchemaVersion = mutation.Checkpoint.ClientState.SchemaVersion,
             SnapshotFormatVersion = mutation.Checkpoint.SnapshotFormatVersion,
             PendingOperations = recovered.PendingOperations,
+            ReplayOperations = GetReplayOnlyOperations(recovered.PendingOperations, recovered.ReplayOperations),
             MaximumResponseBytes = limits.MaximumLogicalBytes,
         };
     }
@@ -341,23 +371,27 @@ public static class SnapshotRecoveryValidator
     /// <summary>Validates exact disposition membership and per-disposition result shape.</summary>
     /// <param name="dispositions">The dispositions to validate.</param>
     /// <param name="operations">The pending operations to match.</param>
+    /// <param name="replayOperations">The replay operations to match.</param>
     /// <param name="limits">The configured limits.</param>
     /// <returns>The disposition logical byte count.</returns>
     /// <exception cref="ArgumentException">The disposition set is malformed or does not exactly match.</exception>
     private static long ValidateDispositions(
         IReadOnlyList<SnapshotOperationDisposition> dispositions,
         IReadOnlyList<SyncOperation> operations,
+        IReadOnlyList<SyncOperation> replayOperations,
         SnapshotRecoveryLimits limits)
     {
-        ValidateDispositionCollections(dispositions, operations, limits);
+        var operationIds = CreateOperationIdSet(operations);
+        var replayOnlyIds = CreateReplayOnlyOperationIdSet(operationIds, replayOperations);
+        ValidateDispositionCollections(dispositions, operationIds.Count + replayOnlyIds.Count, limits);
         var dispositionCount = dispositions.Count;
-        var operationCount = operations.Count;
         var logicalBytes = Int32LogicalBytes;
         Dictionary<OperationId, int> resultCounts = [with(capacity: dispositionCount)];
         for (var index = 0; index < dispositionCount; index++)
         {
             var disposition = dispositions[index];
             ValidateDispositionShape(disposition);
+            ValidateDispositionBinding(disposition, operationIds, replayOnlyIds);
             logicalBytes += ValidateDispositionResult(disposition, limits);
             logicalBytes += GuidLogicalBytes + Int32LogicalBytes;
             if (resultCounts.ContainsKey(disposition.OperationId))
@@ -368,29 +402,125 @@ public static class SnapshotRecoveryValidator
             resultCounts.Add(disposition.OperationId, 1);
         }
 
-        for (var index = 0; index < operationCount; index++)
-        {
-            if (!resultCounts.ContainsKey(operations[index].OperationId))
-            {
-                throw new ArgumentException("Snapshot recovery dispositions omit a pending operation.", nameof(dispositions));
-            }
-        }
-
         return logicalBytes;
     }
 
     /// <summary>Validates disposition collection presence and cardinality.</summary>
     /// <param name="dispositions">The dispositions to validate.</param>
-    /// <param name="operations">The pending operations to match.</param>
+    /// <param name="operationCount">The operation count to match.</param>
     /// <param name="limits">The configured limits.</param>
     /// <exception cref="ArgumentException">The collections are missing or do not exactly match.</exception>
     private static void ValidateDispositionCollections(
         IReadOnlyList<SnapshotOperationDisposition> dispositions,
-        IReadOnlyList<SyncOperation> operations,
+        int operationCount,
         SnapshotRecoveryLimits limits) =>
-        _ = dispositions.Count == operations.Count && dispositions.Count <= limits.MaximumPendingOperations
+        _ = dispositions.Count == operationCount && dispositions.Count <= limits.MaximumPendingOperations
             ? true
-            : throw new ArgumentException("Snapshot recovery dispositions must exactly match pending operations.", nameof(dispositions));
+            : throw new ArgumentException("Snapshot recovery dispositions must exactly match requested operations.", nameof(dispositions));
+
+    /// <summary>Creates the set of pending operation ids used for disposition membership validation.</summary>
+    /// <param name="operations">The pending operations.</param>
+    /// <returns>The pending operation id set.</returns>
+    /// <exception cref="ArgumentException">A pending operation id is duplicated.</exception>
+    private static HashSet<OperationId> CreateOperationIdSet(IReadOnlyList<SyncOperation> operations)
+    {
+        HashSet<OperationId> operationIds = [];
+        for (var index = 0; index < operations.Count; index++)
+        {
+            if (!operationIds.Add(operations[index].OperationId))
+            {
+                throw new ArgumentException("Snapshot recovery pending operations contain duplicate operation ids.", nameof(operations));
+            }
+        }
+
+        return operationIds;
+    }
+
+    /// <summary>Creates the set of replay-only operation ids after filtering ids already present as pending.</summary>
+    /// <param name="operationIds">The pending operation ids.</param>
+    /// <param name="replayOperations">The replay operations.</param>
+    /// <returns>The replay-only operation id set.</returns>
+    /// <exception cref="ArgumentException">A replay-only operation id is duplicated.</exception>
+    private static HashSet<OperationId> CreateReplayOnlyOperationIdSet(
+        HashSet<OperationId> operationIds,
+        IReadOnlyList<SyncOperation> replayOperations)
+    {
+        HashSet<OperationId> replayOnlyIds = [];
+        for (var index = 0; index < replayOperations.Count; index++)
+        {
+            var operationId = replayOperations[index].OperationId;
+            if (operationIds.Contains(operationId))
+            {
+                continue;
+            }
+
+            if (!replayOnlyIds.Add(operationId))
+            {
+                throw new ArgumentException("Snapshot recovery replay operations contain duplicate operation ids.", nameof(replayOperations));
+            }
+        }
+
+        return replayOnlyIds;
+    }
+
+    /// <summary>Gets the replay-only operations after filtering ids already present as pending.</summary>
+    /// <param name="operations">The pending operations.</param>
+    /// <param name="replayOperations">The recovered replay operations.</param>
+    /// <returns>The replay-only operations.</returns>
+    private static SyncOperation[] GetReplayOnlyOperations(
+        IReadOnlyList<SyncOperation> operations,
+        IReadOnlyList<SyncOperation> replayOperations)
+    {
+        var operationIds = CreateOperationIdSet(operations);
+        var replayOnlyIds = CreateReplayOnlyOperationIdSet(operationIds, replayOperations);
+        var replayOnlyOperations = new SyncOperation[replayOnlyIds.Count];
+        var replayOnlyIndex = 0;
+        for (var index = 0; index < replayOperations.Count; index++)
+        {
+            var operation = replayOperations[index];
+            if (!replayOnlyIds.Contains(operation.OperationId))
+            {
+                continue;
+            }
+
+            replayOnlyOperations[replayOnlyIndex] = operation;
+            replayOnlyIndex++;
+        }
+
+        return replayOnlyOperations;
+    }
+
+    /// <summary>Validates one disposition against the pending or replay-only operation role that owns it.</summary>
+    /// <param name="disposition">The disposition to validate.</param>
+    /// <param name="operationIds">The pending operation ids.</param>
+    /// <param name="replayOnlyIds">The replay-only operation ids.</param>
+    /// <exception cref="ArgumentException">The disposition is omitted, unknown, or contradicts replay-only accepted proof.</exception>
+    private static void ValidateDispositionBinding(
+        SnapshotOperationDisposition disposition,
+        HashSet<OperationId> operationIds,
+        HashSet<OperationId> replayOnlyIds)
+    {
+        if (operationIds.Contains(disposition.OperationId))
+        {
+            return;
+        }
+
+        if (!replayOnlyIds.Contains(disposition.OperationId))
+        {
+            throw new ArgumentException("Snapshot recovery dispositions contain an unrequested operation.", nameof(disposition));
+        }
+
+        if (disposition.Kind != SnapshotOperationDispositionKind.IncludedAccepted)
+        {
+            throw new ArgumentException("Replay-only snapshot recovery dispositions must prove accepted inclusion.", nameof(disposition));
+        }
+
+        var result = disposition.Result;
+        if (result is null || result.Kind != OperationResultKind.Accepted)
+        {
+            throw new ArgumentException("Replay-only snapshot recovery dispositions must prove accepted inclusion.", nameof(disposition));
+        }
+    }
 
     /// <summary>Validates one disposition's structural fields.</summary>
     /// <param name="disposition">The disposition to validate.</param>
@@ -496,6 +626,18 @@ public static class SnapshotRecoveryValidator
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static long ValidateStreamId(StreamId streamId, string parameterName, SnapshotRecoveryLimits limits) =>
         ValidateProtocolString(streamId.Value, parameterName, limits.MaximumStreamIdUtf8Bytes);
+
+    /// <summary>Validates recovered pending and replay operation counts before proportional allocations or scans.</summary>
+    /// <param name="recovered">The recovered stream state.</param>
+    /// <param name="limits">The configured limits.</param>
+    /// <exception cref="ArgumentException">A recovered operation role exceeds the configured operation limit.</exception>
+    private static void ValidateRecoveredOperationCounts(RecoveredStream recovered, SnapshotRecoveryLimits limits)
+    {
+        if (recovered.PendingOperations.Count > limits.MaximumPendingOperations || recovered.ReplayOperations.Count > limits.MaximumPendingOperations)
+        {
+            throw new ArgumentException("Recovered snapshot recovery operations exceed the pending operation limit.", nameof(recovered));
+        }
+    }
 
     /// <summary>Validates recovered pending and replay operation streams against the mutation stream.</summary>
     /// <param name="mutation">The local mutation.</param>

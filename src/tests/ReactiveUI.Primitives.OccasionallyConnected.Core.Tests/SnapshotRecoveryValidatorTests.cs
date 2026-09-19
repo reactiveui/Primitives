@@ -724,11 +724,15 @@ public sealed partial class SnapshotRecoveryValidatorTests
             .ThrowsExactly<ArgumentException>();
     }
 
-    /// <summary>Creates a recovery request fixture with the supplied pending operations.</summary>
+    /// <summary>Creates a recovery request fixture with the supplied pending and replay operations.</summary>
     /// <param name="pending">The pending operations.</param>
     /// <param name="expiredCursor">The optional expired cursor.</param>
+    /// <param name="replay">The replay-only operations.</param>
     /// <returns>The recovery request fixture.</returns>
-    private static RemoteSnapshotRecoveryRequest CreateRequest(IReadOnlyList<SyncOperation> pending, string? expiredCursor = Cursor) => new()
+    private static RemoteSnapshotRecoveryRequest CreateRequest(
+        IReadOnlyList<SyncOperation> pending,
+        string? expiredCursor = Cursor,
+        IReadOnlyList<SyncOperation>? replay = null) => new()
     {
         StreamId = Stream,
         SubscriptionId = SubscriptionId.New(),
@@ -737,6 +741,7 @@ public sealed partial class SnapshotRecoveryValidatorTests
         ClientStateSchemaVersion = ClientStateSchemaVersion,
         SnapshotFormatVersion = FormatVersion,
         PendingOperations = pending,
+        ReplayOperations = replay ?? [],
         MaximumResponseBytes = MaximumResponseBytes,
     };
 
@@ -813,19 +818,21 @@ public sealed partial class SnapshotRecoveryValidatorTests
     /// <param name="pending">The recovered pending operations.</param>
     /// <param name="snapshotStream">The snapshot stream identifier.</param>
     /// <param name="serverCursor">The recovered server cursor.</param>
+    /// <param name="replay">The recovered replay operations.</param>
     /// <returns>The recovered stream fixture.</returns>
     private static RecoveredStream CreateRecoveredStream(
         SubscriptionId subscriptionId,
         IReadOnlyList<SyncOperation> pending,
         StreamId snapshotStream,
-        string? serverCursor = Cursor) =>
+        string? serverCursor = Cursor,
+        IReadOnlyList<SyncOperation>? replay = null) =>
         new(
             subscriptionId,
             serverCursor,
             new(snapshotStream, FormatVersion, serverCursor, CreatePayload(ClientStateContractId, ClientStateSchemaVersion), Revision, DateTimeOffset.UnixEpoch),
             pending,
             [],
-            FormatVersion);
+            FormatVersion) { ReplayOperations = replay ?? pending };
 
     /// <summary>Creates an included disposition fixture.</summary>
     /// <param name="operationId">The operation identifier.</param>
