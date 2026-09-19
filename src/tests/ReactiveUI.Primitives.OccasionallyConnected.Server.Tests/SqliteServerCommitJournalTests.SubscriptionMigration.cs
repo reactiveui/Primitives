@@ -24,7 +24,7 @@ public sealed partial class SqliteServerCommitJournalTests
         await using (var command = connection.CreateCommand())
         {
             command.CommandText = "ALTER TABLE oc_server_journal_subscriptions ADD COLUMN unsupported_state TEXT NULL;";
-            _ = command.ExecuteNonQuery();
+            _ = await command.ExecuteNonQueryAsync();
         }
 
         await Assert.That(() => CreateSubscriptionJournal(database.Path)).ThrowsExactly<InvalidOperationException>();

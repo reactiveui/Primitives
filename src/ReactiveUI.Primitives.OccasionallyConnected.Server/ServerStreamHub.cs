@@ -858,7 +858,7 @@ public sealed partial class ServerStreamHub : IServerStreamHub, IAsyncDisposable
         }
         finally
         {
-            Dispose(disposing: true);
+            Close();
         }
 
         RethrowDisposalFailure(firstException);
@@ -886,11 +886,9 @@ public sealed partial class ServerStreamHub : IServerStreamHub, IAsyncDisposable
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private void DisposeJournal() => _ownedJournal?.Dispose();
 
-    /// <summary>Disposes hub-managed resources.</summary>
-    /// <param name="disposing">Whether managed resources should be disposed.</param>
-    private void Dispose(bool disposing)
+    /// <summary>Closes hub-managed resources after asynchronous cancellation and drain complete.</summary>
+    private void Close()
     {
-        _ = disposing;
         _disposeCancellation.Dispose();
         _wakeup.Dispose();
     }

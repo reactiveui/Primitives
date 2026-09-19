@@ -36,5 +36,5 @@ public sealed class ServerReceiveRetentionGapException : InvalidOperationExcepti
     public static string ReceiveRetentionGapReasonCode => ReceiveRetentionGapReasonCodeValue;
 
     /// <summary>Gets the stable reason code for HTTP and transport mapping.</summary>
-    public string ReasonCode => ReceiveRetentionGapReasonCode;
+    public string ReasonCode { get; } = ReceiveRetentionGapReasonCodeValue;
 }
