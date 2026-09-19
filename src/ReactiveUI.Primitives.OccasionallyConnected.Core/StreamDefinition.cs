@@ -49,6 +49,9 @@ public sealed record StreamDefinition<TState, TInput>
     /// <summary>Gets the optional provider that captures observer input as owned serialized payloads.</summary>
     public IOccasionallyConnectedInputCapture<TInput>? InputCapture { get; init; }
 
+    /// <summary>Gets the optional public typed-input admission declaration.</summary>
+    public TypedInputOptions? TypedInput { get; init; }
+
     /// <summary>Validates this definition using the default policy capability and priority range.</summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void Validate() => Validate(supportsCustomPolicy: false);
@@ -78,6 +81,7 @@ public sealed record StreamDefinition<TState, TInput>
         ValidateSubscription(supportsCustomPolicy);
         ValidatePublish(supportsCustomPolicy, minimumPriority, maximumPriority);
         ValidateInput(supportsCustomPolicy);
+        ValidateTypedInput();
     }
 
     /// <summary>Validates the optional durable subscription identity.</summary>
@@ -166,6 +170,11 @@ public sealed record StreamDefinition<TState, TInput>
 
         Input.Validate(supportsCustomPolicy);
     }
+
+    /// <summary>Validates the optional public typed-input admission declaration.</summary>
+    /// <exception cref="InvalidOperationException"><see cref="TypedInput"/> is malformed.</exception>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private void ValidateTypedInput() => TypedInput?.Validate();
 
     /// <summary>Validates compatibility with an explicit nested subscription identity.</summary>
     /// <param name="nestedSubscriptionId">The optional nested subscription identity.</param>

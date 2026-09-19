@@ -1261,6 +1261,7 @@ public record StreamDefinition<TState, TInput> : System.IEquatable<ReactiveUI.Pr
     public required ReactiveUI.Primitives.OccasionallyConnected.StreamId StreamId { get; init; }
     public ReactiveUI.Primitives.OccasionallyConnected.RemoteSubscriptionOptions? Subscription { get; init; }
     public ReactiveUI.Primitives.OccasionallyConnected.SubscriptionId? SubscriptionId { get; init; }
+    public ReactiveUI.Primitives.OccasionallyConnected.TypedInputOptions? TypedInput { get; init; }
     [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
     public void Validate() { }
     [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
@@ -1384,6 +1385,15 @@ public record SyncState : System.IEquatable<ReactiveUI.Primitives.OccasionallyCo
     public string? ReasonCode { get; init; }
     public System.TimeSpan? RetryAfter { get; init; }
     public ReactiveUI.Primitives.OccasionallyConnected.SyncLifecycleStatus Status { get; init; }
+}
+[System.Diagnostics.DebuggerDisplay("Count={BufferCapacity,nq}; Bytes={BufferCapacityBytes,nq}; RetainedInput={MaximumRetainedInputBytes,nq}")]
+public record TypedInputOptions : System.IEquatable<ReactiveUI.Primitives.OccasionallyConnected.TypedInputOptions>
+{
+    public int BufferCapacity { get; init; }
+    public long BufferCapacityBytes { get; init; }
+    public required long MaximumRetainedInputBytes { get; init; }
+    [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+    public void Validate() { }
 }
 [System.Diagnostics.DebuggerDisplay("{Client,nq}")]
 public record TransportConnectRequest : System.IEquatable<ReactiveUI.Primitives.OccasionallyConnected.TransportConnectRequest>
