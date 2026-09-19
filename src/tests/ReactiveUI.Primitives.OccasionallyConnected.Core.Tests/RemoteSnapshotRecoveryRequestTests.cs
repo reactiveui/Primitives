@@ -36,6 +36,43 @@ public sealed class RemoteSnapshotRecoveryRequestTests
         await Assert.That(((ICollection<SyncOperation>)request.PendingOperations).IsReadOnly).IsTrue();
     }
 
+    /// <summary>Verifies replay operations are defensively copied.</summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    [Test]
+    public async Task ReplayOperationsAreCopied()
+    {
+        var operations = new List<SyncOperation> { CreateOperation(FirstSequence) };
+        var request = CreateRequest([]) with { ReplayOperations = operations };
+        operations.Add(CreateOperation(SecondSequence));
+
+        await Assert.That(request.ReplayOperations).Count().IsEqualTo(1);
+        await Assert.That(((ICollection<SyncOperation>)request.ReplayOperations).IsReadOnly).IsTrue();
+    }
+
+    /// <summary>Verifies callers that omit replay operations keep the legacy empty-role shape.</summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    [Test]
+    public async Task ReplayOperationsDefaultsToEmpty()
+    {
+        var request = CreateRequest([]);
+
+        await Assert.That(request.ReplayOperations).IsEmpty();
+        await Assert.That(((ICollection<SyncOperation>)request.ReplayOperations).IsReadOnly).IsTrue();
+    }
+
+    /// <summary>Verifies replay operations reject runtime null collections.</summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    [Test]
+    public async Task ReplayOperationsRejectsNullCollection()
+    {
+        var create = static () => CreateRequest([]) with
+        {
+            ReplayOperations = NullReference<IReadOnlyList<SyncOperation>>(),
+        };
+
+        await Assert.That(create).ThrowsExactly<ArgumentNullException>();
+    }
+
     /// <summary>Verifies the fixed ownership ceiling is checked before indexing caller collections.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
@@ -44,6 +81,17 @@ public sealed class RemoteSnapshotRecoveryRequestTests
         var list = new OversizedOperationList();
 
         await Assert.That(() => CreateRequest(list)).ThrowsExactly<ArgumentOutOfRangeException>();
+        await Assert.That(list.IndexerUsed).IsFalse();
+    }
+
+    /// <summary>Verifies the fixed replay ownership ceiling is checked before indexing caller collections.</summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    [Test]
+    public async Task ReplayOperationsRejectsOversizedCollectionBeforeIndexing()
+    {
+        var list = new OversizedOperationList();
+
+        await Assert.That(() => CreateRequest([]) with { ReplayOperations = list }).ThrowsExactly<ArgumentOutOfRangeException>();
         await Assert.That(list.IndexerUsed).IsFalse();
     }
 
@@ -76,6 +124,17 @@ public sealed class RemoteSnapshotRecoveryRequestTests
         Policy = OperationPolicy.Default,
         Metadata = new Dictionary<string, string>(),
     };
+
+    /// <summary>Creates a typed null reference for runtime-null contract regression tests.</summary>
+    /// <typeparam name="T">The reference type.</typeparam>
+    /// <returns>A null reference typed as <typeparamref name="T"/>.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static T NullReference<T>()
+        where T : class
+    {
+        object? value = null;
+        return Unsafe.As<object?, T>(ref value);
+    }
 
     /// <summary>A caller collection that fails if the copy helper indexes before checking the count.</summary>
     private sealed class OversizedOperationList : IReadOnlyList<SyncOperation>

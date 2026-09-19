@@ -16,7 +16,7 @@ public sealed partial class SnapshotRecoveryValidatorTests
     /// <summary>One byte below the exact non-recovered empty-dispositions result size.</summary>
     private const int BelowNonRecoveredEmptyDispositionsHeaderBytes = 7;
 
-    /// <summary>Verifies a request accepts an exact logical size that includes the pending-operation array header.</summary>
+    /// <summary>Verifies a request accepts an exact logical size that includes both operation role headers.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
     public async Task ValidateAcceptsRequestAtExactLogicalSize()
@@ -28,10 +28,10 @@ public sealed partial class SnapshotRecoveryValidatorTests
 
         SnapshotRecoveryValidator.Validate(request, limits);
 
-        await Assert.That(exactLogicalBytes).IsEqualTo(GetRequestHeaderLogicalBytes(request) + Int32LogicalBytes);
+        await Assert.That(exactLogicalBytes).IsEqualTo(GetRequestHeaderLogicalBytes(request) + Int32LogicalBytes + Int32LogicalBytes);
     }
 
-    /// <summary>Verifies request logical size rejects one byte below the pending-operation array header size.</summary>
+    /// <summary>Verifies request logical size rejects one byte below the operation role header size.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
     public async Task ValidateRejectsRequestBelowExactLogicalSize()
@@ -130,7 +130,7 @@ public sealed partial class SnapshotRecoveryValidatorTests
     /// <param name="request">The request fixture.</param>
     /// <returns>The logical byte count.</returns>
     private static long GetRequestLogicalBytes(RemoteSnapshotRecoveryRequest request) =>
-        GetRequestHeaderLogicalBytes(request) + Int32LogicalBytes;
+        GetRequestHeaderLogicalBytes(request) + Int32LogicalBytes + Int32LogicalBytes;
 
     /// <summary>Gets the request header logical byte count.</summary>
     /// <param name="request">The request fixture.</param>

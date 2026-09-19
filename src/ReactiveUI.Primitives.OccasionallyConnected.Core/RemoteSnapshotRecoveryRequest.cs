@@ -33,6 +33,17 @@ public sealed record RemoteSnapshotRecoveryRequest
         init => field = SnapshotRecoveryCollectionCopy.List(value, nameof(PendingOperations));
     } = [];
 
+    /// <summary>Gets locally accepted operation intents that still await receive-inclusion proof.</summary>
+    /// <remarks>
+    /// These replay-only operations must be disjoint from <see cref="PendingOperations"/>. A recovered result must prove
+    /// accepted inclusion for every replay operation, otherwise recovery fails closed.
+    /// </remarks>
+    public IReadOnlyList<SyncOperation> ReplayOperations
+    {
+        get;
+        init => field = SnapshotRecoveryCollectionCopy.List(value, nameof(ReplayOperations));
+    } = [];
+
     /// <summary>Gets the maximum response bytes the caller will accept.</summary>
     public required long MaximumResponseBytes { get; init; }
 }
