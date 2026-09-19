@@ -1014,7 +1014,8 @@ internal sealed partial class InMemoryLocalStoreAdapter
         HashSet<StreamId> protectedStreams = [];
         foreach (var pair in _operations)
         {
-            if (ShouldRecoverReplayOperation(pair.Value, _includedOperations.Contains(pair.Value.Operation.OperationId)))
+            if (!IsDefinitiveTerminal(pair.Value.Status.State)
+                || ShouldRecoverReplayOperation(pair.Value, _includedOperations.Contains(pair.Value.Operation.OperationId)))
             {
                 _ = protectedStreams.Add(pair.Value.Operation.StreamId);
             }
