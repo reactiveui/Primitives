@@ -19,10 +19,8 @@ public sealed class ServerCommitJournalSizerTests
     /// <summary>Verifies payload byte accounting widens before adding text byte counts.</summary>
     /// <returns>The asynchronous assertion operation.</returns>
     [Test]
-    public async Task GetPayloadBytesWidensBeforeAddingTextAndPayloadLength()
-    {
+    public async Task GetPayloadBytesWidensBeforeAddingTextAndPayloadLength() =>
         await Assert.That(ServerCommitJournalSizer.GetPayloadBytes(1, 1, 1, MaximumPayloadLength)).IsEqualTo(ExpectedMaximumPayloadBytes);
-    }
 
     /// <summary>Verifies logical byte addition reports arithmetic overflow.</summary>
     /// <returns>The asynchronous assertion operation.</returns>

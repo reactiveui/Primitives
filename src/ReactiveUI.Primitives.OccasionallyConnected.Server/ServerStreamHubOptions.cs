@@ -41,6 +41,15 @@ public sealed record ServerStreamHubOptions
     /// <summary>Gets the required authorization policy.</summary>
     public required IServerStreamAuthorizationPolicy AuthorizationPolicy { get; init; }
 
+    /// <summary>Gets the optional full-state recovery authorization policy.</summary>
+    public IServerSnapshotRecoveryAuthorizationPolicy? SnapshotRecoveryAuthorizationPolicy { get; init; }
+
+    /// <summary>Gets the optional materializer used to produce allowlisted client snapshot state.</summary>
+    public IServerSnapshotMaterializer? SnapshotRecoveryMaterializer { get; init; }
+
+    /// <summary>Gets the structural validation limits used by snapshot recovery.</summary>
+    public SnapshotRecoveryLimits SnapshotRecoveryLimits { get; init; } = new();
+
     /// <summary>Gets the server clock used for commits, retention and subscription polling.</summary>
     public TimeProvider TimeProvider { get; init; } = TimeProvider.System;
 

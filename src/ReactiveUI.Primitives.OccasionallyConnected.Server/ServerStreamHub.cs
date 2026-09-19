@@ -10,7 +10,7 @@ namespace ReactiveUI.Primitives.OccasionallyConnected.Server;
 
 /// <summary>Concrete authorized server stream hub facade over the internal server journal and processor.</summary>
 [System.Diagnostics.DebuggerDisplay("Disposed={_disposed}")]
-public sealed partial class ServerStreamHub : IServerStreamHub, IAsyncDisposable
+public sealed partial class ServerStreamHub : IServerStreamHub, IServerSnapshotRecoveryHub, IAsyncDisposable
 {
     /// <summary>The stable active-call capacity diagnostic.</summary>
     private const string ActiveCallCapacityMessage = "The server stream hub is at active call capacity.";
@@ -35,6 +35,9 @@ public sealed partial class ServerStreamHub : IServerStreamHub, IAsyncDisposable
 
     /// <summary>The receive acknowledgement journal used by subscriptions and acknowledgements.</summary>
     private readonly IServerSubscriptionAcknowledgementJournal _subscriptionJournal;
+
+    /// <summary>The snapshot recovery journal used to read coherent views and offer recovered cursors.</summary>
+    private readonly IServerSnapshotRecoveryJournal _snapshotRecoveryJournal;
 
     /// <summary>The owned journal resource disposed with the hub when applicable.</summary>
     private readonly IDisposable? _ownedJournal;
@@ -88,6 +91,7 @@ public sealed partial class ServerStreamHub : IServerStreamHub, IAsyncDisposable
     /// <param name="options">The hub options.</param>
     /// <param name="commitJournal">The commit journal.</param>
     /// <param name="subscriptionJournal">The subscription journal.</param>
+    /// <param name="snapshotRecoveryJournal">The snapshot recovery journal.</param>
     /// <param name="ownedJournal">The optional owned journal resource.</param>
     /// <param name="handler">The prepared conflict handler.</param>
     /// <param name="processorOptions">The prepared processor options.</param>
@@ -95,6 +99,7 @@ public sealed partial class ServerStreamHub : IServerStreamHub, IAsyncDisposable
         ServerStreamHubOptions options,
         IServerCommitJournal commitJournal,
         IServerSubscriptionAcknowledgementJournal subscriptionJournal,
+        IServerSnapshotRecoveryJournal snapshotRecoveryJournal,
         IDisposable? ownedJournal,
         ConflictResolvingServerOperationHandler handler,
         ServerOperationProcessorOptions processorOptions)
@@ -102,6 +107,7 @@ public sealed partial class ServerStreamHub : IServerStreamHub, IAsyncDisposable
         _options = options;
         _commitJournal = commitJournal;
         _subscriptionJournal = subscriptionJournal;
+        _snapshotRecoveryJournal = snapshotRecoveryJournal;
         _ownedJournal = ownedJournal;
         _handler = handler;
         _processorOptions = processorOptions;
@@ -117,7 +123,7 @@ public sealed partial class ServerStreamHub : IServerStreamHub, IAsyncDisposable
         ArgumentExceptionHelper.ThrowIfNull(options);
         var prepared = PrepareOptions(options);
         var journal = new InMemoryServerCommitJournal(prepared.JournalOptions);
-        return new(options, journal, journal, null, prepared.Handler, prepared.ProcessorOptions);
+        return new(options, journal, journal, journal, null, prepared.Handler, prepared.ProcessorOptions);
     }
 
     /// <summary>Creates a hub that owns a new SQLite server journal.</summary>
@@ -143,7 +149,7 @@ public sealed partial class ServerStreamHub : IServerStreamHub, IAsyncDisposable
         var prepared = PrepareOptions(options);
 
         var journal = new SqliteServerCommitJournal(databasePath, prepared.JournalOptions);
-        return new(options, journal, journal, journal, prepared.Handler, prepared.ProcessorOptions);
+        return new(options, journal, journal, journal, journal, prepared.Handler, prepared.ProcessorOptions);
     }
 
     /// <inheritdoc/>
@@ -322,12 +328,21 @@ public sealed partial class ServerStreamHub : IServerStreamHub, IAsyncDisposable
 
     /// <summary>Validates hub options before any owned resources are created.</summary>
     /// <param name="options">The options to validate.</param>
+    /// <exception cref="InvalidOperationException">A snapshot materializer is configured without a snapshot recovery authorization policy.</exception>
     private static void ValidateOptions(ServerStreamHubOptions options)
     {
         ArgumentExceptionHelper.ThrowIfNull(options.ConflictHandler);
         ArgumentExceptionHelper.ThrowIfNull(options.AuthorizationPolicy);
         ArgumentExceptionHelper.ThrowIfNull(options.TimeProvider);
         ArgumentExceptionHelper.ThrowIfNull(options.JournalLimits);
+        ArgumentExceptionHelper.ThrowIfNull(options.SnapshotRecoveryLimits);
+        options.SnapshotRecoveryLimits.Validate();
+        if (options.SnapshotRecoveryMaterializer is not null && options.SnapshotRecoveryAuthorizationPolicy is null)
+        {
+            throw new InvalidOperationException(
+                "Snapshot recovery materialization requires a snapshot recovery authorization policy.");
+        }
+
         options.ConflictHandler.Validate();
         ArgumentOutOfRangeExceptionHelper.ThrowIfNegativeOrZero(options.MaximumActiveCalls);
         ArgumentOutOfRangeExceptionHelper.ThrowIfNegativeOrZero(options.MaximumActiveSubscriptions);
@@ -858,7 +873,7 @@ public sealed partial class ServerStreamHub : IServerStreamHub, IAsyncDisposable
         }
         finally
         {
-            Dispose(disposing: true);
+            Close();
         }
 
         RethrowDisposalFailure(firstException);
@@ -886,11 +901,9 @@ public sealed partial class ServerStreamHub : IServerStreamHub, IAsyncDisposable
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private void DisposeJournal() => _ownedJournal?.Dispose();
 
-    /// <summary>Disposes hub-managed resources.</summary>
-    /// <param name="disposing">Whether managed resources should be disposed.</param>
-    private void Dispose(bool disposing)
+    /// <summary>Closes hub-managed resources after asynchronous cancellation and drain complete.</summary>
+    private void Close()
     {
-        _ = disposing;
         _disposeCancellation.Dispose();
         _wakeup.Dispose();
     }

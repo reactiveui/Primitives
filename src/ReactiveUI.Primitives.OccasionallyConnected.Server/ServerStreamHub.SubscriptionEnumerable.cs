@@ -363,7 +363,7 @@ public sealed partial class ServerStreamHub
                 return;
             }
 
-            ReleaseResourcesWithoutDispose();
+            ReleaseResourcesAfterCompletion();
         }
 
         /// <summary>Gets the active move drain task.</summary>
@@ -452,9 +452,9 @@ public sealed partial class ServerStreamHub
         }
 
         /// <summary>Releases owned resources after normal move completion.</summary>
-        private void ReleaseResourcesWithoutDispose()
+        private void ReleaseResourcesAfterCompletion()
         {
-            Dispose(disposing: true);
+            Close();
             _ = _resourcesReleased.TrySetResult(true);
         }
 
@@ -467,16 +467,14 @@ public sealed partial class ServerStreamHub
                 _resourceReleaseStarted = 1;
             }
 
-            Dispose(disposing: true);
+            Close();
             _ = _resourcesReleased.TrySetResult(true);
             return Task.CompletedTask;
         }
 
-        /// <summary>Disposes enumerator-managed resources.</summary>
-        /// <param name="disposing">Whether managed resources should be disposed.</param>
-        private void Dispose(bool disposing)
+        /// <summary>Closes enumerator-managed resources after asynchronous cancellation and drain complete.</summary>
+        private void Close()
         {
-            _ = disposing;
             if (Volatile.Read(ref _started) != 0)
             {
                 _hub.ReleaseActiveSubscription();

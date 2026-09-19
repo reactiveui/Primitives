@@ -628,14 +628,14 @@ public sealed partial class SqliteServerCommitJournalTests
         {
             await using var command = connection.CreateCommand();
             command.CommandText = "CREATE TABLE oc_server_journal_streams (tenant_id TEXT NOT NULL); PRAGMA user_version = 1;";
-            _ = command.ExecuteNonQuery();
+            _ = await command.ExecuteNonQueryAsync();
         }
 
         await Assert.That(() => CreateJournal(database.Path)).ThrowsExactly<InvalidOperationException>();
         await using var verify = OpenRawConnection(database.Path);
         await using var count = verify.CreateCommand();
         count.CommandText = "SELECT COUNT(*) FROM sqlite_master WHERE type = 'table' AND name = 'oc_server_journal_streams';";
-        await Assert.That(count.ExecuteScalar()).IsEqualTo(1L);
+        await Assert.That(await count.ExecuteScalarAsync()).IsEqualTo(1L);
     }
 
     /// <summary>Checks whether payload byte sequences are identical.</summary>

@@ -591,22 +591,52 @@ public sealed partial class InMemoryServerCommitJournalTests
         using var start = new ManualResetEventSlim();
         using var firstRead = new ManualResetEventSlim();
         using var stop = new CancellationTokenSource();
-        var reader = Task.Run(() => ReadUntilStopped(journal, firstKey, secondKey, start, firstRead, stop.Token));
-        var writer = Task.Run(() =>
-        {
-            _ = firstRead.Wait(GuardTimeout, CancellationToken.None);
-            var entry = Entry(secondKey, OperationResultKind.Accepted, SecondOperationSeed);
-            return journal.TryCommit(Plan(SingleEntryCount, State(SecondVersion), Stamp(secondKey), entry));
-        });
+        var readerState = (journal, firstKey, secondKey, start, firstRead, stop.Token);
+        var reader = Task.Factory.StartNew(
+            static state =>
+            {
+                var context = ((InMemoryServerCommitJournal Journal, ServerOperationKey FirstKey, ServerOperationKey SecondKey,
+                    ManualResetEventSlim Start, ManualResetEventSlim FirstRead, CancellationToken Token))state!;
+                return ReadUntilStopped(context.Journal, context.FirstKey, context.SecondKey, context.Start, context.FirstRead, context.Token);
+            },
+            readerState,
+            CancellationToken.None,
+            TaskCreationOptions.LongRunning,
+            TaskScheduler.Default);
+        var writerState = (Journal: journal, SecondKey: secondKey, FirstRead: firstRead);
+        var writer = Task.Factory.StartNew(
+            static state =>
+            {
+                var context = ((InMemoryServerCommitJournal Journal, ServerOperationKey SecondKey, ManualResetEventSlim FirstRead))state!;
+                if (!context.FirstRead.Wait(GuardTimeout, CancellationToken.None))
+                {
+                    throw new TimeoutException("The reader did not observe the pre-commit view.");
+                }
 
+                var entry = Entry(context.SecondKey, OperationResultKind.Accepted, SecondOperationSeed);
+                return context.Journal.TryCommit(Plan(SingleEntryCount, State(SecondVersion), Stamp(context.SecondKey), entry));
+            },
+            writerState,
+            CancellationToken.None,
+            TaskCreationOptions.LongRunning,
+            TaskScheduler.Default);
+
+        var reads = 0;
         start.Set();
-        var result = await writer.WaitAsync(GuardTimeout);
-        await stop.CancelAsync();
-        var reads = await reader.WaitAsync(GuardTimeout);
+        try
+        {
+            var result = await writer.WaitAsync(GuardTimeout);
 
-        await Assert.That(result.Status).IsEqualTo(ServerCommitStatus.Committed);
+            await Assert.That(result.Status).IsEqualTo(ServerCommitStatus.Committed);
+            await Assert.That(journal.Read(StreamKey(), [firstKey, secondKey]).Entries).Count().IsEqualTo(DoubleEntryCount);
+        }
+        finally
+        {
+            await stop.CancelAsync();
+            reads = await reader.WaitAsync(GuardTimeout);
+        }
+
         await Assert.That(reads).IsGreaterThan(0);
-        await Assert.That(journal.Read(StreamKey(), [firstKey, secondKey]).Entries).Count().IsEqualTo(DoubleEntryCount);
     }
 
     /// <summary>Reads until cancellation and checks every snapshot is internally consistent.</summary>
