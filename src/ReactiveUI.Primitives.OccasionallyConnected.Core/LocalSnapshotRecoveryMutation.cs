@@ -29,7 +29,7 @@ public sealed record LocalSnapshotRecoveryMutation
     /// <summary>Gets the snapshot format version used by the local optimistic state.</summary>
     public required int SnapshotFormatVersion { get; init; }
 
-    /// <summary>Gets exact dispositions for the current recovered pending operations.</summary>
+    /// <summary>Gets exact dispositions for the current recovered pending and replay-only operations.</summary>
     public required IReadOnlyList<SnapshotOperationDisposition> OperationDispositions
     {
         get;

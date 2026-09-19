@@ -14,7 +14,7 @@ public sealed record RemoteSnapshotRecoveryResult
     /// <summary>Gets the coherent checkpoint when <see cref="Status"/> is <see cref="RemoteSnapshotRecoveryStatus.Recovered"/>.</summary>
     public RemoteSnapshotCheckpoint? Checkpoint { get; init; }
 
-    /// <summary>Gets exact pending-operation dispositions for a recovered checkpoint.</summary>
+    /// <summary>Gets exact requested-operation dispositions for a recovered checkpoint.</summary>
     public IReadOnlyList<SnapshotOperationDisposition> OperationDispositions
     {
         get;
