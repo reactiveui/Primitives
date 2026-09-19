@@ -160,31 +160,65 @@ internal sealed partial class SqliteLocalCommitStore
         };
     }
 
+    /// <summary>Projects shape-validated recovery dispositions into typed facts for the transaction.</summary>
+    /// <param name="dispositions">The source dispositions.</param>
+    /// <returns>The projected disposition facts.</returns>
+    private static SnapshotRecoveryDisposition[] CaptureSnapshotRecoveryDispositions(IReadOnlyList<SnapshotOperationDisposition> dispositions)
+    {
+        var captured = new SnapshotRecoveryDisposition[dispositions.Count];
+        for (var index = 0; index < dispositions.Count; index++)
+        {
+            captured[index] = CreateSnapshotRecoveryDisposition(dispositions[index]);
+        }
+
+        return captured;
+    }
+
+    /// <summary>Projects typed facts for one previously shape-validated disposition.</summary>
+    /// <param name="disposition">The disposition.</param>
+    /// <returns>The typed disposition facts.</returns>
+    private static SnapshotRecoveryDisposition CreateSnapshotRecoveryDisposition(SnapshotOperationDisposition disposition) =>
+        new(
+            disposition.OperationId,
+            disposition.Kind,
+            disposition.Result?.Kind ?? OperationResultKind.Retryable,
+            disposition.Result?.ReasonCode);
+
     /// <summary>Applies operation dispositions that passed the recovery fences.</summary>
     /// <param name="context">The operation application context.</param>
     /// <param name="pending">The pending operations.</param>
+    /// <param name="replayOnly">The replay-only operations.</param>
     /// <param name="dispositions">The operation dispositions.</param>
     /// <returns>The operation disposition counts.</returns>
-    /// <exception cref="InvalidOperationException">A disposition is missing a validated result proof.</exception>
     /// <exception cref="OperationCanceledException">The operation is canceled while applying dispositions.</exception>
     /// <exception cref="SqliteException">SQLite rejects the operation.</exception>
     private static SnapshotRecoveryOperationCounts ApplySnapshotRecoveryOperations(
         in SnapshotRecoveryOperationContext context,
         List<SqliteSnapshotRecoveryPendingOperation> pending,
-        IReadOnlyList<SnapshotOperationDisposition> dispositions)
+        List<OperationId> replayOnly,
+        SnapshotRecoveryDisposition[] dispositions)
     {
         var included = 0;
         var terminal = 0;
         var preserved = 0;
-        for (var index = 0; index < dispositions.Count; index++)
+        for (var index = 0; index < dispositions.Length; index++)
         {
             context.CancellationToken.ThrowIfCancellationRequested();
-            var operationId = pending[index].OperationId;
+            var replayOnlyDisposition = index >= pending.Count;
+            var operationId = replayOnlyDisposition ? replayOnly[index - pending.Count] : pending[index].OperationId;
             var disposition = dispositions[index];
             if (disposition.Kind == SnapshotOperationDispositionKind.IncludedAccepted)
             {
-                ApplyIncludedSnapshotRecoveryOperation(context, operationId, disposition);
-                included++;
+                ApplyIncludedSnapshotRecoveryOperation(context, operationId, disposition, replayOnlyDisposition);
+                if (replayOnlyDisposition || disposition.ResultKind == OperationResultKind.Accepted)
+                {
+                    included++;
+                }
+                else
+                {
+                    preserved++;
+                }
+
                 continue;
             }
 
@@ -206,23 +240,27 @@ internal sealed partial class SqliteLocalCommitStore
     /// <param name="context">The operation application context.</param>
     /// <param name="operationId">The operation identifier.</param>
     /// <param name="disposition">The disposition.</param>
-    /// <exception cref="InvalidOperationException">The disposition is missing a validated result proof.</exception>
+    /// <param name="replayOnly">Whether the disposition targets replay-only receive inclusion.</param>
     /// <exception cref="SqliteException">SQLite rejects the operation.</exception>
     private static void ApplyIncludedSnapshotRecoveryOperation(
         in SnapshotRecoveryOperationContext context,
         OperationId operationId,
-        SnapshotOperationDisposition disposition)
+        in SnapshotRecoveryDisposition disposition,
+        bool replayOnly)
     {
-        var result = disposition.Result!;
-        SqliteLocalCommitSql.ApplySnapshotRecoveryOperationState(
-            context.Connection,
-            context.Transaction,
-            context.StoreIdentity,
-            operationId,
-            GetSnapshotRecoveryResultState(result.Kind),
-            context.NowUtc,
-            result.ReasonCode);
-        SqliteLocalCommitSql.ReleaseSnapshotRecoveryLeaseOperation(context.Connection, context.Transaction, context.StoreIdentity, operationId);
+        if (!replayOnly)
+        {
+            SqliteLocalCommitSql.ApplySnapshotRecoveryOperationState(
+                context.Connection,
+                context.Transaction,
+                context.StoreIdentity,
+                operationId,
+                GetSnapshotRecoveryResultState(disposition.ResultKind),
+                context.NowUtc,
+                disposition.ReasonCode);
+            SqliteLocalCommitSql.ReleaseSnapshotRecoveryLeaseOperation(context.Connection, context.Transaction, context.StoreIdentity, operationId);
+        }
+
         SqliteLocalCommitSql.InsertReceiveInclusion(context.Connection, context.Transaction, context.StoreIdentity, operationId);
     }
 
@@ -230,14 +268,12 @@ internal sealed partial class SqliteLocalCommitStore
     /// <param name="context">The operation application context.</param>
     /// <param name="operationId">The operation identifier.</param>
     /// <param name="disposition">The disposition.</param>
-    /// <exception cref="InvalidOperationException">The disposition is missing a validated result proof.</exception>
     /// <exception cref="SqliteException">SQLite rejects the operation.</exception>
     private static void ApplyRejectedSnapshotRecoveryOperation(
         in SnapshotRecoveryOperationContext context,
         OperationId operationId,
-        SnapshotOperationDisposition disposition)
+        in SnapshotRecoveryDisposition disposition)
     {
-        var result = disposition.Result!;
         SqliteLocalCommitSql.ApplySnapshotRecoveryOperationState(
             context.Connection,
             context.Transaction,
@@ -245,7 +281,7 @@ internal sealed partial class SqliteLocalCommitStore
             operationId,
             SyncOperationState.Rejected,
             context.NowUtc,
-            result.ReasonCode);
+            disposition.ReasonCode);
         SqliteLocalCommitSql.ReleaseSnapshotRecoveryLeaseOperation(context.Connection, context.Transaction, context.StoreIdentity, operationId);
     }
 
@@ -267,21 +303,23 @@ internal sealed partial class SqliteLocalCommitStore
     private static SyncOperationState GetSnapshotRecoveryResultState(OperationResultKind kind) =>
         kind == OperationResultKind.Accepted ? SyncOperationState.Synchronized : SyncOperationState.Conflict;
 
-    /// <summary>Validates exact pending operation membership and order.</summary>
+    /// <summary>Validates exact pending then replay-only operation membership and order.</summary>
     /// <param name="pending">The pending operations.</param>
+    /// <param name="replayOnly">The replay-only operations.</param>
     /// <param name="dispositions">The operation dispositions.</param>
-    /// <exception cref="ArgumentException">The dispositions do not exactly match pending operations.</exception>
+    /// <exception cref="ArgumentException">The dispositions do not exactly match recovery operations.</exception>
     private static void ValidateSnapshotRecoveryDispositions(
         List<SqliteSnapshotRecoveryPendingOperation> pending,
-        IReadOnlyList<SnapshotOperationDisposition> dispositions)
+        List<OperationId> replayOnly,
+        SnapshotRecoveryDisposition[] dispositions)
     {
-        if (pending.Count != dispositions.Count)
+        if (checked(pending.Count + replayOnly.Count) != dispositions.Length)
         {
-            throw new ArgumentException("Snapshot recovery dispositions must exactly match pending operations.", nameof(dispositions));
+            throw new ArgumentException("Snapshot recovery dispositions must exactly match local recovery operations.", nameof(dispositions));
         }
 
         HashSet<OperationId> seen = [];
-        for (var index = 0; index < dispositions.Count; index++)
+        for (var index = 0; index < dispositions.Length; index++)
         {
             var disposition = dispositions[index];
             if (!seen.Add(disposition.OperationId))
@@ -289,12 +327,28 @@ internal sealed partial class SqliteLocalCommitStore
                 throw new ArgumentException("Snapshot recovery dispositions must not contain duplicate operations.", nameof(dispositions));
             }
 
-            if (pending[index].OperationId == disposition.OperationId)
+            if (index < pending.Count)
+            {
+                if (pending[index].OperationId == disposition.OperationId)
+                {
+                    continue;
+                }
+
+                throw new ArgumentException("Snapshot recovery dispositions must preserve pending operation order.", nameof(dispositions));
+            }
+
+            if (replayOnly[index - pending.Count] != disposition.OperationId)
+            {
+                throw new ArgumentException("Snapshot recovery dispositions must preserve replay operation order after pending operations.", nameof(dispositions));
+            }
+
+            if (disposition.Kind == SnapshotOperationDispositionKind.IncludedAccepted
+                && disposition.ResultKind == OperationResultKind.Accepted)
             {
                 continue;
             }
 
-            throw new ArgumentException("Snapshot recovery dispositions must preserve pending operation order.", nameof(dispositions));
+            throw new ArgumentException("Replay-only snapshot recovery dispositions must carry accepted inclusion proof.", nameof(dispositions));
         }
     }
 
@@ -362,14 +416,23 @@ internal sealed partial class SqliteLocalCommitStore
         CancellationToken cancellationToken)
     {
         PrepareSnapshotRecoveryStream(connection, transaction, storeIdentity, mutation);
+        var dispositions = CaptureSnapshotRecoveryDispositions(mutation.OperationDispositions);
         var pending = SqliteLocalCommitSql.ReadSnapshotRecoveryPendingOperations(
             connection,
             transaction,
             storeIdentity,
             mutation.StreamId,
-            checked(mutation.OperationDispositions.Count + 1),
+            checked(dispositions.Length + 1),
             cancellationToken);
-        ValidateSnapshotRecoveryDispositions(pending, mutation.OperationDispositions);
+        var replayOnlyLimit = pending.Count > dispositions.Length ? 1 : checked(dispositions.Length - pending.Count + 1);
+        var replayOnly = SqliteLocalCommitSql.ReadSnapshotRecoveryReplayOnlyOperationIds(
+            connection,
+            transaction,
+            storeIdentity,
+            mutation.StreamId,
+            replayOnlyLimit,
+            cancellationToken);
+        ValidateSnapshotRecoveryDispositions(pending, replayOnly, dispositions);
         var expiredLeases = SqliteLocalCommitSql.ReadSnapshotRecoveryExpiredLeaseOperationIds(
             connection,
             transaction,
@@ -379,7 +442,8 @@ internal sealed partial class SqliteLocalCommitStore
         var counts = ApplySnapshotRecoveryOperations(
             new(connection, transaction, storeIdentity, expiredLeases, nowUtc, cancellationToken),
             pending,
-            mutation.OperationDispositions);
+            replayOnly,
+            dispositions);
         return PersistSnapshotRecoverySnapshot(connection, transaction, storeIdentity, mutation, nowUtc, counts);
     }
 
@@ -424,6 +488,17 @@ internal sealed partial class SqliteLocalCommitStore
         HashSet<OperationId> ExpiredLeases,
         DateTimeOffset NowUtc,
         CancellationToken CancellationToken);
+
+    /// <summary>Describes one validated recovery disposition without nullable proof lookups.</summary>
+    /// <param name="OperationId">The operation identifier.</param>
+    /// <param name="Kind">The disposition kind.</param>
+    /// <param name="ResultKind">The proven result kind, or a placeholder for unknown dispositions.</param>
+    /// <param name="ReasonCode">The proven result reason code.</param>
+    private readonly record struct SnapshotRecoveryDisposition(
+        OperationId OperationId,
+        SnapshotOperationDispositionKind Kind,
+        OperationResultKind ResultKind,
+        string? ReasonCode);
 
     /// <summary>Counts applied recovery operation dispositions.</summary>
     /// <param name="IncludedOperationCount">The included operation count.</param>

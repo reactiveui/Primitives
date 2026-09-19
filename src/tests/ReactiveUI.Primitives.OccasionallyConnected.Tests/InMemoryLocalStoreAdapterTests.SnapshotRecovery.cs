@@ -273,10 +273,69 @@ public sealed partial class InMemoryLocalStoreAdapterTests
         await Assert.That(recovered.PendingOperations[0].OperationId).IsEqualTo(operation.OperationId);
     }
 
-    /// <summary>Verifies conflict proof is accepted as included work without replaying the operation.</summary>
+    /// <summary>Verifies accepted replay-only work can be proven included without replaying after recovery.</summary>
     /// <returns>The asynchronous test.</returns>
     [Test]
-    public async Task ApplySnapshotRecoveryAsyncAcceptsConflictProofAsIncludedWork()
+    public async Task ApplySnapshotRecoveryAsyncIncludesAcceptedReplayOnlyOperationWithoutReplayingIt()
+    {
+        await using var store = await CreateInitializedStoreAsync();
+        var subscriptionId = await store.GetOrCreateSubscriptionIdAsync(Stream, SubscriptionId.New(), CancellationToken.None);
+        var operation = await CommitOperationAsync(store, Stream, FirstClientSequence, "replay-only");
+        await CompleteUploadAsync(store, operation.OperationId, OperationResultKind.Accepted);
+        var before = await store.RecoverStreamAsync(Stream, subscriptionId, CancellationToken.None);
+        var mutation = CreateSnapshotRecoveryMutation(
+            subscriptionId,
+            expectedRevision: FirstClientSequence,
+            expectedCursor: null,
+            [IncludedSnapshotDisposition(operation.OperationId, OperationResultKind.Accepted)]);
+
+        await Assert.That(before.PendingOperations.Count).IsEqualTo(0);
+        await Assert.That(before.ReplayOperations.Count).IsEqualTo(1);
+        await Assert.That(before.ReplayOperations[0].OperationId).IsEqualTo(operation.OperationId);
+        var result = await RequireSnapshotRecoveryStore(store).ApplySnapshotRecoveryAsync(mutation, CancellationToken.None);
+        var recovered = await store.RecoverStreamAsync(Stream, subscriptionId, CancellationToken.None);
+
+        await Assert.That(result.IncludedOperationCount).IsEqualTo(1);
+        await Assert.That(result.TerminalOperationCount).IsEqualTo(0);
+        await Assert.That(result.PreservedPendingOperationCount).IsEqualTo(0);
+        await Assert.That(recovered.PendingOperations.Count).IsEqualTo(0);
+        await Assert.That(recovered.ReplayOperations.Count).IsEqualTo(0);
+    }
+
+    /// <summary>Verifies replay-only work requires accepted proof before recovery can remove it from replay.</summary>
+    /// <returns>The asynchronous test.</returns>
+    [Test]
+    public async Task ApplySnapshotRecoveryAsyncRejectsUnprovenReplayOnlyOperationWithoutMutation()
+    {
+        await using var store = await CreateInitializedStoreAsync();
+        var subscriptionId = await store.GetOrCreateSubscriptionIdAsync(Stream, SubscriptionId.New(), CancellationToken.None);
+        var operation = await CommitOperationAsync(store, Stream, FirstClientSequence, "replay-only-unknown");
+        await CompleteUploadAsync(store, operation.OperationId, OperationResultKind.Accepted);
+        var before = await store.RecoverStreamAsync(Stream, subscriptionId, CancellationToken.None);
+        var mutation = CreateSnapshotRecoveryMutation(
+            subscriptionId,
+            expectedRevision: FirstClientSequence,
+            expectedCursor: null,
+            [UnknownSnapshotDisposition(operation.OperationId)]);
+
+        await Assert.That(before.PendingOperations.Count).IsEqualTo(0);
+        await Assert.That(before.ReplayOperations.Count).IsEqualTo(1);
+        await Assert.That(before.ReplayOperations[0].OperationId).IsEqualTo(operation.OperationId);
+        await Assert.That(RecoveryApplyAction(store, mutation)).ThrowsExactly<ArgumentException>();
+        var recovered = await store.RecoverStreamAsync(Stream, subscriptionId, CancellationToken.None);
+        var status = await store.GetOperationStatusAsync(operation.OperationId, CancellationToken.None);
+
+        await Assert.That(status?.State).IsEqualTo(SyncOperationState.Synchronized);
+        await Assert.That(recovered.ServerCursor).IsNull();
+        await Assert.That(recovered.PendingOperations.Count).IsEqualTo(0);
+        await Assert.That(recovered.ReplayOperations.Count).IsEqualTo(1);
+        await Assert.That(recovered.ReplayOperations[0].OperationId).IsEqualTo(operation.OperationId);
+    }
+
+    /// <summary>Verifies conflict proof preserves pending ownership while still preventing replay after restart.</summary>
+    /// <returns>The asynchronous test.</returns>
+    [Test]
+    public async Task ApplySnapshotRecoveryAsyncCountsConflictProofAsPreservedWork()
     {
         await using var store = await CreateInitializedStoreAsync();
         var subscriptionId = await store.GetOrCreateSubscriptionIdAsync(Stream, SubscriptionId.New(), CancellationToken.None);
@@ -291,7 +350,9 @@ public sealed partial class InMemoryLocalStoreAdapterTests
         var status = await store.GetOperationStatusAsync(operation.OperationId, CancellationToken.None);
         var recovered = await store.RecoverStreamAsync(Stream, subscriptionId, CancellationToken.None);
 
-        await Assert.That(result.IncludedOperationCount).IsEqualTo(1);
+        await Assert.That(result.IncludedOperationCount).IsEqualTo(0);
+        await Assert.That(result.TerminalOperationCount).IsEqualTo(0);
+        await Assert.That(result.PreservedPendingOperationCount).IsEqualTo(1);
         await Assert.That(status?.State).IsEqualTo(SyncOperationState.Conflict);
         await Assert.That(recovered.PendingOperations.Count).IsEqualTo(1);
         await Assert.That(recovered.ReplayOperations.Count).IsEqualTo(0);
@@ -675,6 +736,25 @@ public sealed partial class InMemoryLocalStoreAdapterTests
     /// <returns>The disposition.</returns>
     private static SnapshotOperationDisposition UnknownSnapshotDisposition(OperationId operationId) =>
         new() { OperationId = operationId, Kind = SnapshotOperationDispositionKind.Unknown };
+
+    /// <summary>Completes one leased operation upload without recording authoritative receive inclusion.</summary>
+    /// <param name="store">The store.</param>
+    /// <param name="operationId">The operation identifier.</param>
+    /// <param name="kind">The result kind.</param>
+    /// <returns>The asynchronous task.</returns>
+    private static async Task CompleteUploadAsync(
+        InMemoryLocalStoreAdapter store,
+        OperationId operationId,
+        OperationResultKind kind)
+    {
+        var batch = RequireBatch(await LeaseSingleBatchAsync(store, new(Stream, 1, DefaultLeaseBytes, TimeSpan.FromMinutes(1))));
+        var result = new RemoteSyncResult(
+            batch.LeaseId,
+            [new(operationId, kind, null, ServerVersion)],
+            null,
+            null);
+        await store.ApplySyncResultAsync(batch.LeaseId, result, CancellationToken.None);
+    }
 
     /// <summary>Compares optional payload envelopes by content.</summary>
     /// <param name="left">The first payload.</param>

@@ -80,6 +80,66 @@ internal static partial class SqliteLocalCommitSql
         return operations;
     }
 
+    /// <summary>Reads synchronized operation identifiers that still need receive inclusion in client sequence order.</summary>
+    /// <param name="connection">The connection.</param>
+    /// <param name="transaction">The transaction.</param>
+    /// <param name="storeIdentity">The store identity.</param>
+    /// <param name="streamId">The stream identifier.</param>
+    /// <param name="maximumRows">The maximum rows to read.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>The replay-only operation identifiers.</returns>
+    /// <exception cref="ArgumentOutOfRangeException">The row bound is not positive.</exception>
+    /// <exception cref="InvalidOperationException">Stored SQLite data is invalid.</exception>
+    /// <exception cref="OperationCanceledException">The operation is canceled while scanning rows.</exception>
+    internal static List<OperationId> ReadSnapshotRecoveryReplayOnlyOperationIds(
+        SqliteConnection connection,
+        SqliteTransaction transaction,
+        string storeIdentity,
+        StreamId streamId,
+        int maximumRows,
+        CancellationToken cancellationToken)
+    {
+        if (maximumRows <= 0)
+        {
+            throw new ArgumentOutOfRangeException(nameof(maximumRows), maximumRows, "The snapshot recovery replay row bound must be positive.");
+        }
+
+        using var command = connection.CreateCommand();
+        command.Transaction = transaction;
+        command.CommandText = """
+            SELECT typeof(outbox.operation_id), length(CAST(outbox.operation_id AS BLOB)),
+                   IFNULL(substr(CAST(outbox.operation_id AS BLOB), 1, $operationIdTextLength), x'')
+            FROM oc_outbox AS outbox
+            INNER JOIN oc_outbox_operation_states AS state
+                ON state.store_identity = outbox.store_identity
+                AND state.operation_id = outbox.operation_id
+            LEFT JOIN oc_outbox_receive_inclusions AS inclusion
+                ON inclusion.store_identity = outbox.store_identity
+                AND inclusion.operation_id = outbox.operation_id
+            WHERE outbox.store_identity = $storeIdentity
+                AND outbox.stream_id = $streamId
+                AND state.operation_state = 4
+                AND inclusion.operation_id IS NULL
+            ORDER BY outbox.client_sequence ASC
+            LIMIT $maximumRows;
+            """;
+        AddStreamParameters(command, storeIdentity, streamId);
+        _ = command.Parameters.AddWithValue("$maximumRows", maximumRows);
+        _ = command.Parameters.AddWithValue("$operationIdTextLength", SnapshotRecoveryOperationIdTextLength);
+        using var reader = command.ExecuteReader();
+        var operations = new List<OperationId>();
+        while (reader.Read())
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            const int OperationIdTypeIndex = 0;
+            const int OperationIdLengthIndex = 1;
+            const int OperationIdIndex = 2;
+            operations.Add(ReadSnapshotRecoveryOperationId(reader, OperationIdIndex, OperationIdTypeIndex, OperationIdLengthIndex));
+        }
+
+        return operations;
+    }
+
     /// <summary>Reads and validates a bounded operation identifier for snapshot recovery scans.</summary>
     /// <param name="reader">The reader.</param>
     /// <param name="valueIndex">The bounded value column index.</param>
