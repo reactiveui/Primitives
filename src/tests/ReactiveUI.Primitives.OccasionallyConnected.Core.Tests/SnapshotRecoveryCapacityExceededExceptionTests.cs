@@ -2,6 +2,8 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Runtime.CompilerServices;
+
 namespace ReactiveUI.Primitives.OccasionallyConnected.Tests;
 
 /// <summary>Tests for <see cref="SnapshotRecoveryCapacityExceededException"/>.</summary>
@@ -41,7 +43,7 @@ public sealed class SnapshotRecoveryCapacityExceededExceptionTests
     {
         const string Message = "bounded capture failed";
         var exception = new SnapshotRecoveryCapacityExceededException(Message);
-        Action missing = static () => _ = new SnapshotRecoveryCapacityExceededException(null!);
+        Action missing = static () => _ = new SnapshotRecoveryCapacityExceededException(NullReference<string>());
 
         await Assert.That(exception.Message).IsEqualTo(Message);
         await Assert.That(missing).ThrowsExactly<ArgumentNullException>();
@@ -55,10 +57,21 @@ public sealed class SnapshotRecoveryCapacityExceededExceptionTests
         const string Message = "bounded capture failed";
         var inner = new InvalidOperationException("inner");
         var exception = new SnapshotRecoveryCapacityExceededException(Message, inner);
-        Action missing = static () => _ = new SnapshotRecoveryCapacityExceededException(null!, new InvalidOperationException("inner"));
+        Action missing = static () => _ = new SnapshotRecoveryCapacityExceededException(NullReference<string>(), new InvalidOperationException("inner"));
 
         await Assert.That(exception.Message).IsEqualTo(Message);
         await Assert.That(exception.InnerException).IsSameReferenceAs(inner);
         await Assert.That(missing).ThrowsExactly<ArgumentNullException>();
+    }
+
+    /// <summary>Creates a typed null reference for runtime-null contract regression tests.</summary>
+    /// <typeparam name="T">The reference type.</typeparam>
+    /// <returns>A null reference typed as <typeparamref name="T"/>.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static T NullReference<T>()
+        where T : class
+    {
+        object? value = null;
+        return Unsafe.As<object?, T>(ref value);
     }
 }
