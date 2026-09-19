@@ -584,6 +584,7 @@ internal sealed partial class SqliteServerCommitJournal : IServerCommitJournal, 
             SubscriptionState = state,
             ExpiredCursorOffer = expiredCursorOffer,
             RequestedExpiredCursor = request.RecoveryRequest.ExpiredCursor,
+            CapturedPendingOperationCount = request.RecoveryRequest.PendingOperations.Count,
             OperationDispositions = ServerSnapshotRecoveryJournalOperations.CreateOperationDispositions(snapshot, operationKeys, fingerprints),
             OperationFingerprints = fingerprints,
         };
@@ -597,8 +598,8 @@ internal sealed partial class SqliteServerCommitJournal : IServerCommitJournal, 
     internal ServerSnapshotOfferResult TryOfferSnapshot(ServerSnapshotOfferRequest request)
     {
         ThrowIfDisposed();
-        ServerSnapshotRecoveryJournalOperations.ValidateOfferRequest(request);
-        if (!ServerSnapshotRecoveryJournalOperations.OfferRequestMatchesView(request)
+        if (!ServerSnapshotRecoveryJournalOperations.ValidateOfferRequest(request)
+            || !ServerSnapshotRecoveryJournalOperations.OfferRequestMatchesView(request)
             || !ServerSnapshotRecoveryJournalOperations.RecoveryResultMatchesView(request.View, request.RecoveryResult))
         {
             return CreateSnapshotOfferResult(ServerSnapshotOfferStatus.ValidationRejected, null, null);

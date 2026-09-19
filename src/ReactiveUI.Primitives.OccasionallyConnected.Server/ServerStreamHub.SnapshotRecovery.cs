@@ -30,6 +30,9 @@ public sealed partial class ServerStreamHub
     /// <summary>The stable validation failure reason.</summary>
     private const string SnapshotValidationRejectedReason = "snapshot.validation_rejected";
 
+    /// <summary>The stable ambiguous replay proof failure reason.</summary>
+    private const string SnapshotAmbiguousPendingOperationReason = "snapshot.ambiguous_pending_operation";
+
     /// <summary>The stable capacity failure reason.</summary>
     private const string SnapshotCapacityExceededReason = "snapshot.capacity_exceeded";
 
@@ -68,6 +71,11 @@ public sealed partial class ServerStreamHub
             if (view.SubscriptionState is null || !HasRetainedExpiredCursorProof(view) || capturedState is null)
             {
                 return CreateNonRecoveredResult(RemoteSnapshotRecoveryStatus.RetentionExpired, SnapshotRetentionExpiredReason);
+            }
+
+            if (!ServerSnapshotRecoveryJournalOperations.ReplayOnlyProofsAreAccepted(view, request))
+            {
+                return CreateNonRecoveredResult(RemoteSnapshotRecoveryStatus.AmbiguousPendingOperation, SnapshotAmbiguousPendingOperationReason);
             }
 
             var frontierCursor = CreateCapturedFrontierCursor(view.Snapshot);

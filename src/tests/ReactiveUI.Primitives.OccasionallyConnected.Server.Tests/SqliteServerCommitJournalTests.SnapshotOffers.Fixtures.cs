@@ -32,16 +32,42 @@ public sealed partial class SqliteServerCommitJournalTests
     /// <returns>The recovery request.</returns>
     [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
     private static RemoteSnapshotRecoveryRequest SnapshotRequest(SubscriptionId subscriptionId, IReadOnlyList<SyncOperation> pendingOperations) =>
-        SnapshotRequest(subscriptionId, pendingOperations, ServerReceiveGroupCursor.Create(StreamKey(), 0));
+        SnapshotRequest(subscriptionId, pendingOperations, []);
+
+    /// <summary>Creates a structurally valid recovery request.</summary>
+    /// <param name="subscriptionId">The subscription identifier.</param>
+    /// <param name="pendingOperations">The owned pending operations.</param>
+    /// <param name="replayOperations">The owned replay-only operations.</param>
+    /// <returns>The recovery request.</returns>
+    [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+    private static RemoteSnapshotRecoveryRequest SnapshotRequest(
+        SubscriptionId subscriptionId,
+        IReadOnlyList<SyncOperation> pendingOperations,
+        IReadOnlyList<SyncOperation> replayOperations) =>
+        SnapshotRequest(subscriptionId, pendingOperations, replayOperations, ServerReceiveGroupCursor.Create(StreamKey(), 0));
 
     /// <summary>Creates a structurally valid recovery request.</summary>
     /// <param name="subscriptionId">The subscription identifier.</param>
     /// <param name="pendingOperations">The owned pending operations.</param>
     /// <param name="expiredCursor">The claimed expired cursor.</param>
     /// <returns>The recovery request.</returns>
+    [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
     private static RemoteSnapshotRecoveryRequest SnapshotRequest(
         SubscriptionId subscriptionId,
         IReadOnlyList<SyncOperation> pendingOperations,
+        string? expiredCursor) =>
+        SnapshotRequest(subscriptionId, pendingOperations, [], expiredCursor);
+
+    /// <summary>Creates a structurally valid recovery request.</summary>
+    /// <param name="subscriptionId">The subscription identifier.</param>
+    /// <param name="pendingOperations">The owned pending operations.</param>
+    /// <param name="replayOperations">The owned replay-only operations.</param>
+    /// <param name="expiredCursor">The claimed expired cursor.</param>
+    /// <returns>The recovery request.</returns>
+    private static RemoteSnapshotRecoveryRequest SnapshotRequest(
+        SubscriptionId subscriptionId,
+        IReadOnlyList<SyncOperation> pendingOperations,
+        IReadOnlyList<SyncOperation> replayOperations,
         string? expiredCursor) =>
         new()
         {
@@ -52,6 +78,7 @@ public sealed partial class SqliteServerCommitJournalTests
             ClientStateSchemaVersion = SingleEntryCount,
             SnapshotFormatVersion = SingleEntryCount,
             PendingOperations = pendingOperations,
+            ReplayOperations = replayOperations,
             MaximumResponseBytes = DefaultMaximumLogicalBytes,
         };
 
@@ -139,6 +166,7 @@ public sealed partial class SqliteServerCommitJournalTests
             SubscriptionState = state,
             ExpiredCursorOffer = null,
             RequestedExpiredCursor = ServerReceiveGroupCursor.Create(StreamKey(), 0),
+            CapturedPendingOperationCount = 0,
             OperationDispositions = [],
             OperationFingerprints = [],
         };
