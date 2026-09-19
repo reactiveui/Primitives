@@ -513,10 +513,12 @@ public sealed partial class SqliteServerCommitJournalTests
 
     /// <summary>Reopens the crashed writer's journal with native SQLite failure details.</summary>
     /// <param name="databasePath">The SQLite database path.</param>
+    /// <param name="childOutput">The crash child process output.</param>
     /// <returns>The recovered journal.</returns>
     /// <exception cref="InvalidOperationException">SQLite could not reopen the journal after the child exited.</exception>
-    private static SqliteServerCommitJournal ReopenJournalAfterCrash(string databasePath)
+    private static SqliteServerCommitJournal ReopenJournalAfterCrash(string databasePath, CrashChildOutput childOutput)
     {
+        var filesBeforeConstructor = CreateCrashRecoveryFileInventory(databasePath);
         try
         {
             return CreateJournal(databasePath);
@@ -524,11 +526,84 @@ public sealed partial class SqliteServerCommitJournalTests
         catch (SqliteException exception)
         {
             throw new InvalidOperationException(
-                string.Create(
-                    CultureInfo.InvariantCulture,
-                    $"Crash recovery failed: SQLite code {exception.SqliteErrorCode}, "
-                    + $"extended code {exception.SqliteExtendedErrorCode}, database '{databasePath}'."),
+                CreateCrashRecoveryFailureMessage(
+                    exception,
+                    databasePath,
+                    childOutput,
+                    filesBeforeConstructor,
+                    CreateCrashRecoveryFileInventory(databasePath)),
                 exception);
+        }
+    }
+
+    /// <summary>Creates a crash recovery failure message with non-mutating process and file diagnostics.</summary>
+    /// <param name="exception">The SQLite failure.</param>
+    /// <param name="databasePath">The SQLite database path.</param>
+    /// <param name="childOutput">The crash child process output.</param>
+    /// <param name="filesBeforeConstructor">The file inventory before the constructor ran.</param>
+    /// <param name="filesAfterConstructor">The file inventory after the constructor failed.</param>
+    /// <returns>The diagnostic failure message.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static string CreateCrashRecoveryFailureMessage(
+        SqliteException exception,
+        string databasePath,
+        CrashChildOutput childOutput,
+        string filesBeforeConstructor,
+        string filesAfterConstructor) =>
+        string.Join(
+            Environment.NewLine,
+            string.Create(
+                CultureInfo.InvariantCulture,
+                $"Crash recovery failed: SQLite code {exception.SqliteErrorCode}, "
+                + $"extended code {exception.SqliteExtendedErrorCode}, database '{databasePath}'."),
+            $"ChildHasExited: {childOutput.HasExited.ToString(CultureInfo.InvariantCulture)}",
+            $"ChildExitCode: {childOutput.ExitCode?.ToString(CultureInfo.InvariantCulture) ?? "unavailable"}",
+            "ChildStandardOutput:",
+            childOutput.StandardOutput,
+            "ChildStandardError:",
+            childOutput.StandardError,
+            "FilesBeforeConstructor:",
+            filesBeforeConstructor,
+            "FilesAfterFailedConstructor:",
+            filesAfterConstructor);
+
+    /// <summary>Creates a non-mutating inventory of the SQLite database files used for crash recovery diagnostics.</summary>
+    /// <param name="databasePath">The SQLite database path.</param>
+    /// <returns>The diagnostic file inventory or its retrieval failure.</returns>
+    private static string CreateCrashRecoveryFileInventory(string databasePath)
+    {
+        try
+        {
+            return string.Join(
+                Environment.NewLine,
+                DescribeCrashRecoveryFile(databasePath),
+                DescribeCrashRecoveryFile(databasePath + WriteAheadLogFileSuffix),
+                DescribeCrashRecoveryFile(databasePath + SharedMemoryFileSuffix),
+                DescribeCrashRecoveryFile(databasePath + RollbackJournalFileSuffix));
+        }
+        catch (Exception exception)
+        {
+            return $"File inventory was unavailable: {exception.GetType().FullName}: {exception.Message}";
+        }
+    }
+
+    /// <summary>Describes one SQLite crash recovery file without opening the database.</summary>
+    /// <param name="path">The SQLite file path.</param>
+    /// <returns>The file metadata or its retrieval failure.</returns>
+    private static string DescribeCrashRecoveryFile(string path)
+    {
+        try
+        {
+            var file = new FileInfo(path);
+            return !file.Exists
+                ? $"Path: '{path}', Exists: False."
+                : string.Create(
+                    CultureInfo.InvariantCulture,
+                    $"Path: '{path}', Exists: True, Length: {file.Length}, LastWriteTimeUtc: {file.LastWriteTimeUtc:O}.");
+        }
+        catch (Exception exception)
+        {
+            return $"Path: '{path}', Metadata retrieval failed: {exception.GetType().FullName}: {exception.Message}";
         }
     }
 
@@ -537,28 +612,34 @@ public sealed partial class SqliteServerCommitJournalTests
     /// <param name="signalPath">The signal path.</param>
     /// <param name="operationId">The operation identifier.</param>
     /// <param name="mode">The child mode.</param>
-    /// <returns>The asynchronous operation.</returns>
+    /// <returns>The crash child process output.</returns>
     /// <exception cref="InvalidOperationException">The child process did not publish a valid signal.</exception>
-    private static async Task RunCrashChildUntilSignalAsync(string databasePath, string signalPath, Guid operationId, string mode)
+    private static async Task<CrashChildOutput> RunCrashChildUntilSignalAsync(string databasePath, string signalPath, Guid operationId, string mode)
     {
         using var child = StartCrashChild(databasePath, signalPath, operationId, mode);
         var standardOutput = child.StandardOutput.ReadToEndAsync();
         var standardError = child.StandardError.ReadToEndAsync();
-        CrashChildOutput? output = null;
+        var childStopped = false;
         try
         {
             var signaled = await WaitForSignalAsync(signalPath, child, SignalWaitTimeout);
             if (!signaled)
             {
-                output = await StopAndDrainCrashChildAsync(child, standardOutput, standardError);
-                throw new InvalidOperationException(CreateSignalTimeoutMessage(output));
+                var timeoutOutput = await StopAndDrainCrashChildAsync(child, standardOutput, standardError);
+                childStopped = true;
+                throw new InvalidOperationException(CreateSignalTimeoutMessage(timeoutOutput));
             }
 
-            output = await StopAndDrainCrashChildAsync(child, standardOutput, standardError);
+            var successOutput = await StopAndDrainCrashChildAsync(child, standardOutput, standardError);
+            childStopped = true;
+            return successOutput;
         }
         finally
         {
-            output ??= await StopAndDrainCrashChildAsync(child, standardOutput, standardError);
+            if (!childStopped)
+            {
+                _ = await StopAndDrainCrashChildAsync(child, standardOutput, standardError);
+            }
         }
     }
 
@@ -621,7 +702,12 @@ public sealed partial class SqliteServerCommitJournalTests
             await child.WaitForExitAsync().WaitAsync(ChildExitTimeout);
         }
 
-        return new(child.HasExited, await standardOutput.WaitAsync(ChildExitTimeout), await standardError.WaitAsync(ChildExitTimeout));
+        var hasExited = child.HasExited;
+        return new(
+            hasExited,
+            hasExited ? child.ExitCode : (int?)null,
+            await standardOutput.WaitAsync(ChildExitTimeout),
+            await standardError.WaitAsync(ChildExitTimeout));
     }
 
     /// <summary>Creates a diagnostic timeout message from child process output.</summary>
@@ -633,6 +719,7 @@ public sealed partial class SqliteServerCommitJournalTests
             Environment.NewLine,
             "The child process did not publish the server journal signal.",
             $"HasExited: {output.HasExited.ToString(CultureInfo.InvariantCulture)}",
+            $"ExitCode: {output.ExitCode?.ToString(CultureInfo.InvariantCulture) ?? "unavailable"}",
             "StandardOutput:",
             output.StandardOutput,
             "StandardError:",
@@ -709,7 +796,8 @@ public sealed partial class SqliteServerCommitJournalTests
 
     /// <summary>The drained child process output.</summary>
     /// <param name="HasExited">A value indicating whether the child exited.</param>
+    /// <param name="ExitCode">The child exit code, when it is available.</param>
     /// <param name="StandardOutput">The standard output.</param>
     /// <param name="StandardError">The standard error.</param>
-    private sealed record CrashChildOutput(bool HasExited, string StandardOutput, string StandardError);
+    private sealed record CrashChildOutput(bool HasExited, int? ExitCode, string StandardOutput, string StandardError);
 }
