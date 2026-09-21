@@ -7,11 +7,11 @@ using System.Runtime.CompilerServices;
 namespace ReactiveUI.Primitives.Extensions.Operators;
 
 /// <summary>Drops leading null values, then forwards every value, including subsequent nulls.</summary>
-/// <typeparam name="T">The element type of the source observable; must be a reference type so the
+/// <typeparam name="T">The element type of the source observable; must be a reference type, nullable or not, so the
 /// null check is meaningful.</typeparam>
 /// <param name="source">The source observable.</param>
 public sealed class SkipWhileNullObservable<T>(IObservable<T> source) : IObservable<T>
-    where T : class
+    where T : class?
 {
     /// <inheritdoc/>
     public IDisposable Subscribe(IObserver<T> observer)

@@ -207,9 +207,9 @@ public static partial class ReactiveExtensions
         public IObservable<Heartbeat<T>> Heartbeat(TimeSpan heartbeatPeriod, ISequencer scheduler) =>
             new HeartbeatObservable<T>(source, heartbeatPeriod, scheduler);
 
-        /// <summary>Emit the latest value or a default if none exists.</summary>
-        /// <param name="defaultValue">The default value.</param>
-        /// <returns>A sequence that emits the latest value or the default.</returns>
+        /// <summary>Emits <paramref name="defaultValue"/> on subscribe, then each source value that differs from the last value emitted.</summary>
+        /// <param name="defaultValue">The value emitted on subscribe before the source is subscribed; source values equal to the last emitted value, including this one, are dropped.</param>
+        /// <returns>A sequence that starts with the default value, then forwards changed values, errors and completion. Equality uses the default comparer.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public IObservable<T> LatestOrDefault(T defaultValue) =>
             new LatestOrDefaultObservable<T>(source, defaultValue);
@@ -768,11 +768,11 @@ public static partial class ReactiveExtensions
         }
     }
 
-    /// <summary>Null-skipping operators for an observable source sequence of reference types.</summary>
+    /// <summary>Null-skipping operators for an observable source sequence of reference types, nullable or not.</summary>
     /// <typeparam name="T">The reference type of the source elements.</typeparam>
     /// <param name="source">The source observable.</param>
     extension<T>(IObservable<T> source)
-        where T : class
+        where T : class?
     {
         /// <summary>Skip null values until the first non-null appears.</summary>
         /// <returns>An IObservable of T.</returns>

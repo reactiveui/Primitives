@@ -159,4 +159,19 @@ public partial class ReactiveExtensionsTests
         await Assert.That(results).Count().IsEqualTo(SampleValue3);
         await Assert.That(results).All(static x => x == RxVoid.Default);
     }
+
+    /// <summary>Tests SkipWhileNull on a nullable reference element type drops leading nulls and forwards later ones.</summary>
+    /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
+    [Test]
+    public async Task GivenNullableReferenceSource_WhenSkipWhileNull_ThenDropsOnlyLeadingNulls()
+    {
+        Subject<string?> subject = new();
+        List<string?> results = [];
+        _ = ((IObservable<string?>)subject).SkipWhileNull().Subscribe(results.Add);
+        subject.OnNext(null);
+        subject.OnNext("alpha");
+        subject.OnNext(null);
+        subject.OnNext("beta");
+        await Assert.That(results).IsCollectionEqualTo(["alpha", null, "beta"]);
+    }
 }

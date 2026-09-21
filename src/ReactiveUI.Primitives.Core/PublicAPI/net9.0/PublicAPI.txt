@@ -1367,7 +1367,7 @@ namespace ReactiveUI.Primitives.Extensions.Operators
         public ShuffleObservable(System.IObservable<T[]> source) { }
         public System.IDisposable Subscribe(System.IObserver<T[]> observer) { }
     }
-    public sealed class SkipWhileNullObservable<T> : System.IObservable<T> where T : class
+    public sealed class SkipWhileNullObservable<T> : System.IObservable<T> where T : class?
     {
         public SkipWhileNullObservable(System.IObservable<T> source) { }
         public System.IDisposable Subscribe(System.IObserver<T> observer) { }
