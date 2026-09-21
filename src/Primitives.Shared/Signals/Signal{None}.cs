@@ -21,7 +21,7 @@ public static partial class Signal
         "Design",
         "SST2307:Generic method type parameters should be inferable from the parameters",
         Justification = "The element type cannot be inferred from the arguments.")]
-    public static IObservable<T> None<T>(ISequencer scheduler) => scheduler == Sequencer.Immediate
+    public static IObservable<T> None<T>(ISequencer scheduler) => scheduler.IsImmediate
         ? ImmutableEmptySignal<T>.Instance
         : new EmptySignal<T>(scheduler);
 
@@ -34,7 +34,7 @@ public static partial class Signal
         "Design",
         "SST2318:Members should not have identical bodies",
         Justification = "The witness parameter only fixes the element type, so this overload builds the same signal.")]
-    public static IObservable<T> None<T>(ISequencer scheduler, T witness) => scheduler == Sequencer.Immediate
+    public static IObservable<T> None<T>(ISequencer scheduler, T witness) => scheduler.IsImmediate
         ? ImmutableEmptySignal<T>.Instance
         : new EmptySignal<T>(scheduler);
 

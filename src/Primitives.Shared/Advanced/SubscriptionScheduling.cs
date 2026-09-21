@@ -42,7 +42,7 @@ internal static class SubscriptionScheduling
     /// <returns>A disposable that cancels the scheduled work, best effort.</returns>
     internal static IDisposable RunOn<TState>(ISequencer sequencer, TState state, Action<TState> run)
     {
-        if (sequencer == Sequencer.Immediate)
+        if (sequencer.IsImmediate)
         {
             run(state);
             return EmptyDisposable.Instance;

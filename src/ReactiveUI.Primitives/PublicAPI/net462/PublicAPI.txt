@@ -1651,6 +1651,15 @@ namespace ReactiveUI.Primitives.Advanced
         [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
         public void SetSubscription(System.IDisposable subscription) { }
     }
+    [System.Diagnostics.DebuggerDisplay("WitnessLatestOnSignal<{typeof(T).Name,nq}>")]
+    public sealed class WitnessLatestOnSignal<T> : ReactiveUI.Primitives.Advanced.IRequireCurrentThread<T>
+    {
+        public WitnessLatestOnSignal(System.IObservable<T> source, ReactiveUI.Primitives.Concurrency.ISequencer scheduler) { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public bool IsRequiredSubscribeOnCurrentThread() { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public System.IDisposable Subscribe(System.IObserver<T> observer) { }
+    }
     [System.Diagnostics.DebuggerDisplay("WitnessOnSignal<{typeof(T).Name,nq}>")]
     public sealed class WitnessOnSignal<T> : ReactiveUI.Primitives.Advanced.IRequireCurrentThread<T>
     {
@@ -1672,6 +1681,7 @@ namespace ReactiveUI.Primitives.Concurrency
     [System.Diagnostics.DebuggerDisplay("{DebuggerDisplay,nq}")]
     public sealed class CurrentThreadSequencer : ReactiveUI.Primitives.Concurrency.ISequencer
     {
+        public CurrentThreadSequencer(System.TimeProvider timeProvider) { }
         public System.DateTimeOffset Now { get; }
         public long Timestamp { get; }
         public static ReactiveUI.Primitives.Concurrency.CurrentThreadSequencer Instance { get; }
@@ -1691,6 +1701,7 @@ namespace ReactiveUI.Primitives.Concurrency
     [System.Diagnostics.DebuggerDisplay("{DebuggerDisplay,nq}")]
     public sealed class ImmediateSequencer : ReactiveUI.Primitives.Concurrency.ISequencer
     {
+        public ImmediateSequencer(System.TimeProvider timeProvider) { }
         public System.DateTimeOffset Now { get; }
         public long Timestamp { get; }
         public static ReactiveUI.Primitives.Concurrency.ImmediateSequencer Instance { get; }
@@ -1728,10 +1739,18 @@ namespace ReactiveUI.Primitives.Concurrency
             public System.IDisposable ScheduleAction<TState>(TState state, System.Action<TState> action) { }
         }
     }
+    public static class SequencerImmediacyExtensions
+    {
+        extension(ReactiveUI.Primitives.Concurrency.ISequencer? sequencer)
+        {
+            public bool IsImmediate { get; }
+        }
+    }
     [System.Diagnostics.DebuggerDisplay("{DebuggerDisplay,nq}")]
     public sealed class SynchronizationContextSequencer : ReactiveUI.Primitives.Concurrency.ISequencer
     {
         public SynchronizationContextSequencer(System.Threading.SynchronizationContext context) { }
+        public SynchronizationContextSequencer(System.Threading.SynchronizationContext context, System.TimeProvider timeProvider) { }
         public System.Threading.SynchronizationContext Context { get; }
         public System.DateTimeOffset Now { get; }
         public long Timestamp { get; }
@@ -1743,6 +1762,7 @@ namespace ReactiveUI.Primitives.Concurrency
     public sealed class TaskPoolSequencer : ReactiveUI.Primitives.Concurrency.ISequencer
     {
         public TaskPoolSequencer(System.Threading.Tasks.TaskFactory taskFactory) { }
+        public TaskPoolSequencer(System.Threading.Tasks.TaskFactory taskFactory, System.TimeProvider timeProvider) { }
         public System.DateTimeOffset Now { get; }
         public long Timestamp { get; }
         public System.Action<System.Exception>? UnhandledExceptionHandler { get; set; }
@@ -1754,6 +1774,7 @@ namespace ReactiveUI.Primitives.Concurrency
     [System.Diagnostics.DebuggerDisplay("{DebuggerDisplay,nq}")]
     public sealed class ThreadPoolSequencer : ReactiveUI.Primitives.Concurrency.ISequencer, System.IDisposable
     {
+        public ThreadPoolSequencer(System.TimeProvider timeProvider) { }
         public static readonly ReactiveUI.Primitives.Concurrency.ThreadPoolSequencer Instance;
         public System.DateTimeOffset Now { get; }
         public long Timestamp { get; }
@@ -1762,7 +1783,7 @@ namespace ReactiveUI.Primitives.Concurrency
         public void Schedule(ReactiveUI.Primitives.Concurrency.IWorkItem item, long dueTimestamp) { }
     }
     [System.Diagnostics.DebuggerDisplay("{DebuggerDisplay,nq}")]
-    public sealed class VirtualClock : ReactiveUI.Primitives.Concurrency.ISequencer, ReactiveUI.Primitives.Concurrency.IStopwatchProvider, System.IServiceProvider
+    public sealed class VirtualClock : System.TimeProvider, ReactiveUI.Primitives.Concurrency.ISequencer, ReactiveUI.Primitives.Concurrency.IStopwatchProvider, System.IServiceProvider
     {
         public VirtualClock() { }
         public VirtualClock(System.DateTimeOffset initialClock) { }
@@ -1770,10 +1791,14 @@ namespace ReactiveUI.Primitives.Concurrency
         public bool IsEnabled { get; }
         public System.DateTimeOffset Now { get; }
         public long Timestamp { get; }
+        public override long TimestampFrequency { get; }
         [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
         public void AdvanceBy(System.TimeSpan time) { }
         [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
         public void AdvanceTo(System.DateTimeOffset time) { }
+        public override System.Threading.ITimer CreateTimer(System.Threading.TimerCallback callback, object? state, System.TimeSpan dueTime, System.TimeSpan period) { }
+        public override long GetTimestamp() { }
+        public override System.DateTimeOffset GetUtcNow() { }
         [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
         public void Schedule(ReactiveUI.Primitives.Concurrency.IWorkItem item) { }
         [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
@@ -1850,6 +1875,7 @@ namespace ReactiveUI.Primitives.Concurrency
     [System.Diagnostics.DebuggerDisplay("{DebuggerDisplay,nq}")]
     public sealed class WasmSequencer : ReactiveUI.Primitives.Concurrency.ISequencer, System.IDisposable
     {
+        public WasmSequencer(System.TimeProvider timeProvider) { }
         public System.DateTimeOffset Now { get; }
         public long Timestamp { get; }
         public static ReactiveUI.Primitives.Concurrency.WasmSequencer Default { get; }
@@ -2467,6 +2493,8 @@ namespace ReactiveUI.Primitives.Signals
         extension<T>(System.IObservable<T> source)
         {
             public System.Collections.Generic.IEnumerable<T> ToEnumerable() { }
+            [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+            public System.IObservable<T> WitnessLatestOn(ReactiveUI.Primitives.Concurrency.ISequencer scheduler) { }
             [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
             public System.IObservable<T> WitnessOn(ReactiveUI.Primitives.Concurrency.ISequencer scheduler) { }
         }

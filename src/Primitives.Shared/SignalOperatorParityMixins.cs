@@ -36,7 +36,7 @@ public static partial class LinqExtensions
 
             ArgumentExceptionHelper.ThrowIfNull(scheduler);
 
-            return scheduler == Sequencer.Immediate || scheduler == Sequencer.CurrentThread
+            return scheduler.IsImmediate || scheduler == Sequencer.CurrentThread
                 ? new FromEnumerableSignal<T>(values)
                 : new ScheduledEnumerableSignal<T>(values, scheduler);
         }
@@ -149,7 +149,7 @@ public static partial class LinqExtensions
 
             ArgumentExceptionHelper.ThrowIfNull(scheduler);
 
-            return scheduler == Sequencer.Immediate ? source : new WitnessOnSignal<T>(source, scheduler);
+            return scheduler.IsImmediate ? source : new WitnessOnSignal<T>(source, scheduler);
         }
 
         /// <summary>Schedules source subscription on the supplied sequencer.</summary>

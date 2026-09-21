@@ -97,6 +97,31 @@ public sealed class ExpireCoordinatorTests
         await Assert.That(errors.SequenceEqual([nameof(TimeoutException)])).IsTrue();
     }
 
+    /// <summary>Verifies a sequencer driven by a virtual clock used as a time provider expires the sequence exactly when the clock reaches the timeout.</summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    [Test]
+    public async Task ExpireOverATimeProviderSequencerFiresWhenTheClockReachesTheTimeout()
+    {
+        VirtualClock clock = new(DateTimeOffset.UnixEpoch);
+        var sequencer = InlineThreadPool.Create(clock);
+        Signal<int> source = new();
+        List<int> values = [];
+        List<string> errors = [];
+        using var subscription = source.Expire(TimeSpan.FromTicks(DueTicks), sequencer)
+            .Subscribe(values.Add, ex => errors.Add(ex.GetType().Name));
+
+        clock.AdvanceBy(TimeSpan.FromTicks(ShortGapTicks));
+        source.OnNext(One);
+        clock.AdvanceBy(TimeSpan.FromTicks(DueTicks - One));
+
+        await Assert.That(errors).IsEmpty();
+
+        clock.AdvanceBy(TimeSpan.FromTicks(One));
+
+        await Assert.That(values.SequenceEqual([One])).IsTrue();
+        await Assert.That(errors.SequenceEqual([nameof(TimeoutException)])).IsTrue();
+    }
+
     /// <summary>Verifies no timer fires once the source has terminated.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]

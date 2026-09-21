@@ -157,4 +157,77 @@ public class TaskPoolSequencerTests
     [Test]
     public async Task Constructor_NullTaskFactory_ThrowsArgumentNull() =>
         await Assert.That(static () => new TaskPoolSequencer(null!)).ThrowsExactly<ArgumentNullException>();
+
+    /// <summary>A null task factory or time provider is rejected by the provider constructor.</summary>
+    /// <returns>A task representing the asynchronous test.</returns>
+    [Test]
+    public async Task ProviderConstructorRejectsANullTaskFactoryOrProvider()
+    {
+        TimeProvider provider = new VirtualClock();
+
+        await Assert.That(() => new TaskPoolSequencer(null!, provider)).ThrowsExactly<ArgumentNullException>();
+        await Assert.That(static () => new TaskPoolSequencer(new(new ManualTaskScheduler()), (TimeProvider)null!))
+            .ThrowsExactly<ArgumentNullException>();
+    }
+
+    /// <summary>The current time and timestamp follow the provider.</summary>
+    /// <returns>A task representing the asynchronous test.</returns>
+    [Test]
+    public async Task NowAndTimestampFollowTheProvider()
+    {
+        VirtualClock clock = new(DateTimeOffset.UnixEpoch);
+        TimeProvider provider = clock;
+        TaskPoolSequencer sequencer = new(new(new ManualTaskScheduler()), provider);
+        var start = sequencer.Timestamp;
+
+        clock.AdvanceBy(TimeSpan.FromSeconds(1));
+
+        await Assert.That(sequencer.Now).IsEqualTo(DateTimeOffset.UnixEpoch + TimeSpan.FromSeconds(1));
+        await Assert.That(sequencer.Timestamp - start).IsEqualTo(Sequencer.ToTimestampDelta(TimeSpan.FromSeconds(1)));
+    }
+
+    /// <summary>Delayed work reaches the task factory only when the provider is advanced to its timestamp.</summary>
+    /// <returns>A task representing the asynchronous test.</returns>
+    [Test]
+    public async Task DelayedWorkIsDispatchedWhenTheProviderReachesItsTimestamp()
+    {
+        VirtualClock clock = new();
+        TimeProvider provider = clock;
+        ManualTaskScheduler tasks = new();
+        TaskPoolSequencer sequencer = new(new(tasks), provider);
+        RecordingWorkItem item = new();
+        var oneSecond = TimeSpan.FromSeconds(1);
+
+        sequencer.Schedule(item, sequencer.Timestamp + Sequencer.ToTimestampDelta(oneSecond));
+        clock.AdvanceBy(oneSecond - TimeSpan.FromTicks(1));
+        tasks.RunPending();
+
+        await Assert.That(item.ExecuteCount).IsEqualTo(0);
+
+        clock.AdvanceBy(TimeSpan.FromTicks(1));
+        await Assert.That(item.ExecuteCount).IsEqualTo(0);
+        tasks.RunPending();
+
+        await Assert.That(item.ExecuteCount).IsEqualTo(1);
+    }
+
+    /// <summary>Delayed work cancelled before its timestamp never runs.</summary>
+    /// <returns>A task representing the asynchronous test.</returns>
+    [Test]
+    public async Task CancelledDelayedWorkIsNotDispatched()
+    {
+        VirtualClock clock = new();
+        TimeProvider provider = clock;
+        ManualTaskScheduler tasks = new();
+        TaskPoolSequencer sequencer = new(new(tasks), provider);
+        RecordingWorkItem item = new();
+        var oneSecond = TimeSpan.FromSeconds(1);
+
+        sequencer.Schedule(item, sequencer.Timestamp + Sequencer.ToTimestampDelta(oneSecond));
+        item.Dispose();
+        clock.AdvanceBy(oneSecond);
+        tasks.RunPending();
+
+        await Assert.That(item.ExecuteCount).IsEqualTo(0);
+    }
 }

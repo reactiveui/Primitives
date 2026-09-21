@@ -25,6 +25,15 @@ public sealed class TaskPoolSequencer : ISequencer
     {
     }
 
+    /// <summary>Initializes a new instance of the <see cref="TaskPoolSequencer"/> class that reads time and arms its delay timer through a <see cref="TimeProvider"/>.</summary>
+    /// <param name="taskFactory">The task factory.</param>
+    /// <param name="timeProvider">The provider supplying the current time, timestamps and the delay timer.</param>
+    /// <exception cref="ArgumentNullException"><paramref name="taskFactory"/> or <paramref name="timeProvider"/> is <see langword="null"/>.</exception>
+    public TaskPoolSequencer(TaskFactory taskFactory, TimeProvider timeProvider)
+        : this(taskFactory, new ThreadPoolSequencer(timeProvider))
+    {
+    }
+
     /// <summary>Initializes a new instance of the <see cref="TaskPoolSequencer"/> class.</summary>
     /// <param name="taskFactory">The factory dispatching ready work.</param>
     /// <param name="delaySequencer">The scheduler delivering delayed callbacks.</param>

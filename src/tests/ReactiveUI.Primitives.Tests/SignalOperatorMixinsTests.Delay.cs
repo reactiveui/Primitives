@@ -176,6 +176,35 @@ public partial class SignalOperatorMixinsTests
         await Assert.That(sequencer.ScheduledCount).IsEqualTo(0);
     }
 
+    /// <summary>Verifies shift over a sequencer driven by a virtual clock used as a time provider delivers each value one due time after it arrived.</summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    [Test]
+    public async Task ShiftOverATimeProviderSequencerDeliversEachValueOneDueTimeLater()
+    {
+        VirtualClock clock = new(DateTimeOffset.UnixEpoch);
+        var sequencer = InlineThreadPool.Create(clock);
+        var step = TimeSpan.FromTicks(Five);
+        var dueTime = TimeSpan.FromTicks(Ten);
+        Signal<int> source = new();
+        RecordingWitness<int> observer = new();
+        using var subscription = source.Shift(dueTime, sequencer).Subscribe(observer);
+
+        source.OnNext(One);
+        clock.AdvanceBy(step);
+        source.OnNext(Two);
+        clock.AdvanceBy(step - TimeSpan.FromTicks(One));
+
+        await Assert.That(observer.Values.Count).IsEqualTo(0);
+
+        clock.AdvanceBy(TimeSpan.FromTicks(One));
+
+        await Assert.That(observer.Values.SequenceEqual([One])).IsTrue();
+
+        clock.AdvanceBy(step);
+
+        await Assert.That(observer.Values.SequenceEqual([One, Two])).IsTrue();
+    }
+
     /// <summary>Sequencer that records scheduled work for deterministic execution.</summary>
     private sealed class RecordingSequencer : ISequencer
     {

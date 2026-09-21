@@ -23,7 +23,7 @@ internal sealed class ObserveOnObservable<T>(IObservable<T> source, ISequencer s
         InvalidOperationExceptionHelper.ThrowIfNull(scheduler);
         ArgumentExceptionHelper.ThrowIfNull(observer);
 
-        if (ReferenceEquals(scheduler, Sequencer.Immediate))
+        if (scheduler.IsImmediate)
         {
             return source.Subscribe(observer);
         }

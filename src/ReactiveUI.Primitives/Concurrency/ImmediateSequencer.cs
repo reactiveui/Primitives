@@ -14,19 +14,42 @@ public sealed class ImmediateSequencer : ISequencer
     /// <summary>Singleton holder for the immediate sequencer.</summary>
     private static readonly Lazy<ImmediateSequencer> StaticInstance = new(static () => new());
 
-    /// <summary>Initializes a new instance of the <see cref="ImmediateSequencer"/> class.</summary>
-    private ImmediateSequencer()
+    /// <summary>The clock supplying time and blocking waits.</summary>
+    private readonly SequencerClock _clock;
+
+    /// <summary>Blocks the scheduling thread for a delay measured by the clock.</summary>
+    private readonly Action<TimeSpan> _wait;
+
+    /// <summary>Initializes a new instance of the <see cref="ImmediateSequencer"/> class that reads time and waits through a <see cref="TimeProvider"/>.</summary>
+    /// <param name="timeProvider">The provider supplying the current time, timestamps and timers.</param>
+    /// <exception cref="ArgumentNullException"><paramref name="timeProvider"/> is <see langword="null"/>.</exception>
+    public ImmediateSequencer(TimeProvider timeProvider)
+        : this(new SequencerClock(timeProvider))
     {
+    }
+
+    /// <summary>Initializes a new instance of the <see cref="ImmediateSequencer"/> class; callers use <see cref="Instance"/>.</summary>
+    private ImmediateSequencer()
+        : this(SequencerClock.Default)
+    {
+    }
+
+    /// <summary>Initializes a new instance of the <see cref="ImmediateSequencer"/> class.</summary>
+    /// <param name="clock">The clock supplying time and blocking waits.</param>
+    private ImmediateSequencer(SequencerClock clock)
+    {
+        _clock = clock;
+        _wait = clock.Wait;
     }
 
     /// <summary>Gets the singleton instance of the immediate scheduler.</summary>
     public static ImmediateSequencer Instance => StaticInstance.Value;
 
     /// <summary>Gets the scheduler's notion of current time.</summary>
-    public DateTimeOffset Now => Sequencer.Now;
+    public DateTimeOffset Now => _clock.GetUtcNow();
 
     /// <summary>Gets the scheduler's monotonic timestamp.</summary>
-    public long Timestamp => Sequencer.Timestamp;
+    public long Timestamp => _clock.GetTimestamp();
 
     /// <summary>Gets the debugger display text.</summary>
     [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
@@ -68,7 +91,7 @@ public sealed class ImmediateSequencer : ISequencer
     {
         ArgumentExceptionHelper.ThrowIfNull(item);
 
-        RunScheduled(item, Sequencer.TimeUntil(dueTimestamp), Wait);
+        RunScheduled(item, _clock.TimeUntil(dueTimestamp), _wait);
     }
 
     /// <summary>Waits for a relative delay and executes work that remains active.</summary>
@@ -89,10 +112,4 @@ public sealed class ImmediateSequencer : ISequencer
 
         item.Execute();
     }
-
-    /// <summary>Blocks the scheduling thread for the remaining delay.</summary>
-    /// <param name="dueTime">The remaining delay.</param>
-    [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
-    [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
-    private static void Wait(TimeSpan dueTime) => Thread.Sleep(dueTime);
 }

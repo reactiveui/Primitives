@@ -163,7 +163,7 @@ public static partial class LinqExtensions
         /// <param name="onNext">The next callback.</param>
         private void Emit(Action<Moment<T>> onNext)
         {
-            if (_sequencer == Sequencer.Immediate)
+            if (_sequencer.IsImmediate)
             {
                 var timestamp = _sequencer.Now;
                 for (var i = 0; i < _range.Count; i++)
@@ -184,7 +184,7 @@ public static partial class LinqExtensions
         /// <param name="observer">The downstream observer.</param>
         private void Emit(IObserver<Moment<T>> observer)
         {
-            if (_sequencer == Sequencer.Immediate)
+            if (_sequencer.IsImmediate)
             {
                 var timestamp = _sequencer.Now;
                 for (var i = 0; i < _range.Count; i++)
@@ -238,7 +238,7 @@ public static partial class LinqExtensions
         /// <param name="onNext">The next callback.</param>
         private void Emit(Action<TimeInterval<T>> onNext)
         {
-            if (_sequencer == Sequencer.Immediate)
+            if (_sequencer.IsImmediate)
             {
                 for (var i = 0; i < _range.Count; i++)
                 {
@@ -262,7 +262,7 @@ public static partial class LinqExtensions
         /// <param name="observer">The downstream observer.</param>
         private void Emit(IObserver<TimeInterval<T>> observer)
         {
-            if (_sequencer == Sequencer.Immediate)
+            if (_sequencer.IsImmediate)
             {
                 for (var i = 0; i < _range.Count; i++)
                 {

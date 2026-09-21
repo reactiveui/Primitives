@@ -11,8 +11,14 @@ namespace ReactiveUI.Primitives.Tests;
 /// <summary>Tests for <see cref="WasmSequencer"/>.</summary>
 public sealed class WasmSequencerTests
 {
+    /// <summary>Timestamp ticks per second of a provider that counts milliseconds.</summary>
+    private const long MillisecondFrequency = 1000;
+
     /// <summary>Expected values produced by an immediate burst, in FIFO order.</summary>
     private static readonly int[] ExpectedBurst = [1, 2, 3];
+
+    /// <summary>The delay used for scheduled work.</summary>
+    private static readonly TimeSpan OneSecond = TimeSpan.FromSeconds(1);
 
     /// <summary>Verifies the shared instance is a singleton.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
@@ -220,6 +226,121 @@ public sealed class WasmSequencerTests
         delays.RunPending();
         await Assert.That(drains.Count).IsEqualTo(0);
         await Assert.That(ran).IsEqualTo(0);
+    }
+
+    /// <summary>A sequencer rejects a missing provider.</summary>
+    /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
+    [Test]
+    public async Task ProviderConstructorRejectsANullProvider() =>
+        await Assert.That(static () => new WasmSequencer(null!)).ThrowsExactly<ArgumentNullException>();
+
+    /// <summary>The current time and timestamp follow the provider.</summary>
+    /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
+    [Test]
+    public async Task NowAndTimestampFollowTheProvider()
+    {
+        VirtualClock clock = new(DateTimeOffset.UnixEpoch);
+        using WasmSequencer sequencer = new(clock);
+        var start = sequencer.Timestamp;
+
+        clock.AdvanceBy(OneSecond);
+
+        await Assert.That(sequencer.Now).IsEqualTo(DateTimeOffset.UnixEpoch + OneSecond);
+        await Assert.That(sequencer.Timestamp - start).IsEqualTo(Sequencer.ToTimestampDelta(OneSecond));
+    }
+
+    /// <summary>Immediate work runs on the provider's next timer turn.</summary>
+    /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
+    [Test]
+    public async Task ImmediateWorkRunsWhenTheProviderFiresItsDrainTimer()
+    {
+        VirtualClock clock = new();
+        using WasmSequencer sequencer = new(clock);
+        RecordingWorkItem item = new();
+        RecordingWorkItem cancelled = new();
+        cancelled.Dispose();
+
+        sequencer.Schedule(cancelled);
+        sequencer.Schedule(item);
+
+        await Assert.That(item.ExecuteCount).IsEqualTo(0);
+
+        clock.AdvanceBy(TimeSpan.FromTicks(1));
+
+        await Assert.That(item.ExecuteCount).IsEqualTo(1);
+        await Assert.That(cancelled.ExecuteCount).IsEqualTo(0);
+    }
+
+    /// <summary>Delayed work runs when the provider reaches its timestamp and not before.</summary>
+    /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
+    [Test]
+    public async Task DelayedWorkRunsExactlyWhenTheProviderReachesItsTimestamp()
+    {
+        VirtualClock clock = new();
+        using WasmSequencer sequencer = new(clock);
+        RecordingWorkItem item = new();
+
+        sequencer.Schedule(item, sequencer.Timestamp + Sequencer.ToTimestampDelta(OneSecond));
+        clock.AdvanceBy(OneSecond - TimeSpan.FromTicks(1));
+
+        await Assert.That(item.ExecuteCount).IsEqualTo(0);
+
+        clock.AdvanceBy(TimeSpan.FromTicks(1));
+
+        await Assert.That(item.ExecuteCount).IsEqualTo(1);
+    }
+
+    /// <summary>Delayed work cancelled before its timestamp never runs.</summary>
+    /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
+    [Test]
+    public async Task DelayedWorkCancelledBeforeItsTimestampDoesNotRun()
+    {
+        VirtualClock clock = new();
+        using WasmSequencer sequencer = new(clock);
+        RecordingWorkItem item = new();
+
+        sequencer.Schedule(item, sequencer.Timestamp + Sequencer.ToTimestampDelta(OneSecond));
+        item.Dispose();
+        clock.AdvanceBy(OneSecond);
+
+        await Assert.That(item.ExecuteCount).IsEqualTo(0);
+    }
+
+    /// <summary>A provider counting at another frequency drives delayed work at the right wall time.</summary>
+    /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
+    [Test]
+    public async Task ProviderWithAnotherFrequencyDrivesDelayedWork()
+    {
+        VirtualClock clock = new();
+        ScaledTimeProvider provider = new(clock, MillisecondFrequency);
+        using WasmSequencer sequencer = new(provider);
+        RecordingWorkItem item = new();
+
+        sequencer.Schedule(item, sequencer.Timestamp + Sequencer.ToTimestampDelta(OneSecond));
+        clock.AdvanceBy(OneSecond - TimeSpan.FromMilliseconds(1));
+
+        await Assert.That(item.ExecuteCount).IsEqualTo(0);
+
+        clock.AdvanceBy(TimeSpan.FromMilliseconds(1));
+
+        await Assert.That(item.ExecuteCount).IsEqualTo(1);
+    }
+
+    /// <summary>Disposal cancels queued immediate work before the provider's drain timer fires.</summary>
+    /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
+    [Test]
+    public async Task DisposeCancelsQueuedWorkBeforeTheDrainTimerFires()
+    {
+        VirtualClock clock = new();
+        WasmSequencer sequencer = new(clock);
+        RecordingWorkItem item = new();
+
+        sequencer.Schedule(item);
+        sequencer.Dispose();
+        clock.AdvanceBy(OneSecond);
+
+        await Assert.That(item.IsDisposed).IsTrue();
+        await Assert.That(item.ExecuteCount).IsEqualTo(0);
     }
 
     /// <summary>Creates a sequencer whose event loop is driven explicitly.</summary>

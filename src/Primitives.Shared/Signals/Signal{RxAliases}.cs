@@ -105,7 +105,7 @@ public static partial class Signal
     {
         ArgumentExceptionHelper.ThrowIfNull(scheduler);
 
-        return scheduler == Sequencer.Immediate
+        return scheduler.IsImmediate
             ? new ImmediateReturnSignal<T>(value)
             : new ReturnSignal<T>(value, scheduler);
     }
@@ -152,7 +152,7 @@ public static partial class Signal
     {
         ArgumentExceptionHelper.ThrowIfNull(scheduler);
 
-        return scheduler == Sequencer.Immediate ? ImmutableEmptySignal<T>.Instance : new EmptySignal<T>(scheduler);
+        return scheduler.IsImmediate ? ImmutableEmptySignal<T>.Instance : new EmptySignal<T>(scheduler);
     }
 
     /// <summary>Returns a non-terminating observable sequence.</summary>
@@ -189,7 +189,7 @@ public static partial class Signal
     {
         ArgumentExceptionHelper.ThrowIfNull(scheduler);
 
-        return scheduler == Sequencer.Immediate
+        return scheduler.IsImmediate
             ? new ImmediateThrowSignal<T>(error)
             : new ThrowSignal<T>(error, scheduler);
     }
@@ -221,7 +221,7 @@ public static partial class Signal
             return ImmutableEmptySignal<int>.Instance;
         }
 
-        return scheduler == Sequencer.Immediate || scheduler == Sequencer.CurrentThread
+        return scheduler.IsImmediate || scheduler == Sequencer.CurrentThread
             ? new RangeSignal(start, count)
             : new SequenceSignal(start, count, scheduler);
     }

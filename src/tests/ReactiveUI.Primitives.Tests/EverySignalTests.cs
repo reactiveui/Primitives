@@ -42,6 +42,29 @@ public sealed class EverySignalTests
         await Assert.That(ticks.SequenceEqual([0L, 1L])).IsTrue();
     }
 
+    /// <summary>Verifies a sequencer driven by a virtual clock used as a time provider emits one tick per period as the clock advances.</summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    [Test]
+    public async Task EveryOverATimeProviderSequencerTicksOncePerPeriodAsTheClockAdvances()
+    {
+        VirtualClock clock = new(DateTimeOffset.UnixEpoch);
+        var sequencer = InlineThreadPool.Create(clock);
+        List<long> ticks = [];
+        using var subscription = Signal.Every(TickPeriod, sequencer).Subscribe(ticks.Add);
+
+        clock.AdvanceBy(TickPeriod - TimeSpan.FromTicks(1));
+
+        await Assert.That(ticks).IsEmpty();
+
+        clock.AdvanceBy(TimeSpan.FromTicks(1));
+
+        await Assert.That(ticks.SequenceEqual([0L])).IsTrue();
+
+        clock.AdvanceBy(TickPeriod + TickPeriod);
+
+        await Assert.That(ticks.SequenceEqual(ExpectedTicks)).IsTrue();
+    }
+
     /// <summary>Verifies a bounded <c>Every</c> on the current-thread sequencer terminates instead of livelocking.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]

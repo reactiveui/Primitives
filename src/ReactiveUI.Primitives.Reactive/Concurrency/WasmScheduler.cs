@@ -43,16 +43,19 @@ public sealed class WasmScheduler : LocalScheduler, ISchedulerPeriodic, IDisposa
     /// <summary>Non-zero once <see cref="Dispose"/> has released the drain timer and the ready queue.</summary>
     private int _isDisposed;
 
-    /// <summary>Initializes a new instance of the <see cref="WasmScheduler"/> class.</summary>
-    /// <param name="timeProvider">Timer provider; null selects the system provider.</param>
+    /// <summary>Initializes a new instance of the <see cref="WasmScheduler"/> class that reads time and arms its timers through a <see cref="TimeProvider"/>.</summary>
+    /// <param name="timeProvider">The provider supplying the current time and timers.</param>
+    /// <exception cref="ArgumentNullException"><paramref name="timeProvider"/> is <see langword="null"/>.</exception>
     [System.Diagnostics.CodeAnalysis.SuppressMessage(
         "Correctness",
         "SST2403:Do not let 'this' escape from a constructor",
         Justification =
             "The drain timer is created disarmed, so nothing can call back into it until Schedule arms it after construction.")]
-    internal WasmScheduler(TimeProvider? timeProvider = null)
+    public WasmScheduler(TimeProvider timeProvider)
     {
-        _timeProvider = timeProvider ?? TimeProvider.System;
+        ArgumentExceptionHelper.ThrowIfNull(timeProvider);
+
+        _timeProvider = timeProvider;
         _drainTimer = CreateTimer(
             _timeProvider,
             static state => ((WasmScheduler)state!).RunDrain(),
@@ -69,7 +72,10 @@ public sealed class WasmScheduler : LocalScheduler, ISchedulerPeriodic, IDisposa
     }
 
     /// <summary>Gets the shared WebAssembly scheduler.</summary>
-    public static WasmScheduler Default { get; } = new();
+    public static WasmScheduler Default { get; } = new(TimeProvider.System);
+
+    /// <summary>Gets the scheduler's notion of current time.</summary>
+    public override DateTimeOffset Now => _timeProvider.GetUtcNow();
 
     /// <summary>Gets a value indicating whether the scheduler has been disposed.</summary>
     private bool IsDisposed => Volatile.Read(ref _isDisposed) != 0;

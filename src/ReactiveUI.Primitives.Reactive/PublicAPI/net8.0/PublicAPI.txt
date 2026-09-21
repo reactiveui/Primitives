@@ -1967,6 +1967,15 @@ namespace ReactiveUI.Primitives.Reactive.Advanced
         [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
         public void SetSubscription(System.IDisposable subscription) { }
     }
+    [System.Diagnostics.DebuggerDisplay("WitnessLatestOnSignal<{typeof(T).Name,nq}>")]
+    public sealed class WitnessLatestOnSignal<T> : ReactiveUI.Primitives.Advanced.IRequireCurrentThread<T>
+    {
+        public WitnessLatestOnSignal(System.IObservable<T> source, System.Reactive.Concurrency.IScheduler scheduler) { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public bool IsRequiredSubscribeOnCurrentThread() { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public System.IDisposable Subscribe(System.IObserver<T> observer) { }
+    }
     [System.Diagnostics.DebuggerDisplay("WitnessOnSignal<{typeof(T).Name,nq}>")]
     public sealed class WitnessOnSignal<T> : ReactiveUI.Primitives.Advanced.IRequireCurrentThread<T>
     {
@@ -2020,9 +2029,18 @@ namespace ReactiveUI.Primitives.Reactive.Concurrency
         public static ReactiveUI.Primitives.Concurrency.ScheduledItem<TAbsolute> Create<TAbsolute, TValue>(System.Reactive.Concurrency.IScheduler scheduler, TValue state, System.Func<System.Reactive.Concurrency.IScheduler, TValue, System.IDisposable> action, TAbsolute dueTime) where TAbsolute : System.IComparable<TAbsolute> { }
         public static ReactiveUI.Primitives.Concurrency.ScheduledItem<TAbsolute> Create<TAbsolute, TValue>(System.Reactive.Concurrency.IScheduler scheduler, TValue state, System.Func<System.Reactive.Concurrency.IScheduler, TValue, System.IDisposable> action, TAbsolute dueTime, System.Collections.Generic.IComparer<TAbsolute> comparer) where TAbsolute : System.IComparable<TAbsolute> { }
     }
+    public static class SequencerImmediacyExtensions
+    {
+        extension(System.Reactive.Concurrency.IScheduler? sequencer)
+        {
+            public bool IsImmediate { get; }
+        }
+    }
     [System.Diagnostics.DebuggerDisplay("WasmScheduler: ReadyCount = {_readyCount}, DrainState = {_drainState}, Disposed = {_isDisposed}")]
     public sealed class WasmScheduler : System.Reactive.Concurrency.LocalScheduler, System.IDisposable, System.Reactive.Concurrency.ISchedulerPeriodic
     {
+        public WasmScheduler(System.TimeProvider timeProvider) { }
+        public override System.DateTimeOffset Now { get; }
         public static ReactiveUI.Primitives.Reactive.Concurrency.WasmScheduler Default { get; }
         public void Dispose() { }
         public override System.IDisposable Schedule<TState>(TState state, System.Func<System.Reactive.Concurrency.IScheduler, TState, System.IDisposable> action) { }
@@ -2328,6 +2346,8 @@ namespace ReactiveUI.Primitives.Reactive.Signals
         extension<T>(System.IObservable<T> source)
         {
             public System.Collections.Generic.IEnumerable<T> ToEnumerable() { }
+            [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+            public System.IObservable<T> WitnessLatestOn(System.Reactive.Concurrency.IScheduler scheduler) { }
             [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
             public System.IObservable<T> WitnessOn(System.Reactive.Concurrency.IScheduler scheduler) { }
         }

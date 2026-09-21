@@ -58,7 +58,7 @@ internal sealed class TaskSignal<T> : ITaskSignal<T>
     /// <returns>A disposable that ends the subscription.</returns>
     public IDisposable Subscribe(IObserver<T> observer)
     {
-        var subscription = ReferenceEquals(_sequencer, Sequencer.Immediate)
+        var subscription = _sequencer.IsImmediate
             ? Source!.Subscribe(observer)
             : new WitnessOnSignal<T>(Source!, _sequencer).Subscribe(observer);
 

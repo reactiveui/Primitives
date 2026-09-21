@@ -44,6 +44,27 @@ public sealed class WasmSchedulerTests
     public async Task DefaultReturnsSingleton() =>
         await Assert.That(WasmScheduler.Default).IsSameReferenceAs(WasmScheduler.Default);
 
+    /// <summary>Verifies the provider constructor rejects a missing provider.</summary>
+    /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
+    [Test]
+    public async Task ConstructorRejectsANullTimeProvider() =>
+        await Assert.That(static () => new WasmScheduler(null!)).ThrowsExactly<ArgumentNullException>();
+
+    /// <summary>Verifies the scheduler reports the provider's current time.</summary>
+    /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
+    [Test]
+    public async Task NowFollowsTheTimeProvider()
+    {
+        ManualTimeProvider timeProvider = new();
+        using WasmScheduler scheduler = new(timeProvider);
+
+        await Assert.That(scheduler.Now).IsEqualTo(DateTimeOffset.UnixEpoch);
+
+        timeProvider.UtcNow = DateTimeOffset.UnixEpoch + ValidInterval;
+
+        await Assert.That(scheduler.Now).IsEqualTo(DateTimeOffset.UnixEpoch + ValidInterval);
+    }
+
     /// <summary>Verifies scheduling rejects null actions.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
     [Test]
@@ -600,6 +621,12 @@ public sealed class WasmSchedulerTests
 
         /// <summary>Gets the most recently requested timer period.</summary>
         public TimeSpan LastPeriod => _timers[^1].Period;
+
+        /// <summary>Gets or sets the time reported as the current UTC time.</summary>
+        public DateTimeOffset UtcNow { get; set; } = DateTimeOffset.UnixEpoch;
+
+        /// <inheritdoc/>
+        public override DateTimeOffset GetUtcNow() => UtcNow;
 
         /// <inheritdoc/>
         public override ITimer CreateTimer(TimerCallback callback, object? state, TimeSpan dueTime, TimeSpan period)
