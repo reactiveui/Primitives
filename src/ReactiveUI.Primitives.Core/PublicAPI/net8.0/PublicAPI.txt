@@ -462,6 +462,46 @@ namespace ReactiveUI.Primitives.Advanced
         public System.IDisposable Subscribe(System.Action<T> onNext, System.Action<System.Exception> onError, System.Action onCompleted) { }
         public bool TryGetReadOnlyValues(out System.Collections.Generic.IReadOnlyList<T> values) { }
     }
+    [System.Diagnostics.DebuggerDisplay("GroupBySignal: Source = {_source}")]
+    public sealed class GroupBySignal<TSource, TKey, TElement> : System.IObservable<ReactiveUI.Primitives.Signals.GroupedSignal<TKey, TElement>> where TKey : notnull
+    {
+        public GroupBySignal(System.IObservable<TSource> source, System.Func<TSource, TKey> keySelector, System.Func<TSource, TElement> elementSelector, System.Collections.Generic.IEqualityComparer<TKey>? comparer, int capacity) { }
+        public System.IDisposable Subscribe(System.IObserver<ReactiveUI.Primitives.Signals.GroupedSignal<TKey, TElement>> observer) { }
+    }
+    [System.Diagnostics.DebuggerDisplay("GroupByUntilSignal: Source = {_source}")]
+    public sealed class GroupByUntilSignal<TSource, TKey, TElement, TDuration> : System.IObservable<ReactiveUI.Primitives.Signals.GroupedSignal<TKey, TElement>> where TKey : notnull
+    {
+        public GroupByUntilSignal(System.IObservable<TSource> source, System.Func<TSource, TKey> keySelector, System.Func<TSource, TElement> elementSelector, System.Func<ReactiveUI.Primitives.Signals.GroupedSignal<TKey, TElement>, System.IObservable<TDuration>> durationSelector, System.Collections.Generic.IEqualityComparer<TKey>? comparer, int capacity) { }
+        public System.IDisposable Subscribe(System.IObserver<ReactiveUI.Primitives.Signals.GroupedSignal<TKey, TElement>> observer) { }
+    }
+    [System.Diagnostics.DebuggerDisplay("GroupByUntilWitness: Groups = {_groups.Count}, Done = {_done}")]
+    public sealed class GroupByUntilWitness<TSource, TKey, TElement, TDuration> : System.IDisposable, System.IObserver<TSource> where TKey : notnull
+    {
+        public GroupByUntilWitness(System.IObserver<ReactiveUI.Primitives.Signals.GroupedSignal<TKey, TElement>> observer, System.Func<TSource, TKey> keySelector, System.Func<TSource, TElement> elementSelector, System.Func<ReactiveUI.Primitives.Signals.GroupedSignal<TKey, TElement>, System.IObservable<TDuration>> durationSelector, System.Collections.Generic.IEqualityComparer<TKey>? comparer, int capacity) { }
+        public ReactiveUI.Primitives.Advanced.SharedSubscription Subscription { get; }
+        public void Dispose() { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public void OnCompleted() { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public void OnError(System.Exception error) { }
+        public void OnNext(TSource value) { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public void SetSubscription(System.IDisposable subscription) { }
+    }
+    [System.Diagnostics.DebuggerDisplay("GroupByWitness: Groups = {_groups.Count}, Done = {_done}")]
+    public sealed class GroupByWitness<TSource, TKey, TElement> : System.IDisposable, System.IObserver<TSource> where TKey : notnull
+    {
+        public GroupByWitness(System.IObserver<ReactiveUI.Primitives.Signals.GroupedSignal<TKey, TElement>> observer, System.Func<TSource, TKey> keySelector, System.Func<TSource, TElement> elementSelector, System.Collections.Generic.IEqualityComparer<TKey>? comparer, int capacity) { }
+        public ReactiveUI.Primitives.Advanced.SharedSubscription Subscription { get; }
+        public void Dispose() { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public void OnCompleted() { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public void OnError(System.Exception error) { }
+        public void OnNext(TSource value) { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public void SetSubscription(System.IDisposable subscription) { }
+    }
     public interface IAggregator<in T, out TResult, TSelf> where TSelf : ReactiveUI.Primitives.Advanced.IAggregator<T, TResult, TSelf>
     {
         TResult Result { get; }
@@ -745,6 +785,16 @@ namespace ReactiveUI.Primitives.Advanced
         [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
         public bool TryClaim() { }
     }
+    [System.Diagnostics.DebuggerDisplay("SharedSubscription: Leases = {_leases}, Primary Disposed = {_primaryDisposed}, Released = {_released}")]
+    public sealed class SharedSubscription : System.IDisposable
+    {
+        public SharedSubscription() { }
+        public bool IsDisposed { get; }
+        public System.IDisposable Acquire() { }
+        public void Attach(System.IDisposable underlying) { }
+        public void Dispose() { }
+        public void Release() { }
+    }
     public static class SinkDelivery
     {
         public static void Next<TResult>(System.IObserver<TResult> observer, TResult value, System.IDisposable sink) { }
@@ -792,6 +842,120 @@ namespace ReactiveUI.Primitives.Advanced
         public void OnNext(T value) { }
         [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
         public void SetSubscription(System.IDisposable subscription) { }
+    }
+    [System.Diagnostics.DebuggerDisplay("SliceBoundarySignal: Source = {_source}")]
+    public sealed class SliceBoundarySignal<T, TBoundary> : System.IObservable<System.IObservable<T>>
+    {
+        public SliceBoundarySignal(System.IObservable<T> source, System.IObservable<TBoundary> boundaries) { }
+        public System.IDisposable Subscribe(System.IObserver<System.IObservable<T>> observer) { }
+    }
+    [System.Diagnostics.DebuggerDisplay("SliceBoundaryWitness: Done = {_done}")]
+    public sealed class SliceBoundaryWitness<T, TBoundary> : System.IDisposable, System.IObserver<T>
+    {
+        public SliceBoundaryWitness(System.IObserver<System.IObservable<T>> observer) { }
+        public System.IObserver<TBoundary> Boundaries { get; }
+        public ReactiveUI.Primitives.Advanced.SharedSubscription Subscription { get; }
+        public void Dispose() { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public void OnCompleted() { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public void OnError(System.Exception error) { }
+        public void OnNext(T value) { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public void SetSubscription(System.IDisposable subscription) { }
+        public void Start() { }
+    }
+    [System.Diagnostics.DebuggerDisplay("SliceClosingSignal: Source = {_source}")]
+    public sealed class SliceClosingSignal<T, TClosing> : System.IObservable<System.IObservable<T>>
+    {
+        public SliceClosingSignal(System.IObservable<T> source, System.Func<System.IObservable<TClosing>> closingSelector) { }
+        public System.IDisposable Subscribe(System.IObserver<System.IObservable<T>> observer) { }
+    }
+    [System.Diagnostics.DebuggerDisplay("SliceClosingWitness: Done = {_done}")]
+    public sealed class SliceClosingWitness<T, TClosing> : System.IDisposable, System.IObserver<T>
+    {
+        public SliceClosingWitness(System.IObserver<System.IObservable<T>> observer, System.Func<System.IObservable<TClosing>> closingSelector) { }
+        public ReactiveUI.Primitives.Advanced.SharedSubscription Subscription { get; }
+        public void Dispose() { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public void OnCompleted() { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public void OnError(System.Exception error) { }
+        public void OnNext(T value) { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public void SetSubscription(System.IDisposable subscription) { }
+        public void Start() { }
+    }
+    [System.Diagnostics.DebuggerDisplay("SliceCountSignal: Count = {_count}, Skip = {_skip}, Source = {_source}")]
+    public sealed class SliceCountSignal<T> : System.IObservable<System.IObservable<T>>
+    {
+        public SliceCountSignal(System.IObservable<T> source, int count, int skip) { }
+        public System.IDisposable Subscribe(System.IObserver<System.IObservable<T>> observer) { }
+    }
+    [System.Diagnostics.DebuggerDisplay("SliceCountWitness: Count = {_count}, Skip = {_skip}, Open = {_windows.Count}, Done = {_done}")]
+    public sealed class SliceCountWitness<T> : System.IDisposable, System.IObserver<T>
+    {
+        public SliceCountWitness(System.IObserver<System.IObservable<T>> observer, int count, int skip) { }
+        public ReactiveUI.Primitives.Advanced.SharedSubscription Subscription { get; }
+        public void Dispose() { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public void OnCompleted() { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public void OnError(System.Exception error) { }
+        public void OnNext(T value) { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public void SetSubscription(System.IDisposable subscription) { }
+        public void Start() { }
+    }
+    [System.Diagnostics.DebuggerDisplay("SliceOpeningSignal: Source = {_source}")]
+    public sealed class SliceOpeningSignal<T, TOpening, TClosing> : System.IObservable<System.IObservable<T>>
+    {
+        public SliceOpeningSignal(System.IObservable<T> source, System.IObservable<TOpening> openings, System.Func<TOpening, System.IObservable<TClosing>> closingSelector) { }
+        public System.IDisposable Subscribe(System.IObserver<System.IObservable<T>> observer) { }
+    }
+    [System.Diagnostics.DebuggerDisplay("SliceOpeningWitness: Open = {_open.Count}, Done = {_done}")]
+    public sealed class SliceOpeningWitness<T, TOpening, TClosing> : System.IDisposable, System.IObserver<T>
+    {
+        public SliceOpeningWitness(System.IObserver<System.IObservable<T>> observer, System.Func<TOpening, System.IObservable<TClosing>> closingSelector) { }
+        public System.IObserver<TOpening> Openings { get; }
+        public ReactiveUI.Primitives.Advanced.SharedSubscription Subscription { get; }
+        public void Dispose() { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public void OnCompleted() { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public void OnError(System.Exception error) { }
+        public void OnNext(T value) { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public void SetSubscription(System.IDisposable subscription) { }
+    }
+    [System.Diagnostics.DebuggerDisplay("SliceRouter: {_delivery}")]
+    public sealed class SliceRouter<TOuter, T>
+    {
+        public SliceRouter(System.IObserver<TOuter> outer, ReactiveUI.Primitives.Advanced.SharedSubscription owner) { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public void Complete(ReactiveUI.Primitives.Advanced.SliceWindow<T> window) { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public void CompleteOuter() { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public void Fault(ReactiveUI.Primitives.Advanced.SliceWindow<T> window, System.Exception error) { }
+        public void Finish(System.Collections.Generic.IEnumerable<ReactiveUI.Primitives.Advanced.SliceWindow<T>> windows, System.Exception? error) { }
+        public void FinishWindows(System.Collections.Generic.IEnumerable<ReactiveUI.Primitives.Advanced.SliceWindow<T>> windows, System.Exception? error) { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public void Flush() { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public void Open(TOuter opened) { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public void Publish(ReactiveUI.Primitives.Advanced.SliceWindow<T> window, T value) { }
+    }
+    [System.Diagnostics.DebuggerDisplay("SliceWindow: Terminated = {_terminated}")]
+    public sealed class SliceWindow<T> : System.IObservable<T>
+    {
+        public SliceWindow(ReactiveUI.Primitives.Advanced.SharedSubscription owner) { }
+        public void Complete() { }
+        public void Fault(System.Exception error) { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public void Publish(T value) { }
+        public System.IDisposable Subscribe(System.IObserver<T> observer) { }
     }
     [System.Diagnostics.DebuggerDisplay("StatefulWitness: State = {_state}, OnError = {_onError}")]
     public sealed class StatefulWitness<T, TState> : System.IObserver<T>
@@ -1562,6 +1726,14 @@ namespace ReactiveUI.Primitives.Signals
         public void OnError(System.Exception error) { }
         [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
         public void OnNext(T value) { }
+    }
+    [System.Diagnostics.DebuggerDisplay("GroupedSignal: Key = {Key}")]
+    public sealed class GroupedSignal<TKey, T> : System.IObservable<T>
+    {
+        public GroupedSignal(TKey key, ReactiveUI.Primitives.Advanced.SliceWindow<T> window) { }
+        public TKey Key { get; }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public System.IDisposable Subscribe(System.IObserver<T> observer) { }
     }
     public interface IAwaitSignal<T> : ReactiveUI.Primitives.Signals.ISignal<T>, System.Runtime.CompilerServices.INotifyCompletion
     {

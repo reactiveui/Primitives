@@ -612,6 +612,24 @@ These change each value into something else.
 | `Switch()` | Another name for `SwitchTo`. | `Switch` |
 | `Timestamp()`, `Timestamp(sequencer)` | Attaches the clock's current time to each value as a `Moment<T>`. | `Timestamp` |
 | `TimeInterval()`, `TimeInterval(sequencer)` | Attaches the gap since the value before it. | `TimeInterval` |
+| `GroupBy(keySelector)` | Splits the stream into one `GroupedSignal<TKey, T>` per key. A group arrives when its first value does. | `GroupBy` |
+| `GroupBy(keySelector, comparer)`, `GroupBy(keySelector, capacity)`, `GroupBy(keySelector, capacity, comparer)` | Same, with a key comparer, an initial table capacity, or both. | `GroupBy` |
+| `GroupBy(keySelector, elementSelector)` and the same comparer and capacity forms | Same, and runs `elementSelector` on each value before it enters its group. | `GroupBy` |
+| `GroupByUntil(keySelector, durationSelector)` | Splits the stream into groups that end when their duration signal emits or completes. The next value with that key opens a new group. | `GroupByUntil` |
+| `GroupByUntil(keySelector, durationSelector, comparer)`, `GroupByUntil(keySelector, durationSelector, capacity)`, `GroupByUntil(keySelector, durationSelector, capacity, comparer)` | Same, with a key comparer, an initial table capacity, or both. | `GroupByUntil` |
+| `GroupByUntil(keySelector, elementSelector, durationSelector)` and the same comparer and capacity forms | Same, and runs `elementSelector` on each value before it enters its group. | `GroupByUntil` |
+| `Slice(count)` | Hands out one signal per window of `count` values. The windows do not overlap. | `Window` |
+| `Slice(count, skip)` | Opens a window every `skip` values, so windows can overlap or leave gaps. | `Window` |
+| `Slice(timeSpan)`, `Slice(timeSpan, sequencer)` | Hands out one signal per time window. | `Window` |
+| `Slice(timeSpan, timeShift)`, `Slice(timeSpan, timeShift, sequencer)` | Opens a window of `timeSpan` every `timeShift`. | `Window` |
+| `Slice(timeSpan, count)`, `Slice(timeSpan, count, sequencer)` | Ends each window after `timeSpan` or `count` values, whichever comes first. | `Window` |
+| `Slice(boundaries)` | Starts the next window each time the boundary signal emits. | `Window` |
+| `Slice(closingSelector)` | Ends each window with the signal your selector returns for it. | `Window` |
+| `Slice(openings, closingSelector)` | Opens a window for each opening value and ends it with the signal your selector returns. | `Window` |
+| `Window(...)` | Another name for every `Slice` overload. | `Window` |
+
+`Buffer` hands you a list per window. `Slice` hands you a signal per window, so you can subscribe to it and work on the
+values as they arrive.
 
 `Map` changes every value.
 
@@ -656,6 +674,29 @@ var pages = new[] { Signal.Sequence(1, 2), Signal.Sequence(10, 2) }.ToSignal();
 
 pages.SwitchTo().Subscribe(value => Console.Write(value + " "));
 // prints: 1 2 10 11
+```
+
+`GroupBy` gives each key its own signal. The `Key` property tells you which group you hold.
+
+```csharp
+Signal.Sequence(1, 6)
+    .GroupBy(number => number % 2)
+    .Subscribe(group => group.Subscribe(number => Console.Write($"{group.Key}:{number} ")));
+// prints: 1:1 0:2 1:3 0:4 1:5 0:6
+```
+
+Subscribe to a group as soon as it arrives. A group signal sends only the values that come after you subscribe.
+The source stays subscribed until you dispose the outer subscription and every group subscription.
+
+`Slice` gives each window its own signal.
+
+```csharp
+Signal.Sequence(1, 5)
+    .Slice(2)
+    .Subscribe(window => window.Subscribe(
+        number => Console.Write(number + " "),
+        () => Console.Write("| ")));
+// prints: 1 2 | 3 4 | 5 |
 ```
 
 ### Filtering
@@ -2718,6 +2759,9 @@ dotnet add xyz.Reactive/xyz.Reactive.csproj package ReactiveUI.Primitives.Maui.R
 | `DelaySubscription`              | `DelayStart`                                                  | Delay source subscription.                                                                          |
 | `Timeout`                        | `Expire`                                                      | Error on missing value before due time.                                                             |
 | `Buffer(count)`                  | `Buffer(count)`                                               | Fixed-size buffers.                                                                                 |
+| `GroupBy`                        | `GroupBy`                                                     | Eight overloads, each returning `GroupedSignal<TKey, T>` groups.                                    |
+| `GroupByUntil`                   | `GroupByUntil`                                                | Eight overloads; a group ends when its duration signal emits or completes.                          |
+| `Window`                         | `Slice` or Rx-name `Window`                                   | Eleven overloads; each window is a signal.                                                          |
 | `SubscribeOn`                    | `SubscribeOn`                                                 | Schedule source subscription.                                                                       |
 | `ToList` / `ToArray`             | `ToList` / `ToArray` or `CollectList` / `CollectArray`        | Signal results.                                                                                     |
 | `FirstAsync` / `LastAsync`       | `FirstAsync` / `LastAsync`                                    | Task result.                                                                                        |
@@ -2963,6 +3007,14 @@ the same thing.
 | `RepeatSourceSignal` | `Repeat` over a source |
 | `BufferSignal` | `Buffer` |
 | `CollectSignal` | `Collect` |
+| `GroupBySignal` | `GroupBy` |
+| `GroupByUntilSignal` | `GroupByUntil` |
+| `SliceCountSignal` | `Slice(count)`, `Slice(count, skip)` |
+| `SliceTimeSignal` | `Slice(timeSpan)`, `Slice(timeSpan, timeShift)` |
+| `SliceTimeCountSignal` | `Slice(timeSpan, count)` |
+| `SliceBoundarySignal` | `Slice(boundaries)` |
+| `SliceClosingSignal` | `Slice(closingSelector)` |
+| `SliceOpeningSignal` | `Slice(openings, closingSelector)` |
 | `EmitIfQuietSignal` | `EmitIfQuiet` |
 | `SerializeSignal` | `Serialize` |
 | `SynchronizeSignal` | `Synchronize` |
@@ -3032,6 +3084,10 @@ These sit beside the operators. You call them directly rather than through a cha
 | `PublishingOption` | `ReactiveUI.Primitives.Async.Signals` | Chooses how an async signal publishes to its subscribers. |
 | `SparkKind` | `ReactiveUI.Primitives.Core` | Which notification a `Spark` carries. |
 | `Broadcaster<T>` | `ReactiveUI.Primitives.Signals` | The struct behind a signal's subscriber list. `Add`, `Remove`, `Next`, `Error`, `Completed` and `HasObservers`. Hold it as a field. |
+| `GroupedSignal<TKey, T>` | `ReactiveUI.Primitives.Signals` | The signal of one group from `GroupBy` or `GroupByUntil`. It has a `Key` and sends the group's values. |
+| `SliceWindow<T>` | `ReactiveUI.Primitives.Advanced` | One window from `Slice`. Publish to it and every current subscriber receives the value. A subscriber that arrives after it ends is completed at once. |
+| `SliceRouter<TOuter, T>` | `ReactiveUI.Primitives.Advanced` | Posts window and group notifications while you hold your lock, then delivers them in order after you release it. |
+| `SharedSubscription` | `ReactiveUI.Primitives.Advanced` | Keeps a source subscribed until its own handle and every lease taken from it are disposed. |
 | `CopyOnWriteList<T>` | `ReactiveUI.Primitives.Advanced` | An immutable list that returns a new instance from `Add` and `Remove`. `Empty` starts one. |
 | `SinkTerminal`, `SinkSubscription`, `SinkDelivery` | `ReactiveUI.Primitives.Advanced` | The static helpers a synchronous sink calls: forward a terminal notification, assign or dispose the upstream subscription, and forward a value while disposing the sink if the observer throws. |
 | `AsyncContext`, `AsyncContextExtensions` | `ReactiveUI.Primitives.Async` | The ambient context an async signal flows through its operators. |
