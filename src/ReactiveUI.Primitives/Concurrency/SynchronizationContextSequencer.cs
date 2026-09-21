@@ -20,6 +20,15 @@ public sealed class SynchronizationContextSequencer : ISequencer
     {
     }
 
+    /// <summary>Initializes a new instance of the <see cref="SynchronizationContextSequencer"/> class that reads time and arms its delay timer through a <see cref="TimeProvider"/>.</summary>
+    /// <param name="context">The synchronization context used to schedule work.</param>
+    /// <param name="timeProvider">The provider supplying the current time, timestamps and the delay timer.</param>
+    /// <exception cref="ArgumentNullException"><paramref name="context"/> or <paramref name="timeProvider"/> is <see langword="null"/>.</exception>
+    public SynchronizationContextSequencer(SynchronizationContext context, TimeProvider timeProvider)
+        : this(context, new ThreadPoolSequencer(timeProvider))
+    {
+    }
+
     /// <summary>Initializes a new instance of the <see cref="SynchronizationContextSequencer"/> class.</summary>
     /// <param name="context">The context receiving ready work.</param>
     /// <param name="delaySequencer">The scheduler delivering delayed callbacks.</param>

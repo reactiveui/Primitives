@@ -54,7 +54,7 @@ public sealed class ReturnSignal<T> : IRequireCurrentThread<T>
     {
         observer = new GuardedWitness<T>(observer, cancel);
 
-        if (_scheduler == Sequencer.Immediate)
+        if (_scheduler.IsImmediate)
         {
             observer.OnNext(_value);
             observer.OnCompleted();

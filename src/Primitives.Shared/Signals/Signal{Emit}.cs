@@ -18,7 +18,7 @@ public static partial class Signal
     /// <param name="value">The value to emit.</param>
     /// <param name="scheduler">The scheduler the value is emitted on.</param>
     /// <returns>A signal that emits <paramref name="value"/> and completes.</returns>
-    public static IObservable<T> Emit<T>(T value, ISequencer scheduler) => scheduler == Sequencer.Immediate
+    public static IObservable<T> Emit<T>(T value, ISequencer scheduler) => scheduler.IsImmediate
         ? new ImmediateReturnSignal<T>(value)
         : new ReturnSignal<T>(value, scheduler);
 

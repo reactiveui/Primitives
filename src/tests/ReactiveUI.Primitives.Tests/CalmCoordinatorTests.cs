@@ -2,6 +2,8 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using ReactiveUI.Primitives.Concurrency;
+
 namespace ReactiveUI.Primitives.Tests;
 
 /// <summary>Tests for the quiet-period coordinator behind <c>Calm</c> and its <c>Throttle</c> alias.</summary>
@@ -210,5 +212,31 @@ public sealed class CalmCoordinatorTests
 
         await Assert.That(values.SequenceEqual([One])).IsTrue();
         await Assert.That(downstream.Error).IsSameReferenceAs(expected);
+    }
+
+    /// <summary>Verifies a sequencer driven by a virtual clock used as a time provider emits the latest value once the quiet period has passed.</summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    [Test]
+    public async Task ThrottleOverATimeProviderSequencerEmitsTheLatestValueWhenTheClockPassesTheQuietPeriod()
+    {
+        VirtualClock clock = new(DateTimeOffset.UnixEpoch);
+        var sequencer = InlineThreadPool.Create(clock);
+        IObserver<int>? source = null;
+        RecordingWitness<int> witness = new();
+        using var subscription = new ScriptedObservable<int>(observer => source = observer)
+            .Throttle(QuietPeriod, sequencer)
+            .Subscribe(witness);
+
+        source!.OnNext(One);
+        clock.AdvanceBy(QuietPeriod / Two);
+        source.OnNext(Two);
+        clock.AdvanceBy(QuietPeriod / Two);
+        await Assert.That(witness.Values).IsEmpty();
+
+        clock.AdvanceBy((QuietPeriod / Two) - TimeSpan.FromTicks(One));
+        await Assert.That(witness.Values).IsEmpty();
+
+        clock.AdvanceBy(TimeSpan.FromTicks(One));
+        await Assert.That(witness.Values.SequenceEqual([Two])).IsTrue();
     }
 }

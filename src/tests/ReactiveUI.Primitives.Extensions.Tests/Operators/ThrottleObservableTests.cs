@@ -17,6 +17,9 @@ public class ThrottleObservableTests
     /// <summary>Tick window for the throttle itself.</summary>
     private const int ThrottleTicks = 10;
 
+    /// <summary>Tick offset that lands inside the throttle window.</summary>
+    private const int HalfWindowTicks = 5;
+
     /// <summary>Verifies stale, duplicate, and disposed throttle callbacks cannot emit.</summary>
     /// <returns>A task representing the asynchronous test operation.</returns>
     [Test]
@@ -99,5 +102,28 @@ public class ThrottleObservableTests
         source.Observer.OnCompleted();
         await Assert.That(caught).IsSameReferenceAs(expected);
         await Assert.That(completed).IsFalse();
+    }
+
+    /// <summary>Verifies a thread-pool sequencer driven by a virtual clock used as a time provider emits the latest value once the throttle window has passed.</summary>
+    /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
+    [Test]
+    public async Task WhenSequencerRunsFromATimeProvider_ThenEmitsTheLatestValueAfterTheWindow()
+    {
+        const int Earlier = 1;
+        const int Latest = 2;
+        VirtualClock clock = new(DateTimeOffset.UnixEpoch);
+        ThreadPoolSequencer sequencer = new(clock);
+        SyncDirectSource<int> source = new();
+        List<int> values = [];
+        using var sub = source.ThrottleOnScheduler(TimeSpan.FromTicks(ThrottleTicks), sequencer).Subscribe(values.Add);
+
+        source.Observer.OnNext(Earlier);
+        clock.AdvanceBy(TimeSpan.FromTicks(HalfWindowTicks));
+        source.Observer.OnNext(Latest);
+        clock.AdvanceBy(TimeSpan.FromTicks(ThrottleTicks - 1));
+        await Assert.That(values).IsEmpty();
+
+        clock.AdvanceBy(TimeSpan.FromTicks(1));
+        await Assert.That(values).IsCollectionEqualTo([Latest]);
     }
 }

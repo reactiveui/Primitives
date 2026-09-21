@@ -1142,6 +1142,7 @@ share one subscription instead of starting the work over each time.
 | `IObserver<T>.FastForEach(source)` | Pushes a whole collection into an observer and indexes arrays and lists directly. | - |
 | `ObserveOn(sequencer)` | Delivers notifications to subscribers on the sequencer you name. | `ObserveOn` |
 | `WitnessOn(sequencer)` | Another name for `ObserveOn`. | `ObserveOn` |
+| `WitnessLatestOn(sequencer)` | Delivers notifications on the sequencer you name. Keeps only the newest value that is waiting and drops the older ones. | - |
 | `SubscribeOn(sequencer)` | Runs the subscription itself on the sequencer you name. | `SubscribeOn` |
 | `Synchronize()`, `Synchronize(object gate)` | Delivers notifications one at a time behind a lock, which you can share with other signals. | `Synchronize` |
 | `Synchronize(Lock gate)` | The same, taking a `System.Threading.Lock`. Available on net9.0 and later only. | `Synchronize` |
@@ -2211,17 +2212,35 @@ conveniences that take an action, with or without a delay.
 
 | Sequencer | What it does |
 |---|---|
-| `Sequencer.CurrentThread` | Queues work on the calling thread and runs it in order. Also available as `CurrentThreadSequencer.Instance`. |
-| `Sequencer.Immediate` | Runs the work right away on the calling thread. Also available as `ImmediateSequencer.Instance`. |
+| `Sequencer.CurrentThread` | Queues work on the calling thread and runs it in order. Also available as `CurrentThreadSequencer.Instance`. `new CurrentThreadSequencer(timeProvider)` waits through a `TimeProvider`. |
+| `Sequencer.Immediate` | Runs the work right away on the calling thread. Also available as `ImmediateSequencer.Instance`. `new ImmediateSequencer(timeProvider)` waits through a `TimeProvider`. |
 | `Sequencer.Default` | The default choice for background work. It is `TaskPoolSequencer.Default`. |
-| `TaskPoolSequencer` | Runs work through a `TaskFactory`. Use `TaskPoolSequencer.Instance`, or pass your own factory. |
-| `ThreadPoolSequencer` | Runs work on the thread pool. Use `ThreadPoolSequencer.Instance`. |
-| `SynchronizationContextSequencer` | Posts work to a `SynchronizationContext`. Use `SynchronizationContextSequencer.Current`, or pass a context. |
-| `WasmSequencer` | Runs work on a browser's single-threaded event loop. Use `WasmSequencer.Default`. |
-| `VirtualClock` | Controls time in a test, using `DateTimeOffset` and `TimeSpan`. You advance the clock, so nothing sleeps. |
+| `TaskPoolSequencer` | Runs work through a `TaskFactory`. Use `TaskPoolSequencer.Instance`, or pass your own factory. `new TaskPoolSequencer(factory, timeProvider)` takes its time from a `TimeProvider`. |
+| `ThreadPoolSequencer` | Runs work on the thread pool. Use `ThreadPoolSequencer.Instance`. `new ThreadPoolSequencer(timeProvider)` takes its time and delay timer from a `TimeProvider`. |
+| `SynchronizationContextSequencer` | Posts work to a `SynchronizationContext`. Use `SynchronizationContextSequencer.Current`, or pass a context. `new SynchronizationContextSequencer(context, timeProvider)` takes its time from a `TimeProvider`. |
+| `WasmSequencer` | Runs work on a browser's single-threaded event loop. Use `WasmSequencer.Default`. `new WasmSequencer(timeProvider)` takes its time and timers from a `TimeProvider`. |
+| `VirtualClock` | Controls time in a test, using `DateTimeOffset` and `TimeSpan`. You advance the clock, so nothing sleeps. It is also a `TimeProvider`. |
 | `VirtualTimeSequencer<TAbsolute, TRelative>` | Controls time in a test using your own clock types. |
+| `sequencer.IsImmediate` | Returns `true` when the sequencer is the immediate sequencer and `false` for any other sequencer or for `null`. Use it instead of comparing against `Sequencer.Immediate`. It comes from `SequencerImmediacyExtensions`. |
 
 Use a virtual sequencer for a time-based test. Do not sleep a real thread.
+
+To run a built-in sequencer from a fake clock, pass a `TimeProvider` to its constructor. `VirtualClock` is a
+`TimeProvider`, so `clock.AdvanceBy` fires the sequencer's timers.
+
+```csharp
+var clock = new VirtualClock();
+var sequencer = new ThreadPoolSequencer(clock);
+var results = new List<int>();
+
+using var subscription = source
+    .Throttle(TimeSpan.FromSeconds(1), sequencer)
+    .Subscribe(results.Add);
+
+source.OnNext(1);
+clock.AdvanceBy(TimeSpan.FromSeconds(1));
+// results now holds 1
+```
 
 ### Platform sequencers
 
@@ -3042,6 +3061,7 @@ the same thing.
 | `DeferSignal<T>` | `Signal.Lazy` / `Signal.Defer` |
 | `CatchSignal<T>` | `Catch` |
 | `WitnessOnSignal<T>` | `WitnessOn` / `ObserveOn` |
+| `WitnessLatestOnSignal<T>` | `WitnessLatestOn` |
 | `SelectManyThenCoordinator<TSource, TMid, TResult>` | `SelectManyThen`, both projection stages in one sink |
 | `CalmCoordinator<T>` | `Calm` / `Throttle` |
 | `ReattemptCoordinator<T>` | `Reattempt` |

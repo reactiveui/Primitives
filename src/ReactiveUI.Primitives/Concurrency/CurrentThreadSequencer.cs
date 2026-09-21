@@ -28,9 +28,41 @@ public sealed class CurrentThreadSequencer : ISequencer
     [ThreadStatic]
     private static SequencerQueue<long>? _threadLocalQueue;
 
-    /// <summary>Initializes a new instance of the <see cref="CurrentThreadSequencer"/> class.</summary>
-    private CurrentThreadSequencer()
+    /// <summary>The clock of the sequencer whose call started the trampoline running on the current thread.</summary>
+    [ThreadStatic]
+    private static SequencerClock? _runningClock;
+
+    /// <summary>The clock supplying time and blocking waits.</summary>
+    private readonly SequencerClock _clock;
+
+    /// <summary>Reads the monotonic clock.</summary>
+    private readonly Func<long> _timestamp;
+
+    /// <summary>Blocks the scheduling thread for a delay measured by the clock.</summary>
+    private readonly Action<TimeSpan> _wait;
+
+    /// <summary>Initializes a new instance of the <see cref="CurrentThreadSequencer"/> class that reads time and waits through a <see cref="TimeProvider"/>.</summary>
+    /// <param name="timeProvider">The provider supplying the current time, timestamps and timers.</param>
+    /// <exception cref="ArgumentNullException"><paramref name="timeProvider"/> is <see langword="null"/>.</exception>
+    /// <remarks>Work scheduled while another sequencer instance is running on the same thread joins that instance's trampoline and waits on its provider.</remarks>
+    public CurrentThreadSequencer(TimeProvider timeProvider)
+        : this(new SequencerClock(timeProvider))
     {
+    }
+
+    /// <summary>Initializes a new instance of the <see cref="CurrentThreadSequencer"/> class; callers use <see cref="Instance"/>.</summary>
+    private CurrentThreadSequencer()
+        : this(SequencerClock.Default)
+    {
+    }
+
+    /// <summary>Initializes a new instance of the <see cref="CurrentThreadSequencer"/> class.</summary>
+    /// <param name="clock">The clock supplying time and blocking waits.</param>
+    private CurrentThreadSequencer(SequencerClock clock)
+    {
+        _clock = clock;
+        _timestamp = clock.GetTimestamp;
+        _wait = clock.Wait;
     }
 
     /// <summary>Gets the singleton instance of the current thread scheduler.</summary>
@@ -41,10 +73,10 @@ public sealed class CurrentThreadSequencer : ISequencer
     public static bool IsScheduleRequired => !_running;
 
     /// <summary>Gets the scheduler's notion of current time.</summary>
-    public DateTimeOffset Now => Sequencer.Now;
+    public DateTimeOffset Now => _clock.GetUtcNow();
 
     /// <summary>Gets the scheduler's monotonic timestamp.</summary>
-    public long Timestamp => Sequencer.Timestamp;
+    public long Timestamp => _clock.GetTimestamp();
 
     /// <summary>Gets the debugger display text.</summary>
     [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
@@ -61,14 +93,14 @@ public sealed class CurrentThreadSequencer : ISequencer
 
         if (!_running)
         {
-            SetRunning(true);
+            StartRunning();
             try
             {
                 action();
                 var queue = GetQueue();
                 if (queue is not null)
                 {
-                    Trampoline.Run(queue);
+                    Trampoline.Run(queue, _timestamp, _wait);
                 }
             }
             finally
@@ -108,11 +140,11 @@ public sealed class CurrentThreadSequencer : ISequencer
         // Initial work executes before Schedule returns.
         if (!_running)
         {
-            SetRunning(true);
+            StartRunning();
 
             try
             {
-                WaitIfNeeded(Sequencer.TimeUntil(dueTimestamp), Wait);
+                WaitIfNeeded(_clock.TimeUntil(dueTimestamp), _wait);
 
                 if (!Sequencer.IsCancelled(item))
                 {
@@ -132,7 +164,7 @@ public sealed class CurrentThreadSequencer : ISequencer
             {
                 try
                 {
-                    Trampoline.Run(queue);
+                    Trampoline.Run(queue, _timestamp, _wait);
                 }
                 finally
                 {
@@ -157,7 +189,7 @@ public sealed class CurrentThreadSequencer : ISequencer
             SetQueue(queue);
         }
 
-        ScheduledItem<long> si = new(dueTimestamp, Comparer<long>.Default, _ =>
+        ScheduledItem<long> si = new(ToRunningTimeline(dueTimestamp), Comparer<long>.Default, _ =>
         {
             if (!Sequencer.IsCancelled(item))
             {
@@ -195,20 +227,27 @@ public sealed class CurrentThreadSequencer : ISequencer
     /// <param name="running">Value indicating whether work is running.</param>
     private static void SetRunning(bool running) => _running = running;
 
-    /// <summary>Blocks the scheduling thread until delayed work becomes due.</summary>
-    /// <param name="dueTime">The remaining delay.</param>
-    [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static void Wait(TimeSpan dueTime) => Thread.Sleep(dueTime);
+    /// <summary>Marks the current thread as running scheduled work on behalf of this sequencer.</summary>
+    private void StartRunning()
+    {
+        _running = true;
+        _runningClock = _clock;
+    }
+
+    /// <summary>Expresses a due timestamp on the clock of the sequencer that started the running trampoline.</summary>
+    /// <param name="dueTimestamp">The absolute due timestamp on this sequencer's clock.</param>
+    /// <returns>The equivalent due timestamp on the running trampoline's clock.</returns>
+    private long ToRunningTimeline(long dueTimestamp)
+    {
+        var runningClock = _runningClock!;
+        return ReferenceEquals(runningClock, _clock)
+            ? dueTimestamp
+            : Sequencer.AddTimestamp(runningClock.GetTimestamp(), _clock.TimeUntil(dueTimestamp));
+    }
 
     /// <summary>Runs queued current-thread work.</summary>
     internal static class Trampoline
     {
-        /// <summary>Runs all work currently in the queue.</summary>
-        /// <param name="queue">Queue to drain.</param>
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        internal static void Run(SequencerQueue<long> queue) => Run(queue, static () => Sequencer.Timestamp, Wait);
-
         /// <summary>Drains work using the supplied clock and wait operation.</summary>
         /// <param name="queue">The pending work.</param>
         /// <param name="timestamp">The monotonic clock.</param>

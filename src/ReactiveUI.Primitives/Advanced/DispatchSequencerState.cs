@@ -36,6 +36,9 @@ public record struct DispatchSequencerState
     /// <summary>Schedules delayed work when the platform provides no override.</summary>
     private readonly ISequencer _sharedTimer;
 
+    /// <summary>Clock deciding whether a due timestamp has already passed.</summary>
+    private readonly SequencerClock _clock;
+
     /// <summary>Approximate number of ready items; snapshots a drain batch.</summary>
     private int _readyCount;
 
@@ -77,6 +80,24 @@ public record struct DispatchSequencerState
         Action drain,
         Action<IWorkItem, long>? scheduleDelayed,
         ISequencer sharedTimer)
+        : this(owner, post, drain, scheduleDelayed, sharedTimer, SequencerClock.Default)
+    {
+    }
+
+    /// <summary>Initializes a new instance of the <see cref="DispatchSequencerState"/> struct.</summary>
+    /// <param name="owner">The owning sequencer.</param>
+    /// <param name="post">Posts the cached drain.</param>
+    /// <param name="drain">The cached drain callback.</param>
+    /// <param name="scheduleDelayed">The optional platform delay override.</param>
+    /// <param name="sharedTimer">Schedules work without a platform delay override.</param>
+    /// <param name="clock">The clock that decides whether a due timestamp has already passed.</param>
+    internal DispatchSequencerState(
+        ISequencer owner,
+        Func<Action, bool> post,
+        Action drain,
+        Action<IWorkItem, long>? scheduleDelayed,
+        ISequencer sharedTimer,
+        SequencerClock clock)
     {
         _ready = new();
         _owner = owner;
@@ -84,6 +105,7 @@ public record struct DispatchSequencerState
         _drain = drain;
         _scheduleDelayed = scheduleDelayed;
         _sharedTimer = sharedTimer;
+        _clock = clock;
     }
 
     /// <summary>Gets the sequencer's notion of current time.</summary>
@@ -130,7 +152,7 @@ public record struct DispatchSequencerState
     {
         ArgumentExceptionHelper.ThrowIfNull(item);
 
-        if (dueTimestamp <= Sequencer.Timestamp)
+        if (dueTimestamp <= _clock.GetTimestamp())
         {
             Schedule(item);
             return;

@@ -42,7 +42,7 @@ public static partial class Signal
             return ImmutableEmptySignal<int>.Instance;
         }
 
-        return scheduler == Sequencer.Immediate || scheduler == Sequencer.CurrentThread
+        return scheduler.IsImmediate || scheduler == Sequencer.CurrentThread
             ? new RangeSignal(start, count)
             : new SequenceSignal(start, count, scheduler);
     }

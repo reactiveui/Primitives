@@ -2,13 +2,19 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
 
 namespace ReactiveUI.Primitives.Concurrency;
 
-/// <summary>Deterministic virtual scheduler backed by <see cref="DateTimeOffset"/> and <see cref="TimeSpan"/>.</summary>
+/// <summary>Deterministic virtual scheduler backed by <see cref="DateTimeOffset"/> and <see cref="TimeSpan"/> that also serves as a <see cref="TimeProvider"/>.</summary>
+/// <remarks>
+/// As a <see cref="TimeProvider"/> the clock reports <see cref="Now"/> as UTC time and counts timestamps in ticks of <see cref="Now"/>.
+/// Its timers fire when <see cref="AdvanceBy"/>, <see cref="AdvanceTo"/> or <see cref="Start"/> reaches them.
+/// </remarks>
 [System.Diagnostics.DebuggerDisplay("{DebuggerDisplay,nq}")]
-public sealed class VirtualClock : ISequencer, IServiceProvider, IStopwatchProvider
+public sealed class VirtualClock : TimeProvider, ISequencer, IServiceProvider, IStopwatchProvider
 {
     /// <summary>Adds a normalized relative time to an absolute time.</summary>
     private static readonly Func<DateTimeOffset, TimeSpan, DateTimeOffset> Adder = static (absolute, relative) =>
@@ -46,9 +52,12 @@ public sealed class VirtualClock : ISequencer, IServiceProvider, IStopwatchProvi
     /// <inheritdoc/>
     public long Timestamp => _state.Timestamp;
 
+    /// <summary>Gets the number of timestamp ticks per second, which is <see cref="TimeSpan.TicksPerSecond"/>.</summary>
+    public override long TimestampFrequency => TimeSpan.TicksPerSecond;
+
     /// <summary>Gets the debugger display text.</summary>
-    [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
-    [System.Diagnostics.DebuggerBrowsable(System.Diagnostics.DebuggerBrowsableState.Never)]
+    [ExcludeFromCodeCoverage]
+    [DebuggerBrowsable(DebuggerBrowsableState.Never)]
     private string DebuggerDisplay => ToString() ?? string.Empty;
 
     /// <summary>Advances the scheduler's clock by the specified relative time, running all work scheduled for that timespan.</summary>
@@ -108,7 +117,7 @@ public sealed class VirtualClock : ISequencer, IServiceProvider, IStopwatchProvi
     /// <param name="action">Action to be executed.</param>
     /// <returns>The disposable object used to cancel the scheduled action (best effort).</returns>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [System.Diagnostics.CodeAnalysis.SuppressMessage(
+    [SuppressMessage(
         "Design",
         "SST2318:Members should not have identical bodies",
         Justification =
@@ -146,6 +155,25 @@ public sealed class VirtualClock : ISequencer, IServiceProvider, IStopwatchProvi
     /// <returns>New stopwatch object; started at the time of the request.</returns>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public IStopwatch StartStopwatch() => new VirtualTimeStopwatch(() => Now, Now);
+
+    /// <summary>Gets the virtual time as a UTC time.</summary>
+    /// <returns><see cref="Now"/>.</returns>
+    public override DateTimeOffset GetUtcNow() => Now;
+
+    /// <summary>Gets the virtual time as a timestamp counted at <see cref="TimestampFrequency"/>.</summary>
+    /// <returns>The ticks of <see cref="Now"/>.</returns>
+    public override long GetTimestamp() => Timestamp;
+
+    /// <summary>Creates a timer whose firings run when the virtual clock advances to them.</summary>
+    /// <param name="callback">The callback invoked at each firing.</param>
+    /// <param name="state">The state passed to <paramref name="callback"/>.</param>
+    /// <param name="dueTime">The virtual delay before the first firing, or <see cref="Timeout.InfiniteTimeSpan"/> to leave the timer stopped.</param>
+    /// <param name="period">The virtual interval between later firings, or <see cref="Timeout.InfiniteTimeSpan"/> or <see cref="TimeSpan.Zero"/> for a single firing.</param>
+    /// <returns>The timer.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="callback"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentOutOfRangeException"><paramref name="dueTime"/> or <paramref name="period"/> is negative and not <see cref="Timeout.InfiniteTimeSpan"/>.</exception>
+    public override ITimer CreateTimer(TimerCallback callback, object? state, TimeSpan dueTime, TimeSpan period) =>
+        VirtualClockTimer.Start(this, callback, state, dueTime, period);
 
     /// <inheritdoc/>
     object? IServiceProvider.GetService(Type serviceType) =>

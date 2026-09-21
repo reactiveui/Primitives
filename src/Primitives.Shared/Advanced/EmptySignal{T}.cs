@@ -42,7 +42,7 @@ public sealed class EmptySignal<T> : IRequireCurrentThread<T>
     {
         observer = new GuardedWitness<T>(observer, cancel);
 
-        if (_scheduler == Sequencer.Immediate)
+        if (_scheduler.IsImmediate)
         {
             observer.OnCompleted();
             return EmptyDisposable.Instance;

@@ -139,7 +139,7 @@ public static partial class Signal
         Func<CancellationTokenSource, Task<TResult>> execution,
         ISequencer? scheduler,
         CancellationTokenSource? cancellationTokenSource) =>
-        ReferenceEquals(scheduler, Sequencer.Immediate)
+        scheduler.IsImmediate
             ? new ImmediateTaskSignal<TResult>(execution, cancellationTokenSource)
             : TaskSignal.Create<TResult>(
                 ao => Lazy(() => Create<TResult>(observer => SubscribeTask(ao, execution, observer))),

@@ -65,7 +65,7 @@ public class ScheduledSignal<T> : ISignal<T>
 
         _defaultObserver = defaultObserver;
         _subject = defaultSubject ?? new Signal<T>();
-        _observed = scheduler == Sequencer.Immediate
+        _observed = scheduler.IsImmediate
             ? _subject
             : new WitnessOnSignal<T>(_subject, scheduler);
         _defaultObserverSub = defaultObserver is null ? null : SubscribeDefaultObserver(defaultObserver);

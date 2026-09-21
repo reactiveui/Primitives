@@ -26,6 +26,13 @@ public static partial class SignalExtensions
         public IObservable<T> WitnessOn(ISequencer scheduler) =>
             new WitnessOnSignal<T>(source, scheduler);
 
+        /// <summary>Delivers only the newest waiting source value on the supplied sequencer.</summary>
+        /// <param name="scheduler">The sequencer that notifications are delivered on.</param>
+        /// <returns>A signal that forwards the latest source value on <paramref name="scheduler"/>.</returns>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public IObservable<T> WitnessLatestOn(ISequencer scheduler) =>
+            new WitnessLatestOnSignal<T>(source, scheduler);
+
         /// <summary>Blocks until the signal completes and returns the observed values.</summary>
         /// <returns>The values observed before completion.</returns>
         /// <exception cref="ArgumentExceptionHelper"><paramref name="source"/> is <see langword="null"/>.</exception>

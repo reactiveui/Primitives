@@ -4,7 +4,6 @@
 
 using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
-using Timer = System.Threading.Timer;
 
 namespace ReactiveUI.Primitives.Concurrency;
 
@@ -25,8 +24,8 @@ public sealed class ThreadPoolSequencer : ISequencer, IDisposable
     /// <summary>Pending delayed work, ordered by monotonic due timestamp.</summary>
     private readonly PriorityQueue<TimedWorkItem> _queue = new();
 
-    /// <summary>Single timer owned by the sequencer for all delayed work.</summary>
-    private readonly Timer? _timer;
+    /// <summary>The clock supplying time and the delay timer.</summary>
+    private readonly SequencerClock _clock;
 
     /// <summary>Reads the monotonic clock used by the delay queue.</summary>
     private readonly Func<long> _timestamp;
@@ -37,21 +36,39 @@ public sealed class ThreadPoolSequencer : ISequencer, IDisposable
     /// <summary>Updates the delay timer.</summary>
     private readonly Action<TimeSpan> _changeTimer;
 
+    /// <summary>Single timer owned by the sequencer for all delayed work, created when the first delayed item arrives.</summary>
+    private ITimer? _timer;
+
     /// <summary>Non-zero after disposal; writes hold the gate, and immediate scheduling reads without it.</summary>
     private int _isDisposed;
 
-    /// <summary>Initializes a new instance of the <see cref="ThreadPoolSequencer"/> class; callers use <see cref="Instance"/>.</summary>
-    [System.Diagnostics.CodeAnalysis.SuppressMessage(
-        "Correctness",
-        "SST2403:Do not let 'this' escape from a constructor",
-        Justification =
-            "The timer is created disarmed, so nothing can call back into it until Schedule arms it after construction.")]
-    internal ThreadPoolSequencer()
+    /// <summary>Initializes a new instance of the <see cref="ThreadPoolSequencer"/> class that reads time and arms its delay timer through a <see cref="TimeProvider"/>.</summary>
+    /// <param name="timeProvider">The provider supplying the current time, timestamps and the delay timer.</param>
+    /// <exception cref="ArgumentNullException"><paramref name="timeProvider"/> is <see langword="null"/>.</exception>
+    public ThreadPoolSequencer(TimeProvider timeProvider)
+        : this(new SequencerClock(timeProvider), QueueOnThreadPool)
     {
-        _timer = CreateTimer(this);
-        _timestamp = static () => Sequencer.Timestamp;
-        _queueImmediate = QueueOnThreadPool;
-        _changeTimer = ChangeTimer;
+    }
+
+    /// <summary>Initializes a new instance of the <see cref="ThreadPoolSequencer"/> class; callers use <see cref="Instance"/>.</summary>
+    internal ThreadPoolSequencer()
+        : this(SequencerClock.Default, QueueOnThreadPool)
+    {
+    }
+
+    /// <summary>Initializes a new instance of the <see cref="ThreadPoolSequencer"/> class.</summary>
+    /// <param name="timeProvider">The provider supplying the current time, timestamps and the delay timer.</param>
+    /// <param name="queueImmediate">Queues an immediate callback.</param>
+    internal ThreadPoolSequencer(TimeProvider timeProvider, Action<WaitCallback, object> queueImmediate)
+        : this(new SequencerClock(timeProvider), queueImmediate)
+    {
+    }
+
+    /// <summary>Initializes a new instance of the <see cref="ThreadPoolSequencer"/> class that shares an existing clock.</summary>
+    /// <param name="clock">The clock supplying time and the delay timer.</param>
+    internal ThreadPoolSequencer(SequencerClock clock)
+        : this(clock, QueueOnThreadPool)
+    {
     }
 
     /// <summary>Initializes a new instance of the <see cref="ThreadPoolSequencer"/> class.</summary>
@@ -63,13 +80,25 @@ public sealed class ThreadPoolSequencer : ISequencer, IDisposable
         Action<WaitCallback, object> queueImmediate,
         Action<TimeSpan> changeTimer)
     {
+        _clock = SequencerClock.Default;
         _timestamp = timestamp;
         _queueImmediate = queueImmediate;
         _changeTimer = changeTimer;
     }
 
+    /// <summary>Initializes a new instance of the <see cref="ThreadPoolSequencer"/> class.</summary>
+    /// <param name="clock">The clock supplying time and the delay timer.</param>
+    /// <param name="queueImmediate">Queues an immediate callback.</param>
+    internal ThreadPoolSequencer(SequencerClock clock, Action<WaitCallback, object> queueImmediate)
+    {
+        _clock = clock;
+        _timestamp = clock.GetTimestamp;
+        _queueImmediate = queueImmediate;
+        _changeTimer = ChangeTimer;
+    }
+
     /// <summary>Gets the scheduler's notion of current time.</summary>
-    public DateTimeOffset Now => Sequencer.Now;
+    public DateTimeOffset Now => _clock.GetUtcNow();
 
     /// <summary>Gets the scheduler's monotonic timestamp.</summary>
     public long Timestamp => _timestamp();
@@ -161,13 +190,6 @@ public sealed class ThreadPoolSequencer : ISequencer, IDisposable
     private static void QueueOnThreadPool(WaitCallback callback, object state) =>
         ThreadPool.UnsafeQueueUserWorkItem(callback, state);
 
-    /// <summary>Creates a disarmed timer that drains due work.</summary>
-    /// <param name="owner">The sequencer receiving timer callbacks.</param>
-    /// <returns>The disarmed timer.</returns>
-    [ExcludeFromCodeCoverage]
-    private static Timer CreateTimer(ThreadPoolSequencer owner) =>
-        new(static state => ((ThreadPoolSequencer)state!).RunDue(), owner, Timeout.InfiniteTimeSpan, Timeout.InfiniteTimeSpan);
-
     /// <summary>Executes the work item unless it has been cancelled.</summary>
     /// <param name="item">Work item to execute.</param>
     private static void ExecuteQueued(IWorkItem item)
@@ -242,11 +264,17 @@ public sealed class ThreadPoolSequencer : ISequencer, IDisposable
         _changeTimer(Sequencer.TimeUntil(_queue.Peek().DueTimestamp, Timestamp));
     }
 
-    /// <summary>Arms the runtime delay timer.</summary>
+    /// <summary>Arms the delay timer, creating it disarmed on first use.</summary>
     /// <param name="dueTime">The remaining delay.</param>
-    [ExcludeFromCodeCoverage]
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private void ChangeTimer(TimeSpan dueTime) => _timer!.Change(dueTime, Timeout.InfiniteTimeSpan);
+    private void ChangeTimer(TimeSpan dueTime)
+    {
+        _timer ??= _clock.CreateTimer(
+            static state => ((ThreadPoolSequencer)state!).RunDue(),
+            this,
+            Timeout.InfiniteTimeSpan,
+            Timeout.InfiniteTimeSpan);
+        _ = _timer.Change(dueTime, Timeout.InfiniteTimeSpan);
+    }
 
     /// <summary>Delayed thread-pool work item queued in the sequencer heap.</summary>
     internal readonly struct TimedWorkItem : IComparable<TimedWorkItem>, IEquatable<TimedWorkItem>
