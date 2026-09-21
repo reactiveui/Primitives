@@ -2038,7 +2038,7 @@ namespace ReactiveUI.Primitives.Extensions
             [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
             public System.IObservable<TOut> WhereSelect<TOut>(System.Func<T, bool> predicate, System.Func<T, TOut> selector) { }
         }
-        extension<T>(System.IObservable<T> source) where T : class
+        extension<T>(System.IObservable<T> source) where T : class?
         {
             public System.IObservable<T> SkipWhileNull() { }
         }
