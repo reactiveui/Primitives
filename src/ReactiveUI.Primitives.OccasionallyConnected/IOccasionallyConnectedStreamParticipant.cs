@@ -37,6 +37,18 @@ internal interface IOccasionallyConnectedStreamParticipant
     /// <returns>The durable remote apply receipt and participant queue transition result.</returns>
     ValueTask<ParticipantRemoteApplyResult> ApplyRemoteBatchAsync(RemoteEventBatch batch, CancellationToken cancellationToken);
 
+    /// <summary>Recovers a retained-history gap through bounded remote snapshot recovery.</summary>
+    /// <param name="session">The active snapshot recovery session.</param>
+    /// <param name="expiredCursor">The expired remote cursor, if known.</param>
+    /// <param name="limits">The finite capture and protocol limits.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>The durable recovery transition.</returns>
+    ValueTask<ParticipantSnapshotRecoveryTransitionResult> RecoverSnapshotAsync(
+        IRemoteSnapshotRecoverySession session,
+        string? expiredCursor,
+        SnapshotRecoveryLimits limits,
+        CancellationToken cancellationToken);
+
     /// <summary>Moves one oversized leased operation to the durable dead-letter set through the stream mutation lane.</summary>
     /// <param name="leaseId">The lease that owns the operation.</param>
     /// <param name="operationId">The operation to dead-letter.</param>

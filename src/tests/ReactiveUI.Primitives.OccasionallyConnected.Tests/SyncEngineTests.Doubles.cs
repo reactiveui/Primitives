@@ -2,6 +2,8 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Runtime.CompilerServices;
+
 namespace ReactiveUI.Primitives.OccasionallyConnected.Tests;
 
 /// <summary>Test doubles for <see cref="SyncEngineTests"/>.</summary>
@@ -466,6 +468,16 @@ public sealed partial class SyncEngineTests
             var cursorAdvanced = RemoteApplyCursorAdvanced?.Invoke(batch) ?? (batch.Events.Count > 0);
             return new(new(batch.NextCursor, batch.Events.Count, 0), null, cursorAdvanced);
         }
+
+        /// <inheritdoc/>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public ValueTask<ParticipantSnapshotRecoveryTransitionResult> RecoverSnapshotAsync(
+            IRemoteSnapshotRecoverySession session,
+            string? expiredCursor,
+            SnapshotRecoveryLimits limits,
+            CancellationToken cancellationToken) =>
+            ValueTask.FromException<ParticipantSnapshotRecoveryTransitionResult>(
+                new NotSupportedException("The recording participant does not support snapshot recovery."));
 
         /// <inheritdoc/>
         public ValueTask<ParticipantQueueTransitionResult> DeadLetterOperationAsync(

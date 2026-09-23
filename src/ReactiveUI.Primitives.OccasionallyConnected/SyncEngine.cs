@@ -177,6 +177,7 @@ internal sealed partial class SyncEngine : ISyncEngine, IOccasionallyConnectedSt
         _metrics = new(options.Options.Diagnostics.Enabled);
         _activities = new(options.Options.Diagnostics.Enabled, options.Options.Diagnostics.ActivitySamplingRatio);
         _scheduler = new(new(options.MaxRegisteredStreams, options.MaxSchedulerDescriptorBytes, options.Options.MinimumPriority, options.Options.MaximumPriority), options.TimeProvider);
+        _snapshotRecoveryAdmissionQueue = new(_gate, options.Options.MaxConcurrentStreams);
         _lifecycle = new(StartCoreAsync, StopCoreAsync);
     }
 
@@ -736,6 +737,12 @@ internal sealed partial class SyncEngine : ISyncEngine, IOccasionallyConnectedSt
             _ = _uploadHeads.Remove(streamId);
         }
 
+        if (_snapshotRecoveryUploadHeads.TryGetValue(streamId, out var snapshotHead))
+        {
+            _ = _snapshotRecoveryUploadHeads.Remove(streamId);
+            DeferStreamScheduleLocked(streamId, ToReschedule(snapshotHead));
+        }
+
         if (_rescheduleStreams.TryGetValue(streamId, out var pending))
         {
             _ = _rescheduleStreams.Remove(streamId);
@@ -772,6 +779,12 @@ internal sealed partial class SyncEngine : ISyncEngine, IOccasionallyConnectedSt
     /// <param name="requested">The scheduler head request.</param>
     private void ScheduleStreamLocked(StreamId streamId, UploadReschedule requested)
     {
+        if (_snapshotRecoveryStreams.Contains(streamId))
+        {
+            ParkSnapshotRecoveryUploadLocked(streamId, requested);
+            return;
+        }
+
         if (_scheduledStreams.Contains(streamId))
         {
             ScheduleExistingStreamLocked(streamId, requested);

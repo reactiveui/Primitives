@@ -61,7 +61,7 @@ internal sealed partial class SyncEngine
     private Task? StopStream(StreamId streamId, CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
-        ParticipantRegistration registration;
+        ParticipantRegistration? registration = null;
         Task? stopTask;
         TaskCompletionSource<bool>? cancellationCompletion = null;
         (
@@ -70,43 +70,18 @@ internal sealed partial class SyncEngine
             TaskCompletionSource<bool> DrainCompletion)? receiveCancellation;
         lock (_gate)
         {
-            ThrowIfDisposedLocked();
-            registration = GetParticipantLocked(streamId);
-            if (registration.RemoteActive)
+            if (_admissionState == EngineAdmissionState.Disposed)
             {
-                registration.RemoteActive = false;
-                registration.ReceiveRestartRequested = false;
-                if (_admissionState == EngineAdmissionState.Stopping && _stopTask is { IsCompleted: false } acceptedStop)
-                {
-                    stopTask = acceptedStop;
-                    receiveCancellation = null;
-                }
-                else
-                {
-                    receiveCancellation = registration.BeginCancelReceive(out var cancellationDrainTask);
-                    if (receiveCancellation is not null)
-                    {
-                        cancellationCompletion = CreateCompletion();
-                    }
-
-                    stopTask = CreateReceiveStopTask(registration.ReceiveTask, cancellationDrainTask, cancellationCompletion?.Task);
-                    if (stopTask is not null)
-                    {
-                        RegisterReceiveStopTaskLocked(stopTask);
-                    }
-                }
-
-                registration.StopReceiveTask = stopTask;
-                ParkStreamUploadLocked(streamId);
+                stopTask = _disposeTask;
+                receiveCancellation = null;
             }
             else
             {
-                stopTask = registration.StopReceiveTask;
-                receiveCancellation = null;
+                stopTask = StopRegisteredStreamLocked(streamId, out registration, out receiveCancellation, out cancellationCompletion);
             }
         }
 
-        if (receiveCancellation is not null && cancellationCompletion is not null)
+        if (receiveCancellation is not null && cancellationCompletion is not null && registration is not null)
         {
             var cancellationLease = receiveCancellation.Value;
             _ = Task.Run(
@@ -114,7 +89,59 @@ internal sealed partial class SyncEngine
                 CancellationToken.None);
         }
 
-        PublishStreamSyncState(streamId);
+        if (registration is not null)
+        {
+            PublishStreamSyncState(streamId);
+        }
+
+        return stopTask;
+    }
+
+    /// <summary>Stops one registered stream while the engine lock is held.</summary>
+    /// <param name="streamId">The stream identity.</param>
+    /// <param name="registration">The stopped registration.</param>
+    /// <param name="receiveCancellation">The receive cancellation ownership.</param>
+    /// <param name="cancellationCompletion">The cancellation completion signal.</param>
+    /// <returns>The receive-pump stop wait task, if any.</returns>
+    private Task? StopRegisteredStreamLocked(
+        StreamId streamId,
+        out ParticipantRegistration registration,
+        out (long Generation, CancellationTokenSource Source, TaskCompletionSource<bool> DrainCompletion)? receiveCancellation,
+        out TaskCompletionSource<bool>? cancellationCompletion)
+    {
+        registration = GetParticipantLocked(streamId);
+        cancellationCompletion = null;
+        if (!registration.RemoteActive)
+        {
+            receiveCancellation = null;
+            return registration.StopReceiveTask;
+        }
+
+        registration.RemoteActive = false;
+        registration.ReceiveRestartRequested = false;
+        Task? stopTask;
+        if (_admissionState == EngineAdmissionState.Stopping && _stopTask is { IsCompleted: false } acceptedStop)
+        {
+            stopTask = acceptedStop;
+            receiveCancellation = null;
+        }
+        else
+        {
+            receiveCancellation = registration.BeginCancelReceive(out var cancellationDrainTask);
+            if (receiveCancellation is not null)
+            {
+                cancellationCompletion = CreateCompletion();
+            }
+
+            stopTask = CreateReceiveStopTask(registration.ReceiveTask, cancellationDrainTask, cancellationCompletion?.Task);
+            if (stopTask is not null)
+            {
+                RegisterReceiveStopTaskLocked(stopTask);
+            }
+        }
+
+        registration.StopReceiveTask = stopTask;
+        ParkStreamUploadLocked(streamId);
         return stopTask;
     }
 
@@ -203,6 +230,8 @@ internal sealed partial class SyncEngine
             _ = _rescheduleStreams.Remove(streamId);
             _ = _uploadHeads.Remove(streamId);
             _ = _deferredUploadHeads.Remove(streamId);
+            _ = _snapshotRecoveryStreams.Remove(streamId);
+            _ = _snapshotRecoveryUploadHeads.Remove(streamId);
             receivePumpActive = _receivePumpStreams.Remove(streamId);
             if (_queueDiagnosticSnapshots.TryGetValue(streamId, out queueSnapshot))
             {

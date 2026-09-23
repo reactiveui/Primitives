@@ -25,6 +25,9 @@ public sealed partial class SyncEngineTests
         /// <summary>The callback count required by the current waiter.</summary>
         private int _expectedCount;
 
+        /// <summary>The last terminal observer error.</summary>
+        private Exception? _error;
+
         /// <summary>Gets a stable snapshot of observed values.</summary>
         public List<T> Values
         {
@@ -33,6 +36,18 @@ public sealed partial class SyncEngineTests
                 lock (_gate)
                 {
                     return [.. _values];
+                }
+            }
+        }
+
+        /// <summary>Gets the last terminal observer error.</summary>
+        public Exception? Error
+        {
+            get
+            {
+                lock (_gate)
+                {
+                    return _error;
                 }
             }
         }
@@ -69,7 +84,14 @@ public sealed partial class SyncEngineTests
 
         /// <inheritdoc/>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void OnError(Exception error) => ArgumentNullException.ThrowIfNull(error);
+        public void OnError(Exception error)
+        {
+            ArgumentNullException.ThrowIfNull(error);
+            lock (_gate)
+            {
+                _error = error;
+            }
+        }
 
         /// <inheritdoc/>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

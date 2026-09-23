@@ -268,6 +268,7 @@ public sealed partial class SyncEngineTests
         engine.NotifyLocalCommitReady(Stream, operation);
         await TriggerAndDrainUploadWithTraceAsync(engine, clock, store, first, faults, operationStates: null);
 
+        await WaitForConditionAsync(() => faults.Values.Exists(static fault => fault.Code == UploadAttemptFaultCode));
         await Assert.That(faults.Values.Exists(static fault => fault.Code == UploadAttemptFaultCode)).IsTrue();
         await Assert.That(transport.ConnectCalls).IsEqualTo(ExpectedCapacityCommitAttempts);
         await Assert.That(first.SentBatches.Count).IsEqualTo(ExpectedSingleOperation);

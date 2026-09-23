@@ -156,6 +156,11 @@ internal sealed partial class SyncEngine
             DeferStoppingUploadWakeLocked(acquisition.StreamId, reschedule, hadHead, priorHead);
             TryCompleteSyncCycleLocked();
         }
+        else if (_snapshotRecoveryStreams.Contains(acquisition.StreamId))
+        {
+            CompleteSnapshotRecoveryUploadAcquisitionLocked(acquisition.StreamId, reschedule, hadHead, priorHead);
+            TryCompleteSyncCycleLocked();
+        }
         else if (reschedule is { } requested)
         {
             requested = MergePendingExplicitFlushLocked(acquisition.StreamId, requested);
