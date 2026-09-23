@@ -12,6 +12,12 @@
   <ItemGroup>
     <ProjectReference Include="..\..\ReactiveUI.Primitives.OccasionallyConnected\ReactiveUI.Primitives.OccasionallyConnected.csproj" />
     <ProjectReference Include="..\..\ReactiveUI.Primitives.OccasionallyConnected.Server\ReactiveUI.Primitives.OccasionallyConnected.Server.csproj" />
+    <ProjectReference Include="..\..\ReactiveUI.Primitives.OccasionallyConnected.Storage.Sqlite\ReactiveUI.Primitives.OccasionallyConnected.Storage.Sqlite.csproj" />
+    <ProjectReference Include="..\..\ReactiveUI.Primitives.OccasionallyConnected.Transport.Http\ReactiveUI.Primitives.OccasionallyConnected.Transport.Http.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
   </ItemGroup>
 
 </Project>
