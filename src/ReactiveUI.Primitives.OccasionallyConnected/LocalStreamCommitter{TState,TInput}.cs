@@ -36,6 +36,9 @@ internal sealed partial class LocalStreamCommitter<TState, TInput>
     /// <summary>Tracks whether store recovery has completed successfully.</summary>
     private bool _recovered;
 
+    /// <summary>Stores the monotonic per-committer queue diagnostic revision.</summary>
+    private long _queueDiagnosticRevision;
+
     /// <summary>Initializes a new instance of the <see cref="LocalStreamCommitter{TState,TInput}"/> class.</summary>
     /// <param name="options">The committer options.</param>
     /// <exception cref="ArgumentNullException"><paramref name="options"/> is <see langword="null"/>.</exception>
@@ -65,6 +68,12 @@ internal sealed partial class LocalStreamCommitter<TState, TInput>
         }
     }
 
+    /// <summary>Gets the bounded queue aggregate observed during the last successful queue transition.</summary>
+    internal QueueDiagnosticSnapshot RecoveredQueueSnapshot { get; private set; }
+
+    /// <summary>Gets recovered upload scheduling metadata when durable work is pending.</summary>
+    internal RecoveredUploadHead? RecoveredUploadHead { get; private set; }
+
     /// <summary>Recovers durable stream state from the store.</summary>
     /// <param name="cancellationToken">The cancellation token.</param>
     /// <returns>The recovered state.</returns>
@@ -80,7 +89,11 @@ internal sealed partial class LocalStreamCommitter<TState, TInput>
                 .ConfigureAwait(false);
             cancellationToken.ThrowIfCancellationRequested();
             var state = await DecodeRecoveredStateAsync(recovered, cancellationToken).ConfigureAwait(false);
+            var queueSnapshot = CreateRecoveredQueueSnapshot(recovered);
+            var recoveredUploadHead = CreateRecoveredUploadHead(recovered);
             cancellationToken.ThrowIfCancellationRequested();
+            SetRecoveredQueueSnapshot(queueSnapshot);
+            RecoveredUploadHead = recoveredUploadHead;
             SwapCurrent(state);
             return state;
         }
@@ -178,12 +191,15 @@ internal sealed partial class LocalStreamCommitter<TState, TInput>
             {
                 if (batch.CompletedOperations.Count == 0)
                 {
-                    return CreateDuplicateRemoteResult(batch, observed, replayCursor, duplicateCount);
+                    return CreateDuplicateRemoteResult(batch, observed, replayCursor, duplicateCount, RecoveredQueueSnapshot);
                 }
 
                 batch = new(batch.BatchId, batch.StreamId, replayCursor, replayCursor, batch.Events) { CompletedOperations = batch.CompletedOperations };
             }
 
+            var recovered = await _options.Dependencies.Store.RecoverStreamAsync(_options.StreamId, _options.SubscriptionId, cancellationToken).ConfigureAwait(false);
+            cancellationToken.ThrowIfCancellationRequested();
+            ValidateReplayRecovery(recovered, observed);
             return await CommitFilteredRemoteBatchAsync(batch, observed, filteredEvents, duplicateCount, cancellationToken).ConfigureAwait(false);
         }
         finally
@@ -301,16 +317,18 @@ internal sealed partial class LocalStreamCommitter<TState, TInput>
     /// <param name="observed">The observed state.</param>
     /// <param name="currentCursor">The current durable cursor.</param>
     /// <param name="duplicateCount">The duplicate count.</param>
+    /// <param name="queueSnapshot">The current queue snapshot.</param>
     /// <returns>The no-op remote commit result.</returns>
     private static RemoteStreamCommitResult<TState, TInput> CreateDuplicateRemoteResult(
         RemoteEventBatch batch,
         LocalStreamCommitterState<TState> observed,
         string currentCursor,
-        int duplicateCount)
+        int duplicateCount,
+        QueueDiagnosticSnapshot queueSnapshot)
     {
         var receipt = new RemoteApplyResult(currentCursor, 0, duplicateCount, observed.Revision);
         var filteredBatch = new RemoteEventBatch(batch.BatchId, batch.StreamId, batch.PreviousCursor, batch.NextCursor, []);
-        return new(receipt, filteredBatch, new System.Collections.ObjectModel.ReadOnlyCollection<TInput>([]), observed);
+        return new(receipt, filteredBatch, new System.Collections.ObjectModel.ReadOnlyCollection<TInput>([]), observed, queueSnapshot, CursorAdvanced: false);
     }
 
     /// <summary>Rejects default operation identifiers before persistence.</summary>
@@ -672,6 +690,7 @@ internal sealed partial class LocalStreamCommitter<TState, TInput>
 
         var filteredBatch = new RemoteEventBatch(batch.BatchId, batch.StreamId, batch.PreviousCursor, batch.NextCursor, filteredEvents);
         var mutation = new SnapshotMutation(_options.StreamId, nextStatePayload, _options.Contracts.SnapshotFormatVersion, observed.Revision) { AuthoritativeState = rebuilt.Authoritative };
+        var queueSnapshot = RecoveredQueueSnapshot;
         var storeResult = await ApplyRemoteStoreTransactionAsync(batch, mutation, filteredEvents.Count, cancellationToken)
             .ConfigureAwait(false);
         var nextState = new LocalStreamCommitterState<TState>(
@@ -682,8 +701,10 @@ internal sealed partial class LocalStreamCommitter<TState, TInput>
             observed.NextClientSequence,
             storeResult.NextCursor) { MaterializedPayload = nextStatePayload, AuthoritativePayload = rebuilt.Authoritative };
         SwapCurrent(nextState);
+        CommitQueueDiagnosticSnapshotIfChanged(queueSnapshot);
         var receipt = storeResult with { DuplicateCount = duplicateCount };
-        return new(receipt, filteredBatch, decodedInputs, nextState);
+        var cursorAdvanced = !string.Equals(observed.ServerCursor, storeResult.NextCursor, StringComparison.Ordinal);
+        return new(receipt, filteredBatch, decodedInputs, nextState, queueSnapshot, cursorAdvanced);
     }
 
     /// <summary>Applies the complete remote batch to the local store under its revision fence.</summary>

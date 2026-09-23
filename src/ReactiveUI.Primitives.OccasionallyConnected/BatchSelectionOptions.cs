@@ -21,4 +21,7 @@ internal sealed record BatchSelectionOptions
 
     /// <summary>Gets the caller-sampled monotonic elapsed time since the first candidate became eligible.</summary>
     public required TimeSpan FirstEligibleElapsed { get; init; }
+
+    /// <summary>Gets a value indicating whether the caller explicitly requested immediate dispatch.</summary>
+    public bool ForceReady { get; init; }
 }

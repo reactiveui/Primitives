@@ -306,4 +306,23 @@ public sealed partial class InMemoryLocalStoreAdapterTests
         await Assert.That(recovered.PendingOperations.Count).IsEqualTo(0);
         await Assert.That(recovered.ReplayOperations.Count).IsEqualTo(0);
     }
+
+    /// <summary>Completes one leased operation upload without recording authoritative receive inclusion.</summary>
+    /// <param name="store">The store.</param>
+    /// <param name="operationId">The operation identifier.</param>
+    /// <param name="kind">The result kind.</param>
+    /// <returns>The asynchronous task.</returns>
+    private static async Task CompleteUploadAsync(
+        InMemoryLocalStoreAdapter store,
+        OperationId operationId,
+        OperationResultKind kind)
+    {
+        var batch = RequireBatch(await LeaseSingleBatchAsync(store, new(Stream, 1, DefaultLeaseBytes, TimeSpan.FromMinutes(1))));
+        var result = new RemoteSyncResult(
+            batch.LeaseId,
+            [new(operationId, kind, null, ServerVersion)],
+            null,
+            null);
+        await store.ApplySyncResultAsync(batch.LeaseId, result, CancellationToken.None);
+    }
 }

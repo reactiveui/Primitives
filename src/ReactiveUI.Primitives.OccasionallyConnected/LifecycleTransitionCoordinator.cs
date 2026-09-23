@@ -79,6 +79,7 @@ internal sealed class LifecycleTransitionCoordinator : IAsyncDisposable
     public ValueTask DisposeAsync()
     {
         Task? wait;
+        TaskCompletionSource<bool>? disposedStartWait = null;
         bool launch;
 
         lock (_gate)
@@ -87,24 +88,28 @@ internal sealed class LifecycleTransitionCoordinator : IAsyncDisposable
             _desiredStarted = false;
             if (_activeKind != TransitionKind.Start)
             {
-                CompleteStartWait(new ObjectDisposedException(nameof(LifecycleTransitionCoordinator)));
+                disposedStartWait = TakeStartWait();
             }
 
             if (!_started && !_cleanupRequired && _driverRunning == 0)
             {
-                return default;
+                wait = Task.CompletedTask;
+                launch = false;
             }
-
-            _cleanupWait ??= CreateCompletion();
-            wait = _cleanupWait.Task;
-            launch = EnsureDriverLocked();
-            if (launch)
+            else
             {
-                _activeKind = TransitionKind.Cleanup;
+                _cleanupWait ??= CreateCompletion();
+                wait = _cleanupWait.Task;
+                launch = EnsureDriverLocked();
+                if (launch)
+                {
+                    _activeKind = TransitionKind.Cleanup;
+                }
             }
         }
 
         LaunchDriver(launch);
+        CompleteWait(disposedStartWait, new ObjectDisposedException(nameof(LifecycleTransitionCoordinator)));
         return new(wait);
     }
 
@@ -171,22 +176,22 @@ internal sealed class LifecycleTransitionCoordinator : IAsyncDisposable
         _ = RunDriverAsync();
     }
 
-    /// <summary>Completes and clears the shared cleanup wait.</summary>
-    /// <param name="failure">The failure to publish, or <see langword="null"/> for success.</param>
-    private void CompleteCleanupWait(Exception? failure)
+    /// <summary>Takes and clears the shared cleanup wait.</summary>
+    /// <returns>The cleanup wait to complete outside the lock.</returns>
+    private TaskCompletionSource<bool>? TakeCleanupWait()
     {
         var wait = _cleanupWait;
         _cleanupWait = null;
-        CompleteWait(wait, failure);
+        return wait;
     }
 
-    /// <summary>Completes and clears the shared startup wait.</summary>
-    /// <param name="failure">The failure to publish, or <see langword="null"/> for success.</param>
-    private void CompleteStartWait(Exception? failure)
+    /// <summary>Takes and clears the shared startup wait.</summary>
+    /// <returns>The startup wait to complete outside the lock.</returns>
+    private TaskCompletionSource<bool>? TakeStartWait()
     {
         var wait = _startWait;
         _startWait = null;
-        CompleteWait(wait, failure);
+        return wait;
     }
 
     /// <summary>Ensures a driver is scheduled while the lifecycle lock is held.</summary>
@@ -282,56 +287,65 @@ internal sealed class LifecycleTransitionCoordinator : IAsyncDisposable
 
     /// <summary>Applies a cleanup result while the lifecycle lock is held.</summary>
     /// <param name="failure">The cleanup failure, if any.</param>
-    private void ApplyCleanupResultLocked(Exception? failure)
+    /// <returns>The waits that must be completed after releasing the lock.</returns>
+    private CompletionSet ApplyCleanupResultLocked(Exception? failure)
     {
         _activeKind = TransitionKind.None;
         _started = false;
         _cleanupRequired = failure is not null;
-        CompleteCleanupWait(failure);
+        var completions = new CompletionSet(TakeCleanupWait(), failure, null, null);
 
         if (failure is not null)
         {
             _desiredStarted = false;
-            CompleteStartWait(failure);
+            completions = completions with { StartWait = TakeStartWait(), StartFailure = failure };
             Volatile.Write(ref _driverRunning, 0);
-            return;
+            return completions;
         }
 
-        CompleteInactiveStartAfterCleanup();
+        return AddInactiveStartAfterCleanup(completions);
     }
 
-    /// <summary>Completes a pending startup when cleanup left no startup intent to run.</summary>
-    private void CompleteInactiveStartAfterCleanup()
+    /// <summary>Adds a pending startup completion when cleanup left no startup intent to run.</summary>
+    /// <param name="completions">The current completion set.</param>
+    /// <returns>The updated completion set.</returns>
+    private CompletionSet AddInactiveStartAfterCleanup(in CompletionSet completions)
     {
         if (_disposed)
         {
-            CompleteStartWait(new ObjectDisposedException(nameof(LifecycleTransitionCoordinator)));
-            return;
+            return completions with
+            {
+                StartWait = TakeStartWait(),
+                StartFailure = new ObjectDisposedException(nameof(LifecycleTransitionCoordinator)),
+            };
         }
 
-        if (_desiredStarted)
+        return _desiredStarted
+            ? completions
+            : completions with
         {
-            return;
-        }
-
-        CompleteStartWait(new InvalidOperationException("Startup was superseded by cleanup."));
+            StartWait = TakeStartWait(),
+            StartFailure = new InvalidOperationException("Startup was superseded by cleanup."),
+        };
     }
 
     /// <summary>Applies a startup result while the lifecycle lock is held.</summary>
     /// <param name="failure">The startup failure, if any.</param>
-    private void ApplyStartResultLocked(Exception? failure)
+    /// <returns>The waits that must be completed after releasing the lock.</returns>
+    private CompletionSet ApplyStartResultLocked(Exception? failure)
     {
         _activeKind = TransitionKind.None;
         _started = failure is null;
         _cleanupRequired = true;
-        CompleteStartWait(failure);
+        var completions = new CompletionSet(null, null, TakeStartWait(), failure);
 
         if (failure is null)
         {
-            return;
+            return completions;
         }
 
         _desiredStarted = false;
+        return completions;
     }
 
     /// <summary>Determines whether cleanup must run before any other accepted transition.</summary>
@@ -364,22 +378,23 @@ internal sealed class LifecycleTransitionCoordinator : IAsyncDisposable
 
     /// <summary>Stops the lifecycle driver until another request arrives.</summary>
     /// <returns>The no-transition kind.</returns>
-    private TransitionKind StopDriver()
+    private DriverSelection StopDriver()
     {
         _activeKind = TransitionKind.None;
+        TaskCompletionSource<bool>? cleanupWait = null;
         if (!_started && !_cleanupRequired)
         {
-            CompleteCleanupWait(null);
+            cleanupWait = TakeCleanupWait();
         }
 
-        CompleteInactiveStartAfterCleanup();
+        var completions = AddInactiveStartAfterCleanup(new(cleanupWait, null, null, null));
         Volatile.Write(ref _driverRunning, 0);
-        return TransitionKind.None;
+        return new(TransitionKind.None, completions);
     }
 
     /// <summary>Selects the next callback while the lifecycle lock is held.</summary>
     /// <returns>The selected transition kind.</returns>
-    private TransitionKind SelectNextTransitionLocked()
+    private DriverSelection SelectNextTransitionLocked()
     {
         if (_disposed)
         {
@@ -388,10 +403,10 @@ internal sealed class LifecycleTransitionCoordinator : IAsyncDisposable
 
         if (ShouldRunRequiredCleanup() || ShouldRunStopCleanup())
         {
-            return SelectCleanup();
+            return new(SelectCleanup(), default);
         }
 
-        return ShouldRunStartup() ? SelectStartup() : StopDriver();
+        return ShouldRunStartup() ? new(SelectStartup(), default) : StopDriver();
     }
 
     /// <summary>Runs callbacks until the coalesced desired state is reached or progress requires a later request.</summary>
@@ -408,23 +423,37 @@ internal sealed class LifecycleTransitionCoordinator : IAsyncDisposable
         while (kind != TransitionKind.None)
         {
             var failure = await RunSelectedCallbackAsync(kind).ConfigureAwait(false);
+            CompletionSet completions;
+            var stopDriver = false;
 
             lock (_gate)
             {
                 if (kind == TransitionKind.Start)
                 {
-                    ApplyStartResultLocked(failure);
+                    completions = ApplyStartResultLocked(failure);
                 }
                 else
                 {
-                    ApplyCleanupResultLocked(failure);
+                    completions = ApplyCleanupResultLocked(failure);
                     if (failure is not null)
                     {
-                        return;
+                        stopDriver = true;
                     }
                 }
 
-                kind = SelectNextTransitionLocked();
+                if (!stopDriver)
+                {
+                    var selected = SelectNextTransitionLocked();
+                    kind = selected.Kind;
+                    var selectedCompletions = selected.Completions;
+                    completions = completions.Merge(in selectedCompletions);
+                }
+            }
+
+            completions.Complete();
+            if (stopDriver)
+            {
+                return;
             }
         }
     }
@@ -452,4 +481,38 @@ internal sealed class LifecycleTransitionCoordinator : IAsyncDisposable
             return exception;
         }
     }
+
+    /// <summary>Stores waits selected under lock for completion after state mutation.</summary>
+    /// <param name="CleanupWait">The cleanup wait, if one was selected.</param>
+    /// <param name="CleanupFailure">The cleanup failure, if any.</param>
+    /// <param name="StartWait">The startup wait, if one was selected.</param>
+    /// <param name="StartFailure">The startup failure, if any.</param>
+    private readonly record struct CompletionSet(
+        TaskCompletionSource<bool>? CleanupWait,
+        Exception? CleanupFailure,
+        TaskCompletionSource<bool>? StartWait,
+        Exception? StartFailure)
+    {
+        /// <summary>Completes selected waits.</summary>
+        internal void Complete()
+        {
+            CompleteWait(CleanupWait, CleanupFailure);
+            CompleteWait(StartWait, StartFailure);
+        }
+
+        /// <summary>Merges another completion set into this one.</summary>
+        /// <param name="other">The additional completions.</param>
+        /// <returns>The merged completion set.</returns>
+        internal CompletionSet Merge(in CompletionSet other) =>
+            new(
+                CleanupWait ?? other.CleanupWait,
+                CleanupFailure ?? other.CleanupFailure,
+                StartWait ?? other.StartWait,
+                StartFailure ?? other.StartFailure);
+    }
+
+    /// <summary>Stores a selected next driver action and waits to complete.</summary>
+    /// <param name="Kind">The selected transition kind.</param>
+    /// <param name="Completions">The waits selected by the transition decision.</param>
+    private readonly record struct DriverSelection(TransitionKind Kind, CompletionSet Completions);
 }

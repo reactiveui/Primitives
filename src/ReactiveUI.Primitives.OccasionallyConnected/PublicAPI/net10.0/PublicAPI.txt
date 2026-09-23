@@ -33,6 +33,10 @@ public enum CircuitBreakerState
     Open = 1,
     HalfOpen = 2,
 }
+public interface IOperationIdSource
+{
+    ReactiveUI.Primitives.OccasionallyConnected.OperationId New() { }
+}
 [System.Diagnostics.DebuggerDisplay("{ContentType,nq}, MaxPayloadBytes = {_maximumPayloadBytes}")]
 public sealed class JsonPayloadSerializer : ReactiveUI.Primitives.OccasionallyConnected.IPayloadSerializer
 {
@@ -71,6 +75,41 @@ public record LoopbackTransportAdapterOptions : System.IEquatable<ReactiveUI.Pri
     public int MaximumStringBytes { get; init; }
     public required ReactiveUI.Primitives.OccasionallyConnected.NegotiatedCapabilities PeerCapabilities { get; init; }
 }
+[System.Diagnostics.DebuggerDisplay("Client={_client,nq}; Store={_storeIdentity,nq}; Built={_built,nq}")]
+public sealed class OccasionallyConnectedBuilder
+{
+    public OccasionallyConnectedBuilder() { }
+    public ReactiveUI.Primitives.OccasionallyConnected.OccasionallyConnectedContext Build() { }
+    public ReactiveUI.Primitives.OccasionallyConnected.OccasionallyConnectedBuilder UseBorrowedStore(ReactiveUI.Primitives.OccasionallyConnected.ILocalStoreAdapter store) { }
+    public ReactiveUI.Primitives.OccasionallyConnected.OccasionallyConnectedBuilder UseBorrowedTransport(ReactiveUI.Primitives.OccasionallyConnected.IRemoteTransportAdapter transport) { }
+    public ReactiveUI.Primitives.OccasionallyConnected.OccasionallyConnectedBuilder UseClient(ReactiveUI.Primitives.OccasionallyConnected.ClientIdentity client) { }
+    [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+    public ReactiveUI.Primitives.OccasionallyConnected.OccasionallyConnectedBuilder UseJsonSerializer(ReactiveUI.Primitives.OccasionallyConnected.SchemaRegistry schemaRegistry) { }
+    [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+    public ReactiveUI.Primitives.OccasionallyConnected.OccasionallyConnectedBuilder UseJsonSerializer(ReactiveUI.Primitives.OccasionallyConnected.SchemaRegistry schemaRegistry, int maximumPayloadBytes) { }
+    public ReactiveUI.Primitives.OccasionallyConnected.OccasionallyConnectedBuilder UseOperationIdSource(ReactiveUI.Primitives.OccasionallyConnected.IOperationIdSource operationIdSource) { }
+    public ReactiveUI.Primitives.OccasionallyConnected.OccasionallyConnectedBuilder UseOptions(ReactiveUI.Primitives.OccasionallyConnected.OccasionallyConnectedOptions options) { }
+    public ReactiveUI.Primitives.OccasionallyConnected.OccasionallyConnectedBuilder UseRetryRandomSource(ReactiveUI.Primitives.OccasionallyConnected.IRetryRandomSource retryRandomSource) { }
+    public ReactiveUI.Primitives.OccasionallyConnected.OccasionallyConnectedBuilder UseSequencer(ReactiveUI.Primitives.Concurrency.ISequencer sequencer) { }
+    public ReactiveUI.Primitives.OccasionallyConnected.OccasionallyConnectedBuilder UseSerializer(ReactiveUI.Primitives.OccasionallyConnected.IPayloadSerializer serializer) { }
+    public ReactiveUI.Primitives.OccasionallyConnected.OccasionallyConnectedBuilder UseStore(ReactiveUI.Primitives.OccasionallyConnected.ILocalStoreAdapter store) { }
+    public ReactiveUI.Primitives.OccasionallyConnected.OccasionallyConnectedBuilder UseStoreIdentity(string storeIdentity) { }
+    public ReactiveUI.Primitives.OccasionallyConnected.OccasionallyConnectedBuilder UseStoreInitialization(ReactiveUI.Primitives.OccasionallyConnected.LocalStoreInitialization initialization) { }
+    public ReactiveUI.Primitives.OccasionallyConnected.OccasionallyConnectedBuilder UseTimeProvider(System.TimeProvider timeProvider) { }
+    public ReactiveUI.Primitives.OccasionallyConnected.OccasionallyConnectedBuilder UseTransport(ReactiveUI.Primitives.OccasionallyConnected.IRemoteTransportAdapter transport) { }
+    public ReactiveUI.Primitives.OccasionallyConnected.OccasionallyConnectedBuilder WithRegistryCapacity(int capacity) { }
+}
+[System.Diagnostics.DebuggerDisplay("Streams={_registrations.Count,nq}; Startup={StartupTask.Status,nq}")]
+public sealed class OccasionallyConnectedContext : ReactiveUI.Primitives.OccasionallyConnected.IOccasionallyConnectedContext
+{
+    public ReactiveUI.Primitives.OccasionallyConnected.ISyncEngine SyncEngine { get; }
+    public System.IObservable<ReactiveUI.Primitives.OccasionallyConnected.SyncState> SyncStates { get; }
+    public System.Threading.Tasks.Task StartupTask { get; }
+    public System.Threading.Tasks.ValueTask DisposeAsync() { }
+    public ReactiveUI.Primitives.OccasionallyConnected.IOccasionallyConnectedStream<TState, TInput> GetOrCreateStream<TState, TInput>(ReactiveUI.Primitives.OccasionallyConnected.StreamDefinition<TState, TInput> definition) { }
+    public System.Threading.Tasks.ValueTask StartAsync(System.Threading.CancellationToken cancellationToken) { }
+    public System.Threading.Tasks.ValueTask StopAsync(System.Threading.CancellationToken cancellationToken) { }
+}
 public static class OccasionallyConnectedExtensions
 {
     extension(ReactiveUI.Primitives.OccasionallyConnected.ISyncEngine engine)
@@ -83,7 +122,19 @@ public static class OccasionallyConnectedExtensions
         public System.Threading.Tasks.ValueTask AwaitSynchronizedAsync(ReactiveUI.Primitives.OccasionallyConnected.OperationId operationId, System.TimeSpan timeout, System.TimeProvider timeProvider) { }
         public System.Threading.Tasks.ValueTask AwaitSynchronizedAsync(ReactiveUI.Primitives.OccasionallyConnected.OperationId operationId, System.TimeSpan timeout, System.TimeProvider timeProvider, System.Threading.CancellationToken cancellationToken) { }
     }
-}
+    extension<TInput>(System.IObservable<TInput> localSource)
+    {
+        public ReactiveUI.Primitives.OccasionallyConnected.IOccasionallyConnectedStream<TState, TInput> ToOccasionallyConnected<TState>(ReactiveUI.Primitives.OccasionallyConnected.IOccasionallyConnectedContext context, ReactiveUI.Primitives.OccasionallyConnected.StreamDefinition<TState, TInput> definition) { }
+    }
+    extension<TInput>(System.IObserver<TInput> observer)
+    {
+        public ReactiveUI.Primitives.OccasionallyConnected.RemoteObserverAdapter<TInput> ToRemoteObserver<TState>(ReactiveUI.Primitives.OccasionallyConnected.IOccasionallyConnectedContext context, ReactiveUI.Primitives.OccasionallyConnected.StreamDefinition<TState, TInput> definition, ReactiveUI.Primitives.OccasionallyConnected.RemotePublishOptions options) { }
+    }
+    extension<TState, TInput>(ReactiveUI.Primitives.OccasionallyConnected.IOccasionallyConnectedStream<TState, TInput> stream)
+    {
+        public System.IObservable<ReactiveUI.Primitives.OccasionallyConnected.PendingSyncSummary> ObservePending() { }
+        public System.IObservable<TState> WhereSynchronized() { }
+    }}
 [System.Diagnostics.DebuggerDisplay("MinimumDelay = {_options.MinimumDelay}, MaximumDelay = {_options.MaximumDelay}")]
 public sealed class RetryPolicy : ReactiveUI.Primitives.OccasionallyConnected.IRetryPolicy
 {
@@ -91,6 +142,13 @@ public sealed class RetryPolicy : ReactiveUI.Primitives.OccasionallyConnected.IR
     public RetryPolicy(ReactiveUI.Primitives.OccasionallyConnected.RetryOptions options) { }
     public RetryPolicy(ReactiveUI.Primitives.OccasionallyConnected.RetryOptions options, System.TimeProvider timeProvider, ReactiveUI.Primitives.OccasionallyConnected.IRetryRandomSource randomSource) { }
     public ReactiveUI.Primitives.OccasionallyConnected.RetryDecision GetDecision(ReactiveUI.Primitives.OccasionallyConnected.RetryFailure failure, ReactiveUI.Primitives.OccasionallyConnected.RetryState state) { }
+}
+[System.Diagnostics.DebuggerDisplay("StreamId = {_streamId}, Disposed = {_disposed}")]
+public sealed class RemoteObserverAdapter<T> : ReactiveUI.Primitives.OccasionallyConnected.IRemoteObserver<T>, System.IAsyncDisposable
+{
+    public System.IObserver<T> AsObserver(ReactiveUI.Primitives.OccasionallyConnected.RemotePublishOptions options, ReactiveUI.Primitives.OccasionallyConnected.ObserverInputOptions? inputOptions) { }
+    public System.Threading.Tasks.ValueTask DisposeAsync() { }
+    public System.Threading.Tasks.ValueTask<ReactiveUI.Primitives.OccasionallyConnected.PublishReceipt> PublishAsync(T value, ReactiveUI.Primitives.OccasionallyConnected.RemotePublishOptions options, System.Threading.CancellationToken cancellationToken) { }
 }
 [System.Diagnostics.DebuggerDisplay("SchemaRegistry")]
 public sealed class SchemaRegistry : ReactiveUI.Primitives.OccasionallyConnected.ISchemaRegistry

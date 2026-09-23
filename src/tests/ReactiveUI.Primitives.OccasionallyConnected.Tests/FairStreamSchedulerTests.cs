@@ -349,6 +349,66 @@ public sealed partial class FairStreamSchedulerTests
         await Assert.That(acquisition.StreamId).IsEqualTo(stream);
     }
 
+    /// <summary>Verifies removing a pending head releases descriptor bytes and permits another head.</summary>
+    /// <returns>A task representing the assertions.</returns>
+    [Test]
+    public async Task RemovePendingHeadReleasesHeadAndAllowsReready()
+    {
+        var clock = new FakeTimeProvider();
+        var scheduler = CreateScheduler(clock);
+        var stream = new StreamId(StreamName);
+        scheduler.Register(new(stream, Weight: LightWeight));
+        var registrationBytes = scheduler.EncodedDescriptorBytes;
+
+        scheduler.Ready(stream, NormalPriority, clock.GetUtcNow());
+        await Assert.That(scheduler.RemovePendingHead(stream)).IsTrue();
+        await Assert.That(scheduler.EncodedDescriptorBytes).IsEqualTo(registrationBytes);
+        scheduler.Ready(stream, HighPriority, clock.GetUtcNow());
+
+        var acquisition = await AcquireAsync(scheduler);
+        await Assert.That(acquisition.StreamId).IsEqualTo(stream);
+        scheduler.Complete(acquisition);
+    }
+
+    /// <summary>Verifies removing an absent pending head reports no change.</summary>
+    /// <returns>A task representing the assertions.</returns>
+    [Test]
+    public async Task RemovePendingHeadReturnsFalseWhenStreamHasNoHead()
+    {
+        var clock = new FakeTimeProvider();
+        var scheduler = CreateScheduler(clock);
+        var stream = new StreamId(StreamName);
+        scheduler.Register(new(stream, Weight: LightWeight));
+        var registrationBytes = scheduler.EncodedDescriptorBytes;
+
+        await Assert.That(scheduler.RemovePendingHead(stream)).IsFalse();
+
+        await Assert.That(scheduler.EncodedDescriptorBytes).IsEqualTo(registrationBytes);
+        await Assert.That(scheduler.TryAcquire(out _)).IsFalse();
+    }
+
+    /// <summary>Verifies removing an inflight head is rejected without releasing ownership.</summary>
+    /// <returns>A task representing the assertions.</returns>
+    [Test]
+    public async Task RemovePendingHeadRejectsInflightHeadAndPreservesOwnership()
+    {
+        var clock = new FakeTimeProvider();
+        var scheduler = CreateScheduler(clock);
+        var stream = new StreamId(StreamName);
+        scheduler.Register(new(stream, Weight: LightWeight));
+        var registrationBytes = scheduler.EncodedDescriptorBytes;
+        scheduler.Ready(stream, NormalPriority, clock.GetUtcNow());
+        var readyBytes = scheduler.EncodedDescriptorBytes;
+        var acquisition = await AcquireAsync(scheduler);
+
+        await Assert.That(() => scheduler.RemovePendingHead(stream)).ThrowsExactly<InvalidOperationException>();
+        await Assert.That(scheduler.EncodedDescriptorBytes).IsEqualTo(readyBytes);
+        await Assert.That(scheduler.TryAcquire(out _)).IsFalse();
+        scheduler.Complete(acquisition);
+
+        await Assert.That(scheduler.EncodedDescriptorBytes).IsEqualTo(registrationBytes);
+    }
+
     /// <summary>Verifies completing and removing streams reclaim retained logical capacity.</summary>
     /// <returns>A task representing the assertions.</returns>
     [Test]

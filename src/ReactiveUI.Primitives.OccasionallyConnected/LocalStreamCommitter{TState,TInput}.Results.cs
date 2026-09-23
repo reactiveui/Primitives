@@ -57,12 +57,14 @@ internal sealed partial class LocalStreamCommitter<TState, TInput>
             var rejected = SelectRejectedOperations(result);
             if (rejected.Count == 0)
             {
+                var queueSnapshot = CreateTerminalQueueSnapshot(RecoveredQueueSnapshot, batch, result, PeekNextQueueDiagnosticRevision());
                 var unchanged = await _options.Dependencies.Store.ApplySyncResultAsync(batch.BatchId, result, [], cancellationToken).ConfigureAwait(false);
                 ValidateUnchangedResult(unchanged);
+                CommitQueueDiagnosticSnapshotIfChanged(queueSnapshot);
                 return Current;
             }
 
-            return await CommitRejectedResultAsync(batch.BatchId, result, rejected, cancellationToken).ConfigureAwait(false);
+            return await CommitRejectedResultAsync(batch, result, rejected, cancellationToken).ConfigureAwait(false);
         }
         finally
         {
@@ -145,6 +147,8 @@ internal sealed partial class LocalStreamCommitter<TState, TInput>
         var recovered = await _options.Dependencies.Store.RecoverStreamAsync(_options.StreamId, _options.SubscriptionId, cancellationToken).ConfigureAwait(false);
         cancellationToken.ThrowIfCancellationRequested();
         ValidateReplayRecovery(recovered, observed);
+        var deadLettered = FindReplayOperation(recovered, operationId);
+        var queueSnapshot = CreateDeadLetterQueueSnapshot(RecoveredQueueSnapshot, deadLettered, PeekNextQueueDiagnosticRevision());
         HashSet<OperationId> excluded = [operationId];
         var prepared = await PrepareProjectionStateAsync(observed with { MaterializedPayload = authoritative }, cancellationToken).ConfigureAwait(false);
         var state = await ReplayResultOperationsAsync(prepared.State, recovered.ReplayOperations, excluded, cancellationToken).ConfigureAwait(false);
@@ -160,18 +164,19 @@ internal sealed partial class LocalStreamCommitter<TState, TInput>
         ValidateDeadLetterResult(snapshot, mutation, observed, authoritative);
         var next = observed with { State = state, Revision = snapshot.Revision, MaterializedPayload = payload };
         SwapCurrent(next);
+        CommitQueueDiagnosticSnapshot(queueSnapshot);
         return next;
     }
 
     /// <summary>Commits a rebuilt optimistic state with the complete upload decisions.</summary>
-    /// <param name="leaseId">The upload lease.</param>
+    /// <param name="batch">The uploaded batch.</param>
     /// <param name="result">The validated upload decisions.</param>
     /// <param name="rejected">The operations excluded from replay.</param>
     /// <param name="cancellationToken">The precommit cancellation token.</param>
     /// <returns>The committed state.</returns>
     /// <exception cref="InvalidOperationException">The authoritative checkpoint is unknown.</exception>
     private async ValueTask<LocalStreamCommitterState<TState>> CommitRejectedResultAsync(
-        Guid leaseId,
+        SyncBatch batch,
         RemoteSyncResult result,
         HashSet<OperationId> rejected,
         CancellationToken cancellationToken)
@@ -195,11 +200,25 @@ internal sealed partial class LocalStreamCommitter<TState, TInput>
         cancellationToken.ThrowIfCancellationRequested();
         ValidateStatePayload(payload);
         var mutation = new SnapshotMutation(_options.StreamId, payload, _options.Contracts.SnapshotFormatVersion, observed.Revision);
-        var snapshots = await _options.Dependencies.Store.ApplySyncResultAsync(leaseId, result, [mutation], cancellationToken).ConfigureAwait(false);
+        var queueSnapshot = CreateTerminalQueueSnapshot(RecoveredQueueSnapshot, batch, result, PeekNextQueueDiagnosticRevision());
+        var snapshots = await _options.Dependencies.Store.ApplySyncResultAsync(batch.BatchId, result, [mutation], cancellationToken).ConfigureAwait(false);
         ValidateReconciledResult(snapshots, mutation, observed, authoritative);
         var next = observed with { State = state, Revision = snapshots[0].Revision, MaterializedPayload = payload };
         SwapCurrent(next);
+        CommitQueueDiagnosticSnapshotIfChanged(queueSnapshot);
         return next;
+    }
+
+    /// <summary>Stores a precomputed queue snapshot when it represents a change.</summary>
+    /// <param name="snapshot">The precomputed queue snapshot.</param>
+    private void CommitQueueDiagnosticSnapshotIfChanged(QueueDiagnosticSnapshot snapshot)
+    {
+        if (snapshot == RecoveredQueueSnapshot)
+        {
+            return;
+        }
+
+        CommitQueueDiagnosticSnapshot(snapshot);
     }
 
     /// <summary>Replays the retained operations in their persisted client sequence order.</summary>

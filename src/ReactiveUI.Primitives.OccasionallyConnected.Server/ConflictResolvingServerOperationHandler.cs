@@ -70,7 +70,7 @@ internal sealed class ConflictResolvingServerOperationHandler : IServerOperation
     private static ServerOperationPreparation Rejected(OperationId operationId, string reasonCode, string? serverVersion = null) =>
         new(new(operationId, OperationResultKind.Rejected, reasonCode, serverVersion), null, [], []);
 
-    /// <summary>Creates an accepted or conflict preparation.</summary>
+    /// <summary>Creates an accepted preparation with any resolved conflict decisions retained for audit.</summary>
     /// <param name="operationId">The operation identifier.</param>
     /// <param name="resolution">The validated resolution.</param>
     /// <param name="domain">The validated domain result.</param>
@@ -80,16 +80,12 @@ internal sealed class ConflictResolvingServerOperationHandler : IServerOperation
         OperationId operationId,
         ConflictResolutionResult resolution,
         ServerDomainApplyResult domain,
-        int maximumProducedEvents)
-    {
-        var kind = resolution.Conflicts.Count == 0 ? OperationResultKind.Accepted : OperationResultKind.Conflict;
-        var reasonCode = kind == OperationResultKind.Conflict ? resolution.Conflicts[0].ResolutionCode : null;
-        return new(
-            new(operationId, kind, reasonCode, resolution.ServerVersion),
+        int maximumProducedEvents) =>
+        new(
+            new(operationId, OperationResultKind.Accepted, null, resolution.ServerVersion),
             domain.NewState,
             resolution.Conflicts,
             CaptureEvents(resolution.ProducedEvents, domain.Events, maximumProducedEvents));
-    }
 
     /// <summary>Copies resolver and domain event proposals into internal prepared events.</summary>
     /// <param name="resolverEvents">The resolver event proposals.</param>

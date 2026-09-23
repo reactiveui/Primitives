@@ -221,6 +221,18 @@ internal sealed partial class ObserverNotificationDispatcher<T> : IDisposable
         List<Action> schedules) =>
         PublishDeferred(valueFactory, sizeBytes, true, schedules);
 
+    /// <summary>Queues an event notification and returns drain scheduling work to run later.</summary>
+    /// <param name="valueFactory">The value factory invoked for each observer callback.</param>
+    /// <param name="sizeBytes">The estimated retained byte size.</param>
+    /// <param name="schedules">The scheduling callbacks to run after the caller leaves its lock.</param>
+    /// <returns>The aggregate publication result before deferred scheduling failures are observed.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    internal ObserverNotificationPublishResult PublishEventDeferred(
+        Func<CancellationToken, ValueTask<T>> valueFactory,
+        long sizeBytes,
+        List<Action> schedules) =>
+        PublishDeferred(valueFactory, sizeBytes, false, schedules);
+
     /// <summary>Subscribes an observer with a bounded notification queue.</summary>
     /// <param name="observer">The observer receiving serialized callbacks.</param>
     /// <param name="options">The queue options.</param>

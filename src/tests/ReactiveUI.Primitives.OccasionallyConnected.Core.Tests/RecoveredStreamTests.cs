@@ -52,6 +52,7 @@ public sealed class RecoveredStreamTests
         await Assert.That(result.ServerCursor).IsEqualTo(ServerCursor);
         await Assert.That(result.Snapshot).IsSameReferenceAs(snapshot);
         await Assert.That(result.NextClientSequence).IsEqualTo(NextClientSequence);
+        await Assert.That(result.PendingUploadNotBeforeUtc).IsNull();
         await Assert.That(result.PendingOperations).Count().IsEqualTo(CopiedCount);
         await Assert.That(result.PendingOperations[0]).IsSameReferenceAs(operation);
         await Assert.That(result.ReplayOperations).Count().IsEqualTo(CopiedCount);
@@ -79,6 +80,17 @@ public sealed class RecoveredStreamTests
         await Assert.That(result.PendingOperations[0]).IsSameReferenceAs(pending);
         await Assert.That(result.ReplayOperations).Count().IsEqualTo(CopiedCount);
         await Assert.That(result.ReplayOperations[0]).IsSameReferenceAs(replay);
+    }
+
+    /// <summary>Verifies recovered upload not-before metadata is init-only optional state.</summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    [Test]
+    public async Task PendingUploadNotBeforeUtcCanBeInitialized()
+    {
+        var notBeforeUtc = DateTimeOffset.UnixEpoch.AddMinutes(1);
+        var result = new RecoveredStream(SubscriptionId.New(), ServerCursor, CreateSnapshot(), [], [], NextClientSequence) { PendingUploadNotBeforeUtc = notBeforeUtc };
+
+        await Assert.That(result.PendingUploadNotBeforeUtc).IsEqualTo(notBeforeUtc);
     }
 
     /// <summary>Verifies null pending operations are rejected.</summary>

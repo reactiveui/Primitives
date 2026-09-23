@@ -253,6 +253,11 @@ internal sealed partial class InMemoryLocalStoreAdapter : ILocalStoreAdapter, IL
             pending.Sort(OperationSequenceComparison);
             replay.Sort(OperationSequenceComparison);
             deadLetters.Sort(static (left, right) => left.Operation.ClientSequence.CompareTo(right.Operation.ClientSequence));
+            var nowUtc = _timeProvider.GetUtcNow();
+            var pendingHead = FindPendingHeadRecord(streamId);
+            var pendingUploadNotBeforeUtc = pendingHead is null
+                ? null
+                : GetPendingUploadNotBeforeUtc(pendingHead, nowUtc);
             result = new(
                 stream.SubscriptionId,
                 stream.ServerCursor,
@@ -260,7 +265,12 @@ internal sealed partial class InMemoryLocalStoreAdapter : ILocalStoreAdapter, IL
                 pending,
                 deadLetters,
                 stream.NextClientSequence);
-            result = result with { ReplayOperations = replay, Quarantine = stream.Quarantine };
+            result = result with
+            {
+                ReplayOperations = replay,
+                PendingUploadNotBeforeUtc = pendingUploadNotBeforeUtc,
+                Quarantine = stream.Quarantine,
+            };
         }
 
         return new(result);

@@ -127,6 +127,7 @@ public sealed partial class LocalStreamCommitterTests
 
         var result = await committer.ApplyRemoteBatchAsync(batch, CancellationToken.None);
 
+        await Assert.That(result.CursorAdvanced).IsFalse();
         await Assert.That(result.Receipt.AppliedCount).IsEqualTo(0);
         await Assert.That(result.Receipt.DuplicateCount).IsEqualTo(1);
         await Assert.That(result.State.State.Sum).IsEqualTo(RecoveredSnapshotSum);
@@ -149,6 +150,7 @@ public sealed partial class LocalStreamCommitterTests
 
         var result = await committer.ApplyRemoteBatchAsync(batch, CancellationToken.None);
 
+        await Assert.That(result.CursorAdvanced).IsTrue();
         await Assert.That(result.Receipt.NextCursor).IsEqualTo(AdvancedRemoteCursor);
         await Assert.That(result.Receipt.AppliedCount).IsEqualTo(0);
         await Assert.That(result.Receipt.DuplicateCount).IsEqualTo(DuplicateRemoteEventCount);
@@ -257,6 +259,25 @@ public sealed partial class LocalStreamCommitterTests
         await Assert.That(store.UnappliedLookupCallCount).IsEqualTo(1);
         await Assert.That(store.RemoteApplyCallCount).IsEqualTo(0);
         await Assert.That(committer.Current.ServerCursor).IsNull();
+    }
+
+    /// <summary>Verifies empty batches that continue the current cursor still durably advance the cursor.</summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    [Test]
+    public async Task ApplyRemoteBatchAsyncEmptyCurrentCursorCommitsCursorAdvance()
+    {
+        var snapshot = await CreateSnapshotWithCursorAsync(RecoveredSnapshotSum, CurrentRemoteCursor);
+        var store = new ScriptedLocalStore { Recovery = CreateRecoveredStream(snapshot, [], RecoveredNextSequence, serverCursor: CurrentRemoteCursor) };
+        var committer = await CreateRecoveredCommitterAsync(store);
+        var batch = CreateRemoteBatch(CurrentRemoteCursor, AdvancedRemoteCursor, []);
+
+        var result = await committer.ApplyRemoteBatchAsync(batch, CancellationToken.None);
+
+        await Assert.That(result.CursorAdvanced).IsTrue();
+        await Assert.That(result.Receipt.AppliedCount).IsEqualTo(0);
+        await Assert.That(result.Receipt.DuplicateCount).IsEqualTo(0);
+        await Assert.That(committer.Current.ServerCursor).IsEqualTo(AdvancedRemoteCursor);
+        await Assert.That(store.RemoteApplyCallCount).IsEqualTo(1);
     }
 
     /// <summary>Verifies malformed inbox lookup results poison the committer.</summary>

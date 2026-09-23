@@ -52,6 +52,10 @@ internal sealed record OccasionallyConnectedStreamOptions<TState, TInput>
     /// <summary>Gets the maximum admitted stream mutation work items.</summary>
     public int WorkCapacity { get; init; } = 64;
 
+    /// <summary>Gets the caller-declared retained byte charge for typed publishes before serialization is available.</summary>
+    /// <remarks>The caller must ensure each locally produced input is bounded by this declared charge.</remarks>
+    public required long LocalAdmissionRetainedBytes { get; init; }
+
     /// <summary>Gets the initialized client identity associated with local commits.</summary>
     public string? ClientId { get; init; }
 
@@ -79,6 +83,11 @@ internal sealed record OccasionallyConnectedStreamOptions<TState, TInput>
         if (WorkCapacity <= 0)
         {
             throw new InvalidOperationException("WorkCapacity must be positive.");
+        }
+
+        if (LocalAdmissionRetainedBytes <= 0)
+        {
+            throw new InvalidOperationException("LocalAdmissionRetainedBytes must be positive.");
         }
 
         if (MinimumPriority <= MaximumPriority)

@@ -32,6 +32,8 @@ public sealed partial class OccasionallyConnectedStreamTests
 
         stream.Input.OnNext(new(FirstValue));
         await stateSerializeEntered.Task.WaitAsync(TimeSpan.FromSeconds(TestWaitTimeoutSeconds));
+        var admissionsDuringPublish = coordinator.EnterLocalCommitCalls;
+        var completionsDuringPublish = coordinator.CompleteLocalCommitCalls;
         var dispose = stream.DisposeAsync().AsTask();
 
         await Assert.That(dispose.IsCompleted).IsFalse();
@@ -44,6 +46,9 @@ public sealed partial class OccasionallyConnectedStreamTests
         await Assert.That(recovery.PendingOperations[0].ClientSequence).IsEqualTo(FirstSequence);
         await Assert.That(ParsePayloadValue(recovery.PendingOperations[0].Payload)).IsEqualTo(FirstValue);
         await Assert.That(coordinator.CommitReadyCalls).IsEqualTo(1);
+        await Assert.That(admissionsDuringPublish).IsEqualTo(1);
+        await Assert.That(completionsDuringPublish).IsEqualTo(0);
+        await Assert.That(coordinator.CompleteLocalCommitCalls).IsEqualTo(1);
     }
 
     /// <summary>Verifies the inert input facade ignores observer calls when input capture is not configured.</summary>

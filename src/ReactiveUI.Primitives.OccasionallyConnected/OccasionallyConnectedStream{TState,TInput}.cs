@@ -9,10 +9,19 @@ namespace ReactiveUI.Primitives.OccasionallyConnected;
 /// <summary>Concrete typed facade for a locally committed occasionally connected stream.</summary>
 /// <typeparam name="TState">The local state type.</typeparam>
 /// <typeparam name="TInput">The input value type.</typeparam>
-internal sealed partial class OccasionallyConnectedStream<TState, TInput> : IOccasionallyConnectedStream<TState, TInput>
+internal sealed partial class OccasionallyConnectedStream<TState, TInput> :
+    IOccasionallyConnectedStream<TState, TInput>,
+    IOccasionallyConnectedStreamParticipant,
+    IOccasionallyConnectedStreamDiagnosticsSink,
+    IReportsSavedLocalCommitDiagnostics,
+    IOccasionallyConnectedSerializedInputPublisher,
+    IOccasionallyConnectedCommittedStateQueueSnapshots<TState>
 {
     /// <summary>The minimum byte size assigned to non-payload notifications.</summary>
     private const long MinimumNotificationSizeBytes = 1;
+
+    /// <summary>The stable fault code for an unavailable durable operation status.</summary>
+    private const string OperationStatusFaultCode = "OC.Stream.OperationStatus";
 
     /// <summary>Protects identity, latest-state, and lifecycle fields.</summary>
     private readonly Lock _gate = new();
@@ -41,11 +50,17 @@ internal sealed partial class OccasionallyConnectedStream<TState, TInput> : IOcc
     /// <summary>Dispatches stream fault notifications.</summary>
     private readonly ObserverNotificationDispatcher<OccasionallyConnectedFault> _faults;
 
+    /// <summary>Stores the context-owned participant registration.</summary>
+    private readonly IDisposable _participantRegistration;
+
     /// <summary>Stores the shared initialization task after the first asynchronous use.</summary>
     private Task<LocalStreamCommitter<TState, TInput>>? _initializeTask;
 
     /// <summary>Stores the serialized lifecycle convergence task.</summary>
     private Task _lifecycleTask = Task.CompletedTask;
+
+    /// <summary>Stores the last exception published as a lifecycle fault to suppress duplicate continuation reports.</summary>
+    private Exception? _lastLifecycleFault;
 
     /// <summary>Stores the shared disposal task after the first disposal call.</summary>
     private Task? _disposeTask;
@@ -62,8 +77,17 @@ internal sealed partial class OccasionallyConnectedStream<TState, TInput> : IOcc
     /// <summary>Tracks the desired stream lifecycle state.</summary>
     private bool _desiredStarted;
 
+    /// <summary>Tracks whether remote work is explicitly parked for this stream.</summary>
+    private bool _remoteStopped;
+
+    /// <summary>Tracks a pending remote stop request that does not require typed initialization.</summary>
+    private bool _stopRequested;
+
     /// <summary>Tracks whether the stream has been disposed.</summary>
     private bool _disposed;
+
+    /// <summary>Rejects engine diagnostic notifications overtaken by a newer state.</summary>
+    private long _lastSyncDiagnosticRevision;
 
     /// <summary>Initializes a new instance of the <see cref="OccasionallyConnectedStream{TState,TInput}"/> class.</summary>
     /// <param name="options">The stream options.</param>
@@ -75,11 +99,13 @@ internal sealed partial class OccasionallyConnectedStream<TState, TInput> : IOcc
         _subscriptionId = GetPreferredSubscriptionId(options.Definition);
         _workLane = new(options.WorkCapacity);
         _faults = new(options.NotificationScheduler);
+        _committedStateQueueSnapshots = new(options.NotificationScheduler, ReportObserverFault);
         _local = new(options.NotificationScheduler, ReportObserverFault);
         _remote = new(options.NotificationScheduler, ReportObserverFault);
         _syncStates = new(options.NotificationScheduler, ReportObserverFault);
         _operationStates = new(options.NotificationScheduler, ReportObserverFault);
         _inputProducer = options.InputProducer ?? CreateInputProducer();
+        _participantRegistration = options.Coordinator.RegisterParticipant(this);
     }
 
     /// <inheritdoc />
@@ -122,32 +148,152 @@ internal sealed partial class OccasionallyConnectedStream<TState, TInput> : IOcc
     public IObserver<TInput> Input => _inputProducer.Observer;
 
     /// <inheritdoc />
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    bool IReportsSavedLocalCommitDiagnostics.ReportsSavedLocalCommitTo(SyncEngine engine) =>
+        ReferenceEquals(_options.Coordinator, engine);
+
+    /// <inheritdoc />
+    public IObservable<OccasionallyConnectedCommittedStateQueueSnapshot<TState>> CommittedStateQueueSnapshots =>
+        new PairedObservable(this);
+
+    /// <inheritdoc />
+    void IOccasionallyConnectedStreamDiagnosticsSink.PublishSyncState(SyncState state, long revision)
+    {
+        var schedules = new List<Action>();
+        lock (_gate)
+        {
+            if (_disposed || revision <= _lastSyncDiagnosticRevision)
+            {
+                return;
+            }
+
+            _lastSyncDiagnosticRevision = revision;
+            _ = _syncStates.PublishLatestDeferred(_ => new(state), MinimumNotificationSizeBytes, schedules);
+        }
+
+        for (var i = 0; i < schedules.Count; i++)
+        {
+            schedules[i]();
+        }
+    }
+
+    /// <inheritdoc />
     public ValueTask<PublishReceipt> PublishAsync(
         TInput value,
         RemotePublishOptions? options,
+        CancellationToken cancellationToken) =>
+        new(PublishWithAdmissionAsync(value, options, cancellationToken));
+
+    /// <inheritdoc/>
+    async ValueTask<ReceiveStreamSubscription?> IOccasionallyConnectedStreamParticipant.PrepareReceiveAsync(CancellationToken cancellationToken)
+    {
+        var subscription = _options.Definition.Subscription;
+        if (subscription is null)
+        {
+            return null;
+        }
+
+        var committer = await EnsureInitializedCoreAsync(cancellationToken).ConfigureAwait(false);
+        SubscriptionId subscriptionId;
+        lock (_gate)
+        {
+            subscriptionId = _subscriptionId ?? throw new InvalidOperationException("SubscriptionId is unavailable until the stream has initialized.");
+        }
+
+        return new(StreamId, subscriptionId, committer.Current.ServerCursor, subscription.StartPosition, subscription.DeliveryGuarantee);
+    }
+
+    /// <inheritdoc/>
+    async ValueTask<PublishReceipt> IOccasionallyConnectedStreamParticipant.CommitSerializedAsync(
+        SyncOperation operation,
         CancellationToken cancellationToken)
     {
-        Task<PublishReceipt> task;
+        ArgumentExceptionHelper.ThrowIfNull(operation);
+        while (true)
+        {
+            var generation = _options.Coordinator.GetCapacityReleaseGeneration(StreamId);
+            try
+            {
+                Task<PublishReceipt> task;
+                lock (_gate)
+                {
+                    ThrowIfDisposed();
+                    task = _workLane.EnqueueAsync(token => CommitSerializedCoreAsync(operation, token), cancellationToken);
+                }
+
+                return await task.ConfigureAwait(false);
+            }
+            catch (QueueCapacityExceededException exception) when (exception.CanFitWhenEmpty)
+            {
+                var retainedBytes = operation.Payload.Payload.IsEmpty
+                    ? SyncEngine.UnknownProducerRetainedBytes
+                    : operation.Payload.Payload.Length;
+                await _options.Coordinator
+                    .WaitForCapacityReleaseAsync(StreamId, generation, retainedBytes, cancellationToken)
+                    .ConfigureAwait(false);
+            }
+        }
+    }
+
+    /// <inheritdoc/>
+    ValueTask<ParticipantQueueTransitionResult> IOccasionallyConnectedStreamParticipant.ApplySyncResultAsync(
+        SyncBatch batch,
+        RemoteSyncResult result,
+        CancellationToken cancellationToken)
+    {
+        ArgumentExceptionHelper.ThrowIfNull(batch);
+        ArgumentExceptionHelper.ThrowIfNull(result);
+        Task<ParticipantQueueTransitionResult> task;
         lock (_gate)
         {
             ThrowIfDisposed();
-            task = _workLane.EnqueueAsync(token => PublishCoreAsync(value, options, token), cancellationToken);
+            task = _workLane.EnqueueAsync(token => ApplySyncResultCoreAsync(batch, result, token), cancellationToken);
         }
 
         return new(task);
     }
 
-    /// <inheritdoc />
+    /// <inheritdoc/>
+    async ValueTask<ParticipantRemoteApplyResult> IOccasionallyConnectedStreamParticipant.ApplyRemoteBatchAsync(
+        RemoteEventBatch batch,
+        CancellationToken cancellationToken)
+    {
+        var result = await ApplyRemoteBatchAsync(batch, cancellationToken).ConfigureAwait(false);
+        return new(result.Receipt, result.QueueSnapshot, result.CursorAdvanced);
+    }
+
+    /// <inheritdoc/>
+    ValueTask<ParticipantQueueTransitionResult> IOccasionallyConnectedStreamParticipant.DeadLetterOperationAsync(
+        Guid leaseId,
+        OperationId operationId,
+        string reasonCode,
+        CancellationToken cancellationToken)
+    {
+        Task<ParticipantQueueTransitionResult> task;
+        lock (_gate)
+        {
+            ThrowIfDisposed();
+            task = _workLane.EnqueueAsync(token => DeadLetterOperationCoreAsync(leaseId, operationId, reasonCode, token), cancellationToken);
+        }
+
+        return new(task);
+    }
+
+    /// <summary>Starts or resumes remote work for this stream and initializes the typed local committer.</summary>
+    /// <param name="cancellationToken">The cancellation token used while waiting for lifecycle convergence.</param>
+    /// <returns>The start operation.</returns>
     public async ValueTask StartAsync(CancellationToken cancellationToken)
     {
         var task = SetDesiredLifecycleState(true);
         await WaitForLifecycleAsync(task, cancellationToken).ConfigureAwait(false);
     }
 
-    /// <inheritdoc />
+    /// <summary>Stops remote work for this stream without closing local publication admission or completing public observers.</summary>
+    /// <param name="cancellationToken">The cancellation token used while waiting for lifecycle convergence.</param>
+    /// <returns>The stop operation.</returns>
     public async ValueTask StopAsync(CancellationToken cancellationToken)
     {
-        var task = SetDesiredLifecycleState(false);
+        var task = SetDesiredLifecycleState(false, forceStop: true);
         await WaitForLifecycleAsync(task, cancellationToken).ConfigureAwait(false);
     }
 
@@ -231,6 +377,8 @@ internal sealed partial class OccasionallyConnectedStream<TState, TInput> : IOcc
         _syncStates.Dispose();
         _operationStates.Dispose();
         _faults.Dispose();
+        _committedStateQueueSnapshots.Dispose();
+        _participantRegistration.Dispose();
         if (failure is null)
         {
             return;
@@ -250,7 +398,7 @@ internal sealed partial class OccasionallyConnectedStream<TState, TInput> : IOcc
         }
         catch (Exception exception)
         {
-            PublishFault("OC.Stream.Lifecycle", "A previous stream lifecycle transition failed.", null, exception);
+            PublishLifecycleFailureOnce(exception);
         }
 
         await ApplyDesiredLifecycleStateAsync().ConfigureAwait(false);
@@ -259,8 +407,9 @@ internal sealed partial class OccasionallyConnectedStream<TState, TInput> : IOcc
     /// <summary>Records the desired lifecycle state and returns the shared convergence task.</summary>
     /// <param name="started">Whether the stream should be started.</param>
     /// <param name="allowDisposed">Whether disposal is allowed to request convergence.</param>
+    /// <param name="forceStop">Whether a stop request should park remote work even when the typed facade has not started.</param>
     /// <returns>The convergence task.</returns>
-    private Task SetDesiredLifecycleState(bool started, bool allowDisposed = false)
+    private Task SetDesiredLifecycleState(bool started, bool allowDisposed = false, bool forceStop = false)
     {
         TaskCompletionSource<bool>? completion = null;
         Task? previous = null;
@@ -272,13 +421,10 @@ internal sealed partial class OccasionallyConnectedStream<TState, TInput> : IOcc
                 ThrowIfDisposed();
             }
 
+            var stopRequired = RecordStopRequestLocked(forceStop);
             var changed = _desiredStarted != started;
             _desiredStarted = started;
-            if (!changed && !_lifecycleTask.IsCompleted)
-            {
-                task = _lifecycleTask;
-            }
-            else if (!changed && IsCompletedSuccessfully(_lifecycleTask))
+            if (!ShouldCreateLifecycleConvergenceLocked(changed, stopRequired))
             {
                 task = _lifecycleTask;
             }
@@ -297,6 +443,39 @@ internal sealed partial class OccasionallyConnectedStream<TState, TInput> : IOcc
         }
 
         return task;
+    }
+
+    /// <summary>Records an explicit remote stop request while the stream gate is held.</summary>
+    /// <param name="forceStop">Whether a remote stop should be forced.</param>
+    /// <returns><see langword="true"/> when remote work still needs to be stopped.</returns>
+    private bool RecordStopRequestLocked(bool forceStop)
+    {
+        if (!forceStop || _remoteStopped)
+        {
+            return false;
+        }
+
+        _stopRequested = true;
+        return true;
+    }
+
+    /// <summary>Determines whether a new lifecycle convergence proxy is needed while the stream gate is held.</summary>
+    /// <param name="changed">Whether the desired started state changed.</param>
+    /// <param name="stopRequired">Whether a remote stop must be applied even without typed startup.</param>
+    /// <returns><see langword="true"/> when a new convergence proxy should be created.</returns>
+    private bool ShouldCreateLifecycleConvergenceLocked(bool changed, bool stopRequired)
+    {
+        if (changed)
+        {
+            return true;
+        }
+
+        if (!_lifecycleTask.IsCompleted)
+        {
+            return false;
+        }
+
+        return stopRequired || !IsCompletedSuccessfully(_lifecycleTask);
     }
 
     /// <summary>Completes a lifecycle convergence proxy after coordinator work finishes.</summary>
@@ -320,6 +499,7 @@ internal sealed partial class OccasionallyConnectedStream<TState, TInput> : IOcc
         }
         catch (Exception exception)
         {
+            PublishLifecycleFailureOnce(exception);
             _ = completion.TrySetException(exception);
         }
     }
@@ -332,13 +512,15 @@ internal sealed partial class OccasionallyConnectedStream<TState, TInput> : IOcc
         {
             bool shouldBeStarted;
             bool isStarted;
+            bool shouldStop;
             lock (_gate)
             {
                 shouldBeStarted = _desiredStarted;
                 isStarted = _started;
+                shouldStop = !shouldBeStarted && _stopRequested && !_remoteStopped;
             }
 
-            if (shouldBeStarted == isStarted)
+            if (shouldBeStarted == isStarted && !shouldStop)
             {
                 return;
             }
@@ -350,6 +532,8 @@ internal sealed partial class OccasionallyConnectedStream<TState, TInput> : IOcc
                 lock (_gate)
                 {
                     _started = true;
+                    _remoteStopped = false;
+                    _stopRequested = false;
                 }
 
                 continue;
@@ -360,6 +544,8 @@ internal sealed partial class OccasionallyConnectedStream<TState, TInput> : IOcc
             lock (_gate)
             {
                 _started = false;
+                _remoteStopped = true;
+                _stopRequested = false;
             }
         }
     }
@@ -380,7 +566,12 @@ internal sealed partial class OccasionallyConnectedStream<TState, TInput> : IOcc
         var result = await committer.CommitAsync(value, CreatePolicy(effectiveOptions), effectiveOptions?.BaseVersion, cancellationToken)
             .ConfigureAwait(false);
         NotifyCommitReady(result);
-        await PublishLocalAsync(result.State, result.Receipt.OperationId, CancellationToken.None).ConfigureAwait(false);
+        var committedPayload = await PublishLocalAsync(result.State, result.Receipt.OperationId, CancellationToken.None).ConfigureAwait(false);
+        if (committedPayload is not null)
+        {
+            PublishCommittedStateQueueSnapshot(committedPayload, result.QueueSnapshot);
+        }
+
         PublishOperationStatus(result.Receipt);
         return result.Receipt;
     }
@@ -393,13 +584,13 @@ internal sealed partial class OccasionallyConnectedStream<TState, TInput> : IOcc
     private ValueTask<PublishReceipt> PublishSerializedAsync(
         PayloadEnvelope payload,
         RemotePublishOptions? options,
-        CancellationToken cancellationToken)
-    {
-        var task = _workLane.EnqueueAsync(
+        CancellationToken cancellationToken) =>
+        new(PublishAdmittedAsync(
             token => PublishSerializedCoreAsync(payload, options, token),
-            cancellationToken);
-        return new(task);
-    }
+            GetNotificationSize(payload),
+            options,
+            allowDisposed: true,
+            cancellationToken));
 
     /// <summary>Commits one producer-captured serialized input using the initialized local committer.</summary>
     /// <param name="payload">The owned input payload.</param>
@@ -421,9 +612,102 @@ internal sealed partial class OccasionallyConnectedStream<TState, TInput> : IOcc
                 cancellationToken)
             .ConfigureAwait(false);
         NotifyCommitReady(result);
-        await PublishLocalAsync(result.State, result.Receipt.OperationId, CancellationToken.None).ConfigureAwait(false);
+        var committedPayload = await PublishLocalAsync(result.State, result.Receipt.OperationId, CancellationToken.None).ConfigureAwait(false);
+        if (committedPayload is not null)
+        {
+            PublishCommittedStateQueueSnapshot(committedPayload, result.QueueSnapshot);
+        }
+
         PublishOperationStatus(result.Receipt);
         return result.Receipt;
+    }
+
+    /// <summary>Runs one serialized local publish inside the serialized stream lane.</summary>
+    /// <param name="operation">The serialized operation.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>The durable publish receipt.</returns>
+    private async ValueTask<PublishReceipt> CommitSerializedCoreAsync(
+        SyncOperation operation,
+        CancellationToken cancellationToken)
+    {
+        var committer = await EnsureInitializedCoreAsync(cancellationToken).ConfigureAwait(false);
+        var result = await committer.CommitSerializedAsync(operation, cancellationToken).ConfigureAwait(false);
+        NotifyCommitReady(result);
+        var committedPayload = await PublishLocalAsync(result.State, result.Receipt.OperationId, CancellationToken.None).ConfigureAwait(false);
+        if (committedPayload is not null)
+        {
+            PublishCommittedStateQueueSnapshot(committedPayload, result.QueueSnapshot);
+        }
+
+        PublishOperationStatus(result.Receipt);
+        return result.Receipt;
+    }
+
+    /// <summary>Admits and runs one typed local publish outside the serialized lane when capacity waits are required.</summary>
+    /// <param name="value">The caller input value.</param>
+    /// <param name="options">The optional publish options.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>The durable publish receipt.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private Task<PublishReceipt> PublishWithAdmissionAsync(
+        TInput value,
+        RemotePublishOptions? options,
+        CancellationToken cancellationToken) =>
+        PublishAdmittedAsync(
+            token => PublishCoreAsync(value, options, token),
+            _options.LocalAdmissionRetainedBytes,
+            options,
+            allowDisposed: false,
+            cancellationToken);
+
+    /// <summary>Tracks one admitted publish through serialization, capacity waits, and durable completion.</summary>
+    /// <param name="publish">The typed or owned-payload commit operation.</param>
+    /// <param name="retainedBytes">The retained input charge for admission and capacity waits.</param>
+    /// <param name="options">The optional publish options.</param>
+    /// <param name="allowDisposed">Whether a previously accepted input may drain during stream disposal.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>The durable publish receipt.</returns>
+    private async Task<PublishReceipt> PublishAdmittedAsync(
+        Func<CancellationToken, ValueTask<PublishReceipt>> publish,
+        long retainedBytes,
+        RemotePublishOptions? options,
+        bool allowDisposed,
+        CancellationToken cancellationToken)
+    {
+        ValidatePublishOptions(options);
+        var admission = await _options.Coordinator.EnterLocalCommitAsync(StreamId, retainedBytes, cancellationToken).ConfigureAwait(false);
+        try
+        {
+            while (true)
+            {
+                var generation = _options.Coordinator.GetCapacityReleaseGeneration(StreamId);
+                try
+                {
+                    Task<PublishReceipt> task;
+                    lock (_gate)
+                    {
+                        if (!allowDisposed)
+                        {
+                            ThrowIfDisposed();
+                        }
+
+                        task = _workLane.EnqueueAsync(publish, cancellationToken);
+                    }
+
+                    return await task.ConfigureAwait(false);
+                }
+                catch (QueueCapacityExceededException exception) when (ShouldWaitForCapacity(exception, options))
+                {
+                    await _options.Coordinator
+                        .WaitForCapacityReleaseAsync(StreamId, generation, retainedBytes, cancellationToken)
+                        .ConfigureAwait(false);
+                }
+            }
+        }
+        finally
+        {
+            _options.Coordinator.CompleteLocalCommit(admission);
+        }
     }
 
     /// <summary>Runs one typed remote apply inside the serialized stream lane.</summary>
@@ -437,8 +721,85 @@ internal sealed partial class OccasionallyConnectedStream<TState, TInput> : IOcc
         var committer = await EnsureInitializedCoreAsync(cancellationToken).ConfigureAwait(false);
         var result = await committer.ApplyRemoteBatchAsync(batch, cancellationToken).ConfigureAwait(false);
         PublishRemote(result);
-        await PublishLocalAsync(result.State, null, CancellationToken.None).ConfigureAwait(false);
+        var committedPayload = await PublishLocalAsync(result.State, null, CancellationToken.None).ConfigureAwait(false);
+        if (committedPayload is not null)
+        {
+            PublishCommittedStateQueueSnapshot(committedPayload, result.QueueSnapshot);
+        }
+
         return result;
+    }
+
+    /// <summary>Runs one upload reconciliation inside the serialized stream lane.</summary>
+    /// <param name="batch">The exact upload batch.</param>
+    /// <param name="result">The remote upload result.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>The reconciliation task.</returns>
+    private async ValueTask<ParticipantQueueTransitionResult> ApplySyncResultCoreAsync(
+        SyncBatch batch,
+        RemoteSyncResult result,
+        CancellationToken cancellationToken)
+    {
+        var committer = await EnsureInitializedCoreAsync(cancellationToken).ConfigureAwait(false);
+        var state = await committer.ApplySyncResultAsync(batch, result, cancellationToken).ConfigureAwait(false);
+        var queueSnapshot = committer.RecoveredQueueSnapshot;
+        var committedPayload = await PublishLocalAsync(state, null, CancellationToken.None).ConfigureAwait(false);
+        if (committedPayload is not null)
+        {
+            PublishCommittedStateQueueSnapshot(committedPayload, queueSnapshot);
+        }
+
+        await PublishOperationStatusesAsync(result).ConfigureAwait(false);
+        return new(queueSnapshot);
+    }
+
+    /// <summary>Runs one local dead-letter reconciliation inside the serialized stream lane.</summary>
+    /// <param name="leaseId">The active upload lease.</param>
+    /// <param name="operationId">The operation to dead-letter.</param>
+    /// <param name="reasonCode">The stable local reason code.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>The dead-letter task.</returns>
+    private async ValueTask<ParticipantQueueTransitionResult> DeadLetterOperationCoreAsync(
+        Guid leaseId,
+        OperationId operationId,
+        string reasonCode,
+        CancellationToken cancellationToken)
+    {
+        var committer = await EnsureInitializedCoreAsync(cancellationToken).ConfigureAwait(false);
+        var state = await committer.DeadLetterOperationAsync(leaseId, operationId, reasonCode, cancellationToken).ConfigureAwait(false);
+        var queueSnapshot = committer.RecoveredQueueSnapshot;
+        var committedPayload = await PublishLocalAsync(state, null, CancellationToken.None).ConfigureAwait(false);
+        if (committedPayload is not null)
+        {
+            PublishCommittedStateQueueSnapshot(committedPayload, queueSnapshot);
+        }
+
+        try
+        {
+            var status = await _options.Store.GetOperationStatusAsync(operationId, CancellationToken.None).ConfigureAwait(false);
+            if (status is not null)
+            {
+                _ = _operationStates.PublishEvent(status, GetOperationStatusNotificationSize(status));
+            }
+            else
+            {
+                PublishFault(
+                    OperationStatusFaultCode,
+                    "The durable operation status was unavailable after a dead-letter commit.",
+                    operationId,
+                    new InvalidOperationException("The durable operation status was unavailable."));
+            }
+        }
+        catch (Exception exception)
+        {
+            PublishFault(
+                OperationStatusFaultCode,
+                "The durable operation status could not be read after a dead-letter commit.",
+                operationId,
+                exception);
+        }
+
+        return new(queueSnapshot);
     }
 
     /// <summary>Ensures durable identity and recovery have completed.</summary>
@@ -496,8 +857,26 @@ internal sealed partial class OccasionallyConnectedStream<TState, TInput> : IOcc
         }
         catch (Exception exception)
         {
+            PublishLifecycleFailureOnce(exception);
             _ = completion.TrySetException(exception);
         }
+    }
+
+    /// <summary>Publishes a sanitized lifecycle fault once for each distinct exception instance.</summary>
+    /// <param name="exception">The lifecycle failure.</param>
+    private void PublishLifecycleFailureOnce(Exception exception)
+    {
+        lock (_gate)
+        {
+            if (ReferenceEquals(_lastLifecycleFault, exception))
+            {
+                return;
+            }
+
+            _lastLifecycleFault = exception;
+        }
+
+        PublishFault("OC.Stream.Lifecycle", "A previous stream lifecycle transition failed.", null, exception);
     }
 
     /// <summary>Resolves durable identity, constructs the committer, and recovers local state.</summary>
@@ -534,12 +913,23 @@ internal sealed partial class OccasionallyConnectedStream<TState, TInput> : IOcc
             MaximumPriority = _options.MaximumPriority,
         });
         var state = await committer.RecoverAsync(cancellationToken).ConfigureAwait(false);
+        _options.Coordinator.RecordRecoveredQueueAggregate(StreamId, committer.RecoveredQueueSnapshot);
+        if (committer.RecoveredUploadHead is { } recoveredUploadHead)
+        {
+            _options.Coordinator.NotifyRecoveredLocalWorkReady(StreamId, recoveredUploadHead.Priority, recoveredUploadHead.NotBeforeUtc);
+        }
+
         lock (_gate)
         {
             _subscriptionId = subscriptionId;
         }
 
-        await PublishLocalAsync(state, null, CancellationToken.None).ConfigureAwait(false);
+        var committedPayload = await PublishLocalAsync(state, null, CancellationToken.None).ConfigureAwait(false);
+        if (committedPayload is not null)
+        {
+            PublishCommittedStateQueueSnapshot(committedPayload, committer.RecoveredQueueSnapshot);
+        }
+
         return committer;
     }
 
@@ -563,12 +953,22 @@ internal sealed partial class OccasionallyConnectedStream<TState, TInput> : IOcc
         throw new InvalidOperationException("Publish options StreamId must match the stream.");
     }
 
+    /// <summary>Determines whether a capacity failure should wait for a release notification.</summary>
+    /// <param name="exception">The capacity exception.</param>
+    /// <param name="options">The call-specific publish options.</param>
+    /// <returns>Whether the publish should wait and retry.</returns>
+    private bool ShouldWaitForCapacity(QueueCapacityExceededException exception, RemotePublishOptions? options)
+    {
+        var effective = options ?? _options.Definition.Publish;
+        return exception.CanFitWhenEmpty && (effective is null || effective.AdmissionStrategy == BufferStrategy.Block);
+    }
+
     /// <summary>Publishes an isolated local state snapshot and records its payload for future latest replay.</summary>
     /// <param name="state">The current committed local state.</param>
     /// <param name="operationId">The optional local operation identity.</param>
     /// <param name="cancellationToken">The cancellation token.</param>
-    /// <returns>A task that completes after notification snapshot preparation has completed.</returns>
-    private async ValueTask PublishLocalAsync(
+    /// <returns>The owned committed payload, or null when notification preparation fails.</returns>
+    private async ValueTask<PayloadEnvelope?> PublishLocalAsync(
         LocalStreamCommitterState<TState> state,
         OperationId? operationId,
         CancellationToken cancellationToken)
@@ -581,7 +981,7 @@ internal sealed partial class OccasionallyConnectedStream<TState, TInput> : IOcc
         catch (Exception exception)
         {
             PublishFault("OC.Stream.LocalSnapshot", "The stream local notification snapshot failed.", operationId, exception);
-            return;
+            return null;
         }
 
         var schedules = new List<Action>();
@@ -594,6 +994,7 @@ internal sealed partial class OccasionallyConnectedStream<TState, TInput> : IOcc
         }
 
         RunNotificationSchedules(schedules);
+        return payload;
     }
 
     /// <summary>Gets the durable payload backing a local notification snapshot.</summary>
@@ -709,13 +1110,50 @@ internal sealed partial class OccasionallyConnectedStream<TState, TInput> : IOcc
             new SyncOperationStatus(receipt.OperationId, StreamId, receipt.State, Attempt: 0, receipt.SavedAtUtc, ReasonCode: null),
             GetOperationStatusNotificationSize(StreamId, receipt));
 
+    /// <summary>Publishes locally observed upload result statuses after durable reconciliation.</summary>
+    /// <param name="result">The reconciled result.</param>
+    /// <returns>The best-effort notification task.</returns>
+    private async ValueTask PublishOperationStatusesAsync(RemoteSyncResult result)
+    {
+        foreach (var remote in result.Operations)
+        {
+            try
+            {
+                var status = await _options.Store.GetOperationStatusAsync(remote.OperationId, CancellationToken.None).ConfigureAwait(false);
+                if (status is null)
+                {
+                    PublishFault(
+                        OperationStatusFaultCode,
+                        "The durable operation status was unavailable after upload reconciliation.",
+                        remote.OperationId,
+                        new InvalidOperationException("The durable operation status was unavailable."));
+                    continue;
+                }
+
+                _ = _operationStates.PublishEvent(status, GetOperationStatusNotificationSize(status));
+            }
+            catch (Exception exception)
+            {
+                PublishFault(
+                    OperationStatusFaultCode,
+                    "The durable operation status could not be read after upload reconciliation.",
+                    remote.OperationId,
+                    exception);
+            }
+        }
+    }
+
     /// <summary>Notifies the coordinator after a durable local commit.</summary>
     /// <param name="result">The local commit result.</param>
     private void NotifyCommitReady(LocalStreamCommitResult<TState, TInput> result)
     {
         try
         {
-            _options.Coordinator.NotifyLocalCommitReady(StreamId, result.Operation);
+            _options.Coordinator.RecordSavedLocalCommit(
+                StreamId,
+                result.Operation,
+                result.QueueSnapshot,
+                result.Receipt);
         }
         catch (Exception exception)
         {

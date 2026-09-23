@@ -146,6 +146,32 @@ internal sealed class FairStreamScheduler
         }
     }
 
+    /// <summary>Removes a pending head without unregistering the stream.</summary>
+    /// <param name="streamId">The stream identifier.</param>
+    /// <returns><see langword="true"/> when a pending head was removed; otherwise, <see langword="false"/>.</returns>
+    /// <exception cref="InvalidOperationException">The stream is missing or its head is inflight.</exception>
+    internal bool RemovePendingHead(StreamId streamId)
+    {
+        lock (_gate)
+        {
+            var state = GetStream(streamId);
+            var head = state.Head;
+            if (head is null)
+            {
+                return false;
+            }
+
+            if (head.Inflight)
+            {
+                throw new InvalidOperationException("An inflight stream head cannot be removed.");
+            }
+
+            _encodedDescriptorBytes -= HeadFixedBytes;
+            state.Head = null;
+            return true;
+        }
+    }
+
     /// <summary>Attempts to acquire the next eligible stream head.</summary>
     /// <param name="acquisition">The acquired stream when an eligible head is available.</param>
     /// <returns><see langword="true"/> when a head was acquired; otherwise, <see langword="false"/>.</returns>
@@ -176,18 +202,38 @@ internal sealed class FairStreamScheduler
     internal void Complete(FairStreamAcquisition acquisition)
     {
         ArgumentExceptionHelper.ThrowIfNull(acquisition);
+        if (TryComplete(acquisition))
+        {
+            return;
+        }
+
+        throw new InvalidOperationException("The acquisition does not match the inflight stream head.");
+    }
+
+    /// <summary>Attempts to complete an acquired head and releases its retained metadata when it still owns the active head.</summary>
+    /// <param name="acquisition">The acquisition returned by <see cref="TryAcquire(out FairStreamAcquisition?)"/>.</param>
+    /// <returns><see langword="true"/> when the active head matched and was completed; otherwise, <see langword="false"/>.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="acquisition"/> is null.</exception>
+    internal bool TryComplete(FairStreamAcquisition acquisition)
+    {
+        ArgumentExceptionHelper.ThrowIfNull(acquisition);
 
         lock (_gate)
         {
-            var state = GetStream(acquisition.StreamId);
+            if (!_streamsById.TryGetValue(acquisition.StreamId, out var state))
+            {
+                return false;
+            }
+
             var head = state.Head;
             if (head is null || !head.Matches(acquisition))
             {
-                throw new InvalidOperationException("The acquisition does not match the inflight stream head.");
+                return false;
             }
 
             _encodedDescriptorBytes -= HeadFixedBytes;
             state.Head = null;
+            return true;
         }
     }
 

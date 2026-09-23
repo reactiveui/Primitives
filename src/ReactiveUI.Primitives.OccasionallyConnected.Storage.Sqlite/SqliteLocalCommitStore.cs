@@ -319,10 +319,17 @@ internal sealed partial class SqliteLocalCommitStore : IDisposable
             }
 
             ValidateRecoveredSequences(payloadRows.Pending, payloadRows.Replay, stream.NextClientSequence);
+            var pendingUploadNotBeforeUtc = SqliteLocalCommitSql.SelectRecoveredPendingUploadNotBeforeUtc(
+                connection,
+                transaction,
+                storeIdentity,
+                streamId,
+                _timeProvider.GetUtcNow(),
+                cancellationToken);
 
             cancellationToken.ThrowIfCancellationRequested();
             transaction.Commit();
-            return CreateRecoveredStream(subscriptionId, stream, in payloadRows);
+            return CreateRecoveredStream(subscriptionId, stream, in payloadRows, pendingUploadNotBeforeUtc);
         }
     }
 
@@ -1061,11 +1068,13 @@ internal sealed partial class SqliteLocalCommitStore : IDisposable
     /// <param name="subscriptionId">The recovered subscription identifier.</param>
     /// <param name="stream">The durable stream state.</param>
     /// <param name="payloadRows">The recovered payload rows.</param>
+    /// <param name="pendingUploadNotBeforeUtc">The pending upload not-before timestamp.</param>
     /// <returns>The recovered stream.</returns>
     private static RecoveredStream CreateRecoveredStream(
         SubscriptionId subscriptionId,
         SqliteLocalStreamState stream,
-        in SqliteRecoveredPayloadRows payloadRows)
+        in SqliteRecoveredPayloadRows payloadRows,
+        DateTimeOffset? pendingUploadNotBeforeUtc = null)
     {
         var result = new RecoveredStream(
             subscriptionId,
@@ -1074,7 +1083,11 @@ internal sealed partial class SqliteLocalCommitStore : IDisposable
             payloadRows.Pending,
             payloadRows.DeadLetters,
             stream.NextClientSequence);
-        return result with { ReplayOperations = payloadRows.Replay };
+        return result with
+        {
+            ReplayOperations = payloadRows.Replay,
+            PendingUploadNotBeforeUtc = pendingUploadNotBeforeUtc,
+        };
     }
 
     /// <summary>Reads payload-bearing rows during recovery.</summary>

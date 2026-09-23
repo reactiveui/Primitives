@@ -46,7 +46,7 @@ internal static class BatchSelectionPlanner
             }
         }
 
-        var disposition = inspectedCount > 0 && options.FirstEligibleElapsed >= options.Batching.MaximumDwellTime
+        var disposition = inspectedCount > 0 && (options.ForceReady || options.FirstEligibleElapsed >= options.Batching.MaximumDwellTime)
             ? BatchSelectionResultKind.Ready
             : BatchSelectionResultKind.WaitForDwell;
         return new(disposition, inspectedCount, encodedBytes);
