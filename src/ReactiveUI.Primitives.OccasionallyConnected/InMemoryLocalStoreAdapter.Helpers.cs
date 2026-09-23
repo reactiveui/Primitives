@@ -413,14 +413,19 @@ internal sealed partial class InMemoryLocalStoreAdapter
     }
 #endif
 
+    /// <summary>Determines whether a stream head is permanently blocked from leasing.</summary>
+    /// <param name="record">The operation record.</param>
+    /// <returns>Whether the operation is permanently blocked.</returns>
+    private static bool IsPermanentlyBlockedForLease(OperationRecord record) =>
+        IsBlockingHead(record.Status.State)
+        || (record.Attempt > 0 && record.Operation.Policy.DeliveryGuarantee == DeliveryGuarantee.AtMostOnce);
+
     /// <summary>Determines whether a stream head must wait for ownership or a retry decision.</summary>
     /// <param name="record">The operation record.</param>
     /// <param name="nowUtc">The sampled current timestamp.</param>
     /// <returns>Whether the operation blocks leasing.</returns>
     private static bool IsBlockedForLease(OperationRecord record, DateTimeOffset nowUtc) =>
-        IsBlockingHead(record.Status.State) || record.LeaseId.HasValue
-        || (record.Attempt > 0 && record.Operation.Policy.DeliveryGuarantee == DeliveryGuarantee.AtMostOnce)
-        || record.RetryState?.DueUtc > nowUtc;
+        IsPermanentlyBlockedForLease(record) || record.LeaseId.HasValue || record.RetryState?.DueUtc > nowUtc;
 
     /// <summary>Combines two capacity usages with checked arithmetic.</summary>
     /// <param name="left">The first usage.</param>
@@ -802,6 +807,52 @@ internal sealed partial class InMemoryLocalStoreAdapter
         DateTimeOffset? currentTerminalAtUtc,
         DateTimeOffset nowUtc) =>
         IsBlockingHead(status.State) || IsDefinitiveTerminal(status.State) ? nowUtc : currentTerminalAtUtc;
+
+    /// <summary>Gets the future UTC time before which a pending upload head cannot be leased.</summary>
+    /// <param name="record">The operation record.</param>
+    /// <param name="nowUtc">The sampled current timestamp.</param>
+    /// <returns>The future not-before timestamp, or null when no known future time blocks the head.</returns>
+    private DateTimeOffset? GetPendingUploadNotBeforeUtc(OperationRecord record, DateTimeOffset nowUtc)
+    {
+        DateTimeOffset? notBeforeUtc = null;
+        if (record.RetryState?.DueUtc is { } retryDueUtc && retryDueUtc > nowUtc)
+        {
+            notBeforeUtc = retryDueUtc;
+        }
+
+        if (record.LeaseId is { } leaseId && _leases.TryGetValue(leaseId, out var lease) && lease.ExpiresAtUtc > nowUtc
+            && (notBeforeUtc is null || lease.ExpiresAtUtc > notBeforeUtc.GetValueOrDefault()))
+        {
+            notBeforeUtc = lease.ExpiresAtUtc;
+        }
+
+        return notBeforeUtc;
+    }
+
+    /// <summary>Finds the first pending operation record for a stream that may drive recovered upload scheduling.</summary>
+    /// <param name="streamId">The stream identity.</param>
+    /// <returns>The pending head record, or null when no schedulable pending head exists.</returns>
+    private OperationRecord? FindPendingHeadRecord(StreamId streamId)
+    {
+        OperationRecord? candidate = null;
+        foreach (var pair in _operations)
+        {
+            var record = pair.Value;
+            if (record.Operation.StreamId != streamId || IsDefinitiveTerminal(record.Status.State))
+            {
+                continue;
+            }
+
+            if (candidate is null || record.Operation.ClientSequence < candidate.Operation.ClientSequence)
+            {
+                candidate = record;
+            }
+        }
+
+        return candidate is not null && !IsPermanentlyBlockedForLease(candidate)
+            ? candidate
+            : null;
+    }
 
     /// <summary>Applies a retained capacity delta.</summary>
     /// <param name="delta">The retained capacity delta.</param>

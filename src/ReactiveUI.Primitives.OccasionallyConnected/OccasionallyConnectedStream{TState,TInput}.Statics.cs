@@ -15,6 +15,9 @@ internal sealed partial class OccasionallyConnectedStream<TState, TInput>
     /// <summary>The fault envelope and owned diagnostic exception retained for one fault.</summary>
     private const int FaultNotificationObjectCount = 2;
 
+    /// <summary>The state and pending summary objects retained by one paired notification.</summary>
+    private const int PairedNotificationObjectCount = 2;
+
     /// <summary>The byte count retained by a GUID field.</summary>
     private const long GuidSizeBytes = 16;
 
@@ -70,6 +73,13 @@ internal sealed partial class OccasionallyConnectedStream<TState, TInput>
         + GetTextSize(remoteEvent.ServerCursor)
         + sizeof(long);
 
+    /// <summary>Gets the retained notification size for a pending queue snapshot.</summary>
+    /// <param name="payload">The committed state payload backing per-observer snapshots.</param>
+    /// <returns>The byte size charged to observer queues.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static long GetPendingSnapshotNotificationSize(PayloadEnvelope payload) =>
+        GetNotificationSize(payload) + NotificationObjectOverheadBytes + sizeof(int) + (PairedNotificationObjectCount * sizeof(long));
+
     /// <summary>Gets the retained notification size for an operation status snapshot.</summary>
     /// <param name="streamId">The stream identity.</param>
     /// <param name="receipt">The local publish receipt.</param>
@@ -84,6 +94,21 @@ internal sealed partial class OccasionallyConnectedStream<TState, TInput>
             + sizeof(int)
             + sizeof(long)
             + GetTextSize(receipt.State.ToString()));
+
+    /// <summary>Gets the retained notification size for a reconciled operation status snapshot.</summary>
+    /// <param name="status">The persisted operation status.</param>
+    /// <returns>The byte size charged to observer queues.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static long GetOperationStatusNotificationSize(SyncOperationStatus status) =>
+        Math.Max(
+            MinimumNotificationSizeBytes,
+            NotificationObjectOverheadBytes
+            + GetGuidSize()
+            + GetTextSize(status.StreamId.Value)
+            + sizeof(int)
+            + sizeof(long)
+            + GetTextSize(status.State.ToString())
+            + (status.ReasonCode is null ? 0 : GetTextSize(status.ReasonCode)));
 
     /// <summary>Gets the retained notification size for a bounded fault diagnostic.</summary>
     /// <param name="fault">The fault notification.</param>

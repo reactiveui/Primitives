@@ -26,6 +26,12 @@ public sealed partial class LocalStreamCommitterTests
     /// <summary>The pending operation value.</summary>
     private const int PendingOperationValue = 100;
 
+    /// <summary>The lower recovered operation scheduling priority.</summary>
+    private const int RecoveredLowPriority = -6;
+
+    /// <summary>The higher recovered operation scheduling priority.</summary>
+    private const int RecoveredHighPriority = 7;
+
     /// <summary>The cross-stream next sequence.</summary>
     private const long CrossStreamNextSequence = 2;
 
@@ -113,6 +119,41 @@ public sealed partial class LocalStreamCommitterTests
         await Assert.That(state.Revision).IsEqualTo(RecoveredSnapshotRevision);
         await Assert.That(state.NextClientSequence).IsEqualTo(RecoveredNextSequence);
         await Assert.That(committer.Current.State.Sum).IsEqualTo(RecoveredSnapshotSum);
+    }
+
+    /// <summary>Verifies empty recovery does not request recovered upload scheduling.</summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    [Test]
+    public async Task RecoverAsyncLeavesRecoveredUploadPriorityNullWhenNoPendingOperations()
+    {
+        var store = new ScriptedLocalStore { Recovery = CreateRecoveredStream(null, [], FirstClientSequence) };
+        var committer = CreateCommitter(store);
+
+        _ = await committer.RecoverAsync(CancellationToken.None);
+
+        await Assert.That(committer.RecoveredUploadHead).IsNull();
+    }
+
+    /// <summary>Verifies recovery keeps only the highest pending priority for upload scheduling.</summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    [Test]
+    public async Task RecoverAsyncStoresHighestRecoveredUploadPriority()
+    {
+        var snapshot = await CreateSnapshotAsync(new(RecoveredSnapshotSum));
+        var low = CreatePendingOperation(RecoveredSnapshotRevision, PendingOperationValue) with
+        {
+            Policy = OperationPolicy.Default with { Priority = RecoveredLowPriority },
+        };
+        var high = CreatePendingOperation(RecoveredSnapshotRevision + 1, PendingOperationValue + 1) with
+        {
+            Policy = OperationPolicy.Default with { Priority = RecoveredHighPriority },
+        };
+        var store = new ScriptedLocalStore { Recovery = CreateRecoveredStream(snapshot, [low, high], RecoveredNextSequence) };
+        var committer = CreateCommitter(store);
+
+        _ = await committer.RecoverAsync(CancellationToken.None);
+
+        await Assert.That(committer.RecoveredUploadHead.GetValueOrDefault().Priority).IsEqualTo(RecoveredHighPriority);
     }
 
     /// <summary>Verifies no snapshot is accepted only for a pristine recovered stream.</summary>

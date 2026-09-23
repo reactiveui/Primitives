@@ -90,6 +90,10 @@ internal sealed partial class LocalStreamCommitter<TState, TInput>
         ValidateStatePayload(payload);
         var initialAuthoritative = observed.MaterializedPayload is null ? previousPayload : null;
         var mutation = new SnapshotMutation(_options.StreamId, payload, _options.Contracts.SnapshotFormatVersion, observed.Revision) { AuthoritativeState = initialAuthoritative };
+        var queueSnapshot = CreateCommittedQueueSnapshot(
+            RecoveredQueueSnapshot,
+            operation,
+            PeekNextQueueDiagnosticRevision());
         var result = await _options.Dependencies.Store.CommitLocalOperationAsync(operation, mutation, cancellationToken).ConfigureAwait(false);
         ValidateStoreResult(result, operation, observed.Revision);
         var next = new LocalStreamCommitterState<TState>(
@@ -100,7 +104,8 @@ internal sealed partial class LocalStreamCommitter<TState, TInput>
             checked(operation.ClientSequence + 1),
             observed.ServerCursor) { MaterializedPayload = payload, AuthoritativePayload = observed.AuthoritativePayload ?? initialAuthoritative };
         SwapCurrent(next);
+        CommitQueueDiagnosticSnapshot(queueSnapshot);
         var receipt = new PublishReceipt(result.OperationId, result.ClientSequence, SyncOperationState.SavedLocally, result.CommittedAtUtc);
-        return new(receipt, operation, decodedInput, next);
+        return new(receipt, operation, decodedInput, next, queueSnapshot);
     }
 }

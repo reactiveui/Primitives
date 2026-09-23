@@ -5,7 +5,7 @@
 namespace ReactiveUI.Primitives.OccasionallyConnected;
 
 /// <summary>Creates stable local operation identifiers.</summary>
-internal interface IOperationIdSource
+public interface IOperationIdSource
 {
     /// <summary>Creates a new operation identifier.</summary>
     /// <returns>The new operation identifier.</returns>

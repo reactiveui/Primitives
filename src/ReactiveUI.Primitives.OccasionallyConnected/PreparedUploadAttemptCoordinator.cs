@@ -229,7 +229,8 @@ internal static class PreparedUploadAttemptCoordinator
     /// <param name="prepared">The prepared transport handle.</param>
     /// <param name="batch">The exact supplied synchronization batch.</param>
     /// <param name="options">The upload attempt options.</param>
-    /// <exception cref="InvalidOperationException">The prepared handle is malformed or exceeds configured bounds.</exception>
+    /// <exception cref="InvalidOperationException">The prepared handle is malformed.</exception>
+    /// <exception cref="PreparedUploadSizeExceededException">The prepared handle exceeds configured bounds.</exception>
     private static void ValidatePrepared(IPreparedRemotePush prepared, SyncBatch batch, PreparedUploadAttemptOptions options)
     {
         if (!ReferenceEquals(prepared.Batch, batch))
@@ -237,8 +238,13 @@ internal static class PreparedUploadAttemptCoordinator
             throw new InvalidOperationException("The prepared upload handle substituted the synchronization batch.");
         }
 
-        _ = prepared.EncodedSizeBytes <= 0 || prepared.EncodedSizeBytes > options.MaximumEncodedSizeBytes
-            ? throw new InvalidOperationException("The prepared upload exceeds the configured encoded byte limit.")
+        if (prepared.EncodedSizeBytes <= 0)
+        {
+            throw new InvalidOperationException("The prepared upload handle reported a non-positive encoded size.");
+        }
+
+        _ = prepared.EncodedSizeBytes > options.MaximumEncodedSizeBytes
+            ? throw new PreparedUploadSizeExceededException(prepared.EncodedSizeBytes, options.MaximumEncodedSizeBytes)
             : true;
     }
 

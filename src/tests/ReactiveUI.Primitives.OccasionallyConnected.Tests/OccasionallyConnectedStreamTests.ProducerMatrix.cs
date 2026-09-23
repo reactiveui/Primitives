@@ -65,8 +65,9 @@ public sealed partial class OccasionallyConnectedStreamTests
             await inputSerializeEntered.Task.WaitAsync(TimeSpan.FromSeconds(TestWaitTimeoutSeconds));
             second = stream.PublishAsync(new(SecondValue), null, CancellationToken.None).AsTask();
 
-            await Assert.That(() => PublishCounterInputAsync(stream, new(ThirdValue), null, CancellationToken.None))
-                .ThrowsExactly<InvalidOperationException>();
+            var reject = new RemotePublishOptions { StreamId = Stream, AdmissionStrategy = BufferStrategy.Reject };
+            await Assert.That(() => PublishCounterInputAsync(stream, new(ThirdValue), reject, CancellationToken.None))
+                .ThrowsExactly<QueueCapacityExceededException>();
         }
         catch (Exception exception)
         {

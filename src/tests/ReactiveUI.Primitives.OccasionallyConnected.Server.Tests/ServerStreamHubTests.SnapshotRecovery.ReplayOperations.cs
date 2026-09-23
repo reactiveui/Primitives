@@ -10,6 +10,9 @@ public sealed partial class ServerStreamHubTests
     /// <summary>The pending operation payload used for unknown proof checks.</summary>
     private const string PendingUnknownPayload = "pending-unknown";
 
+    /// <summary>The fingerprint input bound for the retained replay proof.</summary>
+    private const int ReplayProofFingerprintMaximumBytes = 4096;
+
     /// <summary>Verifies recovery includes accepted replay-only proof while preserving pending unknown proof.</summary>
     /// <returns>The assertion task.</returns>
     [Test]
@@ -173,14 +176,10 @@ public sealed partial class ServerStreamHubTests
         await AssertSnapshotPayloadAsync(replayed.Checkpoint?.ClientState, materializedClientState);
     }
 
-    /// <summary>Verifies replay-only rejected and conflict proofs fail closed before materialization.</summary>
-    /// <param name="operationResultKind">The retained replay-only proof kind.</param>
+    /// <summary>Verifies a replay-only rejected proof fails closed before materialization.</summary>
     /// <returns>The assertion task.</returns>
     [Test]
-    [Arguments(OperationResultKind.Rejected)]
-    [Arguments(OperationResultKind.Conflict)]
-    public async Task GetSnapshotAsyncReturnsAmbiguousPendingOperationForReplayOnlyContradictoryProofBeforeMaterialization(
-        OperationResultKind operationResultKind)
+    public async Task GetSnapshotAsyncReturnsAmbiguousPendingOperationForReplayOnlyRejectedProofBeforeMaterialization()
     {
         var subscriptionId = SubscriptionId.New();
         var materializer = new RecordingSnapshotMaterializer(Payload(SnapshotClientPayload));
@@ -189,20 +188,66 @@ public sealed partial class ServerStreamHubTests
         await using var hub = ServerStreamHub.CreateInMemory(
             ReplayProofOptions(
                 new RecordingDomainHandler(),
-                new TargetReplayProofResolver(replayOperation.OperationId, operationResultKind),
+                new TargetReplayProofResolver(replayOperation.OperationId),
                 materializer));
         var seed = await SeedSnapshotRecoveryFrontierAsync(hub, subscriptionId);
         var upload = await hub.ApplyOperationsAsync(Batch(replayOperation), new(Tenant, Client), CancellationToken.None);
         var request = SnapshotRecoveryRequest(subscriptionId, seed.ExpiredCursor, [pendingOperation], [replayOperation]);
 
         await Assert.That(upload.Result.Operations).Count().IsEqualTo(SingleCount);
-        await Assert.That(upload.Result.Operations[0].Kind).IsEqualTo(operationResultKind);
+        await Assert.That(upload.Result.Operations[0].Kind).IsEqualTo(OperationResultKind.Rejected);
 
         var result = await ((IServerSnapshotRecoveryHub)hub).GetSnapshotAsync(request, new(Tenant, Client), CancellationToken.None);
 
         await Assert.That(result.Status).IsEqualTo(RemoteSnapshotRecoveryStatus.AmbiguousPendingOperation);
         await Assert.That(result.Checkpoint).IsNull();
         await Assert.That(result.OperationDispositions).IsEmpty();
+        await Assert.That(materializer.CallCount).IsEqualTo(0);
+    }
+
+    /// <summary>Verifies a retained conflict receipt blocks replay-only snapshot recovery.</summary>
+    /// <returns>The assertion task.</returns>
+    [Test]
+    public async Task GetSnapshotAsyncReturnsAmbiguousPendingOperationForReplayOnlyConflictProofBeforeMaterialization()
+    {
+        using var database = new SqliteLease();
+        var subscriptionId = SubscriptionId.New();
+        var materializer = new RecordingSnapshotMaterializer(Payload(SnapshotClientPayload));
+        var replayOperation = Operation(SnapshotThirdOperationSeed, "replay-conflict-proof");
+        var pendingOperation = Operation(SnapshotThirdOperationSeed + 1, PendingUnknownPayload);
+        var options = ReplayProofOptions(new RecordingDomainHandler(), Resolver(), materializer);
+        string? expiredCursor;
+        await using (var seedingHub = ServerStreamHub.CreateSqlite(database.Path, options))
+        {
+            var seed = await SeedSnapshotRecoveryFrontierAsync(seedingHub, subscriptionId);
+            expiredCursor = seed.ExpiredCursor;
+        }
+
+        var streamKey = new ServerStreamKey(Tenant, Stream);
+        var operationKey = new ServerOperationKey(Client, replayOperation.OperationId);
+        using (var journal = new SqliteServerCommitJournal(database.Path, new() { TimeProvider = options.TimeProvider }))
+        {
+            var before = journal.Read(streamKey, [operationKey]);
+            var fingerprint = new ServerCommitFingerprint(CanonicalOperationFingerprint.Compute(
+                Tenant,
+                Client,
+                replayOperation,
+                ReplayProofFingerprintMaximumBytes));
+            var result = new OperationSyncResult(replayOperation.OperationId, OperationResultKind.Conflict, "snapshot-replay-conflict", before.State?.Version);
+            var entry = new ServerLedgerEntry(operationKey, fingerprint, result, [], []);
+            var commit = journal.TryCommit(new(streamKey, before.Revision, null, null, [entry]));
+            await Assert.That(commit.Status).IsEqualTo(ServerCommitStatus.Committed);
+        }
+
+        await using var hub = ServerStreamHub.CreateSqlite(database.Path, options);
+        var upload = await hub.ApplyOperationsAsync(Batch(replayOperation), new(Tenant, Client), CancellationToken.None);
+        var request = SnapshotRecoveryRequest(subscriptionId, expiredCursor, [pendingOperation], [replayOperation]);
+        var recovery = await ((IServerSnapshotRecoveryHub)hub).GetSnapshotAsync(request, new(Tenant, Client), CancellationToken.None);
+
+        await Assert.That(upload.Result.Operations[0].Kind).IsEqualTo(OperationResultKind.Conflict);
+        await Assert.That(recovery.Status).IsEqualTo(RemoteSnapshotRecoveryStatus.AmbiguousPendingOperation);
+        await Assert.That(recovery.Checkpoint).IsNull();
+        await Assert.That(recovery.OperationDispositions).IsEmpty();
         await Assert.That(materializer.CallCount).IsEqualTo(0);
     }
 
@@ -267,10 +312,9 @@ public sealed partial class ServerStreamHubTests
             },
         };
 
-    /// <summary>Returns rejected or conflict proof for one target operation and delegates all other operations.</summary>
+    /// <summary>Rejects one target operation and delegates all other operations.</summary>
     /// <param name="operationId">The operation that should receive contradictory proof.</param>
-    /// <param name="operationResultKind">The contradictory proof kind.</param>
-    private sealed class TargetReplayProofResolver(OperationId operationId, OperationResultKind operationResultKind) : IConflictResolver
+    private sealed class TargetReplayProofResolver(OperationId operationId) : IConflictResolver
     {
         /// <inheritdoc/>
         public ValueTask<ConflictResolutionResult> ResolveAsync(
@@ -283,19 +327,12 @@ public sealed partial class ServerStreamHubTests
                 return Resolver().ResolveAsync(context, cancellationToken);
             }
 
-            var result = operationResultKind == OperationResultKind.Conflict
-                ? new ConflictResolutionResult(
-                    [operation.OperationId],
-                    [],
-                    [new(operation.OperationId, "snapshot-replay-conflict", null)],
-                    [],
-                    context.Current.Version)
-                : new ConflictResolutionResult(
-                    [],
-                    [new(operation.OperationId, "snapshot-replay-rejected", false)],
-                    [],
-                    [],
-                    context.Current.Version);
+            var result = new ConflictResolutionResult(
+                [],
+                [new(operation.OperationId, "snapshot-replay-rejected", false)],
+                [],
+                [],
+                context.Current.Version);
             return ValueTask.FromResult(result);
         }
     }

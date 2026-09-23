@@ -52,7 +52,7 @@ public sealed class BoundedSerializedStreamWorkLaneTests
             },
             CancellationToken.None);
 
-        await Assert.That(() => lane.EnqueueAsync(static _ => ValueTask.FromResult(SecondResult), CancellationToken.None)).ThrowsExactly<InvalidOperationException>();
+        await Assert.That(() => lane.EnqueueAsync(static _ => ValueTask.FromResult(SecondResult), CancellationToken.None)).ThrowsExactly<QueueCapacityExceededException>();
 
         releaseFirst.SetResult();
         await Assert.That(await first).IsEqualTo(FirstResult);

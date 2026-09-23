@@ -106,8 +106,8 @@ public sealed class CrdtServerStreamRegistrationTests
             new(Tenant, Stream),
             [new(ClientA, operation.OperationId)]);
 
-        await Assert.That(result.Result.Operations[0].Kind).IsEqualTo(OperationResultKind.Conflict);
-        await Assert.That(result.Result.Operations[0].ReasonCode).IsEqualTo(MergeReason);
+        await Assert.That(result.Result.Operations[0].Kind).IsEqualTo(OperationResultKind.Accepted);
+        await Assert.That(result.Result.Operations[0].ReasonCode).IsNull();
         await Assert.That(result.Result.Operations[0].ServerVersion).IsEqualTo(FirstVersion);
         await Assert.That(result.ProducedEvents).Count().IsEqualTo(SingleCount);
         await Assert.That(eventInput.Kind).IsEqualTo(CrdtInputKind.AuthoritativeState);
@@ -220,9 +220,12 @@ public sealed class CrdtServerStreamRegistrationTests
         var input = CrdtCodec.DecodeInput(result.ProducedEvents[ThirdSequence - 1].Payload.Payload);
 
         await Assert.That(result.Result.Operations).Count().IsEqualTo(TripleCount);
-        await Assert.That(result.Result.Operations[0].ReasonCode).IsEqualTo(MergeReason);
-        await Assert.That(result.Result.Operations[1].ReasonCode).IsEqualTo(MergeReason);
-        await Assert.That(result.Result.Operations[ThirdSequence - 1].ReasonCode).IsEqualTo(MergeReason);
+        await Assert.That(result.Result.Operations[0].Kind).IsEqualTo(OperationResultKind.Accepted);
+        await Assert.That(result.Result.Operations[1].Kind).IsEqualTo(OperationResultKind.Accepted);
+        await Assert.That(result.Result.Operations[ThirdSequence - 1].Kind).IsEqualTo(OperationResultKind.Accepted);
+        await Assert.That(result.Result.Operations[0].ReasonCode).IsNull();
+        await Assert.That(result.Result.Operations[1].ReasonCode).IsNull();
+        await Assert.That(result.Result.Operations[ThirdSequence - 1].ReasonCode).IsNull();
         await Assert.That(result.Result.Operations[ThirdSequence - 1].ServerVersion).IsEqualTo(ThirdVersion);
         await Assert.That(input.State?.Value.Counter).IsEqualTo(Component);
     }
@@ -273,6 +276,59 @@ public sealed class CrdtServerStreamRegistrationTests
         await Assert.That(replay.ProducedEvents[0].EventId).IsEqualTo(eventId);
         await Assert.That(snapshot.Entries).Count().IsEqualTo(SingleCount);
         await Assert.That(snapshot.Entries[0].Events).Count().IsEqualTo(SingleCount);
+    }
+
+    /// <summary>Verifies a resolved CRDT merge acknowledges acceptance and replays one durable decision.</summary>
+    /// <returns>The assertion task.</returns>
+    /// <exception cref="InvalidOperationException">The committed state or resolved audit payload is missing.</exception>
+    [Test]
+    public async Task CreateReplaysAcceptedResolvedMergeAfterSqliteRestart()
+    {
+        using var lease = new SqliteLease();
+        var operation = Operation(OperationId.New(), ClientA, FirstSequence, Component);
+        ServerSyncResult first;
+        using (var journal = lease.Open())
+        {
+            first = await CreateProcessor(journal, CrdtKind.GCounter).ProcessAsync(
+                Batch(operation),
+                new(ClientA, Tenant),
+                CancellationToken.None);
+        }
+
+        using var reopened = lease.Open();
+        var replay = await CreateProcessor(reopened, CrdtKind.GCounter).ProcessAsync(
+            Batch(operation),
+            new(ClientA, Tenant),
+            CancellationToken.None);
+        var snapshot = reopened.Read(new(Tenant, Stream), [new(ClientA, operation.OperationId)]);
+        if (snapshot.State is not { } committedState || snapshot.Entries[0].Conflicts[0].ResolvedPayload is not { } resolvedPayload)
+        {
+            throw new InvalidOperationException("The resolved CRDT merge must retain its canonical state and audit payload.");
+        }
+
+        var committedCrdt = CrdtCodec.DecodeState(committedState.State.Payload);
+        var resolvedCrdt = CrdtCodec.DecodeState(resolvedPayload.Payload);
+
+        await Assert.That(first.Result.Operations[0].Kind).IsEqualTo(OperationResultKind.Accepted);
+        await Assert.That(first.Result.Operations[0].ReasonCode).IsNull();
+        await Assert.That(replay.Result.Operations[0].Kind).IsEqualTo(OperationResultKind.Accepted);
+        await Assert.That(replay.Result.Operations[0].ReasonCode).IsNull();
+        await Assert.That(replay.Result.Operations[0].ServerVersion).IsEqualTo(FirstVersion);
+        await Assert.That(replay.ProducedEvents).Count().IsEqualTo(SingleCount);
+        await Assert.That(replay.ProducedEvents[0].EventId).IsEqualTo(first.ProducedEvents[0].EventId);
+        await Assert.That(snapshot.Revision).IsEqualTo(SingleCount);
+        await Assert.That(snapshot.State?.Version).IsEqualTo(FirstVersion);
+        await Assert.That(committedCrdt.Value.Counter).IsEqualTo(Component);
+        await Assert.That(committedCrdt.GCounterComponents[ClientA]).IsEqualTo(Component);
+        await Assert.That(resolvedCrdt.GCounterComponents[ClientA]).IsEqualTo(committedCrdt.GCounterComponents[ClientA]);
+        await Assert.That(resolvedCrdt.Value.Counter).IsEqualTo(committedCrdt.Value.Counter);
+        await Assert.That(snapshot.Entries).Count().IsEqualTo(SingleCount);
+        await Assert.That(snapshot.Entries[0].Result.Kind).IsEqualTo(OperationResultKind.Accepted);
+        await Assert.That(snapshot.Entries[0].Conflicts).Count().IsEqualTo(SingleCount);
+        await Assert.That(snapshot.Entries[0].Conflicts[0].OperationId).IsEqualTo(operation.OperationId);
+        await Assert.That(snapshot.Entries[0].Conflicts[0].ResolutionCode).IsEqualTo(MergeReason);
+        await Assert.That(snapshot.Entries[0].Events).Count().IsEqualTo(SingleCount);
+        await Assert.That(snapshot.LastCursor).IsEqualTo(first.ProducedEvents[0].ServerCursor);
     }
 
     /// <summary>Creates the server processor.</summary>
@@ -337,10 +393,10 @@ public sealed class CrdtServerStreamRegistrationTests
 
         await Assert.That(results[0].ProducedEvents).Count().IsEqualTo(SingleCount);
         await Assert.That(results[1].ProducedEvents).Count().IsEqualTo(SingleCount);
-        await Assert.That(results[0].Result.Operations[0].Kind).IsEqualTo(OperationResultKind.Conflict);
-        await Assert.That(results[1].Result.Operations[0].Kind).IsEqualTo(OperationResultKind.Conflict);
-        await Assert.That(results[0].Result.Operations[0].ReasonCode).IsEqualTo(MergeReason);
-        await Assert.That(results[1].Result.Operations[0].ReasonCode).IsEqualTo(MergeReason);
+        await Assert.That(results[0].Result.Operations[0].Kind).IsEqualTo(OperationResultKind.Accepted);
+        await Assert.That(results[1].Result.Operations[0].Kind).IsEqualTo(OperationResultKind.Accepted);
+        await Assert.That(results[0].Result.Operations[0].ReasonCode).IsNull();
+        await Assert.That(results[1].Result.Operations[0].ReasonCode).IsNull();
         await Assert.That(results[0].Result.Operations[0].ServerVersion).IsNotEqualTo(results[1].Result.Operations[0].ServerVersion);
         await Assert.That(results[0].Result.Operations[0].ServerVersion == FirstVersion || results[1].Result.Operations[0].ServerVersion == FirstVersion).IsTrue();
         await Assert.That(results[0].Result.Operations[0].ServerVersion == SecondVersion || results[1].Result.Operations[0].ServerVersion == SecondVersion).IsTrue();

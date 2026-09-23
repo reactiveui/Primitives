@@ -45,16 +45,31 @@ public sealed partial class FairStreamSchedulerTests
             CancellationToken.None,
             TaskCreationOptions.LongRunning,
             TaskScheduler.Default);
+        Task<int>? countTask = null;
         try
         {
             await clock.Entered.Task.WaitAsync(GuardTimeout);
-            var count = await Task.Run(() => scheduler.RegisteredStreamCount).WaitAsync(GuardTimeout);
+            countTask = Task.Factory.StartNew(
+                static state =>
+                {
+                    var target = (FairStreamScheduler)(state ?? throw new InvalidOperationException("The scheduler task state is required."));
+                    return target.RegisteredStreamCount;
+                },
+                scheduler,
+                CancellationToken.None,
+                TaskCreationOptions.LongRunning,
+                TaskScheduler.Default);
+            var count = await countTask.WaitAsync(GuardTimeout);
             await Assert.That(count).IsEqualTo(1);
         }
         finally
         {
             clock.Release();
             await operation.WaitAsync(GuardTimeout);
+            if (countTask is not null)
+            {
+                _ = await countTask.WaitAsync(GuardTimeout);
+            }
         }
     }
 
@@ -74,6 +89,30 @@ public sealed partial class FairStreamSchedulerTests
         scheduler.Complete(actual);
         scheduler.Ready(stream, NormalPriority, clock.GetUtcNow());
         await Assert.That((await AcquireAsync(scheduler)).StreamId).IsEqualTo(stream);
+    }
+
+    /// <summary>Verifies stale try-complete cannot remove a newly acquired head after re-registration.</summary>
+    /// <returns>The asynchronous test.</returns>
+    [Test]
+    public async Task TryCompleteStaleAcquisitionPreservesNewHeadAfterReregister()
+    {
+        var clock = new Microsoft.Extensions.Time.Testing.FakeTimeProvider();
+        var scheduler = CreateScheduler(clock);
+        var stream = new StreamId(StreamName);
+
+        scheduler.Register(new(stream, LightWeight));
+        scheduler.Ready(stream, NormalPriority, clock.GetUtcNow());
+        var staleAcquisition = await AcquireAsync(scheduler);
+        await Assert.That(scheduler.Remove(stream)).IsTrue();
+
+        scheduler.Register(new(stream, LightWeight));
+        scheduler.Ready(stream, NormalPriority, clock.GetUtcNow());
+        var currentAcquisition = await AcquireAsync(scheduler);
+
+        await Assert.That(scheduler.TryComplete(staleAcquisition)).IsFalse();
+        await Assert.That(scheduler.TryAcquire(out _)).IsFalse();
+        scheduler.Complete(currentAcquisition);
+        await Assert.That(scheduler.TryAcquire(out _)).IsFalse();
     }
 
     /// <summary>An application clock whose callback can be held while another thread accesses the scheduler.</summary>

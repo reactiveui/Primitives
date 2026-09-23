@@ -1,0 +1,55 @@
+namespace ReactiveUI.Primitives.OccasionallyConnected.DependencyInjection;
+
+[System.Diagnostics.DebuggerDisplay("Streams = {_streams.Count}, JsonContracts = {_jsonContracts.Count}")]
+public sealed class OccasionallyConnectedDependencyInjectionBuilder
+{
+    public ReactiveUI.Primitives.OccasionallyConnected.DependencyInjection.OccasionallyConnectedDependencyInjectionBuilder AddJsonContract<T>(string contractId, int schemaVersion, System.Text.Json.Serialization.Metadata.JsonTypeInfo<T> jsonTypeInfo) { }
+    public ReactiveUI.Primitives.OccasionallyConnected.DependencyInjection.OccasionallyConnectedDependencyInjectionBuilder AddStream<TState, TInput>(string name, System.Func<System.IServiceProvider, ReactiveUI.Primitives.OccasionallyConnected.StreamDefinition<TState, TInput>> factory) { }
+    public ReactiveUI.Primitives.OccasionallyConnected.DependencyInjection.OccasionallyConnectedDependencyInjectionBuilder ConfigureOptions(System.Func<ReactiveUI.Primitives.OccasionallyConnected.OccasionallyConnectedOptions, ReactiveUI.Primitives.OccasionallyConnected.OccasionallyConnectedOptions> configure) { }
+    public ReactiveUI.Primitives.OccasionallyConnected.DependencyInjection.OccasionallyConnectedDependencyInjectionBuilder UseClient(ReactiveUI.Primitives.OccasionallyConnected.ClientIdentity client) { }
+    public ReactiveUI.Primitives.OccasionallyConnected.DependencyInjection.OccasionallyConnectedDependencyInjectionBuilder UseJsonSerializer() { }
+    public ReactiveUI.Primitives.OccasionallyConnected.DependencyInjection.OccasionallyConnectedDependencyInjectionBuilder UseJsonSerializer(int maximumPayloadBytes) { }
+    public ReactiveUI.Primitives.OccasionallyConnected.DependencyInjection.OccasionallyConnectedDependencyInjectionBuilder UseOptions(ReactiveUI.Primitives.OccasionallyConnected.OccasionallyConnectedOptions options) { }
+    public ReactiveUI.Primitives.OccasionallyConnected.DependencyInjection.OccasionallyConnectedDependencyInjectionBuilder UseSerializer(System.Type serializerType) { }
+    public ReactiveUI.Primitives.OccasionallyConnected.DependencyInjection.OccasionallyConnectedDependencyInjectionBuilder UseStore(System.Type storeType) { }
+    public ReactiveUI.Primitives.OccasionallyConnected.DependencyInjection.OccasionallyConnectedDependencyInjectionBuilder UseStoreIdentity(string storeIdentity) { }
+    public ReactiveUI.Primitives.OccasionallyConnected.DependencyInjection.OccasionallyConnectedDependencyInjectionBuilder UseStoreInitialization(ReactiveUI.Primitives.OccasionallyConnected.LocalStoreInitialization initialization) { }
+    public ReactiveUI.Primitives.OccasionallyConnected.DependencyInjection.OccasionallyConnectedDependencyInjectionBuilder UseTransport(System.Type transportType) { }
+    public ReactiveUI.Primitives.OccasionallyConnected.DependencyInjection.OccasionallyConnectedDependencyInjectionBuilder WithMaximumNamedStreams(int maximumNamedStreams) { }
+    public ReactiveUI.Primitives.OccasionallyConnected.DependencyInjection.OccasionallyConnectedDependencyInjectionBuilder WithMaximumStreamNameLength(int maximumStreamNameLength) { }
+}
+public interface IOccasionallyConnectedStreamRegistry
+{
+    ReactiveUI.Primitives.OccasionallyConnected.IOccasionallyConnectedStream<TState, TInput> GetRequiredStream<TState, TInput>(ReactiveUI.Primitives.OccasionallyConnected.DependencyInjection.OccasionallyConnectedStreamKey<TState, TInput> key) { }
+}
+public static class OccasionallyConnectedServiceCollectionExtensions
+{
+    extension(Microsoft.Extensions.DependencyInjection.IServiceCollection services)
+    {
+        public Microsoft.Extensions.DependencyInjection.IServiceCollection AddOccasionallyConnected(System.Action<ReactiveUI.Primitives.OccasionallyConnected.DependencyInjection.OccasionallyConnectedDependencyInjectionBuilder> configure) { }
+    }
+}
+[System.Diagnostics.DebuggerDisplay("MaximumNamedStreams = {MaximumNamedStreams}, MaximumStreamNameLength = {MaximumStreamNameLength}")]
+public sealed class OccasionallyConnectedServiceOptions
+{
+    public OccasionallyConnectedServiceOptions() { }
+    public int MaximumNamedStreams { get; set; }
+    public int MaximumStreamNameLength { get; set; }
+    public ReactiveUI.Primitives.OccasionallyConnected.OccasionallyConnectedOptions Options { get; set; }
+}
+[System.Diagnostics.DebuggerDisplay("{Name,nq}")]
+public readonly struct OccasionallyConnectedStreamKey<TState, TInput> : System.IEquatable<ReactiveUI.Primitives.OccasionallyConnected.DependencyInjection.OccasionallyConnectedStreamKey<TState, TInput>>
+{
+    public OccasionallyConnectedStreamKey(string name) { }
+    public System.Type InputType { get; }
+    public string Name { get; }
+    public System.Type StateType { get; }
+    [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+    public readonly bool Equals(ReactiveUI.Primitives.OccasionallyConnected.DependencyInjection.OccasionallyConnectedStreamKey<TState, TInput> other) { }
+    public override readonly bool Equals(object? obj) { }
+    public override readonly int GetHashCode() { }
+    [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+    public static bool operator ==(ReactiveUI.Primitives.OccasionallyConnected.DependencyInjection.OccasionallyConnectedStreamKey<TState, TInput> left, ReactiveUI.Primitives.OccasionallyConnected.DependencyInjection.OccasionallyConnectedStreamKey<TState, TInput> right) { }
+    [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+    public static bool operator !=(ReactiveUI.Primitives.OccasionallyConnected.DependencyInjection.OccasionallyConnectedStreamKey<TState, TInput> left, ReactiveUI.Primitives.OccasionallyConnected.DependencyInjection.OccasionallyConnectedStreamKey<TState, TInput> right) { }
+}

@@ -89,7 +89,7 @@ internal sealed partial class BoundedSerializedStreamWorkLane : IDisposable
     /// <param name="cancellationToken">The cancellation token.</param>
     /// <returns>The task completed by the admitted work.</returns>
     /// <exception cref="ArgumentNullException"><paramref name="work"/> is null.</exception>
-    /// <exception cref="InvalidOperationException">The lane is full.</exception>
+    /// <exception cref="QueueCapacityExceededException">The lane is full.</exception>
     /// <exception cref="ObjectDisposedException">The lane has been disposed.</exception>
     internal Task<T> EnqueueAsync<T>(Func<CancellationToken, ValueTask<T>> work, CancellationToken cancellationToken)
     {
@@ -168,7 +168,7 @@ internal sealed partial class BoundedSerializedStreamWorkLane : IDisposable
     /// <param name="item">The work item.</param>
     /// <param name="cancellationToken">The caller cancellation token.</param>
     /// <returns><see langword="true"/> when the item should run now.</returns>
-    /// <exception cref="InvalidOperationException">The lane is full.</exception>
+    /// <exception cref="QueueCapacityExceededException">The lane is full.</exception>
     /// <exception cref="ObjectDisposedException">The lane has been disposed.</exception>
     private bool Admit(QueuedWorkItem item, CancellationToken cancellationToken)
     {
@@ -178,7 +178,7 @@ internal sealed partial class BoundedSerializedStreamWorkLane : IDisposable
             cancellationToken.ThrowIfCancellationRequested();
             if (_admitted >= _capacity)
             {
-                throw new InvalidOperationException("The stream work lane is full.");
+                throw new QueueCapacityExceededException("The stream work lane is full.", true);
             }
 
             _admitted++;

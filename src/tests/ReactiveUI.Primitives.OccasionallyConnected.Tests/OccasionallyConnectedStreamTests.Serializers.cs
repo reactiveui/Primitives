@@ -11,6 +11,64 @@ namespace ReactiveUI.Primitives.OccasionallyConnected.Tests;
 /// <content>Payload serializer and model helpers.</content>
 public sealed partial class OccasionallyConnectedStreamTests
 {
+    /// <summary>Decodes an empty counter command as a zero delta.</summary>
+    /// <param name="inner">The serializer for other commands and state.</param>
+    private sealed class EmptyCommandPayloadSerializer(IPayloadSerializer inner) : IPayloadSerializer
+    {
+        /// <inheritdoc />
+        public string ContentType => inner.ContentType;
+
+        /// <inheritdoc />
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public ValueTask<PayloadEnvelope> SerializeAsync<T>(string contractId, int schemaVersion, T value, CancellationToken cancellationToken) =>
+            inner.SerializeAsync(contractId, schemaVersion, value, cancellationToken);
+
+        /// <inheritdoc />
+        public ValueTask<object> DeserializeAsync(PayloadEnvelope envelope, Type targetType, CancellationToken cancellationToken)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            return targetType == typeof(CounterInput) && envelope.Payload.IsEmpty
+                ? ValueTask.FromResult<object>(new CounterInput(0))
+                : inner.DeserializeAsync(envelope, targetType, cancellationToken);
+        }
+    }
+
+    /// <summary>Composes another serializer while enlarging one valid counter command payload.</summary>
+    /// <param name="inner">The serializer used for normal payloads.</param>
+    /// <param name="oversizedValue">The command value to enlarge.</param>
+    /// <param name="paddedByteCount">The minimum encoded payload length.</param>
+    private sealed class OversizedCounterInputPayloadSerializer(IPayloadSerializer inner, int oversizedValue, int paddedByteCount) : IPayloadSerializer
+    {
+        /// <inheritdoc />
+        public string ContentType => inner.ContentType;
+
+        /// <inheritdoc />
+        public async ValueTask<PayloadEnvelope> SerializeAsync<T>(
+            string contractId,
+            int schemaVersion,
+            T value,
+            CancellationToken cancellationToken)
+        {
+            var envelope = await inner.SerializeAsync(contractId, schemaVersion, value, cancellationToken).ConfigureAwait(false);
+            if (value is not CounterInput { Delta: var delta } || delta != oversizedValue || envelope.Payload.Length >= paddedByteCount)
+            {
+                return envelope;
+            }
+
+            var text = System.Text.Encoding.UTF8.GetString(envelope.Payload.Span).PadRight(paddedByteCount);
+            return envelope with
+            {
+                Payload = System.Text.Encoding.UTF8.GetBytes(text),
+                PayloadHash = $"hash-{text}",
+            };
+        }
+
+        /// <inheritdoc />
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public ValueTask<object> DeserializeAsync(PayloadEnvelope envelope, Type targetType, CancellationToken cancellationToken) =>
+            inner.DeserializeAsync(envelope, targetType, cancellationToken);
+    }
+
     /// <summary>Serializes immutable counter payloads as invariant text.</summary>
     private class ScriptedPayloadSerializer : IPayloadSerializer
     {

@@ -54,6 +54,12 @@ public sealed record RecoveredStream
     /// <summary>Gets the recovered dead-letter records.</summary>
     public IReadOnlyList<DeadLetterRecord> DeadLetters { get; }
 
+    /// <summary>Gets the optional lower bound before which the recovered FIFO upload head cannot be leased.</summary>
+    /// <remarks>
+    /// Null means the store has no known future time constraint. Other ownership or policy blockers can still prevent leasing.
+    /// </remarks>
+    public DateTimeOffset? PendingUploadNotBeforeUtc { get; init; }
+
     /// <summary>Gets the recovered quarantine marker for this stream, when one exists.</summary>
     public LocalPayloadQuarantineRecord? Quarantine
     {

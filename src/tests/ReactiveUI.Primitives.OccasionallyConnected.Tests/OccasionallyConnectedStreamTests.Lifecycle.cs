@@ -67,7 +67,7 @@ public sealed partial class OccasionallyConnectedStreamTests
 
         await Assert.That(faults.Values).Count().IsEqualTo(1);
         await Assert.That(faults.Values[0].Code).IsEqualTo("OC.Stream.Lifecycle");
-        await Assert.That(coordinator.StopCalls).IsEqualTo(0);
+        await Assert.That(coordinator.StopCalls).IsEqualTo(1);
         await Assert.That(() => stream.SubscriptionId).ThrowsExactly<InvalidOperationException>();
     }
 
@@ -205,6 +205,39 @@ public sealed partial class OccasionallyConnectedStreamTests
         await Assert.That(coordinator.StopCalls).IsEqualTo(1);
     }
 
+    /// <summary>Verifies stopping before first start parks remote work while local publication remains admitted.</summary>
+    /// <returns>A task that completes when the test finishes.</returns>
+    [Test]
+    public async Task StopAsyncBeforeFirstStartParksRemoteWorkAndPreservesOfflinePublish()
+    {
+        await using var store = await CreateInitializedStoreAsync();
+        var coordinator = new RecordingCoordinator(store);
+        await using var stream = CreateStream(store, CreateDefinition(subscriptionId: ExplicitSubscription), coordinator);
+
+        await stream.StopAsync(CancellationToken.None);
+
+        await Assert.That(coordinator.RegisterCalls).IsEqualTo(1);
+        await Assert.That(coordinator.StopCalls).IsEqualTo(1);
+        await Assert.That(coordinator.StartCalls).IsEqualTo(0);
+        await Assert.That(coordinator.EnterLocalCommitCalls).IsEqualTo(0);
+
+        var receipt = await stream.PublishAsync(new(FirstValue), null, CancellationToken.None);
+        var recovery = await store.RecoverStreamAsync(Stream, ExplicitSubscription, CancellationToken.None);
+
+        await Assert.That(receipt.ClientSequence).IsEqualTo(FirstSequence);
+        await Assert.That(coordinator.EnterLocalCommitCalls).IsEqualTo(1);
+        await Assert.That(coordinator.CompleteLocalCommitCalls).IsEqualTo(1);
+        await Assert.That(coordinator.StartCalls).IsEqualTo(0);
+        await Assert.That(coordinator.StopCalls).IsEqualTo(1);
+        await Assert.That(recovery.PendingOperations.Count).IsEqualTo(1);
+        await Assert.That(recovery.PendingOperations[0].OperationId).IsEqualTo(receipt.OperationId);
+
+        await stream.StartAsync(CancellationToken.None);
+
+        await Assert.That(coordinator.StartCalls).IsEqualTo(1);
+        await Assert.That(coordinator.StopCalls).IsEqualTo(1);
+    }
+
     /// <summary>Verifies local snapshot preparation failures are reported without failing startup.</summary>
     /// <returns>A task that completes when the test finishes.</returns>
     [Test]
@@ -335,6 +368,10 @@ public sealed partial class OccasionallyConnectedStreamTests
 
         await Assert.That(() => new OccasionallyConnectedStream<CounterState, CounterInput>(options with { WorkCapacity = 0 }))
             .ThrowsExactly<InvalidOperationException>();
+        await Assert.That(() => new OccasionallyConnectedStream<CounterState, CounterInput>(options with { LocalAdmissionRetainedBytes = 0 }))
+            .ThrowsExactly<InvalidOperationException>();
+        await Assert.That(() => new OccasionallyConnectedStream<CounterState, CounterInput>(options with { LocalAdmissionRetainedBytes = -1 }))
+            .ThrowsExactly<InvalidOperationException>();
         await Assert.That(() => new OccasionallyConnectedStream<CounterState, CounterInput>(options with { MinimumPriority = 1, MaximumPriority = 0 }))
             .ThrowsExactly<InvalidOperationException>();
         await Assert.That(() => new OccasionallyConnectedStream<CounterState, CounterInput>(options with { Store = MissingRequired<ILocalStoreAdapter>() }))
@@ -377,6 +414,7 @@ public sealed partial class OccasionallyConnectedStreamTests
             NotificationScheduler = scheduler,
             NotificationOptions = new(NotificationCapacity, NotificationCapacityBytes, ObserverNotificationOverflowMode.CoalesceLatest),
             WorkCapacity = WorkCapacity,
+            LocalAdmissionRetainedBytes = ConfiguredTypedAdmissionBytes,
             ClientId = ClientId,
         };
 

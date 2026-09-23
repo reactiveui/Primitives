@@ -98,6 +98,53 @@ internal static partial class SqliteLocalCommitSql
             : [];
     }
 
+    /// <summary>Selects the next future time blocker for a recovered pending stream head.</summary>
+    /// <param name="connection">The connection.</param>
+    /// <param name="transaction">The transaction.</param>
+    /// <param name="storeIdentity">The store identity.</param>
+    /// <param name="streamId">The stream identifier.</param>
+    /// <param name="nowUtc">The current UTC timestamp.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>The future not-before timestamp, or <see langword="null"/> when the recovered head is not time-blocked.</returns>
+    /// <exception cref="OperationCanceledException">The operation is canceled while traversing candidates.</exception>
+    internal static DateTimeOffset? SelectRecoveredPendingUploadNotBeforeUtc(
+        SqliteConnection connection,
+        SqliteTransaction transaction,
+        string storeIdentity,
+        StreamId streamId,
+        DateTimeOffset nowUtc,
+        CancellationToken cancellationToken)
+    {
+        using var command = connection.CreateCommand();
+        command.Transaction = transaction;
+        command.CommandText = """
+            SELECT outbox.operation_id, outbox.stream_id, outbox.client_sequence, length(outbox.payload),
+                   lease.lease_id, lease.lease_expires_at_utc, state.operation_state,
+                   state.attempt_count, outbox.policy_delivery_guarantee, state.retry_due_utc
+            FROM oc_outbox AS outbox
+            LEFT JOIN oc_outbox_operation_states AS state
+                ON state.store_identity = outbox.store_identity
+                AND state.operation_id = outbox.operation_id
+            LEFT JOIN oc_outbox_leases AS lease
+                ON lease.store_identity = outbox.store_identity
+                AND lease.operation_id = outbox.operation_id
+            WHERE outbox.store_identity = $storeIdentity AND outbox.stream_id = $streamId
+                AND (state.operation_state IS NULL OR state.operation_state NOT IN (4, 5, 6))
+                AND NOT EXISTS (
+                    SELECT 1
+                    FROM oc_payload_quarantine AS quarantine
+                    WHERE quarantine.store_identity = outbox.store_identity
+                        AND quarantine.stream_id = outbox.stream_id)
+            ORDER BY outbox.client_sequence ASC
+            LIMIT 1;
+            """;
+        _ = command.Parameters.AddWithValue(StoreIdentityParameter, storeIdentity);
+        _ = command.Parameters.AddWithValue(StreamIdParameter, streamId.Value);
+        using var reader = command.ExecuteReader();
+        cancellationToken.ThrowIfCancellationRequested();
+        return reader.Read() ? ReadLeaseCandidateRow(reader, nowUtc).NotBeforeUtc : null;
+    }
+
     /// <summary>Inserts lease membership rows for a selected batch.</summary>
     /// <param name="connection">The connection.</param>
     /// <param name="transaction">The transaction.</param>
@@ -623,26 +670,61 @@ internal static partial class SqliteLocalCommitSql
         var attempt = ReadNonNegativeInt(reader, LeaseAttemptIndex, InvalidAttemptCountMessage);
         var deliveryGuarantee = ReadDeliveryGuarantee(reader, LeaseDeliveryGuaranteeIndex);
         var retryDueUtc = ReadNullableDateTimeOffset(reader, LeaseRetryDueUtcIndex, "The SQLite retry due timestamp is invalid.");
-        var hasActiveLease = false;
-        if (!reader.IsDBNull(LeaseIdIndex))
-        {
-            _ = ReadLeaseId(reader, LeaseIdIndex);
-            hasActiveLease = ReadDateTimeOffset(reader, LeaseExpiryIndex, InvalidLeaseExpiryMessage) > nowUtc;
-        }
-
-        var isBlockedByAtMostOnceAmbiguity = state == SyncOperationState.Ambiguous
-            && deliveryGuarantee == DeliveryGuarantee.AtMostOnce;
-        var isBlockedByAtMostOnceAttempt = deliveryGuarantee == DeliveryGuarantee.AtMostOnce && attempt > 0;
-        var isBlockedByUnresolvedState = state is SyncOperationState.Conflict or SyncOperationState.GuaranteeExpired;
-        var isBlockedByRetryDue = retryDueUtc.HasValue && retryDueUtc.GetValueOrDefault() > nowUtc;
+        var leaseState = ReadLeaseCandidateTiming(reader, nowUtc, retryDueUtc);
+        var isPermanentlyBlocked = IsPermanentlyBlockedLeaseCandidate(state, attempt, deliveryGuarantee);
         return new(
             operationId,
             streamId,
             clientSequence,
             payloadBytes,
-            hasActiveLease,
-            !isBlockedByAtMostOnceAmbiguity && !isBlockedByAtMostOnceAttempt && !isBlockedByUnresolvedState && !isBlockedByRetryDue);
+            leaseState.HasActiveLease,
+            !isPermanentlyBlocked && leaseState.NotBeforeUtc is null,
+            isPermanentlyBlocked ? null : leaseState.NotBeforeUtc);
     }
+
+    /// <summary>Reads the time-based blockers for a lease candidate.</summary>
+    /// <param name="reader">The reader.</param>
+    /// <param name="nowUtc">The current UTC timestamp.</param>
+    /// <param name="retryDueUtc">The retry due timestamp.</param>
+    /// <returns>The lease candidate timing.</returns>
+    /// <exception cref="InvalidOperationException">Stored SQLite data is invalid.</exception>
+    private static LeaseCandidateTiming ReadLeaseCandidateTiming(
+        SqliteDataReader reader,
+        DateTimeOffset nowUtc,
+        DateTimeOffset? retryDueUtc)
+    {
+        DateTimeOffset? notBeforeUtc = null;
+        var hasActiveLease = false;
+        if (!reader.IsDBNull(LeaseIdIndex))
+        {
+            _ = ReadLeaseId(reader, LeaseIdIndex);
+            var leaseExpiresAtUtc = ReadDateTimeOffset(reader, LeaseExpiryIndex, InvalidLeaseExpiryMessage);
+            hasActiveLease = leaseExpiresAtUtc > nowUtc;
+            if (hasActiveLease)
+            {
+                notBeforeUtc = leaseExpiresAtUtc;
+            }
+        }
+
+        if (retryDueUtc is { } dueUtc && dueUtc > nowUtc && (notBeforeUtc is null || dueUtc > notBeforeUtc.Value))
+        {
+            notBeforeUtc = dueUtc;
+        }
+
+        return new(hasActiveLease, notBeforeUtc);
+    }
+
+    /// <summary>Determines whether persisted operation state permanently blocks leasing.</summary>
+    /// <param name="state">The operation state.</param>
+    /// <param name="attempt">The attempt count.</param>
+    /// <param name="deliveryGuarantee">The delivery guarantee.</param>
+    /// <returns>Whether the lease candidate is permanently blocked.</returns>
+    private static bool IsPermanentlyBlockedLeaseCandidate(
+        SyncOperationState state,
+        int attempt,
+        DeliveryGuarantee deliveryGuarantee) =>
+        state is SyncOperationState.Ambiguous or SyncOperationState.Conflict or SyncOperationState.GuaranteeExpired
+        || (deliveryGuarantee == DeliveryGuarantee.AtMostOnce && attempt > 0);
 
     /// <summary>Reads a persisted lease identifier.</summary>
     /// <param name="reader">The reader.</param>
@@ -657,6 +739,11 @@ internal static partial class SqliteLocalCommitSql
             : throw new InvalidOperationException(InvalidLeaseIdMessage);
     }
 
+    /// <summary>The time-based blockers for a lease candidate row.</summary>
+    /// <param name="HasActiveLease">Whether an active lease currently owns the operation.</param>
+    /// <param name="NotBeforeUtc">The future UTC time when the row may be retried or leased.</param>
+    private readonly record struct LeaseCandidateTiming(bool HasActiveLease, DateTimeOffset? NotBeforeUtc);
+
     /// <summary>One leaseable operation row selected before payload materialization.</summary>
     /// <param name="OperationId">The operation identifier.</param>
     /// <param name="StreamId">The stream identifier.</param>
@@ -664,11 +751,13 @@ internal static partial class SqliteLocalCommitSql
     /// <param name="PayloadBytes">The payload byte count.</param>
     /// <param name="HasActiveLease">Whether an active lease currently owns the operation.</param>
     /// <param name="IsEligibleNow">Whether retry and delivery state permit leasing the operation now.</param>
+    /// <param name="NotBeforeUtc">The future UTC time when the row may be retried or leased.</param>
     private readonly record struct LeaseCandidateRow(
         OperationId OperationId,
         StreamId StreamId,
         long ClientSequence,
         long PayloadBytes,
         bool HasActiveLease,
-        bool IsEligibleNow);
+        bool IsEligibleNow,
+        DateTimeOffset? NotBeforeUtc);
 }

@@ -11,8 +11,12 @@ namespace ReactiveUI.Primitives.OccasionallyConnected;
 /// <param name="Batch">The filtered batch committed to the local store.</param>
 /// <param name="Inputs">The decoded immutable inputs used for projection.</param>
 /// <param name="State">The current state after the remote apply.</param>
+/// <param name="QueueSnapshot">The bounded queue aggregate after the durable remote apply.</param>
+/// <param name="CursorAdvanced">Whether the durable stream cursor advanced.</param>
 internal sealed record RemoteStreamCommitResult<TState, TInput>(
     RemoteApplyResult Receipt,
     RemoteEventBatch Batch,
     IReadOnlyList<TInput> Inputs,
-    LocalStreamCommitterState<TState> State);
+    LocalStreamCommitterState<TState> State,
+    QueueDiagnosticSnapshot QueueSnapshot,
+    bool CursorAdvanced);

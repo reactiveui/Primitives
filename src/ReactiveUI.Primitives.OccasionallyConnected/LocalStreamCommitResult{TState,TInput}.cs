@@ -11,8 +11,10 @@ namespace ReactiveUI.Primitives.OccasionallyConnected;
 /// <param name="Operation">The committed operation envelope.</param>
 /// <param name="Input">The decoded immutable input used for projection.</param>
 /// <param name="State">The current state after the commit.</param>
+/// <param name="QueueSnapshot">The bounded queue aggregate after the commit.</param>
 internal sealed record LocalStreamCommitResult<TState, TInput>(
     PublishReceipt Receipt,
     SyncOperation Operation,
     TInput Input,
-    LocalStreamCommitterState<TState> State);
+    LocalStreamCommitterState<TState> State,
+    QueueDiagnosticSnapshot QueueSnapshot);

@@ -34,6 +34,7 @@ public sealed partial class OccasionallyConnectedStreamTests
                 NotificationScheduler = scheduler,
                 NotificationOptions = new(NotificationCapacity, NotificationCapacityBytes, ObserverNotificationOverflowMode.CoalesceLatest),
                 WorkCapacity = WorkCapacity,
+                LocalAdmissionRetainedBytes = ConfiguredTypedAdmissionBytes,
                 ClientId = ClientId,
             });
         await stream.StartAsync(CancellationToken.None);
@@ -80,6 +81,7 @@ public sealed partial class OccasionallyConnectedStreamTests
                 NotificationScheduler = scheduler,
                 NotificationOptions = new(NotificationCapacity, TinyNotificationCapacityBytes, ObserverNotificationOverflowMode.Disconnect),
                 WorkCapacity = WorkCapacity,
+                LocalAdmissionRetainedBytes = ConfiguredTypedAdmissionBytes,
                 ClientId = ClientId,
             });
         await stream.StartAsync(CancellationToken.None);
@@ -122,6 +124,7 @@ public sealed partial class OccasionallyConnectedStreamTests
                 NotificationScheduler = scheduler,
                 NotificationOptions = new(NotificationCapacity, NotificationCapacityBytes, ObserverNotificationOverflowMode.CoalesceLatest),
                 WorkCapacity = WorkCapacity,
+                LocalAdmissionRetainedBytes = ConfiguredTypedAdmissionBytes,
                 ClientId = ClientId,
             });
         await stream.StartAsync(CancellationToken.None);
