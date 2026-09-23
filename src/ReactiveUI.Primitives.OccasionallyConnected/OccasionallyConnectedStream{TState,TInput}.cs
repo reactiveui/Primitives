@@ -194,13 +194,8 @@ internal sealed partial class OccasionallyConnectedStream<TState, TInput> :
         }
 
         var committer = await EnsureInitializedCoreAsync(cancellationToken).ConfigureAwait(false);
-        SubscriptionId subscriptionId;
-        lock (_gate)
-        {
-            subscriptionId = _subscriptionId ?? throw new InvalidOperationException("SubscriptionId is unavailable until the stream has initialized.");
-        }
-
-        return new(StreamId, subscriptionId, committer.Current.ServerCursor, subscription.StartPosition, subscription.DeliveryGuarantee);
+        var current = committer.Current;
+        return new(StreamId, current.SubscriptionId, current.ServerCursor, subscription.StartPosition, subscription.DeliveryGuarantee);
     }
 
     /// <inheritdoc/>
