@@ -60,7 +60,11 @@ public sealed partial class HttpServerEndpoint
                 return buffer.ToArray();
             }
 
-            buffer.Write(bytes, 0, read);
+#if NET5_0_OR_GREATER
+            await buffer.WriteAsync(bytes.AsMemory(0, read), cancellationToken).ConfigureAwait(false);
+#else
+            await buffer.WriteAsync(bytes, 0, read, cancellationToken).ConfigureAwait(false);
+#endif
         }
     }
 }

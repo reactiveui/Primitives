@@ -52,6 +52,9 @@ public sealed record HttpRemoteTransportOptions
     /// <summary>Gets the default relative acknowledgement endpoint.</summary>
     public static string DefaultAcknowledgePath { get; } = "ack";
 
+    /// <summary>Gets the default relative snapshot recovery endpoint.</summary>
+    public static string DefaultSnapshotRecoveryPath { get; } = "snapshot-recovery";
+
     /// <summary>Gets the caller-owned HTTP client.</summary>
     public required HttpClient HttpClient { get; init; }
 
@@ -69,6 +72,9 @@ public sealed record HttpRemoteTransportOptions
 
     /// <summary>Gets the relative acknowledgement route.</summary>
     public string AcknowledgePath { get; init; } = DefaultAcknowledgePath;
+
+    /// <summary>Gets the relative snapshot recovery route.</summary>
+    public string SnapshotRecoveryPath { get; init; } = DefaultSnapshotRecoveryPath;
 
     /// <summary>Gets whether plain HTTP is permitted for loopback-only local development endpoints.</summary>
     public bool AllowInsecureLoopbackHttp { get; init; }
@@ -106,6 +112,12 @@ public sealed record HttpRemoteTransportOptions
     /// <summary>Gets the clock used to observe HTTP retry hints.</summary>
     public TimeProvider TimeProvider { get; init; } = TimeProvider.System;
 
+    /// <summary>Gets the replay protection settings used by this adapter.</summary>
+    public HttpReplayProtectionOptions ReplayProtection { get; init; } = new();
+
+    /// <summary>Gets the finite validation limits used for snapshot recovery request and response bodies.</summary>
+    public SnapshotRecoveryLimits SnapshotRecoveryLimits { get; init; } = new();
+
     /// <summary>Gets the maximum concurrent non-acknowledgement HTTP requests.</summary>
     public int MaximumConcurrentRequests { get; init; } = DefaultConcurrentRequests;
 
@@ -131,6 +143,7 @@ public sealed record HttpRemoteTransportOptions
         HttpRemoteTransportOptionsValidation.ValidateRelativePath(PushPath, nameof(PushPath));
         HttpRemoteTransportOptionsValidation.ValidateRelativePath(SubscribePath, nameof(SubscribePath));
         HttpRemoteTransportOptionsValidation.ValidateRelativePath(AcknowledgePath, nameof(AcknowledgePath));
+        HttpRemoteTransportOptionsValidation.ValidateRelativePath(SnapshotRecoveryPath, nameof(SnapshotRecoveryPath));
         HttpRemoteTransportOptionsValidation.ValidatePositive(MaximumResponseBytes, nameof(MaximumResponseBytes));
         HttpRemoteTransportOptionsValidation.ValidatePositive(MaximumRequestBytes, nameof(MaximumRequestBytes));
         HttpRemoteTransportOptionsValidation.ValidatePositive(MaximumPayloadBytes, nameof(MaximumPayloadBytes));
@@ -145,6 +158,10 @@ public sealed record HttpRemoteTransportOptions
         HttpRemoteTransportOptionsValidation.ValidatePositive(MaximumConcurrentAcknowledgements, nameof(MaximumConcurrentAcknowledgements));
         HttpRemoteTransportOptionsValidation.ValidatePositive(MaximumConcurrentSubscriptions, nameof(MaximumConcurrentSubscriptions));
         ArgumentExceptionHelper.ThrowIfNull(TimeProvider);
+        ArgumentExceptionHelper.ThrowIfNull(ReplayProtection);
+        ArgumentExceptionHelper.ThrowIfNull(SnapshotRecoveryLimits);
+        ReplayProtection.Validate();
+        SnapshotRecoveryLimits.Validate();
     }
 
     /// <summary>Validates the endpoint transport scheme.</summary>

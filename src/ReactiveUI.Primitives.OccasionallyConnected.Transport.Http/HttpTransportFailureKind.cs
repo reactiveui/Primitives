@@ -33,4 +33,7 @@ public enum HttpTransportFailureKind
 
     /// <summary>The configured endpoint is invalid for the requested operation.</summary>
     Configuration = 8,
+
+    /// <summary>The remote replay session is stale and may be renewed by the synchronization engine.</summary>
+    StaleReplaySession = 9,
 }

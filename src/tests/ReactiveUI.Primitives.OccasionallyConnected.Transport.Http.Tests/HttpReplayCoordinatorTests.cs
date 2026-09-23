@@ -1,11 +1,10 @@
 // Copyright (c) 2019-2026 ReactiveUI Association Incorporated. All rights reserved.
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
-
 using System.Globalization;
 using System.Net;
+using System.Runtime.CompilerServices;
 using System.Text;
-
 namespace ReactiveUI.Primitives.OccasionallyConnected.Transport.Http.Tests;
 
 /// <summary>Tests <see cref="HttpReplayCoordinator"/>.</summary>
@@ -108,18 +107,71 @@ public sealed partial class HttpReplayCoordinatorTests
     {
         await using HttpReplayCoordinator coordinator = new(CreateOptions(SentAtUtc));
         var calls = 0;
-
         var decision = await coordinator.AdmitAsync(CreateRequest(HttpReplayOperationKind.Connect), AuthorizeAsync, CancellationToken.None);
-
         await Assert.That(calls).IsEqualTo(SingleAuthorizationCall);
         await Assert.That(decision.Kind).IsEqualTo(HttpReplayAdmissionKind.Execute);
         await Assert.That(decision.Owner).IsNotNull();
-
         ValueTask<HttpReplayAuthorizationResult> AuthorizeAsync(CancellationToken cancellationToken)
         {
             cancellationToken.ThrowIfCancellationRequested();
             calls++;
             return new(HttpReplayAuthorizationResult.Allowed);
+        }
+    }
+
+    /// <summary>Verifies blocked clock callbacks do not own the coordinator gate.</summary>
+    /// <param name="blockedReadIndex">The one-based clock read index to block.</param>
+    /// <returns>The asynchronous test operation.</returns>
+    [Test]
+    [Arguments(1)]
+    [Arguments(2)]
+    public async Task AdmitAsyncBlockedClockReadDoesNotBlockIndependentCoordinatorGateAccess(int blockedReadIndex)
+    {
+        var timeProvider = new BlockingSelectedReadTimeProvider(SentAtUtc, blockedReadIndex);
+        await using HttpReplayCoordinator coordinator = new(CreateOptions(SentAtUtc) with { TimeProvider = timeProvider });
+        var request = CreateRequest(HttpReplayOperationKind.Connect);
+        var admission = Task.Factory.StartNew(
+            static state =>
+            {
+                var context = (BlockedClockAdmissionContext)state!;
+                return context.Coordinator
+                    .AdmitAsync(context.Request, static _ => new(HttpReplayAuthorizationResult.Allowed), CancellationToken.None)
+                    .AsTask();
+            },
+            new BlockedClockAdmissionContext(coordinator, request),
+            CancellationToken.None,
+            TaskCreationOptions.LongRunning,
+            TaskScheduler.Default).Unwrap();
+        Task? dispose = null;
+        try
+        {
+            var firstCompleted = await Task.WhenAny(admission, timeProvider.BlockedReadStarted, CreateWaitTimeoutTask());
+            if (firstCompleted == admission)
+            {
+                var decision = await admission;
+                await Assert.That(decision.Kind).IsEqualTo(HttpReplayAdmissionKind.Execute);
+                return;
+            }
+
+            await Assert.That(firstCompleted).IsSameReferenceAs(timeProvider.BlockedReadStarted);
+            dispose = Task.Factory.StartNew(
+                static state => ((HttpReplayCoordinator)state!).DisposeAsync().AsTask(),
+                coordinator,
+                CancellationToken.None,
+                TaskCreationOptions.LongRunning,
+                TaskScheduler.Default).Unwrap();
+            var gateProbe = await Task.WhenAny(dispose, CreateWaitTimeoutTask());
+            await Assert.That(gateProbe).IsSameReferenceAs(dispose);
+        }
+        finally
+        {
+            _ = timeProvider.ReleaseBlockedRead();
+            if (dispose is not null)
+            {
+                await dispose.ConfigureAwait(false);
+            }
+
+            _ = await admission.ConfigureAwait(false);
         }
     }
 
@@ -139,7 +191,6 @@ public sealed partial class HttpReplayCoordinatorTests
 
         await coordinator.CompleteAsync(first.Owner, new() { StatusCode = HttpStatusCode.OK, ResponseBytes = SmallResponseBytes });
         var replay = await coordinator.AdmitAsync(request, static _ => new(CreateDenied()), CancellationToken.None);
-
         await Assert.That(replay.Kind).IsEqualTo(HttpReplayAdmissionKind.Reject);
         await Assert.That(replay.Failure?.Kind).IsEqualTo(HttpTransportFailureKind.AuthorizationDenied);
     }
@@ -161,7 +212,6 @@ public sealed partial class HttpReplayCoordinatorTests
 
         await coordinator.CompleteAsync(first.Owner, new() { StatusCode = HttpStatusCode.OK, ResponseBytes = OversizedResponseBytes });
         var replay = await coordinator.AdmitAsync(request, static _ => new(HttpReplayAuthorizationResult.Allowed), CancellationToken.None);
-
         await Assert.That(replay.Kind).IsEqualTo(HttpReplayAdmissionKind.ReplayTransient);
         await Assert.That(replay.Failure?.StatusCode).IsEqualTo(HttpStatusCode.ServiceUnavailable);
     }
@@ -184,11 +234,9 @@ public sealed partial class HttpReplayCoordinatorTests
 
         await coordinator.CompleteAsync(first.Owner, new() { StatusCode = HttpStatusCode.OK, ResponseBytes = OversizedResponseBytes });
         var replay = await coordinator.AdmitAsync(request, AuthorizeReplayAsync, CancellationToken.None);
-
         await Assert.That(authorizationCalls).IsEqualTo(SingleAuthorizationCall);
         await Assert.That(replay.Kind).IsEqualTo(HttpReplayAdmissionKind.Execute);
         await Assert.That(replay.Owner).IsNotNull();
-
         ValueTask<HttpReplayAuthorizationResult> AuthorizeReplayAsync(CancellationToken cancellationToken)
         {
             cancellationToken.ThrowIfCancellationRequested();
@@ -217,12 +265,9 @@ public sealed partial class HttpReplayCoordinatorTests
         await coordinator.CompleteAsync(first.Owner, new() { StatusCode = HttpStatusCode.OK, ResponseBytes = SmallResponseBytes });
         clock.SetUtcNow(observedNow.Add(Window).Add(Window));
         var inclusiveReplay = await coordinator.AdmitAsync(request, static _ => new(HttpReplayAuthorizationResult.Allowed), CancellationToken.None);
-
         await Assert.That(inclusiveReplay.Kind).IsEqualTo(HttpReplayAdmissionKind.ReplayCached);
-
         clock.SetUtcNow(observedNow.Add(Window).Add(Window).AddTicks(SingleAuthorizationCall));
         var expiredReplay = await coordinator.AdmitAsync(request, static _ => new(HttpReplayAuthorizationResult.Allowed), CancellationToken.None);
-
         await Assert.That(expiredReplay.Kind).IsEqualTo(HttpReplayAdmissionKind.Reject);
         await Assert.That(expiredReplay.Failure?.Kind).IsEqualTo(HttpTransportFailureKind.ValidationRejected);
     }
@@ -248,7 +293,6 @@ public sealed partial class HttpReplayCoordinatorTests
         await coordinator.CompleteAsync(first.Owner, new() { StatusCode = HttpStatusCode.OK, ResponseBytes = SmallResponseBytes, ConnectSession = session });
         clock.SetUtcNow(observedNow.Add(Window).Add(Window).AddTicks(SingleAuthorizationCall));
         var replay = await coordinator.AdmitAsync(request, static _ => new(HttpReplayAuthorizationResult.Allowed), CancellationToken.None);
-
         await Assert.That(replay.Kind).IsEqualTo(HttpReplayAdmissionKind.Reject);
         await Assert.That(replay.Failure?.StatusCode).IsEqualTo(HttpStatusCode.Conflict);
     }
@@ -272,12 +316,9 @@ public sealed partial class HttpReplayCoordinatorTests
         }
 
         await secondCoordinator.CompleteAsync(firstAdmission.Owner, new() { StatusCode = HttpStatusCode.OK, ResponseBytes = AlternateResponseBytes });
-
         await Assert.That(firstAdmission.Owner.IsClosed).IsFalse();
-
         await secondCoordinator.CompleteAsync(secondAdmission.Owner, new() { StatusCode = HttpStatusCode.OK, ResponseBytes = SmallResponseBytes });
         var secondReplay = await secondCoordinator.AdmitAsync(secondRequest, static _ => new(HttpReplayAuthorizationResult.Allowed), CancellationToken.None);
-
         await Assert.That(secondReplay.Kind).IsEqualTo(HttpReplayAdmissionKind.ReplayCached);
         await AssertByteArrayEqualsAsync(secondReplay.CachedResponse?.Body.ToArray(), SmallResponseBytes);
     }
@@ -285,7 +326,7 @@ public sealed partial class HttpReplayCoordinatorTests
     /// <summary>Verifies foreign owners cannot abandon a matching local entry id.</summary>
     /// <returns>The asynchronous test operation.</returns>
     [Test]
-    public async Task AbandonAsyncWithForeignOwnerDoesNotCloseOrMutateMatchingEntry()
+    public async Task AbandonWithForeignOwnerDoesNotCloseOrMutateMatchingEntry()
     {
         await using HttpReplayCoordinator firstCoordinator = new(CreateOptions(SentAtUtc));
         await using HttpReplayCoordinator secondCoordinator = new(CreateOptions(SentAtUtc));
@@ -300,13 +341,10 @@ public sealed partial class HttpReplayCoordinatorTests
             return;
         }
 
-        await secondCoordinator.AbandonAsync(firstAdmission.Owner, CancellationToken.None);
-
+        secondCoordinator.Abandon(firstAdmission.Owner);
         await Assert.That(firstAdmission.Owner.IsClosed).IsFalse();
-
         await secondCoordinator.CompleteAsync(secondAdmission.Owner, new() { StatusCode = HttpStatusCode.OK, ResponseBytes = SmallResponseBytes });
         var secondReplay = await secondCoordinator.AdmitAsync(secondRequest, static _ => new(HttpReplayAuthorizationResult.Allowed), CancellationToken.None);
-
         await Assert.That(secondReplay.Kind).IsEqualTo(HttpReplayAdmissionKind.ReplayCached);
     }
 
@@ -338,15 +376,12 @@ public sealed partial class HttpReplayCoordinatorTests
         clock.SetUtcNow(freshNow);
         var freshRequest = CreateRequest(HttpReplayOperationKind.Connect, freshNow) with { Nonce = FreshNonce };
         var second = await coordinator.AdmitAsync(freshRequest, static _ => new(HttpReplayAuthorizationResult.Allowed), CancellationToken.None);
-
         await Assert.That(first.Owner.IsClosed).IsFalse();
         await Assert.That(second.Kind).IsNotEqualTo(HttpReplayAdmissionKind.Execute);
         await Assert.That(second.Owner).IsNull();
-
         await coordinator.CompleteAsync(first.Owner, new() { StatusCode = HttpStatusCode.OK, ResponseBytes = SmallResponseBytes });
         var anotherFreshRequest = CreateRequest(HttpReplayOperationKind.Connect, freshNow) with { Nonce = SecondFreshNonce };
         var afterCompletion = await coordinator.AdmitAsync(anotherFreshRequest, static _ => new(HttpReplayAuthorizationResult.Allowed), CancellationToken.None);
-
         await Assert.That(afterCompletion.Kind).IsEqualTo(HttpReplayAdmissionKind.Execute);
         await Assert.That(afterCompletion.Owner).IsNotNull();
     }
@@ -370,7 +405,6 @@ public sealed partial class HttpReplayCoordinatorTests
 
         clock.SetUtcNow(observedNow.Add(Window).AddTicks(SingleAuthorizationCall));
         var staleDuplicate = await coordinator.AdmitAsync(request, static _ => new(HttpReplayAuthorizationResult.Allowed), CancellationToken.None);
-
         await Assert.That(staleDuplicate.Kind).IsEqualTo(HttpReplayAdmissionKind.Reject);
         await Assert.That(staleDuplicate.Failure?.Kind).IsEqualTo(HttpTransportFailureKind.ValidationRejected);
     }
@@ -385,15 +419,12 @@ public sealed partial class HttpReplayCoordinatorTests
         await using HttpReplayCoordinator coordinator = new(options);
         var authorization = new TaskCompletionSource<HttpReplayAuthorizationResult>(TaskCreationOptions.RunContinuationsAsynchronously);
         var admission = coordinator.AdmitAsync(CreateRequest(HttpReplayOperationKind.Connect), AuthorizeAsync, CancellationToken.None).AsTask();
-
         clock.SetUtcNow(SentAtUtc.Add(Window).AddTicks(SingleAuthorizationCall));
         authorization.SetResult(HttpReplayAuthorizationResult.Allowed);
         var decision = await admission;
-
         await Assert.That(decision.Kind).IsEqualTo(HttpReplayAdmissionKind.Reject);
         await Assert.That(decision.Owner).IsNull();
         await Assert.That(decision.Failure?.Kind).IsEqualTo(HttpTransportFailureKind.ValidationRejected);
-
         ValueTask<HttpReplayAuthorizationResult> AuthorizeAsync(CancellationToken cancellationToken)
         {
             cancellationToken.ThrowIfCancellationRequested();
@@ -420,13 +451,10 @@ public sealed partial class HttpReplayCoordinatorTests
 
         await Assert.That(replayAuthorizationCalls).IsEqualTo(SingleAuthorizationCall);
         await AssertNotCompletedWithinObservationAsync(replayAdmission);
-
         await coordinator.CompleteAsync(first.Owner, new() { StatusCode = HttpStatusCode.OK, ResponseBytes = SmallResponseBytes });
         var replay = await AwaitWithTimeoutAsync(replayAdmission);
-
         await Assert.That(replay.Kind).IsEqualTo(HttpReplayAdmissionKind.ReplayCached);
         await AssertByteArrayEqualsAsync(replay.CachedResponse?.Body.ToArray(), SmallResponseBytes);
-
         ValueTask<HttpReplayAuthorizationResult> AuthorizeReplayAsync(CancellationToken cancellationToken)
         {
             cancellationToken.ThrowIfCancellationRequested();
@@ -450,13 +478,11 @@ public sealed partial class HttpReplayCoordinatorTests
             return;
         }
 
-        await first.Owner.AbandonAsync(CancellationToken.None);
+        await first.Owner.DisposeAsync();
         var replay = await coordinator.AdmitAsync(request, AuthorizeReplayAsync, CancellationToken.None);
-
         await Assert.That(authorizationCalls).IsEqualTo(SingleAuthorizationCall);
         await Assert.That(replay.Kind).IsEqualTo(HttpReplayAdmissionKind.Execute);
         await Assert.That(replay.Owner).IsNotNull();
-
         ValueTask<HttpReplayAuthorizationResult> AuthorizeReplayAsync(CancellationToken cancellationToken)
         {
             cancellationToken.ThrowIfCancellationRequested();
@@ -480,13 +506,11 @@ public sealed partial class HttpReplayCoordinatorTests
             return;
         }
 
-        await first.Owner.AbandonAsync(CancellationToken.None);
+        await first.Owner.DisposeAsync();
         var replay = await coordinator.AdmitAsync(request, AuthorizeReplayAsync, CancellationToken.None);
-
         await Assert.That(authorizationCalls).IsEqualTo(SingleAuthorizationCall);
         await Assert.That(replay.Kind).IsEqualTo(HttpReplayAdmissionKind.ReplayTransient);
         await Assert.That(replay.Owner).IsNull();
-
         ValueTask<HttpReplayAuthorizationResult> AuthorizeReplayAsync(CancellationToken cancellationToken)
         {
             cancellationToken.ThrowIfCancellationRequested();
@@ -515,7 +539,6 @@ public sealed partial class HttpReplayCoordinatorTests
         var cachedConnect = await coordinator.AdmitAsync(request, static _ => new(HttpReplayAuthorizationResult.Allowed), CancellationToken.None);
         var push = CreateAuthenticatedRequestWithSession(HttpReplayOperationKind.Push, session);
         var pushAdmission = await coordinator.AdmitAsync(push, static _ => new(HttpReplayAuthorizationResult.Allowed), CancellationToken.None);
-
         await Assert.That(cachedConnect.Kind).IsEqualTo(HttpReplayAdmissionKind.ReplayCached);
         await Assert.That(GetHeader(cachedConnect.CachedResponse, ReplaySessionIdHeader)).IsEqualTo(session.SessionId);
         await Assert.That(GetHeader(cachedConnect.CachedResponse, ReplaySessionSecretHeader)).IsEqualTo(session.SessionSecret);
@@ -541,7 +564,6 @@ public sealed partial class HttpReplayCoordinatorTests
 
         await coordinator.CompleteAsync(first.Owner, new() { StatusCode = HttpStatusCode.OK, ResponseBytes = SmallResponseBytes, ConnectSession = session });
         var replay = await coordinator.AdmitAsync(request, static _ => new(HttpReplayAuthorizationResult.Allowed), CancellationToken.None);
-
         await Assert.That(replay.Kind).IsEqualTo(HttpReplayAdmissionKind.ReplayTransient);
         await Assert.That(replay.CachedResponse).IsNull();
         await Assert.That(replay.Failure?.StatusCode).IsEqualTo(HttpStatusCode.ServiceUnavailable);
@@ -567,13 +589,144 @@ public sealed partial class HttpReplayCoordinatorTests
         }
 
         await AssertNotCompletedWithinObservationAsync(replayAdmission);
-
         await coordinator.CompleteAsync(first.Owner, new() { StatusCode = HttpStatusCode.OK, ResponseBytes = SmallResponseBytes, ConnectSession = session });
         var replay = await AwaitWithTimeoutAsync(replayAdmission);
-
         await Assert.That(replay.Kind).IsEqualTo(HttpReplayAdmissionKind.ReplayTransient);
         await Assert.That(replay.CachedResponse).IsNull();
         await Assert.That(replay.Failure?.StatusCode).IsEqualTo(HttpStatusCode.ServiceUnavailable);
+    }
+
+    /// <summary>Verifies a connect session registration exception drains duplicate waiters after the owner is atomically closed.</summary>
+    /// <returns>The asynchronous test operation.</returns>
+    [Test]
+    public async Task CompleteAsyncRegistrationExceptionDrainsWaitersAfterAtomicOwnerClose()
+    {
+        await using HttpReplayCoordinator coordinator = new(CreateOptions(SentAtUtc));
+        using var replayTimeout = new CancellationTokenSource(TimeSpan.FromMilliseconds(WaitTimeoutMilliseconds));
+        var request = CreateRequest(HttpReplayOperationKind.Connect);
+        var session = new HttpReplayIssuedSession { SessionId = ReplaySessionId, SessionSecret = SessionSecret, ExpiresAtUtc = SentAtUtc.Add(Window + Window) };
+        var first = await coordinator.AdmitAsync(request, static _ => new(HttpReplayAuthorizationResult.Allowed), CancellationToken.None);
+        var replayAdmission = coordinator.AdmitAsync(request, static _ => new(HttpReplayAuthorizationResult.Allowed), replayTimeout.Token).AsTask();
+        await Assert.That(first.Owner).IsNotNull();
+        if (first.Owner is null)
+        {
+            return;
+        }
+
+        await AssertNotCompletedWithinObservationAsync(replayAdmission);
+        await coordinator.Sessions.DisposeAsync();
+        var failureStatus = await coordinator.CompleteAsync(first.Owner, new() { StatusCode = HttpStatusCode.OK, ResponseBytes = SmallResponseBytes, ConnectSession = session });
+        await Assert.That(failureStatus).IsEqualTo(HttpStatusCode.ServiceUnavailable);
+        var replay = await AwaitWithTimeoutAsync(replayAdmission);
+        await Assert.That(replay.Kind).IsEqualTo(HttpReplayAdmissionKind.ReplayTransient);
+        await Assert.That(replay.Failure?.StatusCode).IsEqualTo(HttpStatusCode.ServiceUnavailable);
+    }
+
+    /// <summary>Verifies a connect registration clock failure drains waiters after atomic owner close without leaking waiter capacity.</summary>
+    /// <returns>The asynchronous test operation.</returns>
+    [Test]
+    public async Task CompleteAsyncRegistrationClockFailureDrainsWaitersAfterAtomicOwnerClose()
+    {
+        var clock = new ManualTimeProvider(SentAtUtc);
+        var options = CreateOptions(SentAtUtc) with { TimeProvider = clock, MaximumActiveReplayWaiters = SingleAuthorizationCall };
+        await using HttpReplayCoordinator coordinator = new(options);
+        using var replayTimeout = new CancellationTokenSource(TimeSpan.FromMilliseconds(WaitTimeoutMilliseconds));
+        using var capacityTimeout = new CancellationTokenSource(TimeSpan.FromMilliseconds(WaitTimeoutMilliseconds));
+        var request = CreateRequest(HttpReplayOperationKind.Connect);
+        var session = new HttpReplayIssuedSession { SessionId = ReplaySessionId, SessionSecret = SessionSecret, ExpiresAtUtc = SentAtUtc.Add(Window + Window) };
+        var first = await coordinator.AdmitAsync(request, static _ => new(HttpReplayAuthorizationResult.Allowed), CancellationToken.None);
+        var replayAdmission = coordinator.AdmitAsync(request, static _ => new(HttpReplayAuthorizationResult.Allowed), replayTimeout.Token).AsTask();
+        await Assert.That(first.Owner).IsNotNull();
+        if (first.Owner is null)
+        {
+            return;
+        }
+
+        await AssertNotCompletedWithinObservationAsync(replayAdmission);
+        var clockFailure = new InvalidOperationException("Replay registration clock failed.");
+        clock.ThrowOnNextRead(clockFailure);
+        InvalidOperationException? thrown = null;
+        try
+        {
+            _ = await coordinator.CompleteAsync(first.Owner, new() { StatusCode = HttpStatusCode.OK, ResponseBytes = SmallResponseBytes, ConnectSession = session });
+        }
+        catch (InvalidOperationException exception)
+        {
+            thrown = exception;
+        }
+        finally
+        {
+            clock.ClearFailure();
+        }
+
+        await Assert.That(thrown).IsSameReferenceAs(clockFailure);
+        var replay = await AwaitWithTimeoutAsync(replayAdmission);
+        await Assert.That(replay.Kind).IsEqualTo(HttpReplayAdmissionKind.ReplayTransient);
+        await Assert.That(replay.Owner).IsNull();
+        await Assert.That(replay.CachedResponse).IsNull();
+        await Assert.That(replay.Failure?.StatusCode).IsEqualTo(HttpStatusCode.ServiceUnavailable);
+        var capacityRequest = request with { Nonce = AlternateNonce };
+        var capacityOwner = await coordinator.AdmitAsync(capacityRequest, static _ => new(HttpReplayAuthorizationResult.Allowed), CancellationToken.None);
+        var capacityReplay = coordinator.AdmitAsync(capacityRequest, static _ => new(HttpReplayAuthorizationResult.Allowed), capacityTimeout.Token).AsTask();
+        await Assert.That(capacityOwner.Owner).IsNotNull();
+        if (capacityOwner.Owner is null)
+        {
+            return;
+        }
+
+        await AssertNotCompletedWithinObservationAsync(capacityReplay);
+        await coordinator.CompleteAsync(capacityOwner.Owner, new() { StatusCode = HttpStatusCode.OK, ResponseBytes = SmallResponseBytes });
+        var capacityDecision = await AwaitWithTimeoutAsync(capacityReplay);
+        await Assert.That(capacityDecision.Kind).IsEqualTo(HttpReplayAdmissionKind.ReplayCached);
+    }
+
+    /// <summary>Verifies an expired signed session is rejected by coordinator admission before entry ownership.</summary>
+    /// <returns>The asynchronous test operation.</returns>
+    [Test]
+    public async Task AdmitAsyncRejectsExpiredSignedSessionBeforeEntryOwnership()
+    {
+        var expiresAtUtc = SentAtUtc.AddTicks(SingleAuthorizationCall);
+        var clock = new ManualTimeProvider(expiresAtUtc.AddTicks(SingleAuthorizationCall));
+        await using HttpReplayCoordinator coordinator = new(CreateOptions(SentAtUtc) with { TimeProvider = clock });
+        var session = new HttpReplayIssuedSession { SessionId = ReplaySessionId, SessionSecret = SessionSecret, ExpiresAtUtc = expiresAtUtc };
+        coordinator.Sessions.RegisterIssued(new(TenantId, ClientId), session, SentAtUtc);
+        var request = CreateAuthenticatedRequestWithSession(HttpReplayOperationKind.Push, session);
+        var authorizationCalls = 0;
+        var decision = await coordinator.AdmitAsync(request, AuthorizeAsync, CancellationToken.None);
+        await Assert.That(decision.Kind).IsEqualTo(HttpReplayAdmissionKind.Reject);
+        await Assert.That(decision.Owner).IsNull();
+        await Assert.That(decision.Failure?.Kind).IsEqualTo(HttpTransportFailureKind.StaleReplaySession);
+        await Assert.That(decision.Failure?.StatusCode).IsEqualTo(HttpStatusCode.Unauthorized);
+        await Assert.That(authorizationCalls).IsEqualTo(SingleAuthorizationCall);
+        ValueTask<HttpReplayAuthorizationResult> AuthorizeAsync(CancellationToken cancellationToken)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            authorizationCalls++;
+            return new(HttpReplayAuthorizationResult.Allowed);
+        }
+    }
+
+    /// <summary>Verifies missing replay MAC syntax is rejected before authorization or session lookup.</summary>
+    /// <returns>The asynchronous test operation.</returns>
+    /// <exception cref="InvalidOperationException">The expected transport exception was not captured.</exception>
+    [Test]
+    public async Task AdmitAsyncRejectsMissingReplayMacBeforeAuthorization()
+    {
+        await using HttpReplayCoordinator coordinator = new(CreateOptions(SentAtUtc));
+        var request = CreateAuthenticatedRequest(coordinator, HttpReplayOperationKind.Push) with { ReplayMac = null };
+        var authorizationCalls = 0;
+        var exception = await Assert.That(async () => _ = await coordinator.AdmitAsync(request, AuthorizeAsync, CancellationToken.None)).ThrowsExactly<HttpRemoteTransportException>();
+        await Assert.That(exception).IsNotNull();
+        var transportException = exception ?? throw new InvalidOperationException("Expected missing replay MAC to fail with HTTP transport exception.");
+        await Assert.That(transportException.Kind).IsEqualTo(HttpTransportFailureKind.ValidationRejected);
+        await Assert.That(transportException.StatusCode).IsEqualTo(HttpStatusCode.BadRequest);
+        await Assert.That(authorizationCalls).IsEqualTo(0);
+        ValueTask<HttpReplayAuthorizationResult> AuthorizeAsync(CancellationToken cancellationToken)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            authorizationCalls++;
+            return new(HttpReplayAuthorizationResult.Allowed);
+        }
     }
 
     /// <summary>Verifies reauthorization runs for every duplicate admission path.</summary>
@@ -591,12 +744,10 @@ public sealed partial class HttpReplayCoordinatorTests
             return;
         }
 
-        await first.Owner.AbandonAsync(CancellationToken.None);
+        await first.Owner.DisposeAsync();
         var replay = await coordinator.AdmitAsync(request, AuthorizeAsync, CancellationToken.None);
-
         await Assert.That(calls).IsEqualTo(DoubleAuthorizationCall);
         await Assert.That(replay.Kind).IsEqualTo(HttpReplayAdmissionKind.Execute);
-
         ValueTask<HttpReplayAuthorizationResult> AuthorizeAsync(CancellationToken cancellationToken)
         {
             cancellationToken.ThrowIfCancellationRequested();
@@ -625,11 +776,9 @@ public sealed partial class HttpReplayCoordinatorTests
             first.Owner,
             new() { StatusCode = HttpStatusCode.OK, ContentType = new('a', LargeContentTypeLength), ResponseBytes = SmallResponseBytes });
         var replay = await coordinator.AdmitAsync(request, AuthorizeReplayAsync, CancellationToken.None);
-
         await Assert.That(authorizationCalls).IsEqualTo(SingleAuthorizationCall);
         await Assert.That(replay.Kind).IsEqualTo(HttpReplayAdmissionKind.Execute);
         await Assert.That(replay.Owner).IsNotNull();
-
         ValueTask<HttpReplayAuthorizationResult> AuthorizeReplayAsync(CancellationToken cancellationToken)
         {
             cancellationToken.ThrowIfCancellationRequested();
@@ -657,20 +806,15 @@ public sealed partial class HttpReplayCoordinatorTests
         }
 
         await AssertNotCompletedWithinObservationAsync(firstReplay);
-
         var saturated = await coordinator.AdmitAsync(request, static _ => new(HttpReplayAuthorizationResult.Allowed), CancellationToken.None);
-
         await Assert.That(saturated.Kind).IsEqualTo(HttpReplayAdmissionKind.ReplayTransient);
         await Assert.That(saturated.Failure?.StatusCode).IsEqualTo(HttpStatusCode.TooManyRequests);
-
         await firstReplayTimeout.CancelAsync();
         await Assert.That(async () => await firstReplay).Throws<OperationCanceledException>();
-
         var secondReplay = coordinator.AdmitAsync(request, static _ => new(HttpReplayAuthorizationResult.Allowed), secondReplayTimeout.Token).AsTask();
         await AssertNotCompletedWithinObservationAsync(secondReplay);
         await coordinator.CompleteAsync(first.Owner, new() { StatusCode = HttpStatusCode.OK, ResponseBytes = SmallResponseBytes });
         var replay = await AwaitWithTimeoutAsync(secondReplay);
-
         await Assert.That(replay.Kind).IsEqualTo(HttpReplayAdmissionKind.ReplayCached);
         await AssertByteArrayEqualsAsync(replay.CachedResponse?.Body.ToArray(), SmallResponseBytes);
     }
@@ -692,7 +836,6 @@ public sealed partial class HttpReplayCoordinatorTests
 
         await coordinator.CompleteAsync(first.Owner, new() { StatusCode = HttpStatusCode.OK, ResponseBytes = OversizedResponseBytes, FailedBeforeEffect = true });
         var replay = await coordinator.AdmitAsync(request, static _ => new(HttpReplayAuthorizationResult.Allowed), CancellationToken.None);
-
         await Assert.That(replay.Kind).IsEqualTo(HttpReplayAdmissionKind.Reject);
         await Assert.That(replay.Failure?.Kind).IsEqualTo(HttpTransportFailureKind.PayloadTooLarge);
         await Assert.That(replay.Failure?.StatusCode).IsEqualTo(HttpStatusCode.RequestEntityTooLarge);
@@ -715,7 +858,6 @@ public sealed partial class HttpReplayCoordinatorTests
         await coordinator.CompleteAsync(first.Owner, new() { StatusCode = HttpStatusCode.OK, ResponseBytes = SmallResponseBytes });
         var ambiguousRequest = request with { CanonicalRequest = CreateCanonicalRequest(AlternateResponseBytes) };
         var replay = await coordinator.AdmitAsync(ambiguousRequest, static _ => new(HttpReplayAuthorizationResult.Allowed), CancellationToken.None);
-
         await Assert.That(replay.Kind).IsEqualTo(HttpReplayAdmissionKind.Reject);
         await Assert.That(replay.Failure?.Kind).IsEqualTo(HttpTransportFailureKind.ValidationRejected);
         await Assert.That(replay.Failure?.StatusCode).IsEqualTo(HttpStatusCode.Conflict);
@@ -742,7 +884,6 @@ public sealed partial class HttpReplayCoordinatorTests
         await coordinator.DisposeAsync();
         var replay = await AwaitWithTimeoutAsync(replayAdmission);
         await coordinator.CompleteAsync(first.Owner, new() { StatusCode = HttpStatusCode.OK, ResponseBytes = SmallResponseBytes, ConnectSession = session });
-
         await Assert.That(replay.Kind).IsEqualTo(HttpReplayAdmissionKind.ReplayTransient);
         await Assert.That(replay.Failure?.StatusCode).IsEqualTo(HttpStatusCode.ServiceUnavailable);
     }
@@ -756,6 +897,11 @@ public sealed partial class HttpReplayCoordinatorTests
         var completed = await Task.WhenAny(task, delay);
         await Assert.That(completed).IsSameReferenceAs(delay);
     }
+
+    /// <summary>Creates a bounded wait timeout task.</summary>
+    /// <returns>The timeout task.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static Task CreateWaitTimeoutTask() => Task.Delay(TimeSpan.FromMilliseconds(WaitTimeoutMilliseconds));
 
     /// <summary>Awaits a replay admission with a bounded timeout.</summary>
     /// <param name="task">The replay admission task.</param>
@@ -887,6 +1033,43 @@ public sealed partial class HttpReplayCoordinatorTests
     /// <returns>The replay options.</returns>
     private static HttpReplayProtectionOptions CreateOptions(DateTimeOffset utcNow) => new() { TimeProvider = new ManualTimeProvider(utcNow) };
 
+    /// <summary>A replay clock that blocks a selected read to expose callbacks under coordinator locks.</summary>
+    /// <param name="utcNow">The returned UTC instant.</param>
+    /// <param name="blockedRead">The one-based read number that should block.</param>
+    private sealed class BlockingSelectedReadTimeProvider(DateTimeOffset utcNow, int blockedRead) : TimeProvider
+    {
+        /// <summary>The signal raised when the selected read is reached.</summary>
+        private readonly TaskCompletionSource<object?> _blockedReadStarted = new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        /// <summary>The signal that releases the selected read.</summary>
+        private readonly TaskCompletionSource<object?> _releaseBlockedRead = new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        /// <summary>The number of clock reads.</summary>
+        private int _readCount;
+
+        /// <summary>Gets the signal raised when the selected read is reached.</summary>
+        internal Task BlockedReadStarted => _blockedReadStarted.Task;
+
+        /// <inheritdoc />
+        public override DateTimeOffset GetUtcNow()
+        {
+            var readCount = Interlocked.Increment(ref _readCount);
+            if (readCount == blockedRead)
+            {
+                _ = _blockedReadStarted.TrySetResult(null);
+                var awaiter = _releaseBlockedRead.Task.GetAwaiter();
+                _ = awaiter.GetResult();
+            }
+
+            return utcNow;
+        }
+
+        /// <summary>Releases the blocked read.</summary>
+        /// <returns><see langword="true"/> when this call released the read.</returns>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        internal bool ReleaseBlockedRead() => _releaseBlockedRead.TrySetResult(null);
+    }
+
     /// <summary>A manually advanced replay clock for freshness tests.</summary>
     /// <param name="utcNow">The initial UTC instant.</param>
     private sealed class ManualTimeProvider(DateTimeOffset utcNow) : TimeProvider
@@ -894,11 +1077,37 @@ public sealed partial class HttpReplayCoordinatorTests
         /// <summary>The current UTC instant.</summary>
         private DateTimeOffset _utcNow = utcNow;
 
+        /// <summary>The optional one-shot clock failure.</summary>
+        private Exception? _nextFailure;
+
         /// <inheritdoc />
-        public override DateTimeOffset GetUtcNow() => _utcNow;
+        public override DateTimeOffset GetUtcNow()
+        {
+            var failure = Interlocked.Exchange(ref _nextFailure, null);
+            if (failure is not null)
+            {
+                throw failure;
+            }
+
+            return _utcNow;
+        }
 
         /// <summary>Sets the current UTC instant.</summary>
         /// <param name="utcNow">The new UTC instant.</param>
         internal void SetUtcNow(DateTimeOffset utcNow) => _utcNow = utcNow;
+
+        /// <summary>Throws the supplied exception on the next clock read.</summary>
+        /// <param name="failure">The clock failure.</param>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        internal void ThrowOnNextRead(Exception failure) => Volatile.Write(ref _nextFailure, failure);
+
+        /// <summary>Clears any armed clock failure.</summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        internal void ClearFailure() => Volatile.Write(ref _nextFailure, null);
     }
+
+    /// <summary>Captures admission inputs for a long-running blocked-clock probe.</summary>
+    /// <param name="Coordinator">The coordinator under test.</param>
+    /// <param name="Request">The replay request.</param>
+    private sealed record BlockedClockAdmissionContext(HttpReplayCoordinator Coordinator, HttpReplayRequest Request);
 }

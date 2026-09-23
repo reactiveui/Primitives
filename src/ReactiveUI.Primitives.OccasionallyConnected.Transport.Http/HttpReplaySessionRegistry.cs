@@ -100,18 +100,28 @@ internal sealed class HttpReplaySessionRegistry : IAsyncDisposable
         }
     }
 
-    /// <summary>Issues a fresh replay session for the trusted principal.</summary>
+    /// <summary>Issues and registers a fresh replay session for the trusted principal.</summary>
     /// <param name="principal">The trusted session owner.</param>
     /// <param name="observedUtc">The monotonic observed timestamp.</param>
     /// <returns>The issued replay session header values.</returns>
     /// <exception cref="HttpRemoteTransportException">Input is invalid or capacity is unavailable.</exception>
     internal HttpReplayIssuedSession Issue(HttpReplayPrincipal principal, DateTimeOffset observedUtc)
     {
-        ValidatePrincipal(principal);
-        var expiresAtUtc = AddChecked(observedUtc, _options.ReplaySessionRetention, nameof(observedUtc));
-        var session = new HttpReplayIssuedSession { SessionId = CreateToken(), SessionSecret = CreateToken(), ExpiresAtUtc = expiresAtUtc };
+        var session = CreatePending(principal, observedUtc);
         RegisterIssued(principal, session, observedUtc);
         return session;
+    }
+
+    /// <summary>Creates fresh replay session header material without retaining it.</summary>
+    /// <param name="principal">The trusted session owner.</param>
+    /// <param name="observedUtc">The monotonic observed timestamp.</param>
+    /// <returns>The pending issued replay session.</returns>
+    /// <exception cref="HttpRemoteTransportException">Input is invalid.</exception>
+    internal HttpReplayIssuedSession CreatePending(HttpReplayPrincipal principal, DateTimeOffset observedUtc)
+    {
+        ValidatePrincipal(principal);
+        var expiresAtUtc = AddChecked(observedUtc, _options.ReplaySessionRetention, nameof(observedUtc));
+        return new() { TenantId = principal.TenantId, SessionId = CreateToken(), SessionSecret = CreateToken(), ExpiresAtUtc = expiresAtUtc };
     }
 
     /// <summary>Registers an endpoint-issued replay session.</summary>
@@ -183,6 +193,7 @@ internal sealed class HttpReplaySessionRegistry : IAsyncDisposable
         byte[]? sessionSecret = null;
         string? verifiedSessionId = null;
         var verifiedExpiresAtUtc = DateTimeOffset.MinValue;
+        var foundSessionForAnotherOwner = false;
         lock (_gate)
         {
             ThrowIfDisposed();
@@ -194,11 +205,16 @@ internal sealed class HttpReplaySessionRegistry : IAsyncDisposable
                 verifiedSessionId = entry.SessionId;
                 verifiedExpiresAtUtc = entry.ExpiresAtUtc;
             }
+            else
+            {
+                foundSessionForAnotherOwner = entry is not null;
+            }
         }
 
         if (sessionSecret is null || verifiedSessionId is null)
         {
-            throw new HttpRemoteTransportException(HttpTransportFailureKind.Authentication, HttpStatusCode.Unauthorized);
+            var kind = foundSessionForAnotherOwner ? HttpTransportFailureKind.Authentication : HttpTransportFailureKind.StaleReplaySession;
+            throw new HttpRemoteTransportException(kind, HttpStatusCode.Unauthorized);
         }
 
         try

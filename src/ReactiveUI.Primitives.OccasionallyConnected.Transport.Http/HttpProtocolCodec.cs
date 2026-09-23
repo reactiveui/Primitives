@@ -31,6 +31,7 @@ internal sealed partial class HttpProtocolCodec
         | RemoteTransportCapabilities.ReceiveAcknowledgements
         | RemoteTransportCapabilities.ServerIdempotency
         | RemoteTransportCapabilities.AtomicApplyAndAcknowledge
+        | RemoteTransportCapabilities.SnapshotRecovery
         | RemoteTransportCapabilities.StreamingReceive;
 
     /// <summary>The decimal number base.</summary>
@@ -87,16 +88,37 @@ internal sealed partial class HttpProtocolCodec
     /// <summary>The protocol limits.</summary>
     private readonly HttpProtocolLimits _limits;
 
+    /// <summary>The snapshot recovery protocol limits.</summary>
+    private readonly SnapshotRecoveryLimits _snapshotRecoveryLimits;
+
     /// <summary>Initializes a new instance of the <see cref="HttpProtocolCodec"/> class.</summary>
     /// <param name="options">The adapter options.</param>
-    internal HttpProtocolCodec(HttpRemoteTransportOptions options) => _limits = HttpProtocolLimits.FromOptions(options).Complete();
+    internal HttpProtocolCodec(HttpRemoteTransportOptions options)
+    {
+        ArgumentExceptionHelper.ThrowIfNull(options);
+        ArgumentExceptionHelper.ThrowIfNull(options.SnapshotRecoveryLimits);
+        _limits = HttpProtocolLimits.FromOptions(options).Complete();
+        _snapshotRecoveryLimits = options.SnapshotRecoveryLimits;
+        _snapshotRecoveryLimits.Validate();
+    }
 
     /// <summary>Initializes a new instance of the <see cref="HttpProtocolCodec"/> class.</summary>
     /// <param name="limits">The protocol limits.</param>
     internal HttpProtocolCodec(HttpProtocolLimits limits)
+        : this(limits, new SnapshotRecoveryLimits())
+    {
+    }
+
+    /// <summary>Initializes a new instance of the <see cref="HttpProtocolCodec"/> class.</summary>
+    /// <param name="limits">The protocol limits.</param>
+    /// <param name="snapshotRecoveryLimits">The snapshot recovery limits.</param>
+    internal HttpProtocolCodec(HttpProtocolLimits limits, SnapshotRecoveryLimits snapshotRecoveryLimits)
     {
         ArgumentExceptionHelper.ThrowIfNull(limits);
+        ArgumentExceptionHelper.ThrowIfNull(snapshotRecoveryLimits);
         _limits = limits.Complete();
+        _snapshotRecoveryLimits = snapshotRecoveryLimits;
+        _snapshotRecoveryLimits.Validate();
     }
 
     /// <summary>Serializes a connect request.</summary>
@@ -321,19 +343,19 @@ internal sealed partial class HttpProtocolCodec
     /// <returns>The subscribe request.</returns>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal RemoteSubscribeRequest ParseSubscribeRequest(string query) =>
+        ParseSubscribeRequestWithQueryFields(query).Request;
+
+    /// <summary>Parses a subscribe request query string and preserves its exact decoded fields for replay canonicalization.</summary>
+    /// <param name="query">The encoded query string.</param>
+    /// <returns>The subscribe request and decoded query fields.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    internal HttpSubscribeRequestParseResult ParseSubscribeRequestWithQueryFields(string query) =>
         TranslateProtocolExceptions(
             () =>
             {
                 var values = ParseQuery(query);
-                RequireKeys(values, StreamIdPropertyName, SubscriptionIdPropertyName, PositionKindPropertyName);
-                var streamId = new StreamId(values[StreamIdPropertyName]);
-                var subscriptionId = new SubscriptionId(Guid.Parse(values[SubscriptionIdPropertyName]));
-                var cursor = GetOptionalQueryValue(values, CursorPropertyName);
-                var kind = (StartPositionKind)ParseInt32(values[PositionKindPropertyName]);
-                var position = CreateStartPosition(kind, values);
-                var request = new RemoteSubscribeRequest(streamId, subscriptionId, cursor, position);
-                ValidateSubscribeRequest(request);
-                return request;
+                var request = CreateSubscribeRequest(values);
+                return new HttpSubscribeRequestParseResult(request, CreateQueryFields(values));
             });
 
     /// <summary>Deserializes a subscribe response into complete batches.</summary>

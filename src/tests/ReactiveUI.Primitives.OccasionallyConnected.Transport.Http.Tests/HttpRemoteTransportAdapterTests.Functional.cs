@@ -1,11 +1,9 @@
 // Copyright (c) 2019-2026 ReactiveUI Association Incorporated. All rights reserved.
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
-
 using System.Net;
 using System.Runtime.CompilerServices;
 using ReactiveUI.Primitives.OccasionallyConnected;
-
 namespace ReactiveUI.Primitives.OccasionallyConnected.Transport.Http.Tests;
 
 /// <summary>Functional edge-case tests for <see cref="HttpRemoteTransportAdapter"/>.</summary>
@@ -44,6 +42,15 @@ public sealed partial class HttpRemoteTransportAdapterTests
     /// <summary>The expected connect and subscribe request count.</summary>
     private const int ConnectAndSubscribeRequestCount = 2;
 
+    /// <summary>The stale replay session marker header.</summary>
+    private const string StaleReplaySessionHeader = "X-ReactiveUI-Replay-Session-State";
+
+    /// <summary>The stale replay session marker value.</summary>
+    private const string StaleReplaySessionValue = "stale";
+
+    /// <summary>A malformed stale replay session marker value.</summary>
+    private const string MalformedStaleReplaySessionValue = "expired";
+
     /// <summary>Verifies the convenience overload routes through the cancellation-aware connect path.</summary>
     /// <returns>The asynchronous test operation.</returns>
     [Test]
@@ -52,9 +59,7 @@ public sealed partial class HttpRemoteTransportAdapterTests
         var handler = new RecordingHttpHandler(static request => CreateProtocolResponse(HttpStatusCode.OK, ConnectResponseJson));
         using var httpClient = CreateHttpClient(handler);
         await using var adapter = CreateAdapter(httpClient);
-
         _ = await adapter.ConnectAsync(CreateConnectRequest());
-
         await Assert.That(handler.Requests[0].RequestUri).IsEqualTo(new(ConnectEndpoint));
     }
 
@@ -66,22 +71,35 @@ public sealed partial class HttpRemoteTransportAdapterTests
         using var httpClient = CreateHttpClient(new RecordingHttpHandler(static request => CreateProtocolResponse(HttpStatusCode.OK, ConnectResponseJson)));
         var adapter = CreateAdapter(httpClient);
         await adapter.DisposeAsync();
-
         await Assert.That(async () => _ = await adapter.ConnectAsync(CreateConnectRequest(), CancellationToken.None)).ThrowsExactly<ObjectDisposedException>();
     }
 
-    /// <summary>Verifies configured connect routes cannot escape the trusted base path.</summary>
+    /// <summary>Verifies encoded connect routes cannot escape the trusted base path after URI normalization.</summary>
     /// <returns>The asynchronous test operation.</returns>
     [Test]
     public async Task ConnectAsyncRejectsConfiguredPathEscapingBaseAddress()
     {
         var handler = new RecordingHttpHandler(static request => CreateProtocolResponse(HttpStatusCode.OK, ConnectResponseJson));
         using var httpClient = CreateHttpClient(handler);
-        await using var adapter = CreateAdapter(httpClient, CreateBaseAddress(), static options => options with { ConnectPath = "../connect" });
-
+        await using var adapter = CreateAdapter(httpClient, CreateBaseAddress(), static options => options with { ConnectPath = "%2E%2E/connect" });
         var exception = await CaptureHttpExceptionAsync(async () => _ = await adapter.ConnectAsync(CreateConnectRequest(), CancellationToken.None));
-
         await Assert.That(exception.Kind).IsEqualTo(HttpTransportFailureKind.Configuration);
+        await Assert.That(handler.Requests).IsEmpty();
+    }
+
+    /// <summary>Verifies unsafe route configuration is rejected before any HTTP request is sent.</summary>
+    /// <param name="path">The unsafe route path.</param>
+    /// <returns>The asynchronous test operation.</returns>
+    [Test]
+    [Arguments("?streamId=stream-1")]
+    [Arguments(".")]
+    [Arguments("../push")]
+    [Arguments("push/../ack")]
+    public async Task ConstructorRejectsUnsafeRoutesBeforeSend(string path)
+    {
+        var handler = new RecordingHttpHandler(static request => CreateProtocolResponse(HttpStatusCode.OK, ConnectResponseJson));
+        using var httpClient = CreateHttpClient(handler);
+        await Assert.That(() => CreateAdapter(httpClient, CreateBaseAddress(), options => options with { PushPath = path })).ThrowsExactly<ArgumentException>();
         await Assert.That(handler.Requests).IsEmpty();
     }
 
@@ -93,9 +111,7 @@ public sealed partial class HttpRemoteTransportAdapterTests
         var handler = new RecordingHttpHandler(static request => throw new HttpRequestException("connection failed before response headers"));
         using var httpClient = CreateHttpClient(handler);
         await using var adapter = CreateAdapter(httpClient);
-
         var exception = await CaptureHttpExceptionAsync(async () => _ = await adapter.ConnectAsync(CreateConnectRequest(), CancellationToken.None));
-
         await Assert.That(exception.Kind).IsEqualTo(HttpTransportFailureKind.AmbiguousTransportOutcome);
         await Assert.That(exception.InnerException).IsTypeOf<HttpRequestException>();
     }
@@ -114,11 +130,89 @@ public sealed partial class HttpRemoteTransportAdapterTests
         using var httpClient = CreateHttpClient(handler);
         await using var adapter = CreateAdapter(httpClient);
         var session = await adapter.ConnectAsync(CreateConnectRequest(), CancellationToken.None);
-
         var exception = await CaptureHttpExceptionAsync(async () => _ = await session.PushAsync(CreateBatch(), CancellationToken.None));
-
         await Assert.That(exception.Kind).IsEqualTo(HttpTransportFailureKind.Authentication);
         await Assert.That(exception.StatusCode).IsEqualTo(HttpStatusCode.Unauthorized);
+    }
+
+    /// <summary>Verifies a single stale replay marker maps to remote-session-expired retry classification.</summary>
+    /// <returns>The asynchronous test operation.</returns>
+    [Test]
+    public async Task PushAsyncStaleReplayMarkerOnUnauthorizedMapsRemoteSessionExpired()
+    {
+        var handler = new RecordingHttpHandler(static request => request.RequestUri?.AbsolutePath switch
+        {
+            ConnectRoute => CreateProtocolResponse(HttpStatusCode.OK, ConnectResponseJson),
+            PushRoute => CreateResponseWithStaleReplayMarker(HttpStatusCode.Unauthorized, StaleReplaySessionValue),
+            _ => CreateProtocolResponse(HttpStatusCode.NotFound, "{}"),
+        });
+        using var httpClient = CreateHttpClient(handler);
+        await using var adapter = CreateAdapter(httpClient);
+        var session = await adapter.ConnectAsync(CreateConnectRequest(), CancellationToken.None);
+        var exception = await CaptureHttpExceptionAsync(async () => _ = await session.PushAsync(CreateBatch(), CancellationToken.None));
+        await Assert.That(exception.Kind).IsEqualTo(HttpTransportFailureKind.StaleReplaySession);
+        await Assert.That(exception.RetryFailure.Kind).IsEqualTo(RetryFailureKind.RemoteSessionExpired);
+        await Assert.That(exception.RetryFailure.CredentialsVersion).IsNull();
+    }
+
+    /// <summary>Verifies a stale replay marker on a non-401 response does not change status classification.</summary>
+    /// <returns>The asynchronous test operation.</returns>
+    [Test]
+    public async Task PushAsyncStaleReplayMarkerOnForbiddenRemainsAuthorizationFailure()
+    {
+        var handler = new RecordingHttpHandler(static request => request.RequestUri?.AbsolutePath switch
+        {
+            ConnectRoute => CreateProtocolResponse(HttpStatusCode.OK, ConnectResponseJson),
+            PushRoute => CreateResponseWithStaleReplayMarker(HttpStatusCode.Forbidden, StaleReplaySessionValue),
+            _ => CreateProtocolResponse(HttpStatusCode.NotFound, "{}"),
+        });
+        using var httpClient = CreateHttpClient(handler);
+        await using var adapter = CreateAdapter(httpClient);
+        var session = await adapter.ConnectAsync(CreateConnectRequest(), CancellationToken.None);
+        var exception = await CaptureHttpExceptionAsync(async () => _ = await session.PushAsync(CreateBatch(), CancellationToken.None));
+        await Assert.That(exception.Kind).IsEqualTo(HttpTransportFailureKind.AuthorizationDenied);
+        await Assert.That(exception.RetryFailure.Kind).IsEqualTo(RetryFailureKind.AuthorizationDenied);
+        await Assert.That(exception.RetryFailure.CredentialsVersion).IsNull();
+    }
+
+    /// <summary>Verifies duplicate stale replay marker values do not change plain authentication classification.</summary>
+    /// <returns>The asynchronous test operation.</returns>
+    [Test]
+    public async Task PushAsyncDuplicateStaleReplayMarkerOnUnauthorizedRemainsAuthenticationFailure()
+    {
+        var handler = new RecordingHttpHandler(static request => request.RequestUri?.AbsolutePath switch
+        {
+            ConnectRoute => CreateProtocolResponse(HttpStatusCode.OK, ConnectResponseJson),
+            PushRoute => CreateResponseWithStaleReplayMarker(HttpStatusCode.Unauthorized, StaleReplaySessionValue, StaleReplaySessionValue),
+            _ => CreateProtocolResponse(HttpStatusCode.NotFound, "{}"),
+        });
+        using var httpClient = CreateHttpClient(handler);
+        await using var adapter = CreateAdapter(httpClient);
+        var session = await adapter.ConnectAsync(CreateConnectRequest(), CancellationToken.None);
+        var exception = await CaptureHttpExceptionAsync(async () => _ = await session.PushAsync(CreateBatch(), CancellationToken.None));
+        await Assert.That(exception.Kind).IsEqualTo(HttpTransportFailureKind.Authentication);
+        await Assert.That(exception.RetryFailure.Kind).IsEqualTo(RetryFailureKind.Authentication);
+        await Assert.That(exception.RetryFailure.CredentialsVersion).IsNull();
+    }
+
+    /// <summary>Verifies malformed stale replay marker values do not change plain authentication classification.</summary>
+    /// <returns>The asynchronous test operation.</returns>
+    [Test]
+    public async Task PushAsyncMalformedStaleReplayMarkerOnUnauthorizedRemainsAuthenticationFailure()
+    {
+        var handler = new RecordingHttpHandler(static request => request.RequestUri?.AbsolutePath switch
+        {
+            ConnectRoute => CreateProtocolResponse(HttpStatusCode.OK, ConnectResponseJson),
+            PushRoute => CreateResponseWithStaleReplayMarker(HttpStatusCode.Unauthorized, MalformedStaleReplaySessionValue),
+            _ => CreateProtocolResponse(HttpStatusCode.NotFound, "{}"),
+        });
+        using var httpClient = CreateHttpClient(handler);
+        await using var adapter = CreateAdapter(httpClient);
+        var session = await adapter.ConnectAsync(CreateConnectRequest(), CancellationToken.None);
+        var exception = await CaptureHttpExceptionAsync(async () => _ = await session.PushAsync(CreateBatch(), CancellationToken.None));
+        await Assert.That(exception.Kind).IsEqualTo(HttpTransportFailureKind.Authentication);
+        await Assert.That(exception.RetryFailure.Kind).IsEqualTo(RetryFailureKind.Authentication);
+        await Assert.That(exception.RetryFailure.CredentialsVersion).IsNull();
     }
 
     /// <summary>Verifies configured push routes cannot escape the trusted base path.</summary>
@@ -132,11 +226,9 @@ public sealed partial class HttpRemoteTransportAdapterTests
             _ => CreateProtocolResponse(HttpStatusCode.NotFound, "{}"),
         });
         using var httpClient = CreateHttpClient(handler);
-        await using var adapter = CreateAdapter(httpClient, CreateBaseAddress(), static options => options with { PushPath = "../push" });
+        await using var adapter = CreateAdapter(httpClient, CreateBaseAddress(), static options => options with { PushPath = "%2E%2E/push" });
         var session = await adapter.ConnectAsync(CreateConnectRequest(), CancellationToken.None);
-
         var exception = await CaptureHttpExceptionAsync(async () => _ = await session.PushAsync(CreateBatch(), CancellationToken.None));
-
         await Assert.That(exception.Kind).IsEqualTo(HttpTransportFailureKind.Configuration);
         await Assert.That(handler.Requests).Count().IsEqualTo(1);
     }
@@ -149,7 +241,6 @@ public sealed partial class HttpRemoteTransportAdapterTests
         var timestampQuery = await CaptureSubscribeQueryAsync(StartPosition.FromTimestamp(new(2026, 9, 13, 0, 0, 0, TimeSpan.Zero)));
         var sequenceQuery = await CaptureSubscribeQueryAsync(StartPosition.FromSequence(SubscribeSequence));
         var cursorQuery = await CaptureSubscribeQueryAsync(StartPosition.FromCursor("start-cursor"));
-
         await Assert.That(timestampQuery).Contains(TimestampQueryMarker);
         await Assert.That(sequenceQuery).Contains(SequenceQueryMarker);
         await Assert.That(cursorQuery).Contains(InitialCursorQueryMarker);
@@ -165,10 +256,8 @@ public sealed partial class HttpRemoteTransportAdapterTests
         await using var adapter = CreateAdapter(httpClient);
         var session = await adapter.ConnectAsync(CreateConnectRequest(), CancellationToken.None);
         var subscribe = CreateSubscribeRequest(StartPosition.Latest);
-
         var enumerator = session.SubscribeAsync(subscribe, CancellationToken.None).GetAsyncEnumerator(CancellationToken.None);
         await enumerator.DisposeAsync();
-
         await Assert.That(handler.Requests).Count().IsEqualTo(1);
     }
 
@@ -184,10 +273,8 @@ public sealed partial class HttpRemoteTransportAdapterTests
         using var cancellation = new CancellationTokenSource();
         await cancellation.CancelAsync();
         var subscribe = CreateSubscribeRequest(StartPosition.Latest);
-
         await using var enumerator = session.SubscribeAsync(subscribe, cancellation.Token).GetAsyncEnumerator(CancellationToken.None);
         var hasBatch = await enumerator.MoveNextAsync();
-
         await Assert.That(hasBatch).IsFalse();
         await Assert.That(handler.Requests).Count().IsEqualTo(1);
     }
@@ -218,10 +305,8 @@ public sealed partial class HttpRemoteTransportAdapterTests
         await using var adapter = CreateAdapter(httpClient);
         var session = await adapter.ConnectAsync(CreateConnectRequest(), CancellationToken.None);
         var subscribe = CreateSubscribeRequest(StartPosition.Latest);
-
         await using var enumerator = session.SubscribeAsync(subscribe, CancellationToken.None).GetAsyncEnumerator(CancellationToken.None);
         var hasBatch = await enumerator.MoveNextAsync();
-
         await Assert.That(hasBatch).IsTrue();
         await Assert.That(subscribeAttempts).IsEqualTo(ConnectAndSubscribeRequestCount);
     }
@@ -243,12 +328,10 @@ public sealed partial class HttpRemoteTransportAdapterTests
         var session = await adapter.ConnectAsync(CreateConnectRequest(), CancellationToken.None);
         var subscribe = CreateSubscribeRequest(StartPosition.Latest);
         using var cancellation = new CancellationTokenSource();
-
         await using var enumerator = session.SubscribeAsync(subscribe, cancellation.Token).GetAsyncEnumerator(CancellationToken.None);
         var hasBatch = await enumerator.MoveNextAsync();
         await cancellation.CancelAsync();
         var hasSecondBatch = await enumerator.MoveNextAsync();
-
         await Assert.That(hasBatch).IsTrue();
         await Assert.That(hasSecondBatch).IsFalse();
         await Assert.That(handler.Requests).Count().IsEqualTo(ConnectAndSubscribeRequestCount);
@@ -272,13 +355,11 @@ public sealed partial class HttpRemoteTransportAdapterTests
         await using var adapter = CreateAdapter(httpClient);
         var session = await adapter.ConnectAsync(CreateConnectRequest(), CancellationToken.None);
         var subscribe = CreateSubscribeRequest(CurrentCursor, StartPosition.Latest);
-
         await using var enumerator = session.SubscribeAsync(subscribe, CancellationToken.None).GetAsyncEnumerator(CancellationToken.None);
         var hasDuplicate = await enumerator.MoveNextAsync();
         var duplicate = enumerator.Current;
         var hasNew = await enumerator.MoveNextAsync();
         var next = enumerator.Current;
-
         await Assert.That(hasDuplicate).IsTrue();
         await Assert.That(duplicate.NextCursor).IsEqualTo(CurrentCursor);
         await Assert.That(hasNew).IsTrue();
@@ -302,10 +383,8 @@ public sealed partial class HttpRemoteTransportAdapterTests
         await using var adapter = CreateAdapter(httpClient);
         var session = await adapter.ConnectAsync(CreateConnectRequest(), CancellationToken.None);
         var subscribe = CreateSubscribeRequest(CurrentCursor, StartPosition.Latest);
-
         await using var enumerator = session.SubscribeAsync(subscribe, CancellationToken.None).GetAsyncEnumerator(CancellationToken.None);
         var exception = await CaptureHttpExceptionAsync(async () => _ = await enumerator.MoveNextAsync());
-
         await Assert.That(exception.Kind).IsEqualTo(HttpTransportFailureKind.ProtocolViolation);
     }
 
@@ -319,7 +398,6 @@ public sealed partial class HttpRemoteTransportAdapterTests
         await using var adapter = CreateAdapter(httpClient);
         var session = await adapter.ConnectAsync(CreateConnectRequest(), CancellationToken.None);
         await session.DisposeAsync();
-
         await Assert.That(async () => _ = await session.PushAsync(CreateBatch(), CancellationToken.None)).ThrowsExactly<ObjectDisposedException>();
     }
 
@@ -345,9 +423,7 @@ public sealed partial class HttpRemoteTransportAdapterTests
         var session = await adapter.ConnectAsync(CreateConnectRequest(), CancellationToken.None);
         var push = session.PushAsync(CreateBatch(), CancellationToken.None).AsTask();
         await AwaitWithTimeoutAsync(pushEntered.Task);
-
         await AwaitWithTimeoutAsync(session.DisposeAsync().AsTask());
-
         await Assert.That(async () => await push).Throws<OperationCanceledException>();
     }
 
@@ -375,9 +451,7 @@ public sealed partial class HttpRemoteTransportAdapterTests
         var acknowledgement = new ReceiveAcknowledgement(subscribe.SubscriptionId, subscribe.StreamId, CurrentCursor);
         var acknowledge = session.AcknowledgeAsync(acknowledgement, CancellationToken.None).AsTask();
         await AwaitWithTimeoutAsync(acknowledgementEntered.Task);
-
         await AwaitWithTimeoutAsync(session.DisposeAsync().AsTask());
-
         await Assert.That(async () => await acknowledge).Throws<OperationCanceledException>();
     }
 
@@ -397,11 +471,20 @@ public sealed partial class HttpRemoteTransportAdapterTests
         await using var adapter = CreateAdapter(httpClient);
         var session = await adapter.ConnectAsync(CreateConnectRequest(), CancellationToken.None);
         var subscribe = CreateSubscribeRequest(position);
-
         await using var enumerator = session.SubscribeAsync(subscribe, CancellationToken.None).GetAsyncEnumerator(CancellationToken.None);
         _ = await enumerator.MoveNextAsync();
-
         return handler.Requests[1].RequestUri?.Query ?? string.Empty;
+    }
+
+    /// <summary>Creates a response with stale replay session marker values.</summary>
+    /// <param name="statusCode">The response status code.</param>
+    /// <param name="values">The marker values.</param>
+    /// <returns>The response.</returns>
+    private static HttpResponseMessage CreateResponseWithStaleReplayMarker(HttpStatusCode statusCode, params string[] values)
+    {
+        var response = new HttpResponseMessage(statusCode);
+        _ = response.Headers.TryAddWithoutValidation(StaleReplaySessionHeader, values);
+        return response;
     }
 
     /// <summary>Creates a subscribe request.</summary>

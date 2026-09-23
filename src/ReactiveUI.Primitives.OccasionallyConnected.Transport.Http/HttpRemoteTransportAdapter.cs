@@ -2,7 +2,10 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Globalization;
 using System.Net.Http;
+using System.Security.Cryptography;
+using System.Text;
 
 namespace ReactiveUI.Primitives.OccasionallyConnected.Transport.Http;
 
@@ -16,7 +19,20 @@ public sealed class HttpRemoteTransportAdapter : IRemoteTransportAdapter
         | RemoteTransportCapabilities.CursorResume
         | RemoteTransportCapabilities.ReceiveAcknowledgements
         | RemoteTransportCapabilities.ServerIdempotency
-        | RemoteTransportCapabilities.AtomicApplyAndAcknowledge;
+        | RemoteTransportCapabilities.AtomicApplyAndAcknowledge
+        | RemoteTransportCapabilities.SnapshotRecovery;
+
+    /// <summary>The maximum accepted replay token text length.</summary>
+    private const int MaximumReplayTokenLength = 128;
+
+    /// <summary>The maximum accepted encoded replay tenant header length.</summary>
+    private const int MaximumReplayTenantHeaderLength = 4096;
+
+    /// <summary>The base64 encoding quantum size.</summary>
+    private const int Base64QuantumSize = 4;
+
+    /// <summary>The replay token byte count.</summary>
+    private const int ReplayTokenBytes = 16;
 
     /// <summary>The adapter options.</summary>
     private readonly HttpRemoteTransportOptions _options;
@@ -73,11 +89,12 @@ public sealed class HttpRemoteTransportAdapter : IRemoteTransportAdapter
         HttpProtocolCodec codec = new(_options);
         using var admission = await _requestGate.EnterAsync(linked.Token).ConfigureAwait(false);
         var body = codec.SerializeConnectRequest(request);
-        using var response = await SendAsync(HttpMethod.Post, _options.ConnectPath, body, linked.Token).ConfigureAwait(false);
+        using var response = await SendConnectAsync(body, linked.Token).ConfigureAwait(false);
         var responseBody = await HttpProtocolContent.ReadBoundedBytesAsync(response, _options, linked.Token).ConfigureAwait(false);
         var capabilities = codec.DeserializeConnectResponse(responseBody);
         HttpRemoteTransportCapabilities.ValidateNegotiation(request, capabilities, AdapterCapabilities);
-        return new HttpRemoteTransportSession(_options, capabilities, _requestGate, _acknowledgementGate, _subscriptionGate, _shutdown.Token);
+        var replaySession = CreateReplaySession(response);
+        return new HttpRemoteTransportSession(_options, capabilities, new(_requestGate, _acknowledgementGate, _subscriptionGate), replaySession, request.Client, _shutdown.Token);
     }
 
     /// <summary>Connects to the remote peer without an external cancellation token.</summary>
@@ -130,6 +147,122 @@ public sealed class HttpRemoteTransportAdapter : IRemoteTransportAdapter
         await _disposeCompleted.Task.ConfigureAwait(false);
     }
 
+    /// <summary>Creates a retained replay session from connect response headers.</summary>
+    /// <param name="response">The connect response.</param>
+    /// <returns>The replay session.</returns>
+    /// <exception cref="HttpRemoteTransportException">Replay session headers are missing or malformed.</exception>
+    private static HttpReplayIssuedSession CreateReplaySession(HttpResponseMessage response)
+    {
+        var tenantId = GetOptionalHeader(response, HttpReplayHeaders.TenantId);
+        var sessionId = GetOptionalHeader(response, HttpReplayHeaders.SessionId);
+        var sessionSecret = GetOptionalHeader(response, HttpReplayHeaders.SessionSecret);
+        var sessionExpires = GetOptionalHeader(response, HttpReplayHeaders.SessionExpires);
+        if (tenantId is null || sessionId is null || sessionSecret is null || sessionExpires is null || !IsReplayTenantHeader(tenantId) || !IsReplayToken(sessionId) || !IsReplayToken(sessionSecret))
+        {
+            throw new HttpRemoteTransportException(HttpTransportFailureKind.ValidationRejected);
+        }
+
+        if (!DateTimeOffset.TryParseExact(sessionExpires, "O", CultureInfo.InvariantCulture, DateTimeStyles.None, out var expires)
+            || expires.Offset != TimeSpan.Zero)
+        {
+            throw new HttpRemoteTransportException(HttpTransportFailureKind.ValidationRejected);
+        }
+
+        var decodedTenantId = DecodeReplayTenantHeader(tenantId);
+        return new() { TenantId = decodedTenantId, SessionId = sessionId, SessionSecret = sessionSecret, ExpiresAtUtc = expires };
+    }
+
+    /// <summary>Gets a single optional response header.</summary>
+    /// <param name="response">The response.</param>
+    /// <param name="name">The header name.</param>
+    /// <returns>The header value, or <see langword="null"/>.</returns>
+    /// <exception cref="HttpRemoteTransportException">The response repeats the header.</exception>
+    private static string? GetOptionalHeader(HttpResponseMessage response, string name)
+    {
+        var count = HttpReplayHeaders.ReadValueCount(response.Headers, name, out var value);
+        return count > 1 ? throw new HttpRemoteTransportException(HttpTransportFailureKind.ValidationRejected) : value;
+    }
+
+    /// <summary>Checks a bounded replay tenant header before decoding it.</summary>
+    /// <param name="value">The encoded tenant header.</param>
+    /// <returns>Whether the tenant header is syntactically valid.</returns>
+    private static bool IsReplayTenantHeader(string value)
+    {
+        if (value.Length is 0 or > MaximumReplayTenantHeaderLength)
+        {
+            return false;
+        }
+
+        for (var index = 0; index < value.Length; index++)
+        {
+            if (!IsReplayTokenCharacter(value[index]))
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    /// <summary>Decodes a trusted replay tenant header.</summary>
+    /// <param name="value">The encoded tenant header.</param>
+    /// <returns>The decoded tenant identifier.</returns>
+    /// <exception cref="HttpRemoteTransportException">The tenant header is malformed.</exception>
+    private static string DecodeReplayTenantHeader(string value)
+    {
+        var paddedLength = checked(value.Length + ((Base64QuantumSize - (value.Length % Base64QuantumSize)) % Base64QuantumSize));
+        var padded = value.Replace('-', '+').Replace('_', '/').PadRight(paddedLength, '=');
+        try
+        {
+            var bytes = Convert.FromBase64String(padded);
+            var tenantId = new UTF8Encoding(false, true).GetString(bytes);
+            return string.IsNullOrWhiteSpace(tenantId)
+                ? throw new HttpRemoteTransportException(HttpTransportFailureKind.ValidationRejected)
+                : tenantId;
+        }
+        catch (Exception exception) when (exception is FormatException or DecoderFallbackException or ArgumentException or OverflowException)
+        {
+            throw new HttpRemoteTransportException(HttpTransportFailureKind.ValidationRejected);
+        }
+    }
+
+    /// <summary>Checks a bounded replay token before retaining it.</summary>
+    /// <param name="value">The token text.</param>
+    /// <returns>Whether the token is syntactically valid.</returns>
+    private static bool IsReplayToken(string value)
+    {
+        if (value.Length is 0 or > MaximumReplayTokenLength)
+        {
+            return false;
+        }
+
+        for (var index = 0; index < value.Length; index++)
+        {
+            if (!IsReplayTokenCharacter(value[index]))
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    /// <summary>Checks one replay token character.</summary>
+    /// <param name="character">The candidate character.</param>
+    /// <returns>Whether the character is allowed.</returns>
+    private static bool IsReplayTokenCharacter(char character) =>
+        character is >= 'A' and <= 'Z' or >= 'a' and <= 'z' or >= '0' and <= '9' or '-' or '_';
+
+    /// <summary>Creates an unpredictable replay header token.</summary>
+    /// <returns>The replay token.</returns>
+    private static string CreateReplayToken()
+    {
+        var bytes = new byte[ReplayTokenBytes];
+        using var generator = RandomNumberGenerator.Create();
+        generator.GetBytes(bytes);
+        return HttpReplayBase64Url.Encode(bytes);
+    }
+
     /// <summary>Starts an adapter-scoped connect operation.</summary>
     /// <returns>The operation lease.</returns>
     /// <exception cref="ObjectDisposedException">The adapter is disposed.</exception>
@@ -162,16 +295,14 @@ public sealed class HttpRemoteTransportAdapter : IRemoteTransportAdapter
         }
     }
 
-    /// <summary>Sends a bounded HTTP request and validates its response status.</summary>
-    /// <param name="method">The HTTP method.</param>
-    /// <param name="path">The relative endpoint path.</param>
-    /// <param name="body">The optional serialized body.</param>
+    /// <summary>Sends a bounded connect request and validates its response status.</summary>
+    /// <param name="body">The serialized connect body.</param>
     /// <param name="cancellationToken">The cancellation token.</param>
     /// <returns>The successful HTTP response.</returns>
     /// <exception cref="HttpRemoteTransportException">The request failed or returned a non-success status.</exception>
-    private async Task<HttpResponseMessage> SendAsync(HttpMethod method, string path, byte[]? body, CancellationToken cancellationToken)
+    private async Task<HttpResponseMessage> SendConnectAsync(byte[] body, CancellationToken cancellationToken)
     {
-        using var request = CreateRequest(method, path, body);
+        using var request = CreateConnectRequest(body);
         HttpResponseMessage response;
         try
         {
@@ -196,43 +327,50 @@ public sealed class HttpRemoteTransportAdapter : IRemoteTransportAdapter
         }
 
         var retryAfter = HttpTransportStatus.GetRetryAfter(response, _options.TimeProvider);
-        var kind = HttpTransportStatus.Classify(response.StatusCode);
+        var kind = HttpTransportStatus.Classify(response);
         response.Dispose();
         throw new HttpRemoteTransportException(kind, response.StatusCode, retryAfter);
     }
 
-    /// <summary>Creates a request under the trusted base URI.</summary>
-    /// <param name="method">The HTTP method.</param>
-    /// <param name="path">The configured relative path.</param>
-    /// <param name="body">The optional serialized body.</param>
+    /// <summary>Creates a connect request under the trusted base URI.</summary>
+    /// <param name="body">The serialized connect body.</param>
     /// <returns>The HTTP request.</returns>
-    private HttpRequestMessage CreateRequest(HttpMethod method, string path, byte[]? body)
+    private HttpRequestMessage CreateConnectRequest(byte[] body)
     {
-        var uri = ResolveEndpoint(path);
-        HttpRequestMessage request = new(method, uri);
+        var uri = ResolveConnectEndpoint();
+        HttpRequestMessage request = new(HttpMethod.Post, uri);
         request.Headers.Accept.ParseAdd(HttpProtocolContent.MediaType);
-        if (body is not null)
-        {
-            request.Content = new ByteArrayContent(body);
-            request.Content.Headers.ContentType = System.Net.Http.Headers.MediaTypeHeaderValue.Parse(HttpProtocolContent.MediaType);
-        }
-
+        AddConnectReplayHeaders(request, body);
+        request.Content = new ByteArrayContent(body);
+        request.Content.Headers.ContentType = System.Net.Http.Headers.MediaTypeHeaderValue.Parse(HttpProtocolContent.MediaType);
         return request;
     }
 
-    /// <summary>Resolves and validates a configured endpoint.</summary>
-    /// <param name="path">The relative path.</param>
+    /// <summary>Resolves and validates the configured connect endpoint.</summary>
     /// <returns>The endpoint URI.</returns>
     /// <exception cref="HttpRemoteTransportException">The configured endpoint escapes the trusted base address.</exception>
-    private Uri ResolveEndpoint(string path)
+    private Uri ResolveConnectEndpoint()
     {
-        Uri endpoint = new(_options.BaseAddress, path);
+        Uri endpoint = new(_options.BaseAddress, _options.ConnectPath);
         if (!_options.BaseAddress.IsBaseOf(endpoint))
         {
             throw new HttpRemoteTransportException(HttpTransportFailureKind.Configuration);
         }
 
         return endpoint;
+    }
+
+    /// <summary>Adds replay freshness headers for the initial connect request.</summary>
+    /// <param name="request">The HTTP request.</param>
+    /// <param name="body">The exact request body.</param>
+    private void AddConnectReplayHeaders(HttpRequestMessage request, byte[] body)
+    {
+        var observedUtc = _options.ReplayProtection.TimeProvider.GetUtcNow();
+        request.Headers.Add(HttpReplayHeaders.MessageId, CreateReplayToken());
+        request.Headers.Add(HttpReplayHeaders.Nonce, CreateReplayToken());
+        request.Headers.Add(HttpReplayHeaders.SentAt, observedUtc.ToString("O", CultureInfo.InvariantCulture));
+        _ = new HttpCanonicalRequestBuilder(_options.ReplayProtection)
+            .Build(HttpReplayOperationKind.Connect, HttpMethod.Post.Method, _options.ConnectPath, [], observedUtc, body);
     }
 
     /// <summary>Represents one adapter-scoped operation lease.</summary>

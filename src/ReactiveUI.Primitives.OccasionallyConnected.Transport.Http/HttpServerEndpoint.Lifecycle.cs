@@ -24,6 +24,7 @@ public sealed partial class HttpServerEndpoint
         await _requestGate.DisposeAsync().ConfigureAwait(false);
         await _acknowledgementGate.DisposeAsync().ConfigureAwait(false);
         await _subscriptionGate.DisposeAsync().ConfigureAwait(false);
+        await _replayCoordinator.DisposeAsync().ConfigureAwait(false);
         _shutdown.Dispose();
 
         _ = failure is null

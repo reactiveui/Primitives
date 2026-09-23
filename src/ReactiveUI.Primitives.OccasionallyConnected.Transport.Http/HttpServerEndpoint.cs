@@ -19,7 +19,8 @@ public sealed partial class HttpServerEndpoint : IAsyncDisposable
         | RemoteTransportCapabilities.CursorResume
         | RemoteTransportCapabilities.ReceiveAcknowledgements
         | RemoteTransportCapabilities.ServerIdempotency
-        | RemoteTransportCapabilities.AtomicApplyAndAcknowledge;
+        | RemoteTransportCapabilities.AtomicApplyAndAcknowledge
+        | RemoteTransportCapabilities.SnapshotRecovery;
 
     /// <summary>The HTTP Service Unavailable status code.</summary>
     private const HttpStatusCode ServiceUnavailable = HttpStatusCode.ServiceUnavailable;
@@ -73,6 +74,9 @@ public sealed partial class HttpServerEndpoint : IAsyncDisposable
     /// <summary>The borrowed server hub.</summary>
     private readonly IServerStreamHub _hub;
 
+    /// <summary>The optional borrowed snapshot recovery hub.</summary>
+    private readonly IServerSnapshotRecoveryHub? _snapshotRecoveryHub;
+
     /// <summary>The protocol codec configured from endpoint limits.</summary>
     private readonly HttpProtocolCodec _codec;
 
@@ -88,6 +92,15 @@ public sealed partial class HttpServerEndpoint : IAsyncDisposable
     /// <summary>The subscription admission gate.</summary>
     private readonly HttpRequestGate _subscriptionGate;
 
+    /// <summary>The replay coordinator.</summary>
+    private readonly HttpReplayCoordinator _replayCoordinator;
+
+    /// <summary>The replay canonical request builder.</summary>
+    private readonly HttpCanonicalRequestBuilder _canonicalRequestBuilder;
+
+    /// <summary>The host replay authorizer.</summary>
+    private readonly IHttpReplayAuthorizer _replayAuthorizer;
+
     /// <summary>The endpoint-owned shutdown source.</summary>
     private readonly CancellationTokenSource _shutdown = new();
 
@@ -96,6 +109,9 @@ public sealed partial class HttpServerEndpoint : IAsyncDisposable
 
     /// <summary>The endpoint clock.</summary>
     private readonly TimeProvider _timeProvider;
+
+    /// <summary>The replay admission clock.</summary>
+    private readonly TimeProvider _replayTimeProvider;
 
     /// <summary>The maximum encoded request body bytes.</summary>
     private readonly int _maximumRequestBytes;
@@ -115,6 +131,9 @@ public sealed partial class HttpServerEndpoint : IAsyncDisposable
     /// <summary>The normalized acknowledgement route.</summary>
     private readonly string _acknowledgePath;
 
+    /// <summary>The normalized snapshot recovery route.</summary>
+    private readonly string _snapshotRecoveryPath;
+
     /// <summary>The disposal completion signal.</summary>
     private readonly TaskCompletionSource<object?> _disposeCompleted = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
@@ -130,12 +149,17 @@ public sealed partial class HttpServerEndpoint : IAsyncDisposable
         DeclaredCapabilities = options.DeclaredCapabilities;
         _advertisedCapabilities = CreateAdvertisedCapabilities(options);
         _hub = options.Hub;
+        _snapshotRecoveryHub = options.SnapshotRecoveryHub;
         _codec = CreateCodec(options);
         _requestGate = new(options.MaximumConcurrentRequests);
         _acknowledgementGate = new(options.MaximumConcurrentAcknowledgements);
         _subscriptionGate = new(options.MaximumConcurrentSubscriptions);
+        _replayCoordinator = new(options.ReplayProtection);
+        _canonicalRequestBuilder = new(options.ReplayProtection);
+        _replayAuthorizer = options.ReplayAuthorizer;
         _longPollTimeout = options.LongPollTimeout;
         _timeProvider = options.TimeProvider;
+        _replayTimeProvider = options.ReplayProtection.TimeProvider;
         _maximumRequestBytes = options.MaximumRequestBytes;
         _maximumQueryBytes = options.MaximumQueryBytes;
 
@@ -144,6 +168,7 @@ public sealed partial class HttpServerEndpoint : IAsyncDisposable
         _pushPath = Combine(pathBase, options.PushPath);
         _subscribePath = Combine(pathBase, options.SubscribePath);
         _acknowledgePath = Combine(pathBase, options.AcknowledgePath);
+        _snapshotRecoveryPath = Combine(pathBase, options.SnapshotRecoveryPath);
     }
 
     /// <summary>Gets the capabilities declared by this endpoint.</summary>

@@ -81,7 +81,8 @@ internal sealed class HttpCanonicalRequestBuilder
         if (operation is HttpReplayOperationKind.Connect
             or HttpReplayOperationKind.Push
             or HttpReplayOperationKind.Subscribe
-            or HttpReplayOperationKind.Acknowledge)
+            or HttpReplayOperationKind.Acknowledge
+            or HttpReplayOperationKind.SnapshotRecovery)
         {
             return;
         }
@@ -102,13 +103,25 @@ internal sealed class HttpCanonicalRequestBuilder
         throw new HttpRemoteTransportException(HttpTransportFailureKind.ValidationRejected, HttpStatusCode.BadRequest);
     }
 
-    /// <summary>Validates path text has no ambiguous boundary material.</summary>
+    /// <summary>Validates path text has normalized route segment material.</summary>
     /// <param name="value">The candidate path.</param>
-    /// <exception cref="HttpRemoteTransportException">The path is empty or contains boundary material.</exception>
+    /// <exception cref="HttpRemoteTransportException">The path is empty or contains ambiguous route material.</exception>
     private static void ValidatePath(string value)
     {
         ValidateText(value);
-        if (!ContainsPathBoundary(value) && !ContainsEncodedPathBoundary(value))
+        var segments = value.Split('/');
+        for (var index = 0; index < segments.Length; index++)
+        {
+            ValidatePathSegment(segments[index]);
+        }
+    }
+
+    /// <summary>Validates one normalized route segment.</summary>
+    /// <param name="value">The candidate route segment.</param>
+    /// <exception cref="HttpRemoteTransportException">The segment is empty or contains ambiguous route material.</exception>
+    private static void ValidatePathSegment(string value)
+    {
+        if (value.Length != 0 && value is not "." and not ".." && !ContainsPathBoundary(value) && !ContainsEncodedPathBoundary(value))
         {
             return;
         }

@@ -1,7 +1,6 @@
 // Copyright (c) 2019-2026 ReactiveUI Association Incorporated. All rights reserved.
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
-
 namespace ReactiveUI.Primitives.OccasionallyConnected.Transport.Http.Tests;
 
 /// <summary>Tests <see cref="HttpRemoteTransportOptions"/>.</summary>
@@ -19,7 +18,6 @@ public sealed class HttpRemoteTransportOptionsTests
     public async Task ValidateRejectsRelativeBaseAddress()
     {
         var options = new HttpRemoteTransportOptions { HttpClient = SharedHttpClient, BaseAddress = new("oc/", UriKind.Relative) };
-
         await Assert.That(options.Validate).ThrowsExactly<ArgumentException>();
     }
 
@@ -31,10 +29,16 @@ public sealed class HttpRemoteTransportOptionsTests
     [Arguments(" \t")]
     [Arguments("/rooted")]
     [Arguments("https://example.invalid/absolute")]
-    public async Task ValidateRelativePathRejectsUnsafeRoutes(string path)
-    {
+    [Arguments("?")]
+    [Arguments("?streamId=stream-1")]
+    [Arguments(".")]
+    [Arguments("./push")]
+    [Arguments("push/.")]
+    [Arguments("..")]
+    [Arguments("../push")]
+    [Arguments("push/../ack")]
+    public async Task ValidateRelativePathRejectsUnsafeRoutes(string path) =>
         await Assert.That(() => HttpRemoteTransportOptionsValidation.ValidateRelativePath(path, nameof(path))).ThrowsExactly<ArgumentException>();
-    }
 
     /// <summary>Verifies positive integer options reject zero and negative values.</summary>
     /// <param name="value">The option value.</param>
@@ -42,10 +46,8 @@ public sealed class HttpRemoteTransportOptionsTests
     [Test]
     [Arguments(0)]
     [Arguments(-1)]
-    public async Task ValidatePositiveRejectsNonPositiveValues(int value)
-    {
+    public async Task ValidatePositiveRejectsNonPositiveValues(int value) =>
         await Assert.That(() => HttpRemoteTransportOptionsValidation.ValidatePositive(value, nameof(value))).ThrowsExactly<ArgumentOutOfRangeException>();
-    }
 
     /// <summary>Verifies the instance validator checks every positive limit.</summary>
     /// <returns>The asynchronous test operation.</returns>
@@ -53,7 +55,6 @@ public sealed class HttpRemoteTransportOptionsTests
     public async Task ValidateRejectsInvalidInstanceLimit()
     {
         var options = CreateOptions(SharedHttpClient) with { MaximumResponseBytes = 0 };
-
         await Assert.That(options.Validate).ThrowsExactly<ArgumentOutOfRangeException>();
     }
 
@@ -63,7 +64,6 @@ public sealed class HttpRemoteTransportOptionsTests
     public async Task ValidateRejectsInvalidMaximumConcurrentSubscriptions()
     {
         var options = CreateOptions(SharedHttpClient) with { MaximumConcurrentSubscriptions = 0 };
-
         await Assert.That(options.Validate).ThrowsExactly<ArgumentOutOfRangeException>();
     }
 

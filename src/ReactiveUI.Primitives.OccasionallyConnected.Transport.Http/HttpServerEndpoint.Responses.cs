@@ -30,28 +30,64 @@ public sealed partial class HttpServerEndpoint
 
     /// <summary>Creates an error response from a transport failure.</summary>
     /// <param name="exception">The transport failure.</param>
-    /// <param name="effectsPossible">Whether hub-side effects may already have happened.</param>
     /// <returns>The caller-owned error response.</returns>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static HttpResponseMessage CreateErrorResponse(HttpRemoteTransportException exception, bool effectsPossible) =>
-        CreateResponse(MapTransportStatus(exception.Kind, effectsPossible));
+    private static HttpResponseMessage CreateErrorResponse(HttpRemoteTransportException exception) =>
+        CreateResponse(MapTransportStatus(exception.Kind));
+
+    /// <summary>Creates a response from a replay decision failure.</summary>
+    /// <param name="failure">The replay failure.</param>
+    /// <returns>The caller-owned response.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static HttpResponseMessage CreateReplayFailureResponse(HttpReplayFailure failure)
+    {
+        var response = CreateResponse(failure.StatusCode);
+        if (failure.Kind == HttpTransportFailureKind.StaleReplaySession && failure.StatusCode == HttpStatusCode.Unauthorized)
+        {
+            response.Headers.Add(HttpReplayHeaders.SessionState, HttpReplayHeaders.StaleSessionState);
+        }
+
+        return response;
+    }
+
+    /// <summary>Creates a response from a cached replay response.</summary>
+    /// <param name="cached">The cached replay response.</param>
+    /// <returns>The caller-owned response.</returns>
+    private static HttpResponseMessage CreateCachedReplayResponse(HttpReplayCachedResponse cached)
+    {
+        var response = CreateResponse(cached.StatusCode);
+        var body = cached.Body.ToArray();
+        if (body.Length > 0 || cached.ContentType is not null)
+        {
+            response.Content = new ByteArrayContent(body);
+            if (cached.ContentType is not null)
+            {
+                response.Content.Headers.ContentType = MediaTypeHeaderValue.Parse(cached.ContentType);
+            }
+        }
+
+        var headers = cached.Headers;
+        for (var index = 0; index < headers.Count; index++)
+        {
+            response.Headers.Add(headers[index].Key, headers[index].Value);
+        }
+
+        return response;
+    }
 
     /// <summary>Maps a transport failure to an HTTP status code.</summary>
     /// <param name="kind">The transport failure kind.</param>
-    /// <param name="effectsPossible">Whether hub-side effects may already have happened.</param>
     /// <returns>The HTTP status code.</returns>
-    private static HttpStatusCode MapTransportStatus(HttpTransportFailureKind kind, bool effectsPossible) => kind switch
+    private static HttpStatusCode MapTransportStatus(HttpTransportFailureKind kind) => kind switch
     {
-        HttpTransportFailureKind.Authentication => HttpStatusCode.Unauthorized,
+        HttpTransportFailureKind.Authentication or HttpTransportFailureKind.StaleReplaySession => HttpStatusCode.Unauthorized,
         HttpTransportFailureKind.AuthorizationDenied => HttpStatusCode.Forbidden,
-        HttpTransportFailureKind.PayloadTooLarge when !effectsPossible => PayloadTooLarge,
-        HttpTransportFailureKind.SchemaIncompatible when !effectsPossible => HttpStatusCode.UnsupportedMediaType,
-        HttpTransportFailureKind.ProtocolViolation when !effectsPossible => HttpStatusCode.BadRequest,
-        HttpTransportFailureKind.ValidationRejected when !effectsPossible => HttpStatusCode.BadRequest,
-        HttpTransportFailureKind.Transient when !effectsPossible => TooManyRequests,
-        HttpTransportFailureKind.Transient => ServiceUnavailable,
+        HttpTransportFailureKind.PayloadTooLarge => PayloadTooLarge,
+        HttpTransportFailureKind.SchemaIncompatible => HttpStatusCode.UnsupportedMediaType,
+        HttpTransportFailureKind.ProtocolViolation or HttpTransportFailureKind.ValidationRejected => HttpStatusCode.BadRequest,
+        HttpTransportFailureKind.Transient => TooManyRequests,
         HttpTransportFailureKind.AmbiguousTransportOutcome => HttpStatusCode.InternalServerError,
-        _ => effectsPossible ? HttpStatusCode.InternalServerError : HttpStatusCode.BadRequest,
+        _ => HttpStatusCode.BadRequest,
     };
 
     /// <summary>Creates a retryable error response after hub invocation.</summary>
@@ -64,6 +100,15 @@ public sealed partial class HttpServerEndpoint
     /// <returns><see langword="true"/> when a body is attached.</returns>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static bool HasBody(HttpRequestMessage request) => request.Content is not null;
+
+    /// <summary>Checks whether a request URI includes query text.</summary>
+    /// <param name="requestUri">The request URI.</param>
+    /// <returns><see langword="true"/> when query text is present.</returns>
+    private static bool HasQuery(Uri requestUri)
+    {
+        var query = requestUri.IsAbsoluteUri ? requestUri.Query : GetRelativeQuery(requestUri.OriginalString);
+        return query.Length != 0;
+    }
 
     /// <summary>Validates protocol request content headers.</summary>
     /// <param name="content">The request content.</param>

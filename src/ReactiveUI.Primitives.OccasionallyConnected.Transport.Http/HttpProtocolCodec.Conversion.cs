@@ -173,6 +173,36 @@ internal sealed partial class HttpProtocolCodec
         };
     }
 
+    /// <summary>Converts domain sync operations into wire DTOs.</summary>
+    /// <param name="operations">The operations.</param>
+    /// <returns>The wire DTOs.</returns>
+    private HttpProtocolJsonContext.SyncOperationWire[] ToSyncOperationDtos(IReadOnlyList<SyncOperation> operations)
+    {
+        var count = operations.Count;
+        var values = new HttpProtocolJsonContext.SyncOperationWire[count];
+        for (var index = 0; index < count; index++)
+        {
+            values[index] = ToDto(operations[index]);
+        }
+
+        return values;
+    }
+
+    /// <summary>Converts wire sync operations into domain operations.</summary>
+    /// <param name="dtos">The wire DTOs.</param>
+    /// <returns>The domain operations.</returns>
+    private SyncOperation[] ToOperations(HttpProtocolJsonContext.SyncOperationWire[] dtos)
+    {
+        var count = dtos.Length;
+        var values = new SyncOperation[count];
+        for (var index = 0; index < count; index++)
+        {
+            values[index] = ToOperation(dtos[index]);
+        }
+
+        return values;
+    }
+
     /// <summary>Converts a remote event batch DTO into the domain batch model.</summary>
     /// <param name="dto">The decoded wire receive batch object.</param>
     /// <returns>A domain receive batch with ordered events and completions.</returns>

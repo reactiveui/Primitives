@@ -11,9 +11,9 @@ public sealed partial class HttpServerEndpoint
 {
     /// <summary>Parses and validates a subscribe query from a request URI.</summary>
     /// <param name="uri">The request URI.</param>
-    /// <returns>The subscribe request.</returns>
+    /// <returns>The subscribe request and decoded query fields.</returns>
     /// <exception cref="HttpRemoteTransportException">The query is malformed or oversized.</exception>
-    private RemoteSubscribeRequest ParseSubscribeRequest(Uri uri)
+    private HttpSubscribeRequestParseResult ParseSubscribeRequest(Uri uri)
     {
         var query = uri.IsAbsoluteUri ? uri.Query : GetRelativeQuery(uri.OriginalString);
         if (StrictUtf8.GetByteCount(query) > _maximumQueryBytes)
@@ -21,7 +21,7 @@ public sealed partial class HttpServerEndpoint
             throw new HttpRemoteTransportException(HttpTransportFailureKind.PayloadTooLarge);
         }
 
-        return _codec.ParseSubscribeRequest(query);
+        return _codec.ParseSubscribeRequestWithQueryFields(query);
     }
 
     /// <summary>Reads at most one complete batch from the borrowed hub.</summary>

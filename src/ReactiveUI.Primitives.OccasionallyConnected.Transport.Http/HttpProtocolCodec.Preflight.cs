@@ -135,6 +135,24 @@ internal sealed partial class HttpProtocolCodec
             [],
             static property => ValidateStringElement(property.Value));
 
+    /// <summary>Reads a JSON property name with a sanitized protocol failure for malformed escaped text.</summary>
+    /// <param name="property">The JSON property.</param>
+    /// <returns>The decoded property name.</returns>
+    /// <exception cref="System.Text.Json.JsonException"><paramref name="property"/> has a malformed JSON property name.</exception>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static string ReadJsonPropertyName(JsonProperty property)
+    {
+        try
+        {
+            return property.Name;
+        }
+        catch (InvalidOperationException exception)
+        {
+            _ = exception;
+            throw new JsonException("Unknown JSON property name.");
+        }
+    }
+
     /// <summary>Checks object kind, required properties, unknown names, and duplicate names.</summary>
     /// <param name="element">JSON object whose property set must be closed.</param>
     /// <param name="required">Property names that must appear exactly once.</param>
@@ -159,17 +177,18 @@ internal sealed partial class HttpProtocolCodec
 
         foreach (var property in element.EnumerateObject())
         {
-            if (!seen.Add(property.Name))
+            var propertyName = ReadJsonPropertyName(property);
+            if (!seen.Add(propertyName))
             {
                 throw new JsonException("Duplicate JSON property name.");
             }
 
-            if (!Contains(required, property.Name) && !Contains(optional, property.Name))
+            if (!Contains(required, propertyName) && !Contains(optional, propertyName))
             {
                 throw new JsonException("Unknown JSON property name.");
             }
 
-            _ = remaining.Remove(property.Name);
+            _ = remaining.Remove(propertyName);
             validateProperty(property);
         }
 
@@ -644,12 +663,13 @@ internal sealed partial class HttpProtocolCodec
                 throw new HttpRemoteTransportException(HttpTransportFailureKind.PayloadTooLarge);
             }
 
-            if (!names.Add(property.Name))
+            var propertyName = ReadJsonPropertyName(property);
+            if (!names.Add(propertyName))
             {
                 throw new JsonException("Duplicate JSON property name.");
             }
 
-            ValidateProtocolString(property.Name, _limits.MaximumMetadataKeyBytes);
+            ValidateProtocolString(propertyName, _limits.MaximumMetadataKeyBytes);
             ValidateStringElement(property.Value);
             ValidateProtocolString(string.Concat(property.Value.GetString()), _limits.MaximumMetadataValueBytes);
         }
