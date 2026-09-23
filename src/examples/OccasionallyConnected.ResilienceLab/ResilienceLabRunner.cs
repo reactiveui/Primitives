@@ -20,19 +20,26 @@ public static class ResilienceLabRunner
         ArgumentNullException.ThrowIfNull(options);
         ArgumentNullException.ThrowIfNull(writer);
         cancellationToken.ThrowIfCancellationRequested();
-        if (!string.Equals(options.Scenario, CrdtLoopbackScenarioShape.ScenarioName, StringComparison.Ordinal))
+        if (string.Equals(options.Scenario, CrdtLoopbackScenarioShape.ScenarioName, StringComparison.Ordinal))
         {
-            var unknown = ResilienceLabCaseResult.Fail(
-                "scenario",
-                CrdtLoopbackScenarioShape.ScenarioName,
-                options.Scenario);
-            await WriteAsync(writer, options.Scenario, [unknown]).ConfigureAwait(false);
-            return new(options.Scenario, [unknown]);
+            var cases = await CrdtLoopbackScenario.RunAsync(cancellationToken).ConfigureAwait(false);
+            await WriteAsync(writer, options.Scenario, cases).ConfigureAwait(false);
+            return new(options.Scenario, cases);
         }
 
-        var cases = await CrdtLoopbackScenario.RunAsync(cancellationToken).ConfigureAwait(false);
-        await WriteAsync(writer, options.Scenario, cases).ConfigureAwait(false);
-        return new(options.Scenario, cases);
+        if (string.Equals(options.Scenario, DurableHttpLostAckScenario.ScenarioName, StringComparison.Ordinal))
+        {
+            var cases = await DurableHttpLostAckScenario.RunAsync(cancellationToken).ConfigureAwait(false);
+            await WriteAsync(writer, options.Scenario, cases).ConfigureAwait(false);
+            return new(options.Scenario, cases);
+        }
+
+        var unknown = ResilienceLabCaseResult.Fail(
+            "scenario",
+            CrdtLoopbackScenarioShape.ScenarioName,
+            options.Scenario);
+        await WriteAsync(writer, options.Scenario, [unknown]).ConfigureAwait(false);
+        return new(options.Scenario, [unknown]);
     }
 
     /// <summary>Writes a stable result transcript.</summary>

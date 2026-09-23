@@ -3,6 +3,7 @@
 // See the LICENSE file in the project root for full license information.
 
 using System.Globalization;
+using System.Runtime.CompilerServices;
 using ReactiveUI.Primitives.OccasionallyConnected.Crdt;
 using ReactiveUI.Primitives.OccasionallyConnected.Server;
 
@@ -559,8 +560,7 @@ internal static partial class CrdtLoopbackScenario
     /// <summary>Appends receive acknowledgement case results.</summary>
     /// <param name="cases">The case list.</param>
     /// <param name="context">The case build context.</param>
-    private static void AppendReceiveCases(List<ResilienceLabCaseResult> cases, CaseBuildContext context)
-    {
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static void AppendReceiveCases(List<ResilienceLabCaseResult> cases, CaseBuildContext context) =>
         cases.AddRange(CrdtLoopbackAckReportBuilder.BuildCases(context.ClientAAcknowledged, context.ClientBAcknowledged));
-    }
 }

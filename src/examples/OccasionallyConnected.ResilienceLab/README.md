@@ -2,9 +2,9 @@
 
 This example hosts bounded runnable resilience demonstrations for `ReactiveUI.Primitives.OccasionallyConnected`.
 
-The initial implemented scenario is `crdt-loopback`. It uses the public in-memory server stream hub and loopback transport with two trusted authenticated client identities. It demonstrates public CRDT behavior for GCounter, PNCounter, ORSet, and LWW register states, including independent client receive checks, authoritative frontier agreement, duplicate operation idempotence, observed OR-set remove behavior, server-stamped LWW ordering, and explicit receive acknowledgement/resume behavior.
+The `crdt-loopback` scenario uses the public in-memory server stream hub and loopback transport with two trusted authenticated client identities. It demonstrates public CRDT behavior for GCounter, PNCounter, ORSet, and LWW register states, including independent client receive checks, authoritative frontier agreement, duplicate operation idempotence, observed OR-set remove behavior, server-stamped LWW ordering, and explicit receive acknowledgement/resume behavior.
 
-This is a volatile in-memory loopback lab slice. It does not claim durable deduplication, exactly-once delivery, HTTP transport coverage, socket integration, restart recovery, or the later runtime scenarios planned for ResilienceLab.
+The `durable-http-lost-ack` scenario runs a local Kestrel HTTP server with a durable SQLite journal and the built-in CRDT server registration. It drops a successful push response after the server commits, closes the writer, then reopens its SQLite store and retries the same operation. An independent SQLite-backed observer receives the effect. The printed cases report the server journal count, retry identity, pending queue before and after restart, restored client state, cursor, snapshot, and observer inbox count. The clients request `AtLeastOnce` delivery, and the single observed durable server effect comes from server deduplication of the stable operation ID within its configured retention window. This scenario covers one lost-ACK boundary. The other failure points in the resilience matrix remain future work.
 
 ## Project
 
@@ -20,6 +20,7 @@ From the repository root:
 ```powershell
 dotnet build src/examples/OccasionallyConnected.ResilienceLab/ReactiveUI.Primitives.OccasionallyConnected.ResilienceLab.csproj -c Release -f net8.0 -m:1 --disable-build-servers
 dotnet src/examples/OccasionallyConnected.ResilienceLab/bin/Release/net8.0/ReactiveUI.Primitives.OccasionallyConnected.ResilienceLab.dll --scenario crdt-loopback
+dotnet src/examples/OccasionallyConnected.ResilienceLab/bin/Release/net8.0/ReactiveUI.Primitives.OccasionallyConnected.ResilienceLab.dll --scenario durable-http-lost-ack
 ```
 
 The process prints each expected/actual case and exits with `0` only when every case passes. Unsupported scenarios print the expected scenario name and return a nonzero exit code.
