@@ -58,6 +58,9 @@ internal sealed partial class InMemoryLocalStoreAdapter : ILocalStoreAdapter, IL
     /// <summary>The initialized client identity binding.</summary>
     private string? _clientId;
 
+    /// <summary>The outbox limits selected for this instance at initialization.</summary>
+    private OutboxOptions? _outboxOptions;
+
     /// <summary>The retained operation and snapshot payload bytes.</summary>
     private long _encodedBytes;
 
@@ -128,6 +131,7 @@ internal sealed partial class InMemoryLocalStoreAdapter : ILocalStoreAdapter, IL
         ArgumentExceptionHelper.ThrowIfNull(initialization);
         InMemoryLocalStoreAdapterValidation.ValidateStoreIdentity(initialization.StoreIdentity, nameof(initialization));
         var clientId = ValidateClientId(initialization.ClientId, nameof(initialization));
+        initialization.Outbox?.Validate();
         if (initialization.RequiredSchemaVersion <= 0)
         {
             throw new ArgumentOutOfRangeException(nameof(initialization), initialization.RequiredSchemaVersion, "Required schema version must be positive.");
@@ -153,6 +157,8 @@ internal sealed partial class InMemoryLocalStoreAdapter : ILocalStoreAdapter, IL
                 throw new InvalidOperationException("The in-memory local store has already been initialized for another store identity.");
             }
 
+            ValidateOutboxBinding(initialization.Outbox);
+
             if (_storeIdentity is null)
             {
                 var capacity = StoreIdentityCapacity(initialization.StoreIdentity);
@@ -164,6 +170,7 @@ internal sealed partial class InMemoryLocalStoreAdapter : ILocalStoreAdapter, IL
                 EnsureCapacityFor(capacity);
                 ApplyCapacity(capacity);
                 _clientId = clientId;
+                _outboxOptions = initialization.Outbox;
             }
             else
             {
@@ -297,6 +304,7 @@ internal sealed partial class InMemoryLocalStoreAdapter : ILocalStoreAdapter, IL
                 var capacity = AddCapacity(
                     OperationRecordCapacity(record),
                     CapacityDifference(LocalSnapshotCapacity(stream.Snapshot), LocalSnapshotCapacity(nextSnapshot)));
+                EnsureOutboxCapacityFor(operation);
                 EnsureCapacityFor(capacity);
                 _operations.Add(operation.OperationId, record);
                 ApplyCapacity(capacity);

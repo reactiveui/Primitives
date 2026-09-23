@@ -648,6 +648,7 @@ public record LocalStoreInitialization : System.IEquatable<ReactiveUI.Primitives
 {
     public LocalStoreInitialization(string StoreIdentity, int RequiredSchemaVersion, bool RequireAuthenticatedEncryptionAtRest) { }
     public string? ClientId { get; init; }
+    public ReactiveUI.Primitives.OccasionallyConnected.OutboxOptions? Outbox { get; init; }
     public bool RequireAuthenticatedEncryptionAtRest { get; init; }
     public int RequiredSchemaVersion { get; init; }
     public string StoreIdentity { get; init; }
