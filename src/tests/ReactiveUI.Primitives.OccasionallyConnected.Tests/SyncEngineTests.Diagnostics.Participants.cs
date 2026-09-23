@@ -151,6 +151,15 @@ public sealed partial class SyncEngineTests
 
         /// <inheritdoc/>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public ValueTask<ParticipantSnapshotRecoveryTransitionResult> RecoverSnapshotAsync(
+            IRemoteSnapshotRecoverySession session,
+            string? expiredCursor,
+            SnapshotRecoveryLimits limits,
+            CancellationToken cancellationToken) =>
+            inner.RecoverSnapshotAsync(session, expiredCursor, limits, cancellationToken);
+
+        /// <inheritdoc/>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public ValueTask<ParticipantQueueTransitionResult> DeadLetterOperationAsync(
             Guid leaseId,
             OperationId operationId,
@@ -199,6 +208,15 @@ public sealed partial class SyncEngineTests
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public ValueTask<ParticipantRemoteApplyResult> ApplyRemoteBatchAsync(RemoteEventBatch batch, CancellationToken cancellationToken) =>
             inner.ApplyRemoteBatchAsync(batch, cancellationToken);
+
+        /// <inheritdoc/>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public ValueTask<ParticipantSnapshotRecoveryTransitionResult> RecoverSnapshotAsync(
+            IRemoteSnapshotRecoverySession session,
+            string? expiredCursor,
+            SnapshotRecoveryLimits limits,
+            CancellationToken cancellationToken) =>
+            inner.RecoverSnapshotAsync(session, expiredCursor, limits, cancellationToken);
 
         /// <inheritdoc/>
         public async ValueTask<ParticipantQueueTransitionResult> DeadLetterOperationAsync(

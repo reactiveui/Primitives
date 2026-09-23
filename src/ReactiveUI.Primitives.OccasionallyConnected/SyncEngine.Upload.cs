@@ -148,13 +148,10 @@ internal sealed partial class SyncEngine
     /// <param name="cancellationToken">The engine-owned stop token.</param>
     private void TrackAvailableUploadAttempts(CancellationToken cancellationToken)
     {
-        while (TryAcquireUpload(cancellationToken, out var acquisition, out var context)
+        while (TryAcquireUpload(cancellationToken, out var acquisition, out var context, out var reservation)
             && acquisition is not null)
         {
-            TrackUploadAttempt(RunUploadAttemptAsync(
-                acquisition,
-                context,
-                cancellationToken));
+            TrackUploadAttempt(reservation, RunUploadAttemptAsync(acquisition, context, cancellationToken));
         }
     }
 
@@ -226,16 +223,19 @@ internal sealed partial class SyncEngine
     /// <param name="cancellationToken">The engine-owned stop token.</param>
     /// <param name="acquisition">The acquired stream head.</param>
     /// <param name="context">The acquired upload attempt context.</param>
+    /// <param name="reservation">The active upload reservation.</param>
     /// <returns><see langword="true"/> when one stream was acquired.</returns>
     private bool TryAcquireUpload(
         CancellationToken cancellationToken,
         out FairStreamAcquisition? acquisition,
-        out UploadAttemptContext context)
+        out UploadAttemptContext context,
+        out UploadAttemptReservation reservation)
     {
         lock (_gate)
         {
             acquisition = null;
             context = default;
+            reservation = default;
 
             if (cancellationToken.IsCancellationRequested
                 || _admissionState != EngineAdmissionState.Running
@@ -271,6 +271,8 @@ internal sealed partial class SyncEngine
 
             _uploadHeads[acquisition.StreamId] = head with { Inflight = true };
             _activeUploadAttempts++;
+            reservation = new(acquisition.StreamId, CreateCompletion());
+            _activeUploadAttemptByStream[acquisition.StreamId] = reservation.Completion.Task;
             return true;
         }
     }
@@ -344,12 +346,14 @@ internal sealed partial class SyncEngine
     }
 
     /// <summary>Tracks one bounded upload attempt task until it completes.</summary>
+    /// <param name="reservation">The stream reservation owned by the attempt.</param>
     /// <param name="task">The attempt task.</param>
-    private void TrackUploadAttempt(Task task)
+    private void TrackUploadAttempt(UploadAttemptReservation reservation, Task task)
     {
         lock (_gate)
         {
             _ = _uploadAttemptTasks.Add(task);
+            _uploadAttemptReservations[task] = reservation;
         }
 
         _ = task.ContinueWith(
@@ -373,6 +377,18 @@ internal sealed partial class SyncEngine
         lock (_gate)
         {
             _ = _uploadAttemptTasks.Remove(task);
+            if (_uploadAttemptReservations.TryGetValue(task, out var reservation))
+            {
+                _ = _uploadAttemptReservations.Remove(task);
+                if (_activeUploadAttemptByStream.TryGetValue(reservation.StreamId, out var current)
+                    && ReferenceEquals(current, reservation.Completion.Task))
+                {
+                    _ = _activeUploadAttemptByStream.Remove(reservation.StreamId);
+                }
+
+                reservation.Complete();
+            }
+
             if (_uploadAttemptTasks.Count == 0 && _activeUploadAttempts == 0)
             {
                 drainWaiter = _uploadDrainWaiter;
@@ -381,5 +397,14 @@ internal sealed partial class SyncEngine
         }
 
         _ = drainWaiter?.TrySetResult(true);
+    }
+
+    /// <summary>Stores a per-stream completion reserved before an upload attempt starts external work.</summary>
+    /// <param name="StreamId">The stream that owns the attempt.</param>
+    /// <param name="Completion">The reservation completion observed by snapshot recovery.</param>
+    private readonly record struct UploadAttemptReservation(StreamId StreamId, TaskCompletionSource<bool> Completion)
+    {
+        /// <summary>Completes the lifetime join after the attempt releases its shared session lease.</summary>
+        internal void Complete() => _ = Completion.TrySetResult(true);
     }
 }

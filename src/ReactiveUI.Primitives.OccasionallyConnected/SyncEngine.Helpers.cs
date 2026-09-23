@@ -36,6 +36,9 @@ internal sealed partial class SyncEngine
         /// <summary>Tracks the current receive pump generation.</summary>
         private long _receiveGeneration;
 
+        /// <summary>Tracks the shared-session generation currently leased by this receive pump.</summary>
+        private long _activeSharedReceiveGeneration;
+
         /// <summary>Tracks the current receive cancellation callback drain.</summary>
         private TaskCompletionSource<bool>? _receiveCancellationDrain;
 
@@ -54,6 +57,9 @@ internal sealed partial class SyncEngine
         /// <summary>Gets or sets the receive generation assigned to <see cref="ReceiveTask"/>.</summary>
         internal long ReceiveTaskGeneration { get; set; }
 
+        /// <summary>Gets the active shared receive generation, or zero for an owned retry session.</summary>
+        internal long ActiveSharedReceiveGeneration => Volatile.Read(ref _activeSharedReceiveGeneration);
+
         /// <summary>Gets or sets the receive task being stopped by an explicit stream stop.</summary>
         internal Task? StopReceiveTask { get; set; }
 
@@ -67,6 +73,11 @@ internal sealed partial class SyncEngine
 
             owner.Unregister(this);
         }
+
+        /// <summary>Records a shared receive lease transition.</summary>
+        /// <param name="generation">The shared generation, or zero after release.</param>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        internal void SetActiveSharedReceiveGeneration(long generation) => Volatile.Write(ref _activeSharedReceiveGeneration, generation);
 
         /// <summary>Cancels receive work owned by this registration.</summary>
         /// <returns>The cancellation callback failure, if cancellation throws.</returns>

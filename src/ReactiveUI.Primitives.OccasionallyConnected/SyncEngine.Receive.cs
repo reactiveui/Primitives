@@ -101,10 +101,16 @@ internal sealed partial class SyncEngine
     }
 
     /// <summary>Releases the active receive session before a retry reconnects.</summary>
+    /// <param name="registration">The participant that owns the active receive lease.</param>
     /// <param name="state">The mutable receive state.</param>
     /// <returns>The release task.</returns>
-    private async ValueTask ReleaseReceiveRetrySessionAsync(ReceivePumpState state)
+    private async ValueTask ReleaseReceiveRetrySessionAsync(ParticipantRegistration registration, ReceivePumpState state)
     {
+        lock (_gate)
+        {
+            registration.SetActiveSharedReceiveGeneration(0);
+        }
+
         if (state.ActiveSession is null)
         {
             return;
@@ -217,6 +223,7 @@ internal sealed partial class SyncEngine
         }
 
         registration.ReceiveRestartRequested = false;
+        registration.SetActiveSharedReceiveGeneration(sessionLease.Generation);
         var task = RunReceivePumpAsync(registration, pumpLease.Value.Generation, sessionLease, uploadCancellation.Token, pumpLease.Value.Token);
         registration.ReceiveTask = task;
         registration.ReceiveTaskGeneration = pumpLease.Value.Generation;
@@ -313,8 +320,8 @@ internal sealed partial class SyncEngine
                 return;
             }
 
-            await ReleaseReceiveRetrySessionAsync(state).ConfigureAwait(false);
-            if (!retry.UseRenewedSharedSession || !TryAcquireSharedSessionLease(out var renewedLease))
+            await ReleaseReceiveRetrySessionAsync(registration, state).ConfigureAwait(false);
+            if (!retry.UseRenewedSharedSession || !TryAcquireReceiveSharedSessionLease(registration, out var renewedLease))
             {
                 continue;
             }
@@ -424,22 +431,38 @@ internal sealed partial class SyncEngine
 
         state.ActiveGuarantee = subscription.DeliveryGuarantee;
         var request = new RemoteSubscribeRequest(subscription.StreamId, subscription.SubscriptionId, subscription.Cursor, subscription.InitialPosition);
-        await foreach (var batch in state.ActiveSession.SubscribeAsync(request, cancellationToken).WithCancellation(cancellationToken).ConfigureAwait(false))
+        var session = state.ActiveSession;
+        var sessionGeneration = state.SharedSessionGeneration;
+        try
         {
-            if (!IsActiveRegisteredParticipant(registration))
+            await foreach (var batch in session.SubscribeAsync(request, cancellationToken).WithCancellation(cancellationToken).ConfigureAwait(false))
+            {
+                if (!IsActiveRegisteredParticipant(registration))
+                {
+                    return false;
+                }
+
+                await ApplyReceiveBatchAsync(
+                        participant,
+                        session,
+                        subscription.SubscriptionId,
+                        batch,
+                        sessionGeneration,
+                        cancellationToken)
+                    .ConfigureAwait(false);
+                state.MadeProgress = true;
+            }
+        }
+        catch (RemoteSubscriptionRetentionGapException exception) when (IsRecoveryGapForSubscription(exception, subscription))
+        {
+            if (!await RecoverReceiveSnapshotAsync(registration, session, exception, sessionGeneration, cancellationToken).ConfigureAwait(false))
             {
                 return false;
             }
 
-            await ApplyReceiveBatchAsync(
-                    participant,
-                    state.ActiveSession,
-                    subscription.SubscriptionId,
-                    batch,
-                    state.SharedSessionGeneration,
-                    cancellationToken)
-                .ConfigureAwait(false);
+            RecordRemoteProgress(sessionGeneration);
             state.MadeProgress = true;
+            return IsActiveRegisteredParticipant(registration);
         }
 
         return IsActiveRegisteredParticipant(registration);
@@ -695,7 +718,7 @@ internal sealed partial class SyncEngine
     {
         try
         {
-            await ReleaseReceiveRetrySessionAsync(state).ConfigureAwait(false);
+            await ReleaseReceiveRetrySessionAsync(registration, state).ConfigureAwait(false);
         }
         catch (Exception exception)
         {

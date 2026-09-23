@@ -61,14 +61,21 @@ internal sealed partial class SyncEngine
         }
     }
 
-    /// <summary>Tries to acquire a lease for the current shared session.</summary>
+    /// <summary>Acquires a shared receive lease and publishes its generation in one engine-gated step.</summary>
+    /// <param name="registration">The receive participant.</param>
     /// <param name="lease">The acquired shared-session lease.</param>
-    /// <returns>Whether the lease was acquired.</returns>
-    private bool TryAcquireSharedSessionLease(out SharedSessionLease lease)
+    /// <returns>Whether a shared lease was acquired.</returns>
+    private bool TryAcquireReceiveSharedSessionLease(ParticipantRegistration registration, out SharedSessionLease lease)
     {
         lock (_gate)
         {
-            return TryAcquireSharedSessionLeaseLocked(out lease);
+            if (!TryAcquireSharedSessionLeaseLocked(out lease))
+            {
+                return false;
+            }
+
+            registration.SetActiveSharedReceiveGeneration(lease.Generation);
+            return true;
         }
     }
 
@@ -253,7 +260,7 @@ internal sealed partial class SyncEngine
                     currentCapabilities,
                     newSession is IRemoteTransportBatchPreparer,
                     newSession.NegotiatedCapabilities,
-                    out var retiredSessionToDispose))
+                    out var publishEffects))
             {
                 var rejectedSession = newSession;
                 newSession = null;
@@ -262,9 +269,10 @@ internal sealed partial class SyncEngine
             }
 
             newSession = null;
-            if (retiredSessionToDispose is not null)
+            await CompleteRenewedReceiveCancellationsAsync(publishEffects.ReceiveCancellations).ConfigureAwait(false);
+            if (publishEffects.RetiredSession is not null)
             {
-                await DisposeRetiredSharedSessionAsync(retiredSessionToDispose).ConfigureAwait(false);
+                await DisposeRetiredSharedSessionAsync(publishEffects.RetiredSession).ConfigureAwait(false);
             }
 
             return new(true);
@@ -324,7 +332,7 @@ internal sealed partial class SyncEngine
     /// <param name="currentCapabilities">The current session capabilities captured outside the engine lock.</param>
     /// <param name="candidateSupportsPreparedUpload">Whether the candidate session supports prepared upload.</param>
     /// <param name="candidateCapabilities">The candidate session capabilities captured outside the engine lock.</param>
-    /// <param name="retiredSessionToDispose">The old generation to dispose outside the lock.</param>
+    /// <param name="publishEffects">Retirement and receive cancellation work captured with publication.</param>
     /// <returns>Whether the session became the active shared session.</returns>
     private bool TryPublishRenewedSession(
         long observedGeneration,
@@ -333,9 +341,9 @@ internal sealed partial class SyncEngine
         NegotiatedCapabilities currentCapabilities,
         bool candidateSupportsPreparedUpload,
         NegotiatedCapabilities candidateCapabilities,
-        out IRemoteTransportSession? retiredSessionToDispose)
+        out RenewalPublishEffects publishEffects)
     {
-        retiredSessionToDispose = null;
+        publishEffects = new(null, []);
         lock (_gate)
         {
             if (_admissionState != EngineAdmissionState.Running
@@ -350,6 +358,7 @@ internal sealed partial class SyncEngine
                 return false;
             }
 
+            IRemoteTransportSession? retiredSessionToDispose = null;
             if (_sharedSessionLease is { } oldSession)
             {
                 if (oldSession.Retire())
@@ -365,9 +374,83 @@ internal sealed partial class SyncEngine
             _session = newSession;
             _sessionGeneration++;
             _sharedSessionLease = new(newSession, _sessionGeneration);
+            publishEffects = new(retiredSessionToDispose, CaptureRenewedReceiveCancellationsLocked(observedGeneration));
             SignalUploadPumpLocked();
             return true;
         }
+    }
+
+    /// <summary>Captures receive cancellation ownership while the replacement session is published.</summary>
+    /// <param name="observedGeneration">The retired shared generation.</param>
+    /// <returns>The receive cancellations to complete outside the engine lock.</returns>
+    private List<ReceiveRenewalCancellation> CaptureRenewedReceiveCancellationsLocked(long observedGeneration)
+    {
+        List<ReceiveRenewalCancellation> cancellations = [];
+        foreach (var registration in _participants.Values)
+        {
+            if (!registration.RemoteActive
+                || registration.ReceiveTask is null
+                || !_snapshotRecoveryStreams.Contains(registration.Participant.StreamId)
+                || registration.ActiveSharedReceiveGeneration != observedGeneration)
+            {
+                continue;
+            }
+
+            if (CaptureReceiveRenewalCancellationLocked(registration, out _) is { } cancellation)
+            {
+                cancellations.Add(cancellation);
+            }
+        }
+
+        return cancellations;
+    }
+
+    /// <summary>Captures cancellation for a receive pump that must restart on the current shared generation.</summary>
+    /// <param name="registration">The old-generation receive registration.</param>
+    /// <param name="drainTask">The existing or newly captured cancellation drain task.</param>
+    /// <returns>The cancellation driver work, if a receive pump still owns a cancellation source.</returns>
+    private ReceiveRenewalCancellation? CaptureReceiveRenewalCancellationLocked(
+        ParticipantRegistration registration,
+        out Task? drainTask)
+    {
+        registration.ReceiveRestartRequested = true;
+        var cancellation = registration.BeginCancelReceive(out drainTask);
+        if (cancellation is not { } lease)
+        {
+            return null;
+        }
+
+        var completion = CreateCompletion();
+        var stopTask = CreateReceiveStopTask(registration.ReceiveTask, drainTask, completion.Task);
+        if (stopTask is not null)
+        {
+            RegisterReceiveStopTaskLocked(stopTask);
+        }
+
+        return new(registration, lease, completion);
+    }
+
+    /// <summary>Cancels retired receive work without joining its pump from the renewal caller.</summary>
+    /// <param name="cancellations">The captured old-generation receive cancellations.</param>
+    /// <returns>The cancellation callback drain task.</returns>
+    private async Task CompleteRenewedReceiveCancellationsAsync(List<ReceiveRenewalCancellation> cancellations)
+    {
+        if (cancellations.Count == 0)
+        {
+            return;
+        }
+
+        var drains = new Task[cancellations.Count];
+        for (var index = 0; index < cancellations.Count; index++)
+        {
+            var cancellation = cancellations[index];
+            drains[index] = cancellation.Completion.Task;
+            _ = Task.Run(
+                () => CompleteReceiveCancellationDriver(cancellation.Registration, cancellation.Lease, cancellation.Completion),
+                CancellationToken.None);
+        }
+
+        await Task.WhenAll(drains).ConfigureAwait(false);
     }
 
     /// <summary>Clears a completed renewal task if it still represents the observed generation.</summary>
@@ -392,6 +475,22 @@ internal sealed partial class SyncEngine
         _sessionRenewalTask = null;
         _sessionRenewalGeneration = 0;
     }
+
+    /// <summary>Stores the retirement and receive cancellations captured by a published generation.</summary>
+    /// <param name="RetiredSession">The old session to dispose when it has no references.</param>
+    /// <param name="ReceiveCancellations">Old-generation receive work to cancel outside the engine lock.</param>
+    private readonly record struct RenewalPublishEffects(
+        IRemoteTransportSession? RetiredSession,
+        List<ReceiveRenewalCancellation> ReceiveCancellations);
+
+    /// <summary>Stores one old-generation receive cancellation captured during shared-session renewal.</summary>
+    /// <param name="Registration">The receive participant.</param>
+    /// <param name="Lease">Its cancellation ownership.</param>
+    /// <param name="Completion">The callback drain completion.</param>
+    private readonly record struct ReceiveRenewalCancellation(
+        ParticipantRegistration Registration,
+        (long Generation, CancellationTokenSource Source, TaskCompletionSource<bool> DrainCompletion) Lease,
+        TaskCompletionSource<bool> Completion);
 
     /// <summary>Stores an acquired shared-session generation lease.</summary>
     /// <param name="Session">The leased shared session.</param>

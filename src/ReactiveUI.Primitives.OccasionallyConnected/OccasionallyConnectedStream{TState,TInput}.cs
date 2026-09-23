@@ -539,8 +539,17 @@ internal sealed partial class OccasionallyConnectedStream<TState, TInput> :
                 continue;
             }
 
-            await _workLane.WhenIdleAsync(CancellationToken.None).ConfigureAwait(false);
-            await _options.Coordinator.StopStreamAsync(StreamId, CancellationToken.None).ConfigureAwait(false);
+            Exception? failure = null;
+            failure = await CaptureFailureAsync(
+                    () => _options.Coordinator.StopStreamAsync(StreamId, CancellationToken.None).AsTask(),
+                    failure)
+                .ConfigureAwait(false);
+            failure = await CaptureFailureAsync(() => _workLane.WhenIdleAsync(CancellationToken.None), failure).ConfigureAwait(false);
+            if (failure is not null)
+            {
+                throw failure;
+            }
+
             lock (_gate)
             {
                 _started = false;
