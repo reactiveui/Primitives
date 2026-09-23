@@ -30,6 +30,17 @@ public sealed class RetryFailureTests
         await Assert.That(failure.RetryAfter).IsEqualTo(TimeSpan.MaxValue);
     }
 
+    /// <summary>Verifies a remote session expiry marker has no credential or retry hint.</summary>
+    /// <returns>The assertion task.</returns>
+    [Test]
+    public async Task RemoteSessionExpiredHasNoImplicitHints()
+    {
+        var failure = new RetryFailure(RetryFailureKind.RemoteSessionExpired);
+        await Assert.That(failure.Kind).IsEqualTo(RetryFailureKind.RemoteSessionExpired);
+        await Assert.That(failure.RetryAfter).IsNull();
+        await Assert.That(failure.CredentialsVersion).IsNull();
+    }
+
     /// <summary>Verifies renewed credentials carry their opaque version.</summary>
     /// <returns>The assertion task.</returns>
     [Test]
