@@ -137,6 +137,32 @@ public sealed class CollaborationStreamRegistrationsTests
         await Assert.That(json.Contains("acceptedClientId", StringComparison.Ordinal)).IsTrue();
     }
 
+    /// <summary>Verifies the registered resolver accepts a valid typed-client update with trusted server provenance.</summary>
+    /// <returns>The assertion task.</returns>
+    /// <exception cref="InvalidOperationException">Thrown when the resolver does not produce a canonical payload.</exception>
+    [Test]
+    public async Task ActivityRegistrationCustomResolverAcceptsTypedClientUpdate()
+    {
+        var registration = FindActivityRegistration(CollaborationStreamRegistrations.CreateAll());
+        var operation = CreateActivityOperation() with { Type = SyncOperationType.Update };
+        var context = new ConflictContext(
+            CreateInitialState(),
+            [operation],
+            new(ClientId, TenantHint),
+            CreateServerContext(operation));
+
+        var result = await registration.CustomResolver.ResolveAsync(context, CancellationToken.None).ConfigureAwait(false);
+
+        await Assert.That(result.AcceptedOperations).Count().IsEqualTo(1);
+        await Assert.That(result.RejectedOperations).Count().IsEqualTo(0);
+        await Assert.That(result.Conflicts).Count().IsEqualTo(1);
+        var payload = result.Conflicts[0].ResolvedPayload
+            ?? throw new InvalidOperationException("The update resolver should produce a canonical payload.");
+        using var document = JsonDocument.Parse(payload.Payload.ToArray());
+        await Assert.That(document.RootElement.GetProperty("acceptedClientId").GetString()).IsEqualTo(ClientId);
+        await Assert.That(document.RootElement.GetProperty("status").GetString()).IsEqualTo("ready");
+    }
+
     /// <summary>Verifies corrupted current canonical state is not merged into new activity state.</summary>
     /// <returns>The assertion task.</returns>
     [Test]
@@ -203,8 +229,11 @@ public sealed class CollaborationStreamRegistrationsTests
             CreateAuthenticatedClient(),
             CancellationToken.None);
 
-        await Assert.That(result.Result.Operations[0].Kind).IsEqualTo(OperationResultKind.Conflict);
+        await Assert.That(result.Result.Operations[0].Kind).IsEqualTo(OperationResultKind.Accepted);
+        await Assert.That(result.Result.Operations[0].OperationId).IsEqualTo(second.OperationId);
+        await Assert.That(result.Result.Operations[0].ReasonCode).IsNull();
         await Assert.That(result.ProducedEvents).Count().IsEqualTo(1);
+        await Assert.That(result.ProducedEvents[0].CausedByOperationId).IsEqualTo(second.OperationId);
         using var document = JsonDocument.Parse(result.ProducedEvents[0].Payload.Payload.ToArray());
         var root = document.RootElement;
         await Assert.That(root.GetProperty(TitlePropertyName).GetString()).IsEqualTo(OriginalTitle);
@@ -344,25 +373,28 @@ public sealed class CollaborationStreamRegistrationsTests
         await Assert.That(result.RejectedOperations[0].ReasonCode).IsEqualTo("activity-missing-server-provenance");
     }
 
-    /// <summary>Verifies the activity resolver rejects non-custom operation types.</summary>
+    /// <summary>Verifies the activity resolver rejects unsupported operation types.</summary>
     /// <returns>The assertion task.</returns>
     [Test]
-    public async Task ActivityRegistrationRejectsNonCustomOperationType()
+    public async Task ActivityRegistrationRejectsUnsupportedOperationTypes()
     {
         var registration = FindActivityRegistration(CollaborationStreamRegistrations.CreateAll());
-        var operation = CreateActivityOperation() with { Type = SyncOperationType.Append };
-        var context = new ConflictContext(
-            CreateInitialState(),
-            [operation],
-            new(ClientId, TenantHint),
-            CreateServerContext(operation));
+        foreach (var operationType in new[] { SyncOperationType.Append, SyncOperationType.Delete })
+        {
+            var operation = CreateActivityOperation() with { Type = operationType };
+            var context = new ConflictContext(
+                CreateInitialState(),
+                [operation],
+                new(ClientId, TenantHint),
+                CreateServerContext(operation));
 
-        var result = await registration.CustomResolver.ResolveAsync(context, CancellationToken.None).ConfigureAwait(false);
+            var result = await registration.CustomResolver.ResolveAsync(context, CancellationToken.None).ConfigureAwait(false);
 
-        await Assert.That(result.AcceptedOperations).Count().IsEqualTo(0);
-        await Assert.That(result.RejectedOperations).Count().IsEqualTo(1);
-        await Assert.That(result.RejectedOperations[0].OperationId).IsEqualTo(operation.OperationId);
-        await Assert.That(result.RejectedOperations[0].ReasonCode).IsEqualTo("activity-operation-type-mismatch");
+            await Assert.That(result.AcceptedOperations).Count().IsEqualTo(0);
+            await Assert.That(result.RejectedOperations).Count().IsEqualTo(1);
+            await Assert.That(result.RejectedOperations[0].OperationId).IsEqualTo(operation.OperationId);
+            await Assert.That(result.RejectedOperations[0].ReasonCode).IsEqualTo("activity-operation-type-mismatch");
+        }
     }
 
     /// <summary>Verifies the activity resolver rejects malformed activity input payloads.</summary>
