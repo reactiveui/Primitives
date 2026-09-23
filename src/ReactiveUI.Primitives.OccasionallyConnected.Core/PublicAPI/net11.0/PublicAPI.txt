@@ -1098,6 +1098,7 @@ public enum RetryFailureKind
     PayloadTooLarge = 5,
     DeterministicConflictRejected = 6,
     AmbiguousTransportOutcome = 7,
+    RemoteSessionExpired = 8,
 }
 [System.Diagnostics.DebuggerDisplay("MinimumDelay = {MinimumDelay}, MaximumDelay = {MaximumDelay}, MaximumRetryAttempts = {MaximumRetryAttempts}")]
 public record RetryOptions : System.IEquatable<ReactiveUI.Primitives.OccasionallyConnected.RetryOptions>

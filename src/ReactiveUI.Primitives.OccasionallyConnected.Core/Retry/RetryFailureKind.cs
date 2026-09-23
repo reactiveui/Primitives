@@ -30,4 +30,7 @@ public enum RetryFailureKind
 
     /// <summary>An ambiguous transport result whose retry behavior is selected by the delivery guarantee.</summary>
     AmbiguousTransportOutcome = 7,
+
+    /// <summary>A remote replay session expired and may be renewed by the owning synchronization engine.</summary>
+    RemoteSessionExpired = 8,
 }
