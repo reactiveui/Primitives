@@ -1,13 +1,11 @@
 // Copyright (c) 2019-2026 ReactiveUI Association Incorporated. All rights reserved.
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
-
 using System.Globalization;
 using System.Net.Http;
 using System.Runtime.CompilerServices;
 using System.Text;
 using ReactiveUI.Primitives.OccasionallyConnected;
-
 namespace ReactiveUI.Primitives.OccasionallyConnected.Transport.Http.Tests;
 
 /// <summary>Test helpers for <see cref="HttpServerEndpointTests"/>.</summary>
@@ -28,7 +26,14 @@ public sealed partial class HttpServerEndpointTests
     /// <summary>Creates endpoint options for tests.</summary>
     /// <param name="hub">The borrowed hub.</param>
     /// <returns>The endpoint options.</returns>
-    private static HttpServerEndpointOptions CreateOptions(IServerStreamHub hub) => new() { Hub = hub, DeclaredCapabilities = CreateCapabilities() };
+    private static HttpServerEndpointOptions CreateOptions(IServerStreamHub hub) =>
+        new()
+        {
+            Hub = hub,
+            DeclaredCapabilities = CreateCapabilities(),
+            ReplayAuthorizer = AllowReplayAuthorizer.Instance,
+            ReplayProtection = new HttpReplayProtectionOptions { TimeProvider = new ReplayTimeProvider(ReplaySentAtUtc) },
+        };
 
     /// <summary>Creates endpoint capabilities.</summary>
     /// <param name="features">The optional feature override.</param>
@@ -281,6 +286,28 @@ public sealed partial class HttpServerEndpointTests
     {
         _ = entered.TrySetResult(null);
         await Task.Delay(Timeout.InfiniteTimeSpan, cancellationToken).ConfigureAwait(false);
+        yield break;
+    }
+
+    /// <summary>Creates a subscription that throws the supplied cancellation token after shutdown cancels it.</summary>
+    /// <param name="entered">The signal completed after enumeration starts.</param>
+    /// <param name="cancellationToken">The enumeration cancellation token.</param>
+    /// <returns>The async batch sequence.</returns>
+    /// <exception cref="OperationCanceledException">The subscription throws the supplied canceled token.</exception>
+    private static async IAsyncEnumerable<RemoteEventBatch> ThrowWhenCancelledAsync(
+        TaskCompletionSource<object?> entered,
+        [EnumeratorCancellation] CancellationToken cancellationToken)
+    {
+        _ = entered.TrySetResult(null);
+        try
+        {
+            await Task.Delay(Timeout.InfiniteTimeSpan, cancellationToken).ConfigureAwait(false);
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw new OperationCanceledException(cancellationToken);
+        }
+
         yield break;
     }
 

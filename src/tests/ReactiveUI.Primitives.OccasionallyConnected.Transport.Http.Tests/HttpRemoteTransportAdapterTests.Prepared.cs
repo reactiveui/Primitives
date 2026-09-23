@@ -1,16 +1,17 @@
 // Copyright (c) 2019-2026 ReactiveUI Association Incorporated. All rights reserved.
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
-
 using System.Net;
 using System.Text;
-
 namespace ReactiveUI.Primitives.OccasionallyConnected.Transport.Http.Tests;
 
 /// <summary>Tests the HTTP remote transport adapter.</summary>
 /// <content>Prepared uploads validate and own the exact body before a durable attempt begins.</content>
 public sealed partial class HttpRemoteTransportAdapterTests
 {
+    /// <summary>The connect calls made before and after replacing a disposed session.</summary>
+    private const int RequestsAfterReplacementSession = 2;
+
     /// <summary>Verifies preparation creates no remote effects and sends exactly its measured body once.</summary>
     /// <returns>The asynchronous test operation.</returns>
     [Test]
@@ -25,12 +26,10 @@ public sealed partial class HttpRemoteTransportAdapterTests
         await using var session = await adapter.ConnectAsync(CreateConnectRequest(), CancellationToken.None);
         await Assert.That(session is IRemoteTransportBatchPreparer).IsTrue();
         await using var prepared = await ((IRemoteTransportBatchPreparer)session).PreparePushAsync(batch, CancellationToken.None);
-
         await Assert.That(handler.Requests.Count).IsEqualTo(1);
         await Assert.That(prepared.Batch).IsSameReferenceAs(batch);
         var measuredBytes = prepared.EncodedSizeBytes;
         var result = await prepared.SendAsync(CancellationToken.None);
-
         await Assert.That(result.BatchId).IsEqualTo(batch.BatchId);
         await Assert.That(measuredBytes).IsEqualTo(Encoding.UTF8.GetByteCount(handler.Requests[1].Body));
         await Assert.That(async () => await prepared.SendAsync(CancellationToken.None)).Throws<InvalidOperationException>();
@@ -46,19 +45,24 @@ public sealed partial class HttpRemoteTransportAdapterTests
     public async Task PreparePushAsyncRejectsNegotiatedBoundsBeforeSending(int maximumOperations, int maximumBytes)
     {
         var response = $$"""
-            {"protocolVersion":"1.0","features":15,"maximumBatchOperations":{{maximumOperations}},"maximumBatchBytes":{{maximumBytes}},"serverIdempotencyRetentionMilliseconds":60000,"clientInboxRetentionRequiredMilliseconds":120000}
+            {
+              "protocolVersion":"1.0",
+              "features":15,
+              "maximumBatchOperations":{{maximumOperations}},
+              "maximumBatchBytes":{{maximumBytes}},
+              "serverIdempotencyRetentionMilliseconds":60000,
+              "clientInboxRetentionRequiredMilliseconds":120000
+            }
             """;
         var handler = new RecordingHttpHandler(request => CreateProtocolResponse(HttpStatusCode.OK, response));
         using var httpClient = CreateHttpClient(handler);
         await using var adapter = CreateAdapter(httpClient);
         await using var session = await adapter.ConnectAsync(CreateConnectRequest(), CancellationToken.None);
         var batch = new SyncBatch(CreateBatch().BatchId, [CreateOperation(1), CreateOperation(SecondSequence)]);
-
         var exception = await CaptureHttpExceptionAsync(async () =>
         {
             await using var prepared = await ((IRemoteTransportBatchPreparer)session).PreparePushAsync(batch, CancellationToken.None);
         });
-
         await Assert.That(exception.Kind).IsEqualTo(HttpTransportFailureKind.PayloadTooLarge);
         await Assert.That(handler.Requests.Count).IsEqualTo(1);
     }
@@ -73,12 +77,16 @@ public sealed partial class HttpRemoteTransportAdapterTests
         var batch = new SyncBatch(CreateBatch().BatchId, [operation]);
         var handler = new RecordingHttpHandler(static request => CreateProtocolResponse(HttpStatusCode.OK, ConnectResponseJson));
         using var httpClient = CreateHttpClient(handler);
-        await using var adapter = CreateAdapter(httpClient);
+        await using var adapter = CreateAdapter(httpClient, CreateBaseAddress(), static options => options with { MaximumConcurrentRequests = 1 });
         await using var session = await adapter.ConnectAsync(CreateConnectRequest(), CancellationToken.None);
+        var preparer = (IRemoteTransportBatchPreparer)session;
 
-        var failure = await CaptureHttpExceptionAsync(async () => _ = await ((IRemoteTransportBatchPreparer)session).PreparePushAsync(batch, CancellationToken.None));
+        var failure = await CaptureHttpExceptionAsync(async () => _ = await preparer.PreparePushAsync(batch, CancellationToken.None));
+        using var replacementCancellation = new CancellationTokenSource(TimeSpan.FromSeconds(AwaitTimeoutSeconds));
+        await using var replacement = await preparer.PreparePushAsync(CreateBatch(), replacementCancellation.Token);
 
         await Assert.That(failure.Kind).IsEqualTo(HttpTransportFailureKind.ProtocolViolation);
+        await Assert.That(replacement.EncodedSizeBytes).IsGreaterThan(0);
         await Assert.That(handler.Requests.Count).IsEqualTo(1);
     }
 
@@ -95,7 +103,6 @@ public sealed partial class HttpRemoteTransportAdapterTests
         var prepared = await preparer.PreparePushAsync(CreateBatch(), CancellationToken.None);
         var failure = await CaptureHttpExceptionAsync(async () => _ = await preparer.PreparePushAsync(CreateBatch(), CancellationToken.None));
         var subscribe = CreateSubscribeRequest(PriorCursor, StartPosition.Latest);
-
         await session.AcknowledgeAsync(new(subscribe.SubscriptionId, subscribe.StreamId, PriorCursor), CancellationToken.None);
         await Assert.That(failure.Kind).IsEqualTo(HttpTransportFailureKind.Transient);
         await prepared.DisposeAsync();
@@ -104,6 +111,44 @@ public sealed partial class HttpRemoteTransportAdapterTests
         await Assert.That(async () => await prepared.SendAsync(CancellationToken.None)).ThrowsExactly<ObjectDisposedException>();
         await using var replacement = await preparer.PreparePushAsync(CreateBatch(), CancellationToken.None);
         await Assert.That(replacement.EncodedSizeBytes).IsGreaterThan(0);
+    }
+
+    /// <summary>Verifies canceled preparation releases request admission and owned preparation resources.</summary>
+    /// <returns>The asynchronous test operation.</returns>
+    [Test]
+    public async Task PreparePushAsyncCanceledBeforeOwnershipReleasesRequestAdmission()
+    {
+        var handler = new RecordingHttpHandler(static request => CreateProtocolResponse(HttpStatusCode.OK, ConnectResponseJson));
+        using var httpClient = CreateHttpClient(handler);
+        await using var adapter = CreateAdapter(httpClient, CreateBaseAddress(), static options => options with { MaximumConcurrentRequests = 1 });
+        await using var session = await adapter.ConnectAsync(CreateConnectRequest(), CancellationToken.None);
+        var preparer = (IRemoteTransportBatchPreparer)session;
+        using var cancellation = new CancellationTokenSource();
+        await cancellation.CancelAsync().ConfigureAwait(false);
+        await Assert.That(async () => _ = await preparer.PreparePushAsync(CreateBatch(), cancellation.Token)).Throws<OperationCanceledException>();
+        await using var replacement = await preparer.PreparePushAsync(CreateBatch(), CancellationToken.None);
+        await Assert.That(replacement.EncodedSizeBytes).IsGreaterThan(0);
+        await Assert.That(handler.Requests.Count).IsEqualTo(1);
+    }
+
+    /// <summary>Verifies preparation after session disposal fails through the same cleanup owner without leaking adapter capacity.</summary>
+    /// <returns>The asynchronous test operation.</returns>
+    [Test]
+    public async Task PreparePushAsyncAfterSessionDisposalThrowsAndLeavesAdapterUsable()
+    {
+        var handler = new RecordingHttpHandler(static request => CreateProtocolResponse(HttpStatusCode.OK, ConnectResponseJson));
+        using var httpClient = CreateHttpClient(handler);
+        await using var adapter = CreateAdapter(httpClient);
+        await using var session = await adapter.ConnectAsync(CreateConnectRequest(), CancellationToken.None);
+        var preparer = (IRemoteTransportBatchPreparer)session;
+        await session.DisposeAsync();
+
+        await Assert.That(async () => _ = await preparer.PreparePushAsync(CreateBatch(), CancellationToken.None)).ThrowsExactly<ObjectDisposedException>();
+        await using var replacementSession = await adapter.ConnectAsync(CreateConnectRequest(), CancellationToken.None);
+        await using var replacement = await ((IRemoteTransportBatchPreparer)replacementSession).PreparePushAsync(CreateBatch(), CancellationToken.None);
+
+        await Assert.That(replacement.EncodedSizeBytes).IsGreaterThan(0);
+        await Assert.That(handler.Requests.Count).IsEqualTo(RequestsAfterReplacementSession);
     }
 
     /// <summary>Verifies owner disposal reclaims idle payloads without waiting for their callers.</summary>
@@ -119,10 +164,8 @@ public sealed partial class HttpRemoteTransportAdapterTests
         await using var adapter = CreateAdapter(httpClient);
         await using var session = await adapter.ConnectAsync(CreateConnectRequest(), CancellationToken.None);
         await using var prepared = await ((IRemoteTransportBatchPreparer)session).PreparePushAsync(CreateBatch(), CancellationToken.None);
-
         var disposal = disposeAdapter ? adapter.DisposeAsync() : session.DisposeAsync();
         await AwaitWithTimeoutAsync(disposal.AsTask());
-
         await Assert.That(() => prepared.Batch).ThrowsExactly<ObjectDisposedException>();
         await Assert.That(async () => await prepared.SendAsync(CancellationToken.None)).ThrowsExactly<ObjectDisposedException>();
         await Assert.That(handler.Requests.Count).IsEqualTo(1);
@@ -142,10 +185,8 @@ public sealed partial class HttpRemoteTransportAdapterTests
         await using var session = await adapter.ConnectAsync(CreateConnectRequest(), CancellationToken.None);
         using var cancellation = new CancellationTokenSource();
         await using var prepared = await ((IRemoteTransportBatchPreparer)session).PreparePushAsync(batch, cancellation.Token);
-
         await cancellation.CancelAsync();
         var result = await prepared.SendAsync(CancellationToken.None);
-
         await Assert.That(result.BatchId).IsEqualTo(batch.BatchId);
     }
 
@@ -222,9 +263,7 @@ public sealed partial class HttpRemoteTransportAdapterTests
         var prepared = await ((IRemoteTransportBatchPreparer)session).PreparePushAsync(batch, CancellationToken.None);
         var send = prepared.SendAsync(CancellationToken.None).AsTask();
         await AwaitWithTimeoutAsync(entered.Task);
-
         Task DisposePreparedAsync() => prepared.DisposeAsync().AsTask().WaitAsync(TimeSpan.FromSeconds(AwaitTimeoutSeconds));
-
         await Assert.That(DisposePreparedAsync).ThrowsExactly<AggregateException>();
         await Assert.That(async () => await send).Throws<OperationCanceledException>();
         await Assert.That(DisposePreparedAsync).ThrowsExactly<AggregateException>();

@@ -432,6 +432,22 @@ internal sealed partial class HttpProtocolJsonContext
         writer.WriteEndArray();
     }
 
+    /// <summary>Writes an optional array property when it contains values.</summary>
+    /// <typeparam name="T">The item type.</typeparam>
+    /// <param name="writer">The JSON writer.</param>
+    /// <param name="propertyName">The property name.</param>
+    /// <param name="values">The values.</param>
+    /// <param name="write">The item writer.</param>
+    private static void WriteOptionalArray<T>(Utf8JsonWriter writer, string propertyName, T[] values, Action<Utf8JsonWriter, T> write)
+    {
+        if (values.Length == 0)
+        {
+            return;
+        }
+
+        WriteArray(writer, propertyName, values, write);
+    }
+
     /// <summary>Writes a 32-bit integer array property.</summary>
     /// <param name="writer">The JSON writer.</param>
     /// <param name="propertyName">The property name.</param>

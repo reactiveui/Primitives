@@ -22,8 +22,20 @@ public sealed record HttpServerEndpointOptions
     /// <summary>Gets the borrowed server hub.</summary>
     public required IServerStreamHub Hub { get; init; }
 
+    /// <summary>Gets the optional borrowed snapshot recovery hub.</summary>
+    public IServerSnapshotRecoveryHub? SnapshotRecoveryHub { get; init; }
+
     /// <summary>Gets the capabilities declared by this endpoint.</summary>
     public required NegotiatedCapabilities DeclaredCapabilities { get; init; }
+
+    /// <summary>Gets the host authorization callback used before admitting fresh and duplicate replay requests.</summary>
+    public required IHttpReplayAuthorizer ReplayAuthorizer { get; init; }
+
+    /// <summary>Gets the replay protection settings used by this endpoint.</summary>
+    public HttpReplayProtectionOptions ReplayProtection { get; init; } = new();
+
+    /// <summary>Gets the finite validation limits used for snapshot recovery request and response bodies.</summary>
+    public SnapshotRecoveryLimits SnapshotRecoveryLimits { get; init; } = new();
 
     /// <summary>Gets the optional route path base.</summary>
     public string PathBase { get; init; } = string.Empty;
@@ -39,6 +51,9 @@ public sealed record HttpServerEndpointOptions
 
     /// <summary>Gets the relative acknowledgement route.</summary>
     public string AcknowledgePath { get; init; } = HttpRemoteTransportOptions.DefaultAcknowledgePath;
+
+    /// <summary>Gets the relative snapshot recovery route.</summary>
+    public string SnapshotRecoveryPath { get; init; } = HttpRemoteTransportOptions.DefaultSnapshotRecoveryPath;
 
     /// <summary>Gets the maximum concurrent non-acknowledgement requests.</summary>
     public int MaximumConcurrentRequests { get; init; } = 4;

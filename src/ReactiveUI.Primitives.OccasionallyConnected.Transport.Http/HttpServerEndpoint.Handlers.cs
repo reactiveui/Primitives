@@ -11,6 +11,32 @@ namespace ReactiveUI.Primitives.OccasionallyConnected.Transport.Http;
 /// <summary>Handles portable HTTP server requests for occasionally connected synchronization.</summary>
 public sealed partial class HttpServerEndpoint
 {
+    /// <summary>Dispatches a body-defined route after path matching.</summary>
+    /// <param name="request">The HTTP request.</param>
+    /// <param name="requestUri">The request URI.</param>
+    /// <param name="expectedMethod">The expected HTTP method.</param>
+    /// <param name="handler">The route handler.</param>
+    /// <param name="authenticatedClient">The host-authenticated client principal.</param>
+    /// <param name="cancellationToken">The request cancellation token.</param>
+    /// <returns>The caller-owned response.</returns>
+    private static ValueTask<HttpResponseMessage> DispatchBodyRouteAsync(
+        HttpRequestMessage request,
+        Uri requestUri,
+        HttpMethod expectedMethod,
+        Func<HttpRequestMessage, ServerAuthenticatedClient, CancellationToken, ValueTask<HttpResponseMessage>> handler,
+        ServerAuthenticatedClient authenticatedClient,
+        CancellationToken cancellationToken)
+    {
+        if (GetMethodStatus(request.Method, expectedMethod) != HttpStatusCode.OK)
+        {
+            return new(CreateResponse(HttpStatusCode.MethodNotAllowed));
+        }
+
+        return HasQuery(requestUri)
+            ? new(CreateResponse(HttpStatusCode.BadRequest))
+            : handler(request, authenticatedClient, cancellationToken);
+    }
+
     /// <summary>Creates a safe response before route work when endpoint admission cannot proceed.</summary>
     /// <param name="request">The HTTP request.</param>
     /// <param name="authenticatedClient">The host-authenticated client principal.</param>
@@ -61,16 +87,12 @@ public sealed partial class HttpServerEndpoint
 
         if (StringComparer.Ordinal.Equals(route, _connectPath))
         {
-            return GetMethodStatus(request.Method, HttpMethod.Post) == HttpStatusCode.OK
-                ? HandleConnectAsync(request, authenticatedClient, cancellationToken)
-                : new(CreateResponse(HttpStatusCode.MethodNotAllowed));
+            return DispatchBodyRouteAsync(request, requestUri, HttpMethod.Post, HandleConnectAsync, authenticatedClient, cancellationToken);
         }
 
         if (StringComparer.Ordinal.Equals(route, _pushPath))
         {
-            return GetMethodStatus(request.Method, HttpMethod.Post) == HttpStatusCode.OK
-                ? HandlePushAsync(request, authenticatedClient, cancellationToken)
-                : new(CreateResponse(HttpStatusCode.MethodNotAllowed));
+            return DispatchBodyRouteAsync(request, requestUri, HttpMethod.Post, HandlePushAsync, authenticatedClient, cancellationToken);
         }
 
         if (StringComparer.Ordinal.Equals(route, _subscribePath))
@@ -80,23 +102,15 @@ public sealed partial class HttpServerEndpoint
                 : new(CreateResponse(HttpStatusCode.MethodNotAllowed));
         }
 
+        if (StringComparer.Ordinal.Equals(route, _snapshotRecoveryPath))
+        {
+            return DispatchBodyRouteAsync(request, requestUri, HttpMethod.Post, HandleSnapshotRecoveryAsync, authenticatedClient, cancellationToken);
+        }
+
         return StringComparer.Ordinal.Equals(route, _acknowledgePath)
-            ? DispatchAcknowledgementAsync(request, authenticatedClient, cancellationToken)
+            ? DispatchBodyRouteAsync(request, requestUri, HttpMethod.Post, HandleAcknowledgeAsync, authenticatedClient, cancellationToken)
             : new(CreateResponse(NotFound));
     }
-
-    /// <summary>Dispatches an acknowledgement route after path matching.</summary>
-    /// <param name="request">The HTTP request.</param>
-    /// <param name="authenticatedClient">The host-authenticated client principal.</param>
-    /// <param name="cancellationToken">The request cancellation token.</param>
-    /// <returns>The caller-owned response.</returns>
-    private ValueTask<HttpResponseMessage> DispatchAcknowledgementAsync(
-        HttpRequestMessage request,
-        ServerAuthenticatedClient authenticatedClient,
-        CancellationToken cancellationToken) =>
-        GetMethodStatus(request.Method, HttpMethod.Post) == HttpStatusCode.OK
-            ? HandleAcknowledgeAsync(request, authenticatedClient, cancellationToken)
-            : new(CreateResponse(HttpStatusCode.MethodNotAllowed));
 
     /// <summary>Handles a connect request.</summary>
     /// <param name="request">The HTTP request.</param>
@@ -110,21 +124,40 @@ public sealed partial class HttpServerEndpoint
     {
         try
         {
-            using var requestSource = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, _shutdown.Token);
-            var requestToken = requestSource.Token;
-            using var lease = await _requestGate.EnterAsync(requestToken).ConfigureAwait(false);
-            var connect = _codec.DeserializeConnectRequest(await ReadRequiredBodyAsync(request, requestToken).ConfigureAwait(false));
-            if (!string.Equals(connect.Client.ClientId, authenticatedClient.ClientId, StringComparison.Ordinal))
-            {
-                return CreateResponse(HttpStatusCode.Forbidden);
-            }
-
-            HttpRemoteTransportCapabilities.ValidateNegotiation(connect, _advertisedCapabilities, SupportedCapabilities);
-            return CreateProtocolResponse(_codec.SerializeConnectResponse(_advertisedCapabilities));
+            return await ExecuteReplayConnectAsync(request, authenticatedClient, cancellationToken).ConfigureAwait(false);
         }
         catch (HttpRemoteTransportException exception)
         {
-            return CreateErrorResponse(exception, effectsPossible: false);
+            return CreateErrorResponse(exception);
+        }
+        catch (ObjectDisposedException)
+        {
+            return CreateResponse(ServiceUnavailable);
+        }
+        catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested && Volatile.Read(ref _disposed) != 0)
+        {
+            return CreateResponse(ServiceUnavailable);
+        }
+    }
+
+    /// <summary>Handles a snapshot recovery request.</summary>
+    /// <param name="request">The HTTP request.</param>
+    /// <param name="authenticatedClient">The host-authenticated client principal.</param>
+    /// <param name="cancellationToken">The request cancellation token.</param>
+    /// <returns>The caller-owned response.</returns>
+    private async ValueTask<HttpResponseMessage> HandleSnapshotRecoveryAsync(
+        HttpRequestMessage request,
+        ServerAuthenticatedClient authenticatedClient,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            var result = await ExecuteReplaySnapshotRecoveryAsync(request, authenticatedClient, cancellationToken).ConfigureAwait(false);
+            return result.Response;
+        }
+        catch (HttpRemoteTransportException exception)
+        {
+            return CreateErrorResponse(exception);
         }
         catch (ObjectDisposedException)
         {
@@ -146,36 +179,22 @@ public sealed partial class HttpServerEndpoint
         ServerAuthenticatedClient authenticatedClient,
         CancellationToken cancellationToken)
     {
-        var effectsPossible = false;
         try
         {
-            using var requestSource = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, _shutdown.Token);
-            var requestToken = requestSource.Token;
-            using var lease = await _requestGate.EnterAsync(requestToken).ConfigureAwait(false);
-            var batch = _codec.DeserializePushRequest(await ReadRequiredBodyAsync(request, requestToken).ConfigureAwait(false));
-            effectsPossible = true;
-            var result = await _hub.ApplyOperationsAsync(batch, authenticatedClient, requestToken).ConfigureAwait(false);
-            return CreateProtocolResponse(_codec.SerializePushResponse(batch, result.Result));
+            var result = await ExecuteReplayPushAsync(request, authenticatedClient, cancellationToken).ConfigureAwait(false);
+            return result.Response;
         }
         catch (HttpRemoteTransportException exception)
         {
-            return CreateErrorResponse(exception, effectsPossible);
+            return CreateErrorResponse(exception);
         }
-        catch (ObjectDisposedException) when (!effectsPossible)
+        catch (ObjectDisposedException)
         {
             return CreateResponse(ServiceUnavailable);
         }
-        catch (OperationCanceledException) when (!effectsPossible && !cancellationToken.IsCancellationRequested && Volatile.Read(ref _disposed) != 0)
+        catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested && Volatile.Read(ref _disposed) != 0)
         {
             return CreateResponse(ServiceUnavailable);
-        }
-        catch (OperationCanceledException) when (effectsPossible)
-        {
-            return CreateAmbiguousResponse();
-        }
-        catch (Exception) when (effectsPossible)
-        {
-            return CreateAmbiguousResponse();
         }
     }
 
@@ -189,36 +208,22 @@ public sealed partial class HttpServerEndpoint
         ServerAuthenticatedClient authenticatedClient,
         CancellationToken cancellationToken)
     {
-        var effectsPossible = false;
         try
         {
-            using var requestSource = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, _shutdown.Token);
-            var requestToken = requestSource.Token;
-            using var lease = await _acknowledgementGate.EnterAsync(requestToken).ConfigureAwait(false);
-            var acknowledgement = _codec.DeserializeAcknowledgement(await ReadRequiredBodyAsync(request, requestToken).ConfigureAwait(false));
-            effectsPossible = true;
-            await _hub.AcknowledgeAsync(acknowledgement, authenticatedClient, requestToken).ConfigureAwait(false);
-            return CreateResponse(HttpStatusCode.NoContent);
+            var result = await ExecuteReplayAcknowledgeAsync(request, authenticatedClient, cancellationToken).ConfigureAwait(false);
+            return result.Response;
         }
         catch (HttpRemoteTransportException exception)
         {
-            return CreateErrorResponse(exception, effectsPossible);
+            return CreateErrorResponse(exception);
         }
-        catch (ObjectDisposedException) when (!effectsPossible)
+        catch (ObjectDisposedException)
         {
             return CreateResponse(ServiceUnavailable);
         }
-        catch (OperationCanceledException) when (!effectsPossible && !cancellationToken.IsCancellationRequested && Volatile.Read(ref _disposed) != 0)
+        catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested && Volatile.Read(ref _disposed) != 0)
         {
             return CreateResponse(ServiceUnavailable);
-        }
-        catch (OperationCanceledException) when (effectsPossible)
-        {
-            return CreateAmbiguousResponse();
-        }
-        catch (Exception) when (effectsPossible)
-        {
-            return CreateAmbiguousResponse();
         }
     }
 
@@ -239,46 +244,22 @@ public sealed partial class HttpServerEndpoint
             return CreateResponse(HttpStatusCode.BadRequest);
         }
 
-        var effectsPossible = false;
         try
         {
-            using var requestSource = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, _shutdown.Token);
-            var requestToken = requestSource.Token;
-            using var requestLease = await _requestGate.EnterAsync(requestToken).ConfigureAwait(false);
-            using var subscriptionLease = await _subscriptionGate.EnterAsync(requestToken).ConfigureAwait(false);
-            var subscribe = ParseSubscribeRequest(requestUri);
-            IReadOnlyList<RemoteEventBatch> batches;
-            await using (var deadline = await PollDeadline.StartAsync(_timeProvider, _longPollTimeout, requestToken).ConfigureAwait(false))
-            {
-                effectsPossible = true;
-                batches = await ReadOneBatchAsync(subscribe, authenticatedClient, deadline.Token).ConfigureAwait(false);
-            }
-
-            return batches.Count == 0 ? CreateResponse(HttpStatusCode.NoContent) : CreateProtocolResponse(_codec.SerializeSubscribeResponse(batches));
+            var result = await ExecuteReplaySubscribeAsync(request, requestUri, authenticatedClient, cancellationToken).ConfigureAwait(false);
+            return result.Response;
         }
         catch (HttpRemoteTransportException exception)
         {
-            return CreateErrorResponse(exception, effectsPossible);
+            return CreateErrorResponse(exception);
         }
         catch (ObjectDisposedException)
         {
             return CreateResponse(ServiceUnavailable);
         }
-        catch (OperationCanceledException) when (!effectsPossible)
+        catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested && Volatile.Read(ref _disposed) != 0)
         {
-            throw;
-        }
-        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
-        {
-            return CreateAmbiguousResponse();
-        }
-        catch (OperationCanceledException)
-        {
-            return Volatile.Read(ref _disposed) != 0 ? CreateResponse(ServiceUnavailable) : CreateResponse(HttpStatusCode.NoContent);
-        }
-        catch (Exception) when (effectsPossible)
-        {
-            return CreateAmbiguousResponse();
+            return CreateResponse(ServiceUnavailable);
         }
     }
 }

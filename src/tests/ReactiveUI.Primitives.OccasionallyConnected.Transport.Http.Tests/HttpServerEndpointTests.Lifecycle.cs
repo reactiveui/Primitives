@@ -1,10 +1,8 @@
 // Copyright (c) 2019-2026 ReactiveUI Association Incorporated. All rights reserved.
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
-
 using System.Net;
 using System.Net.Http;
-
 namespace ReactiveUI.Primitives.OccasionallyConnected.Transport.Http.Tests;
 
 /// <summary>Lifecycle, capacity, and deadline behavior tests for <see cref="HttpServerEndpoint"/>.</summary>
@@ -21,9 +19,7 @@ public sealed partial class HttpServerEndpointTests
         await using var endpoint = new HttpServerEndpoint(CreateOptions(new RecordingHub()));
         await endpoint.DisposeAsync();
         using var request = new HttpRequestMessage(HttpMethod.Get, $"{SubscribeUri}{SubscribeQuery}");
-
         using var response = await endpoint.HandleAsync(request, CreateAuthenticatedClient(), CancellationToken.None);
-
         await Assert.That(response.StatusCode).IsEqualTo(HttpStatusCode.ServiceUnavailable);
     }
 
@@ -35,9 +31,7 @@ public sealed partial class HttpServerEndpointTests
         await using var endpoint = new HttpServerEndpoint(CreateOptions(new RecordingHub()));
         await endpoint.DisposeAsync();
         using var request = CreateProtocolRequest(HttpMethod.Post, ConnectUri, CreateCodec().SerializeConnectRequest(CreateConnectRequest(ClientId)));
-
         using var response = await endpoint.HandleAsync(request, CreateAuthenticatedClient(), CancellationToken.None);
-
         await Assert.That(response.StatusCode).IsEqualTo(HttpStatusCode.ServiceUnavailable);
     }
 
@@ -50,9 +44,7 @@ public sealed partial class HttpServerEndpointTests
         await using var endpoint = new HttpServerEndpoint(CreateOptions(hub));
         await endpoint.DisposeAsync();
         using var request = CreateProtocolRequest(HttpMethod.Post, PushUri, CreateCodec().SerializePushRequest(CreateBatch()));
-
         using var response = await endpoint.HandleAsync(request, CreateAuthenticatedClient(), CancellationToken.None);
-
         await Assert.That(response.StatusCode).IsEqualTo(HttpStatusCode.ServiceUnavailable);
         await Assert.That(hub.ApplyClient).IsNull();
     }
@@ -66,9 +58,7 @@ public sealed partial class HttpServerEndpointTests
         await using var endpoint = new HttpServerEndpoint(CreateOptions(hub));
         await endpoint.DisposeAsync();
         using var request = CreateProtocolRequest(HttpMethod.Post, AcknowledgeUri, CreateCodec().SerializeAcknowledgement(CreateAcknowledgement()));
-
         using var response = await endpoint.HandleAsync(request, CreateAuthenticatedClient(), CancellationToken.None);
-
         await Assert.That(response.StatusCode).IsEqualTo(HttpStatusCode.ServiceUnavailable);
         await Assert.That(hub.AcknowledgeClient).IsNull();
     }
@@ -84,13 +74,11 @@ public sealed partial class HttpServerEndpointTests
         HttpResponseMessage? response = null;
         try
         {
-            using var request = CreateProtocolRequest(HttpMethod.Post, PushUri, CreateCodec().SerializePushRequest(CreateBatch()));
+            using var request = await CreateSignedPushRequestAsync(endpoint, CreateBatch());
             var responseTask = endpoint.HandleAsync(request, CreateAuthenticatedClient(), CancellationToken.None).AsTask();
-
             await applyEntered.Task.WaitAsync(TimeSpan.FromSeconds(AsyncWaitTimeoutSeconds)).ConfigureAwait(false);
             var disposeTask = endpoint.DisposeAsync().AsTask();
             response = await AwaitResultAsync(responseTask).ConfigureAwait(false);
-
             await Assert.That(response.StatusCode).IsEqualTo(HttpStatusCode.InternalServerError);
             await Assert.That(hub.ApplyClient).IsEqualTo(CreateAuthenticatedClient());
             await AssertCompletesAsync(disposeTask).ConfigureAwait(false);
@@ -120,11 +108,9 @@ public sealed partial class HttpServerEndpointTests
             using var content = CreateBlockingProtocolContent(readStarted);
             using var request = CreateBodyReadRequest(target, content);
             var responseTask = endpoint.HandleAsync(request, CreateAuthenticatedClient(), CancellationToken.None).AsTask();
-
             await readStarted.Task.WaitAsync(TimeSpan.FromSeconds(AsyncWaitTimeoutSeconds)).ConfigureAwait(false);
             var disposeTask = endpoint.DisposeAsync().AsTask();
             response = await AwaitResultAsync(responseTask).ConfigureAwait(false);
-
             await Assert.That(response.StatusCode).IsEqualTo(HttpStatusCode.ServiceUnavailable);
             await Assert.That(hub.ApplyClient).IsNull();
             await Assert.That(hub.AcknowledgeClient).IsNull();
@@ -150,9 +136,7 @@ public sealed partial class HttpServerEndpointTests
         await using var endpoint = new HttpServerEndpoint(CreateOptions(hub));
         using var content = CreateDisposedReadProtocolContent();
         using var request = CreateBodyReadRequest(target, content);
-
         using var response = await endpoint.HandleAsync(request, CreateAuthenticatedClient(), CancellationToken.None);
-
         await Assert.That(response.StatusCode).IsEqualTo(HttpStatusCode.ServiceUnavailable);
         await Assert.That(hub.ApplyClient).IsNull();
         await Assert.That(hub.AcknowledgeClient).IsNull();
@@ -191,17 +175,14 @@ public sealed partial class HttpServerEndpointTests
         var endpoint = new HttpServerEndpoint(CreateOptions(hub));
         try
         {
-            using var request = CreateProtocolRequest(HttpMethod.Post, PushUri, CreateCodec().SerializePushRequest(CreateBatch()));
+            using var request = await CreateSignedPushRequestAsync(endpoint, CreateBatch());
             responseTask = endpoint.HandleAsync(request, CreateAuthenticatedClient(), CancellationToken.None).AsTask();
-
             await applyEntered.Task.WaitAsync(TimeSpan.FromSeconds(AsyncWaitTimeoutSeconds)).ConfigureAwait(false);
             var disposeTask = endpoint.DisposeAsync().AsTask();
             await cancellationObserved.Task.WaitAsync(TimeSpan.FromSeconds(AsyncWaitTimeoutSeconds)).ConfigureAwait(false);
-
             await Assert.That(disposeTask.IsCompleted).IsFalse();
             _ = releaseApply.TrySetResult(null);
             response = await AwaitResultAsync(responseTask).ConfigureAwait(false);
-
             await Assert.That(response.StatusCode).IsEqualTo(HttpStatusCode.InternalServerError);
             await Assert.That(hub.ApplyClient).IsEqualTo(CreateAuthenticatedClient());
             await Assert.That(async () => await disposeTask.WaitAsync(TimeSpan.FromSeconds(AsyncWaitTimeoutSeconds))).ThrowsExactly<AggregateException>();
@@ -224,7 +205,6 @@ public sealed partial class HttpServerEndpointTests
     public async Task DisposeAsyncIsIdempotent()
     {
         var endpoint = new HttpServerEndpoint(CreateOptions(new RecordingHub()));
-
         await AssertCompletesAsync(Task.WhenAll(endpoint.DisposeAsync().AsTask(), endpoint.DisposeAsync().AsTask())).ConfigureAwait(false);
         await AssertCompletesAsync(endpoint.DisposeAsync().AsTask()).ConfigureAwait(false);
     }
@@ -240,13 +220,11 @@ public sealed partial class HttpServerEndpointTests
         HttpResponseMessage? response = null;
         try
         {
-            using var request = new HttpRequestMessage(HttpMethod.Get, $"{SubscribeUri}{SubscribeQuery}");
+            using var request = await CreateSignedSubscribeRequestAsync(endpoint);
             var responseTask = endpoint.HandleAsync(request, CreateAuthenticatedClient(), CancellationToken.None).AsTask();
-
             await subscribeEntered.Task.WaitAsync(TimeSpan.FromSeconds(AsyncWaitTimeoutSeconds)).ConfigureAwait(false);
             var disposeTask = endpoint.DisposeAsync().AsTask();
             response = await AwaitResultAsync(responseTask).ConfigureAwait(false);
-
             await Assert.That(response.StatusCode).IsEqualTo(HttpStatusCode.ServiceUnavailable);
             await Assert.That(hub.SubscribeClient).IsEqualTo(CreateAuthenticatedClient());
             await AssertCompletesAsync(disposeTask).ConfigureAwait(false);
@@ -255,6 +233,56 @@ public sealed partial class HttpServerEndpointTests
         {
             response?.Dispose();
             await AssertCompletesAsync(endpoint.DisposeAsync().AsTask()).ConfigureAwait(false);
+        }
+    }
+
+    /// <summary>Verifies shutdown cancellation during replay authorization returns a bounded unavailable response.</summary>
+    /// <returns>The asynchronous test operation.</returns>
+    [Test]
+    public async Task HandleAsyncSubscribeShutdownDuringReplayAuthorizationReturnsServiceUnavailable()
+    {
+        var authorizer = new BlockingSubscribeReplayAuthorizer();
+        var hub = new RecordingHub();
+        var endpoint = new HttpServerEndpoint(CreateReplayOptions(hub, authorizer));
+        using var caller = new CancellationTokenSource();
+        Task<HttpResponseMessage>? responseTask = null;
+        Task? disposeTask = null;
+        HttpResponseMessage? response = null;
+        try
+        {
+            using var request = await CreateSignedSubscribeRequestAsync(endpoint);
+            responseTask = endpoint.HandleAsync(request, CreateAuthenticatedClient(), caller.Token).AsTask();
+            await authorizer.SubscribeAuthorizationEntered.Task.WaitAsync(TimeSpan.FromSeconds(AsyncWaitTimeoutSeconds)).ConfigureAwait(false);
+            await Assert.That(responseTask.IsCompleted).IsFalse();
+            await Assert.That(caller.IsCancellationRequested).IsFalse();
+            disposeTask = endpoint.DisposeAsync().AsTask();
+            response = await AwaitResultAsync(responseTask).ConfigureAwait(false);
+
+            await Assert.That(response.StatusCode).IsEqualTo(HttpStatusCode.ServiceUnavailable);
+            await Assert.That(caller.IsCancellationRequested).IsFalse();
+            await Assert.That(hub.SubscribeClient).IsNull();
+        }
+        finally
+        {
+            disposeTask ??= endpoint.DisposeAsync().AsTask();
+            try
+            {
+                if (responseTask is not null && response is null)
+                {
+                    response = await AwaitResultAsync(responseTask).ConfigureAwait(false);
+                }
+            }
+            finally
+            {
+                try
+                {
+                    response?.Dispose();
+                }
+                finally
+                {
+                    await AssertCompletesAsync(disposeTask).ConfigureAwait(false);
+                }
+            }
         }
     }
 
@@ -276,21 +304,19 @@ public sealed partial class HttpServerEndpointTests
         });
         try
         {
-            using var subscribeRequest = new HttpRequestMessage(HttpMethod.Get, $"{SubscribeUri}{SubscribeQuery}");
+            using var subscribeRequest = await CreateSignedSubscribeRequestAsync(endpoint);
+            using var pushRequest = await CreateSignedPushRequestAsync(endpoint, CreateBatch());
+            using var acknowledgeRequest = await CreateSignedAcknowledgeRequestAsync(endpoint, CreateAcknowledgement());
             subscribeTask = endpoint.HandleAsync(subscribeRequest, CreateAuthenticatedClient(), CancellationToken.None).AsTask();
-
             await pollEntered.Task.WaitAsync(TimeSpan.FromSeconds(AsyncWaitTimeoutSeconds)).ConfigureAwait(false);
-            using var pushRequest = CreateProtocolRequest(HttpMethod.Post, PushUri, CreateCodec().SerializePushRequest(CreateBatch()));
             using var pushResponse = await AwaitResultAsync(endpoint
                 .HandleAsync(pushRequest, CreateAuthenticatedClient(), CancellationToken.None)
                 .AsTask()).ConfigureAwait(false);
-            using var acknowledgeRequest = CreateProtocolRequest(HttpMethod.Post, AcknowledgeUri, CreateCodec().SerializeAcknowledgement(CreateAcknowledgement()));
             using var acknowledgeResponse = await AwaitResultAsync(endpoint
                 .HandleAsync(acknowledgeRequest, CreateAuthenticatedClient(), CancellationToken.None)
                 .AsTask()).ConfigureAwait(false);
             _ = releasePoll.TrySetResult(null);
             subscribeResponse = await AwaitResultAsync(subscribeTask).ConfigureAwait(false);
-
             await Assert.That(pushResponse.StatusCode).IsEqualTo(HttpStatusCode.TooManyRequests);
             await Assert.That(acknowledgeResponse.StatusCode).IsEqualTo(HttpStatusCode.NoContent);
             await Assert.That(subscribeResponse.StatusCode).IsEqualTo(HttpStatusCode.NoContent);
@@ -331,14 +357,12 @@ public sealed partial class HttpServerEndpointTests
         HttpResponseMessage? response = null;
         try
         {
-            using var request = new HttpRequestMessage(HttpMethod.Get, $"{SubscribeUri}{SubscribeQuery}");
+            using var request = await CreateSignedSubscribeRequestAsync(endpoint);
             responseTask = endpoint.HandleAsync(request, CreateAuthenticatedClient(), CancellationToken.None).AsTask();
             var timer = await timeProvider.WaitForTimerAsync().ConfigureAwait(false);
-
             await hubEntered.Task.WaitAsync(TimeSpan.FromSeconds(AsyncWaitTimeoutSeconds)).ConfigureAwait(false);
             await timer.FireAsync().ConfigureAwait(false);
             response = await AwaitResultAsync(responseTask).ConfigureAwait(false);
-
             await Assert.That(response.StatusCode).IsEqualTo(HttpStatusCode.InternalServerError);
             await Assert.That(timer.CallbackException).IsNull();
         }
@@ -368,16 +392,14 @@ public sealed partial class HttpServerEndpointTests
         HttpResponseMessage? response = null;
         try
         {
-            using var request = new HttpRequestMessage(HttpMethod.Get, $"{SubscribeUri}{SubscribeQuery}");
+            using var request = await CreateSignedSubscribeRequestAsync(endpoint);
             responseTask = endpoint.HandleAsync(request, CreateAuthenticatedClient(), CancellationToken.None).AsTask();
             timer = await timeProvider.WaitForTimerAsync().ConfigureAwait(false);
-
             await timer.FireAndHoldCallbackAsync().ConfigureAwait(false);
             await timer.DisposeAsyncStarted.WaitAsync(TimeSpan.FromSeconds(AsyncWaitTimeoutSeconds)).ConfigureAwait(false);
             await Assert.That(responseTask.IsCompleted).IsFalse();
             _ = timer.ReleaseCallback();
             response = await AwaitResultAsync(responseTask).ConfigureAwait(false);
-
             await Assert.That(response.StatusCode).IsEqualTo(HttpStatusCode.NoContent);
         }
         finally
@@ -412,10 +434,9 @@ public sealed partial class HttpServerEndpointTests
         var endpoint = new HttpServerEndpoint(CreateOptions(new RecordingHub()) with { TimeProvider = timeProvider });
         try
         {
-            using var request = new HttpRequestMessage(HttpMethod.Get, $"{SubscribeUri}{SubscribeQuery}");
+            using var request = await CreateSignedSubscribeRequestAsync(endpoint);
             var responseTask = endpoint.HandleAsync(request, CreateAuthenticatedClient(), CancellationToken.None).AsTask();
             var timer = await timeProvider.WaitForTimerAsync().ConfigureAwait(false);
-
             await Assert.That(async () => _ = await AwaitResultAsync(responseTask).ConfigureAwait(false)).ThrowsExactly<InvalidOperationException>();
             await timer.DisposeAsyncStarted.WaitAsync(TimeSpan.FromSeconds(AsyncWaitTimeoutSeconds)).ConfigureAwait(false);
         }
@@ -438,15 +459,13 @@ public sealed partial class HttpServerEndpointTests
         HttpResponseMessage? response = null;
         try
         {
-            using var request = new HttpRequestMessage(HttpMethod.Get, $"{SubscribeUri}{SubscribeQuery}");
+            using var request = await CreateSignedSubscribeRequestAsync(endpoint);
             responseTask = endpoint.HandleAsync(request, CreateAuthenticatedClient(), CancellationToken.None).AsTask();
             timer = await timeProvider.WaitForTimerAsync().ConfigureAwait(false);
-
             await timer.DisposeAsyncStarted.WaitAsync(TimeSpan.FromSeconds(AsyncWaitTimeoutSeconds)).ConfigureAwait(false);
             await Assert.That(responseTask.IsCompleted).IsFalse();
             _ = timer.ReleaseDispose();
             response = await AwaitResultAsync(responseTask).ConfigureAwait(false);
-
             await Assert.That(response.StatusCode).IsEqualTo(HttpStatusCode.OK);
             await Assert.That(hub.SubscribeClient).IsEqualTo(CreateAuthenticatedClient());
         }
@@ -487,10 +506,9 @@ public sealed partial class HttpServerEndpointTests
         InvalidOperationException? exception = null;
         try
         {
-            using var request = new HttpRequestMessage(HttpMethod.Get, $"{SubscribeUri}{SubscribeQuery}");
+            using var request = await CreateSignedSubscribeRequestAsync(endpoint);
             responseTask = endpoint.HandleAsync(request, CreateAuthenticatedClient(), CancellationToken.None).AsTask();
             timer = await timeProvider.WaitForTimerAsync().ConfigureAwait(false);
-
             await timer.DisposeAsyncStarted.WaitAsync(TimeSpan.FromSeconds(AsyncWaitTimeoutSeconds)).ConfigureAwait(false);
             await Assert.That(responseTask.IsCompleted).IsFalse();
             _ = timer.ReleaseDispose();
@@ -525,9 +543,8 @@ public sealed partial class HttpServerEndpointTests
         InvalidOperationException? exception = null;
         try
         {
-            using var request = new HttpRequestMessage(HttpMethod.Get, $"{SubscribeUri}{SubscribeQuery}");
+            using var request = await CreateSignedSubscribeRequestAsync(endpoint);
             var responseTask = endpoint.HandleAsync(request, CreateAuthenticatedClient(), CancellationToken.None).AsTask();
-
             try
             {
                 using var response = await AwaitResultAsync(responseTask).ConfigureAwait(false);
@@ -558,10 +575,9 @@ public sealed partial class HttpServerEndpointTests
         var endpoint = new HttpServerEndpoint(CreateOptions(hub) with { TimeProvider = timeProvider });
         try
         {
-            using var request = new HttpRequestMessage(HttpMethod.Get, $"{SubscribeUri}{SubscribeQuery}");
+            using var request = await CreateSignedSubscribeRequestAsync(endpoint);
             var responseTask = endpoint.HandleAsync(request, CreateAuthenticatedClient(), CancellationToken.None).AsTask();
             var timer = await timeProvider.WaitForTimerAsync().ConfigureAwait(false);
-
             await Assert.That(async () => _ = await AwaitResultAsync(responseTask).ConfigureAwait(false)).ThrowsExactly<InvalidOperationException>();
             await timer.DisposeAsyncStarted.WaitAsync(TimeSpan.FromSeconds(AsyncWaitTimeoutSeconds)).ConfigureAwait(false);
             await Assert.That(pollEntered.Task.IsCompleted).IsFalse();
@@ -583,10 +599,9 @@ public sealed partial class HttpServerEndpointTests
         InvalidOperationException? exception = null;
         try
         {
-            using var request = new HttpRequestMessage(HttpMethod.Get, $"{SubscribeUri}{SubscribeQuery}");
+            using var request = await CreateSignedSubscribeRequestAsync(endpoint);
             var responseTask = endpoint.HandleAsync(request, CreateAuthenticatedClient(), CancellationToken.None).AsTask();
             var timer = await timeProvider.WaitForTimerAsync().ConfigureAwait(false);
-
             try
             {
                 using var response = await AwaitResultAsync(responseTask).ConfigureAwait(false);
@@ -626,12 +641,10 @@ public sealed partial class HttpServerEndpointTests
         var endpoint = new HttpServerEndpoint(CreateOptions(hub) with { TimeProvider = timeProvider });
         try
         {
-            using var request = new HttpRequestMessage(HttpMethod.Get, $"{SubscribeUri}{SubscribeQuery}");
+            using var request = await CreateSignedSubscribeRequestAsync(endpoint);
             var responseTask = endpoint.HandleAsync(request, CreateAuthenticatedClient(), CancellationToken.None).AsTask();
             var timer = await timeProvider.WaitForTimerAsync().ConfigureAwait(false);
-
             using var response = await AwaitResultAsync(responseTask).ConfigureAwait(false);
-
             await timer.DisposeAsyncStarted.WaitAsync(TimeSpan.FromSeconds(AsyncWaitTimeoutSeconds)).ConfigureAwait(false);
             await Assert.That(response.StatusCode).IsEqualTo(HttpStatusCode.ServiceUnavailable);
             await Assert.That(hub.SubscribeClient).IsNull();
@@ -654,10 +667,9 @@ public sealed partial class HttpServerEndpointTests
         OperationCanceledException? exception = null;
         try
         {
-            using var request = new HttpRequestMessage(HttpMethod.Get, $"{SubscribeUri}{SubscribeQuery}");
+            using var request = await CreateSignedSubscribeRequestAsync(endpoint);
             var responseTask = endpoint.HandleAsync(request, CreateAuthenticatedClient(), CancellationToken.None).AsTask();
             var timer = await timeProvider.WaitForTimerAsync().ConfigureAwait(false);
-
             try
             {
                 using var response = await AwaitResultAsync(responseTask).ConfigureAwait(false);
@@ -691,10 +703,9 @@ public sealed partial class HttpServerEndpointTests
         InaccessibleDataException? exception = null;
         try
         {
-            using var request = new HttpRequestMessage(HttpMethod.Get, $"{SubscribeUri}{SubscribeQuery}");
+            using var request = await CreateSignedSubscribeRequestAsync(endpoint);
             var responseTask = endpoint.HandleAsync(request, CreateAuthenticatedClient(), CancellationToken.None).AsTask();
             var timer = await timeProvider.WaitForTimerAsync().ConfigureAwait(false);
-
             try
             {
                 using var response = await AwaitResultAsync(responseTask).ConfigureAwait(false);
@@ -711,6 +722,32 @@ public sealed partial class HttpServerEndpointTests
         finally
         {
             await AssertCompletesAsync(endpoint.DisposeAsync().AsTask()).ConfigureAwait(false);
+        }
+    }
+
+    /// <summary>Allows the connect replay authorization, then blocks the subscribe authorization until endpoint shutdown.</summary>
+    private sealed class BlockingSubscribeReplayAuthorizer : IHttpReplayAuthorizer
+    {
+        /// <summary>Whether the connect replay authorization has been allowed.</summary>
+        private bool _connectAuthorized;
+
+        /// <summary>Gets the signal completed when subscribe authorization starts waiting.</summary>
+        internal TaskCompletionSource<object?> SubscribeAuthorizationEntered { get; } =
+            new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        /// <inheritdoc/>
+        public async ValueTask<bool> AuthorizeReplayAsync(HttpReplayAuthorizationContext context, CancellationToken cancellationToken)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            if (!_connectAuthorized)
+            {
+                _connectAuthorized = true;
+                return true;
+            }
+
+            _ = SubscribeAuthorizationEntered.TrySetResult(null);
+            await Task.Delay(Timeout.InfiniteTimeSpan, cancellationToken).ConfigureAwait(false);
+            return true;
         }
     }
 }

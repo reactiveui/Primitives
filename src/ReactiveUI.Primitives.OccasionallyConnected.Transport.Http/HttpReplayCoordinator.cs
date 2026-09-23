@@ -17,6 +17,9 @@ namespace ReactiveUI.Primitives.OccasionallyConnected.Transport.Http;
 internal sealed class HttpReplayCoordinator : IAsyncDisposable
 {
     /// <summary>The connect replay session identifier response header.</summary>
+    private const string ReplayTenantIdHeader = "X-ReactiveUI-Replay-Tenant-Id";
+
+    /// <summary>The connect replay session identifier response header.</summary>
     private const string ReplaySessionIdHeader = "X-ReactiveUI-Replay-Session-Id";
 
     /// <summary>The connect replay session secret response header.</summary>
@@ -122,15 +125,16 @@ internal sealed class HttpReplayCoordinator : IAsyncDisposable
             }
         }
 
+        HttpReplayEnvelopeHasher.ValidateReplayMacSyntax(request);
         var envelope = _hasher.Create(request);
         var authorization = await authorizeAsync(cancellationToken).ConfigureAwait(false);
-        var observedUtc = ObserveHighWater();
-        var failureDecision = CreatePreAdmissionFailureDecision(request, envelope, authorization, observedUtc, out var sessionProof);
-        if (failureDecision is not null)
+        var authorizationFailure = CreateAuthorizationFailureDecision(authorization);
+        if (authorizationFailure is not null)
         {
-            return failureDecision;
+            return authorizationFailure;
         }
 
+        var observedUtc = _options.TimeProvider.GetUtcNow();
         ReplayWaiter? waiter = null;
         HttpReplayDecision decision;
         lock (_gate)
@@ -140,10 +144,11 @@ internal sealed class HttpReplayCoordinator : IAsyncDisposable
                 return CreateTransientDecision(HttpStatusCode.ServiceUnavailable);
             }
 
-            observedUtc = ObserveHighWater();
-            if (sessionProof is not null && observedUtc > sessionProof.ExpiresAtUtc)
+            observedUtc = UpdateHighWaterCore(observedUtc);
+            var sessionFailure = CreateSessionProofFailureDecision(request, envelope, observedUtc, out var sessionProof);
+            if (sessionFailure is not null)
             {
-                return CreateRejectDecision(HttpStatusCode.Unauthorized, HttpTransportFailureKind.Authentication);
+                return sessionFailure;
             }
 
             var existingIndex = FindEntryIndexCore(request);
@@ -160,8 +165,8 @@ internal sealed class HttpReplayCoordinator : IAsyncDisposable
     /// <summary>Completes an owner execution after endpoint effects have run.</summary>
     /// <param name="owner">The replay owner.</param>
     /// <param name="completion">The execution completion.</param>
-    /// <returns>The asynchronous completion operation.</returns>
-    internal ValueTask CompleteAsync(HttpReplayOwner owner, HttpReplayCompletion completion)
+    /// <returns>The registration failure status, when connect session registration failed.</returns>
+    internal ValueTask<HttpStatusCode?> CompleteAsync(HttpReplayOwner owner, HttpReplayCompletion completion)
     {
         ArgumentExceptionHelper.ThrowIfNull(owner);
         ArgumentExceptionHelper.ThrowIfNull(completion);
@@ -170,7 +175,17 @@ internal sealed class HttpReplayCoordinator : IAsyncDisposable
             return default;
         }
 
-        var registrationFailureStatus = RegisterConnectSession(owner, completion);
+        HttpStatusCode? registrationFailureStatus;
+        try
+        {
+            registrationFailureStatus = RegisterConnectSession(owner, completion);
+        }
+        catch
+        {
+            CompleteClosedOwnerAsTransient(owner, HttpStatusCode.ServiceUnavailable, canReexecute: false);
+            throw;
+        }
+
         List<ReplayWaiter> waiters = [];
         HttpReplayDecision? waiterDecision = null;
         lock (_gate)
@@ -184,25 +199,22 @@ internal sealed class HttpReplayCoordinator : IAsyncDisposable
             }
         }
 
-        if (waiterDecision is null)
+        if (waiterDecision is not null)
         {
-            return default;
+            CompleteWaiters(waiters, waiterDecision);
         }
 
-        CompleteWaiters(waiters, waiterDecision);
-        return default;
+        return new(registrationFailureStatus);
     }
 
     /// <summary>Abandons an owner execution and transitions retained state to uncached replay when needed.</summary>
     /// <param name="owner">The replay owner.</param>
-    /// <param name="_">The cancellation token used only while waiting for drain.</param>
-    /// <returns>The asynchronous abandonment operation.</returns>
-    internal ValueTask AbandonAsync(HttpReplayOwner owner, CancellationToken _)
+    internal void Abandon(HttpReplayOwner owner)
     {
         ArgumentExceptionHelper.ThrowIfNull(owner);
         if (!owner.IsOwnedBy(this) || !owner.TryClose())
         {
-            return default;
+            return;
         }
 
         List<ReplayWaiter> waiters = [];
@@ -218,21 +230,33 @@ internal sealed class HttpReplayCoordinator : IAsyncDisposable
             }
         }
 
-        if (waiterDecision is null)
+        if (waiterDecision is not null)
         {
-            return default;
+            CompleteWaiters(waiters, waiterDecision);
         }
-
-        CompleteWaiters(waiters, waiterDecision);
-        return default;
     }
+
+    /// <summary>Creates a host authorization failure before retained replay state is touched.</summary>
+    /// <param name="authorization">The current authorization result.</param>
+    /// <returns>The failure decision, or null when admission can continue.</returns>
+    private static HttpReplayDecision? CreateAuthorizationFailureDecision(HttpReplayAuthorizationResult authorization) =>
+        authorization.IsAuthorized
+            ? null
+            : CreateRejectDecision(authorization.Failure ?? new(HttpStatusCode.Forbidden, HttpTransportFailureKind.AuthorizationDenied));
 
     /// <summary>Creates a safe validation rejection.</summary>
     /// <param name="statusCode">The HTTP status code.</param>
     /// <param name="kind">The failure kind.</param>
     /// <returns>The replay decision.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static HttpReplayDecision CreateRejectDecision(HttpStatusCode statusCode, HttpTransportFailureKind kind) =>
-        new() { Kind = HttpReplayAdmissionKind.Reject, Failure = new(statusCode, kind) };
+        CreateRejectDecision(new(statusCode, kind));
+
+    /// <summary>Creates a safe validation rejection.</summary>
+    /// <param name="failure">The safe replay failure.</param>
+    /// <returns>The replay decision.</returns>
+    private static HttpReplayDecision CreateRejectDecision(HttpReplayFailure failure) =>
+        new() { Kind = HttpReplayAdmissionKind.Reject, Failure = failure };
 
     /// <summary>Creates a safe transient decision.</summary>
     /// <param name="statusCode">The HTTP status code.</param>
@@ -277,6 +301,7 @@ internal sealed class HttpReplayCoordinator : IAsyncDisposable
         session is null
             ? []
             : [
+            new(ReplayTenantIdHeader, HttpReplayBase64Url.Encode(Encoding.UTF8.GetBytes(session.TenantId))),
             new(ReplaySessionIdHeader, session.SessionId),
             new(ReplaySessionSecretHeader, session.SessionSecret),
             new(ReplaySessionExpiresHeader, session.ExpiresAtUtc.ToString("O", CultureInfo.InvariantCulture)),
@@ -344,6 +369,31 @@ internal sealed class HttpReplayCoordinator : IAsyncDisposable
     /// <param name="right">The second timestamp.</param>
     /// <returns>The earlier timestamp.</returns>
     private static DateTimeOffset Min(DateTimeOffset left, DateTimeOffset right) => left <= right ? left : right;
+
+    /// <summary>Transitions an already-closed owner to transient failure and drains waiters.</summary>
+    /// <param name="owner">The already-closed owner.</param>
+    /// <param name="statusCode">The failure status.</param>
+    /// <param name="canReexecute">Whether the same request may be re-executed.</param>
+    private void CompleteClosedOwnerAsTransient(HttpReplayOwner owner, HttpStatusCode statusCode, bool canReexecute)
+    {
+        List<ReplayWaiter> waiters = [];
+        HttpReplayDecision? waiterDecision = null;
+        lock (_gate)
+        {
+            var entry = FindEntryByIdCore(owner.EntryId);
+            if (!_disposed && entry is not null && entry.IsInFlight)
+            {
+                entry.MarkTransient(statusCode, canReexecute);
+                waiterDecision = entry.CreateCurrentDecision();
+                DetachWaitersCore(entry, waiters);
+            }
+        }
+
+        if (waiterDecision is not null)
+        {
+            CompleteWaiters(waiters, waiterDecision);
+        }
+    }
 
     /// <summary>Admits a new replay entry.</summary>
     /// <param name="request">The replay request.</param>
@@ -565,26 +615,19 @@ internal sealed class HttpReplayCoordinator : IAsyncDisposable
         return expiry;
     }
 
-    /// <summary>Creates authorization or session-proof failure before retained replay state is touched.</summary>
+    /// <summary>Creates session-proof failure under the coordinator admission gate.</summary>
     /// <param name="request">The replay request.</param>
     /// <param name="envelope">The replay envelope.</param>
-    /// <param name="authorization">The current authorization result.</param>
     /// <param name="observedUtc">The observed timestamp.</param>
     /// <param name="sessionProof">The verified session proof, when one is required.</param>
     /// <returns>The failure decision, or null when admission can continue.</returns>
-    private HttpReplayDecision? CreatePreAdmissionFailureDecision(
+    private HttpReplayDecision? CreateSessionProofFailureDecision(
         HttpReplayRequest request,
         HttpReplayEnvelope envelope,
-        HttpReplayAuthorizationResult authorization,
         DateTimeOffset observedUtc,
         out HttpReplaySessionProof? sessionProof)
     {
         sessionProof = null;
-        if (!authorization.IsAuthorized)
-        {
-            return new() { Kind = HttpReplayAdmissionKind.Reject, Failure = authorization.Failure ?? new(HttpStatusCode.Forbidden, HttpTransportFailureKind.AuthorizationDenied) };
-        }
-
         if (request.Operation == HttpReplayOperationKind.Connect)
         {
             return null;
@@ -664,13 +707,21 @@ internal sealed class HttpReplayCoordinator : IAsyncDisposable
         var observedUtc = _options.TimeProvider.GetUtcNow();
         lock (_gate)
         {
-            if (observedUtc > _highWaterUtc)
-            {
-                _highWaterUtc = observedUtc;
-            }
-
-            return _highWaterUtc;
+            return UpdateHighWaterCore(observedUtc);
         }
+    }
+
+    /// <summary>Updates the monotonic high-water clock value while the caller owns <see cref="_gate"/>.</summary>
+    /// <param name="observedUtc">The timestamp observed outside the coordinator gate.</param>
+    /// <returns>The monotonic high-water timestamp.</returns>
+    private DateTimeOffset UpdateHighWaterCore(DateTimeOffset observedUtc)
+    {
+        if (observedUtc > _highWaterUtc)
+        {
+            _highWaterUtc = observedUtc;
+        }
+
+        return _highWaterUtc;
     }
 
     /// <summary>Registers an issued connect session before publishing a connect replay response.</summary>

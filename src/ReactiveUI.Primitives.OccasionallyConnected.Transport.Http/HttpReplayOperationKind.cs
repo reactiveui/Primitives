@@ -18,4 +18,7 @@ internal enum HttpReplayOperationKind
 
     /// <summary>The receive acknowledgement operation.</summary>
     Acknowledge = 3,
+
+    /// <summary>The snapshot recovery operation.</summary>
+    SnapshotRecovery = 4,
 }

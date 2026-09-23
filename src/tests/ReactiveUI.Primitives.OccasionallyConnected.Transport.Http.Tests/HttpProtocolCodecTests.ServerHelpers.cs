@@ -1,7 +1,6 @@
 // Copyright (c) 2019-2026 ReactiveUI Association Incorporated. All rights reserved.
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
-
 using System.Diagnostics;
 using System.Globalization;
 using System.Net;
@@ -9,7 +8,6 @@ using System.Net.Http;
 using System.Runtime.CompilerServices;
 using System.Text;
 using System.Text.Json;
-
 namespace ReactiveUI.Primitives.OccasionallyConnected.Transport.Http.Tests;
 
 /// <summary>Tests <see cref="HttpProtocolCodec"/>.</summary>
@@ -148,7 +146,6 @@ public sealed partial class HttpProtocolCodecTests
     private static async Task<string> CaptureSubscribeQueryAsync(RemoteSubscribeRequest request)
     {
         var capturedTask = QueryCaptureHandler.Prepare();
-
         var options = new HttpRemoteTransportOptions { HttpClient = QueryCaptureClient, BaseAddress = new("https://example.invalid/oc/") };
         var capabilities = new NegotiatedCapabilities(
             new(1, 0),
@@ -160,13 +157,12 @@ public sealed partial class HttpProtocolCodecTests
         await using var session = new HttpRemoteTransportSession(
             options,
             capabilities,
-            new HttpRequestGate(1),
-            new HttpRequestGate(1),
-            new HttpRequestGate(1),
+            new(new HttpRequestGate(1), new HttpRequestGate(1), new HttpRequestGate(1)),
+            null,
+            new(WireClientId),
             CancellationToken.None);
         using var cancellation = new CancellationTokenSource(TimeSpan.FromSeconds(QueryCaptureTimeoutSeconds));
         await using var enumerator = session.SubscribeAsync(request, cancellation.Token).GetAsyncEnumerator(cancellation.Token);
-
         var moveNext = enumerator.MoveNextAsync().AsTask();
         var captured = await capturedTask.WaitAsync(cancellation.Token);
         await cancellation.CancelAsync();
@@ -198,7 +194,6 @@ public sealed partial class HttpProtocolCodecTests
         string extraJson = "")
     {
         var tenantHint = tenantHintJson is null ? string.Empty : $",\"tenantHint\":{tenantHintJson}";
-
         return $"{{\"minimumProtocolVersion\":\"{minimumVersion}\""
             + $",\"maximumProtocolVersion\":\"{maximumVersion}\""
             + $",\"clientId\":\"{clientId}\""
@@ -218,7 +213,6 @@ public sealed partial class HttpProtocolCodecTests
         Func<HttpProtocolCodec>? createCodec = null)
     {
         var codecFactory = createCodec ?? CreateServerCodec;
-
         return () => new(
             name,
             () => CaptureHttpException(() => act(codecFactory())),
@@ -238,7 +232,6 @@ public sealed partial class HttpProtocolCodecTests
     private static string OperationJson(OperationJsonOptions? options = null)
     {
         options ??= new();
-
         var baseVersion = options.BaseVersion is null ? string.Empty : $",\"baseVersion\":\"{options.BaseVersion}\"";
         return $"{{\"operationId\":\"{options.OperationId}\",\"streamId\":\"{options.StreamId}\""
             + $",\"clientSequence\":{options.Sequence.ToString(CultureInfo.InvariantCulture)}"

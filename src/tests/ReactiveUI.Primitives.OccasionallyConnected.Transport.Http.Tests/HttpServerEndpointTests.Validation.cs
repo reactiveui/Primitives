@@ -1,12 +1,10 @@
 // Copyright (c) 2019-2026 ReactiveUI Association Incorporated. All rights reserved.
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
-
 using System.Net;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using ReactiveUI.Primitives.OccasionallyConnected;
-
 namespace ReactiveUI.Primitives.OccasionallyConnected.Transport.Http.Tests;
 
 /// <summary>Additional public request validation tests for <see cref="HttpServerEndpoint"/>.</summary>
@@ -21,9 +19,7 @@ public sealed partial class HttpServerEndpointTests
         {
             EffectiveExactlyOnceWindow = TimeSpan.FromMinutes(EffectiveExactlyOnceWindowMinutes),
         };
-
         await using var endpoint = new HttpServerEndpoint(CreateOptions(new RecordingHub()) with { DeclaredCapabilities = capabilities });
-
         await Assert.That(endpoint.DeclaredCapabilities).IsSameReferenceAs(capabilities);
     }
 
@@ -40,27 +36,33 @@ public sealed partial class HttpServerEndpointTests
         var hub = new RecordingHub();
         await using var endpoint = new HttpServerEndpoint(CreateOptions(hub));
         using var request = new HttpRequestMessage(HttpMethod.Post, new Uri(requestTarget, UriKind.Relative));
-
         using var response = await endpoint.HandleAsync(request, CreateAuthenticatedClient(), CancellationToken.None);
-
         await Assert.That(response.StatusCode).IsEqualTo(HttpStatusCode.BadRequest);
         await Assert.That(hub.ApplyClient).IsNull();
     }
 
-    /// <summary>Verifies relative route matching stops at query and fragment separators before dispatch.</summary>
-    /// <param name="requestTarget">The relative request target.</param>
+    /// <summary>Verifies body-defined routes reject query text even when route normalization matches.</summary>
     /// <returns>The asynchronous test operation.</returns>
     [Test]
-    [Arguments("/%70ush?ignored=1#fragment")]
-    [Arguments("/push#fragment")]
-    public async Task HandleAsyncRoutesRelativeKnownPathBeforeQueryAndFragment(string requestTarget)
+    public async Task HandleAsyncRejectsRelativeBodyRouteQueryBeforeHub()
     {
         var hub = new RecordingHub();
         await using var endpoint = new HttpServerEndpoint(CreateOptions(hub));
-        using var request = CreateProtocolRequest(HttpMethod.Post, requestTarget, CreateCodec().SerializePushRequest(CreateBatch()));
-
+        using var request = CreateProtocolRequest(HttpMethod.Post, "/%70ush?ignored=1#fragment", CreateCodec().SerializePushRequest(CreateBatch()));
         using var response = await endpoint.HandleAsync(request, CreateAuthenticatedClient(), CancellationToken.None);
+        await Assert.That(response.StatusCode).IsEqualTo(HttpStatusCode.BadRequest);
+        await Assert.That(hub.ApplyClient).IsNull();
+    }
 
+    /// <summary>Verifies relative route matching stops at fragment separators before dispatch.</summary>
+    /// <returns>The asynchronous test operation.</returns>
+    [Test]
+    public async Task HandleAsyncRoutesRelativeKnownPathBeforeFragment()
+    {
+        var hub = new RecordingHub();
+        await using var endpoint = new HttpServerEndpoint(CreateOptions(hub));
+        using var request = await CreateSignedPushRequestAsync(endpoint, CreateBatch(), "/push#fragment", "push");
+        using var response = await endpoint.HandleAsync(request, CreateAuthenticatedClient(), CancellationToken.None);
         await Assert.That(response.StatusCode).IsEqualTo(HttpStatusCode.OK);
         await Assert.That(hub.ApplyClient).IsEqualTo(CreateAuthenticatedClient());
     }
@@ -76,9 +78,7 @@ public sealed partial class HttpServerEndpointTests
         var hub = new RecordingHub();
         await using var endpoint = new HttpServerEndpoint(CreateOptions(hub));
         using var request = new HttpRequestMessage(HttpMethod.Post, uri);
-
         using var response = await endpoint.HandleAsync(request, CreateAuthenticatedClient(), CancellationToken.None);
-
         await Assert.That(response.StatusCode).IsEqualTo(HttpStatusCode.BadRequest);
         await Assert.That(hub.ApplyClient).IsNull();
     }
@@ -93,9 +93,7 @@ public sealed partial class HttpServerEndpointTests
         using var content = CreateProtocolContent(CreateCodec().SerializePushRequest(CreateBatch()));
         content.Headers.ContentLength = (long)int.MaxValue + 1;
         using var request = new HttpRequestMessage(HttpMethod.Post, PushUri) { Content = content };
-
         using var response = await endpoint.HandleAsync(request, CreateAuthenticatedClient(), CancellationToken.None);
-
         await Assert.That(response.StatusCode).IsEqualTo(HttpStatusCode.RequestEntityTooLarge);
         await Assert.That(hub.ApplyClient).IsNull();
     }
@@ -112,9 +110,7 @@ public sealed partial class HttpServerEndpointTests
         contentType.Parameters.Add(new("v"));
         content.Headers.ContentType = contentType;
         using var request = new HttpRequestMessage(HttpMethod.Post, PushUri) { Content = content };
-
         using var response = await endpoint.HandleAsync(request, CreateAuthenticatedClient(), CancellationToken.None);
-
         await Assert.That(response.StatusCode).IsEqualTo(HttpStatusCode.UnsupportedMediaType);
         await Assert.That(hub.ApplyClient).IsNull();
     }
@@ -127,9 +123,7 @@ public sealed partial class HttpServerEndpointTests
         var hub = new RecordingHub { SubscribeHandler = static (_, _, cancellationToken) => YieldBatches([CreateReceiveBatch()], cancellationToken) };
         await using var endpoint = new HttpServerEndpoint(CreateOptions(hub));
         using var request = new HttpRequestMessage(HttpMethod.Get, new Uri(RelativeSubscribeUri, UriKind.Relative));
-
         using var response = await endpoint.HandleAsync(request, CreateAuthenticatedClient(), CancellationToken.None);
-
         await Assert.That(response.StatusCode).IsEqualTo(HttpStatusCode.BadRequest);
         await Assert.That(hub.SubscribeClient).IsNull();
     }
@@ -141,10 +135,9 @@ public sealed partial class HttpServerEndpointTests
     {
         var hub = new RecordingHub();
         await using var endpoint = new HttpServerEndpoint(CreateOptions(hub));
-        using var request = new HttpRequestMessage(HttpMethod.Get, new Uri($"{RelativeSubscribeUri}{SubscribeQuery}#fragment", UriKind.Relative));
-
+        using var request = await CreateSignedRelativeSubscribeRequestAsync(endpoint);
+        request.RequestUri = new($"{RelativeSubscribeUri}{SubscribeQuery}#fragment", UriKind.Relative);
         using var response = await endpoint.HandleAsync(request, CreateAuthenticatedClient(), CancellationToken.None);
-
         await Assert.That(response.StatusCode).IsEqualTo(HttpStatusCode.NoContent);
         await Assert.That(hub.SubscribeClient).IsEqualTo(CreateAuthenticatedClient());
     }
@@ -161,9 +154,7 @@ public sealed partial class HttpServerEndpointTests
         await using var endpoint = new HttpServerEndpoint(CreateOptions(hub));
         using var content = CreateProtocolContent("{"u8.ToArray());
         using var request = CreateBodyReadRequest(target, content);
-
         using var response = await endpoint.HandleAsync(request, CreateAuthenticatedClient(), CancellationToken.None);
-
         await Assert.That(response.StatusCode).IsEqualTo(HttpStatusCode.BadRequest);
         await Assert.That(hub.ApplyClient).IsNull();
         await Assert.That(hub.AcknowledgeClient).IsNull();

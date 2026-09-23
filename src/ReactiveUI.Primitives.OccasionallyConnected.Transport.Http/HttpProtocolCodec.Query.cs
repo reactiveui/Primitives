@@ -147,6 +147,22 @@ internal sealed partial class HttpProtocolCodec
         }
     }
 
+    /// <summary>Creates canonical replay query fields from the exact decoded query values.</summary>
+    /// <param name="values">The decoded query values.</param>
+    /// <returns>The decoded query fields.</returns>
+    private static KeyValuePair<string, string>[] CreateQueryFields(Dictionary<string, string> values)
+    {
+        var fields = new KeyValuePair<string, string>[values.Count];
+        var index = 0;
+        foreach (var value in values)
+        {
+            fields[index] = value;
+            index++;
+        }
+
+        return fields;
+    }
+
     /// <summary>Reads an optional subscribe query value while preserving absence versus an invalid empty value.</summary>
     /// <param name="values">The decoded query values.</param>
     /// <param name="key">The optional key.</param>
@@ -336,6 +352,23 @@ internal sealed partial class HttpProtocolCodec
         _ => throw new HttpRemoteTransportException(HttpTransportFailureKind.ProtocolViolation),
     };
 
+    /// <summary>Creates a validated subscribe request from decoded query values.</summary>
+    /// <param name="values">The decoded query values.</param>
+    /// <returns>The subscribe request.</returns>
+    /// <exception cref="HttpRemoteTransportException">The query does not describe a valid subscribe request.</exception>
+    private RemoteSubscribeRequest CreateSubscribeRequest(Dictionary<string, string> values)
+    {
+        RequireKeys(values, StreamIdPropertyName, SubscriptionIdPropertyName, PositionKindPropertyName);
+        var streamId = new StreamId(values[StreamIdPropertyName]);
+        var subscriptionId = new SubscriptionId(Guid.Parse(values[SubscriptionIdPropertyName]));
+        var cursor = GetOptionalQueryValue(values, CursorPropertyName);
+        var kind = (StartPositionKind)ParseInt32(values[PositionKindPropertyName]);
+        var position = CreateStartPosition(kind, values);
+        var request = new RemoteSubscribeRequest(streamId, subscriptionId, cursor, position);
+        ValidateSubscribeRequest(request);
+        return request;
+    }
+
     /// <summary>Parses the bounded subscribe query into decoded values without accepting unknown fields.</summary>
     /// <param name="query">The encoded query string, with or without a leading question mark.</param>
     /// <returns>The decoded query values.</returns>
@@ -377,6 +410,10 @@ internal sealed partial class HttpProtocolCodec
             }
 
             span = span.Slice(separator + 1);
+            if (span.IsEmpty)
+            {
+                throw new HttpRemoteTransportException(HttpTransportFailureKind.ProtocolViolation);
+            }
         }
 
         return values;

@@ -36,6 +36,11 @@ public record HttpServerEndpointOptions : System.IEquatable<ReactiveUI.Primitive
     public int MaximumResponseBytes { get; init; }
     public string PathBase { get; init; }
     public string PushPath { get; init; }
+    public ReactiveUI.Primitives.OccasionallyConnected.IServerSnapshotRecoveryHub? SnapshotRecoveryHub { get; init; }
+    public ReactiveUI.Primitives.OccasionallyConnected.SnapshotRecoveryLimits SnapshotRecoveryLimits { get; init; }
+    public string SnapshotRecoveryPath { get; init; }
+    public required ReactiveUI.Primitives.OccasionallyConnected.Transport.Http.IHttpReplayAuthorizer ReplayAuthorizer { get; init; }
+    public ReactiveUI.Primitives.OccasionallyConnected.Transport.Http.HttpReplayProtectionOptions ReplayProtection { get; init; }
     public string SubscribePath { get; init; }
     public System.TimeProvider TimeProvider { get; init; }
 }
@@ -66,6 +71,19 @@ public enum HttpTransportFailureKind
     Transient = 6,
     AmbiguousTransportOutcome = 7,
     Configuration = 8,
+    StaleReplaySession = 9,
+}
+[System.Diagnostics.DebuggerDisplay("{Operation,nq} {Client.ClientId,nq}")]
+public record HttpReplayAuthorizationContext : System.IEquatable<ReactiveUI.Primitives.OccasionallyConnected.Transport.Http.HttpReplayAuthorizationContext>
+{
+    public required ReactiveUI.Primitives.OccasionallyConnected.ServerAuthenticatedClient Client { get; init; }
+    public required string Operation { get; init; }
+    public System.Collections.Generic.IReadOnlyList<ReactiveUI.Primitives.OccasionallyConnected.StreamId> StreamIds { get; init; }
+    public ReactiveUI.Primitives.OccasionallyConnected.SubscriptionId? SubscriptionId { get; init; }
+}
+public interface IHttpReplayAuthorizer
+{
+    System.Threading.Tasks.ValueTask<bool> AuthorizeReplayAsync(ReactiveUI.Primitives.OccasionallyConnected.Transport.Http.HttpReplayAuthorizationContext context, System.Threading.CancellationToken cancellationToken) { }
 }
 [System.Diagnostics.DebuggerDisplay("Enabled = {Enabled}, Entries = {MaximumEntries,nq}")]
 public record HttpReplayProtectionOptions : System.IEquatable<ReactiveUI.Primitives.OccasionallyConnected.Transport.Http.HttpReplayProtectionOptions>
@@ -103,6 +121,7 @@ public record HttpRemoteTransportOptions : System.IEquatable<ReactiveUI.Primitiv
     public static string DefaultAcknowledgePath { get; }
     public static string DefaultConnectPath { get; }
     public static string DefaultPushPath { get; }
+    public static string DefaultSnapshotRecoveryPath { get; }
     public static string DefaultSubscribePath { get; }
     public required System.Net.Http.HttpClient HttpClient { get; init; }
     public int MaximumBatchOperations { get; init; }
@@ -119,6 +138,9 @@ public record HttpRemoteTransportOptions : System.IEquatable<ReactiveUI.Primitiv
     public int MaximumRequestBytes { get; init; }
     public int MaximumResponseBytes { get; init; }
     public string PushPath { get; init; }
+    public ReactiveUI.Primitives.OccasionallyConnected.SnapshotRecoveryLimits SnapshotRecoveryLimits { get; init; }
+    public string SnapshotRecoveryPath { get; init; }
+    public ReactiveUI.Primitives.OccasionallyConnected.Transport.Http.HttpReplayProtectionOptions ReplayProtection { get; init; }
     public string SubscribePath { get; init; }
     public System.TimeProvider TimeProvider { get; init; }
     public void Validate() { }

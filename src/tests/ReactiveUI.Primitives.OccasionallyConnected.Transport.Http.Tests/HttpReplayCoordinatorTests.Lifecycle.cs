@@ -1,10 +1,8 @@
 // Copyright (c) 2019-2026 ReactiveUI Association Incorporated. All rights reserved.
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
-
 using System.Net;
 using System.Text;
-
 namespace ReactiveUI.Primitives.OccasionallyConnected.Transport.Http.Tests;
 
 /// <summary>Tests replay coordinator lifecycle edge behavior.</summary>
@@ -89,10 +87,8 @@ public sealed partial class HttpReplayCoordinatorTests
         await AssertLifecycleNotCompletedWithinObservationAsync(duplicate);
         await replayCancellation.CancelAsync();
         await Assert.That(async () => await duplicate).Throws<OperationCanceledException>();
-
         await coordinator.CompleteAsync(first.Owner, new() { StatusCode = HttpStatusCode.OK, ResponseBytes = LifecycleSmallResponseBytes });
         var replay = await coordinator.AdmitAsync(request, static _ => new(HttpReplayAuthorizationResult.Allowed), CancellationToken.None);
-
         await Assert.That(replay.Kind).IsEqualTo(HttpReplayAdmissionKind.ReplayCached);
     }
 
@@ -117,7 +113,6 @@ public sealed partial class HttpReplayCoordinatorTests
         var duplicateReplay = await AwaitLifecycleWithTimeoutAsync(duplicate);
         await replayCancellation.CancelAsync();
         var laterReplay = await coordinator.AdmitAsync(request, static _ => new(HttpReplayAuthorizationResult.Allowed), CancellationToken.None);
-
         await Assert.That(duplicateReplay.Kind).IsEqualTo(HttpReplayAdmissionKind.ReplayCached);
         await Assert.That(laterReplay.Kind).IsEqualTo(HttpReplayAdmissionKind.ReplayCached);
     }
@@ -130,14 +125,11 @@ public sealed partial class HttpReplayCoordinatorTests
         await using HttpReplayCoordinator coordinator = new(CreateLifecycleOptions(LifecycleSentAtUtc));
         var calls = 0;
         await coordinator.DisposeAsync();
-
         var replay = await coordinator.AdmitAsync(CreateLifecycleRequest(HttpReplayOperationKind.Connect, LifecycleSentAtUtc, LifecycleNonce), AuthorizeAsync, CancellationToken.None);
-
         await Assert.That(calls).IsEqualTo(0);
         await Assert.That(replay.Kind).IsEqualTo(HttpReplayAdmissionKind.ReplayTransient);
         await Assert.That(replay.Failure?.StatusCode).IsEqualTo(HttpStatusCode.ServiceUnavailable);
         return;
-
         ValueTask<HttpReplayAuthorizationResult> AuthorizeAsync(CancellationToken _)
         {
             calls++;
@@ -151,12 +143,10 @@ public sealed partial class HttpReplayCoordinatorTests
     public async Task AdmitAsyncAuthorizationDeniedWithoutFailureUsesForbiddenDefault()
     {
         await using HttpReplayCoordinator coordinator = new(CreateLifecycleOptions(LifecycleSentAtUtc));
-
         var decision = await coordinator.AdmitAsync(
             CreateLifecycleRequest(HttpReplayOperationKind.Connect, LifecycleSentAtUtc, LifecycleNonce),
             static _ => new(new HttpReplayAuthorizationResult { IsAuthorized = false }),
             CancellationToken.None);
-
         await Assert.That(decision.Kind).IsEqualTo(HttpReplayAdmissionKind.Reject);
         await Assert.That(decision.Failure?.StatusCode).IsEqualTo(HttpStatusCode.Forbidden);
         await Assert.That(decision.Failure?.Kind).IsEqualTo(HttpTransportFailureKind.AuthorizationDenied);
@@ -173,16 +163,13 @@ public sealed partial class HttpReplayCoordinatorTests
         var admission = coordinator
             .AdmitAsync(CreateLifecycleRequest(HttpReplayOperationKind.Connect, LifecycleSentAtUtc, LifecycleNonce), AuthorizeAsync, CancellationToken.None)
             .AsTask();
-
         await AwaitLifecycleSignalWithTimeoutAsync(authorizationEntered.Task);
         await coordinator.DisposeAsync();
         authorizationRelease.SetResult(HttpReplayAuthorizationResult.Allowed);
         var replay = await AwaitLifecycleWithTimeoutAsync(admission);
-
         await Assert.That(replay.Kind).IsEqualTo(HttpReplayAdmissionKind.ReplayTransient);
         await Assert.That(replay.Failure?.StatusCode).IsEqualTo(HttpStatusCode.ServiceUnavailable);
         return;
-
         ValueTask<HttpReplayAuthorizationResult> AuthorizeAsync(CancellationToken _)
         {
             authorizationEntered.SetResult();
@@ -216,7 +203,6 @@ public sealed partial class HttpReplayCoordinatorTests
         await coordinator.CompleteAsync(first.Owner, new() { StatusCode = HttpStatusCode.OK, ResponseBytes = LifecycleSmallResponseBytes });
         clock.SetUtcNow(observedNow.Add(LifecycleWindow).AddTicks(LifecycleSingleByteLimit));
         var stale = await coordinator.AdmitAsync(request, static _ => new(HttpReplayAuthorizationResult.Allowed), CancellationToken.None);
-
         await Assert.That(stale.Kind).IsEqualTo(HttpReplayAdmissionKind.Reject);
         await Assert.That(stale.Failure?.Kind).IsEqualTo(HttpTransportFailureKind.ValidationRejected);
     }
@@ -246,7 +232,6 @@ public sealed partial class HttpReplayCoordinatorTests
 
         clock.SetUtcNow(observedNow.Add(LifecycleWindow).AddTicks(LifecycleSingleByteLimit));
         var stale = await coordinator.AdmitAsync(request, static _ => new(HttpReplayAuthorizationResult.Allowed), CancellationToken.None);
-
         await Assert.That(stale.Kind).IsEqualTo(HttpReplayAdmissionKind.Reject);
         await Assert.That(stale.Failure?.Kind).IsEqualTo(HttpTransportFailureKind.ValidationRejected);
     }
@@ -277,7 +262,6 @@ public sealed partial class HttpReplayCoordinatorTests
         clock.SetUtcNow(observedNow.Add(LifecycleWindow).AddTicks(LifecycleSingleByteLimit));
         var freshRequest = CreateLifecycleRequest(HttpReplayOperationKind.Connect, clock.GetUtcNow(), LifecycleNonce);
         var fresh = await coordinator.AdmitAsync(freshRequest, static _ => new(HttpReplayAuthorizationResult.Allowed), CancellationToken.None);
-
         await Assert.That(fresh.Kind).IsEqualTo(HttpReplayAdmissionKind.ReplayTransient);
         await Assert.That(fresh.Failure?.StatusCode).IsEqualTo(HttpStatusCode.TooManyRequests);
         await Assert.That(fresh.Owner).IsNull();
@@ -303,7 +287,6 @@ public sealed partial class HttpReplayCoordinatorTests
         await AssertLifecycleNotCompletedWithinObservationAsync(duplicate);
         await coordinator.CompleteAsync(first.Owner, new() { StatusCode = HttpStatusCode.OK, ResponseBytes = LifecycleSmallResponseBytes });
         var replay = await AwaitLifecycleWithTimeoutAsync(duplicate);
-
         await Assert.That(replay.Kind).IsEqualTo(HttpReplayAdmissionKind.ReplayCached);
     }
 
@@ -327,7 +310,6 @@ public sealed partial class HttpReplayCoordinatorTests
         await coordinator.CompleteAsync(first.Owner, new() { StatusCode = HttpStatusCode.OK, ResponseBytes = LifecycleSmallResponseBytes });
         await replayCancellation.CancelAsync();
         var replay = await AwaitLifecycleWithTimeoutAsync(duplicate);
-
         await Assert.That(replay.Kind).IsEqualTo(HttpReplayAdmissionKind.ReplayCached);
     }
 
@@ -342,7 +324,6 @@ public sealed partial class HttpReplayCoordinatorTests
             CreateLifecycleRequest(HttpReplayOperationKind.Connect, LifecycleSentAtUtc, LifecycleNonce),
             static _ => new(HttpReplayAuthorizationResult.Allowed),
             CancellationToken.None);
-
         await Assert.That(decision.Kind).IsEqualTo(HttpReplayAdmissionKind.ReplayTransient);
         await Assert.That(decision.Failure?.StatusCode).IsEqualTo(HttpStatusCode.TooManyRequests);
         await Assert.That(decision.Owner).IsNull();
@@ -356,9 +337,7 @@ public sealed partial class HttpReplayCoordinatorTests
         await using HttpReplayCoordinator coordinator = new(CreateLifecycleOptions(LifecycleSentAtUtc));
         var request = CreateLifecycleAuthenticatedRequest(coordinator, HttpReplayOperationKind.Push, LifecycleSentAtUtc, LifecycleNonce);
         await coordinator.Sessions.DisposeAsync();
-
         var decision = await coordinator.AdmitAsync(request, static _ => new(HttpReplayAuthorizationResult.Allowed), CancellationToken.None);
-
         await Assert.That(decision.Kind).IsEqualTo(HttpReplayAdmissionKind.ReplayTransient);
         await Assert.That(decision.Failure?.StatusCode).IsEqualTo(HttpStatusCode.ServiceUnavailable);
     }
@@ -379,7 +358,6 @@ public sealed partial class HttpReplayCoordinatorTests
 
         await coordinator.DisposeAsync();
         await coordinator.CompleteAsync(first.Owner, new() { StatusCode = HttpStatusCode.OK, ResponseBytes = LifecycleSmallResponseBytes });
-
         await Assert.That(first.Owner.IsClosed).IsTrue();
     }
 
@@ -412,7 +390,6 @@ public sealed partial class HttpReplayCoordinatorTests
         await coordinator.CompleteAsync(first.Owner, new() { StatusCode = HttpStatusCode.OK, ResponseBytes = LifecycleSmallResponseBytes });
         var freshRequest = CreateLifecycleRequest(HttpReplayOperationKind.Connect, clock.GetUtcNow(), LifecycleThirdNonce);
         var fresh = await coordinator.AdmitAsync(freshRequest, static _ => new(HttpReplayAuthorizationResult.Allowed), CancellationToken.None);
-
         await Assert.That(first.Owner.IsClosed).IsTrue();
         await Assert.That(fresh.Kind).IsEqualTo(HttpReplayAdmissionKind.Execute);
         await DisposeOwnerIfPresentAsync(pruner.Owner);
@@ -426,16 +403,14 @@ public sealed partial class HttpReplayCoordinatorTests
     {
         await using HttpReplayCoordinator coordinator = new(CreateLifecycleOptions(LifecycleSentAtUtc));
         HttpReplayOwner owner = new(coordinator, LifecycleUnknownOwnerEntryId);
-
         await coordinator.CompleteAsync(owner, new() { StatusCode = HttpStatusCode.OK, ResponseBytes = LifecycleSmallResponseBytes });
-
         await Assert.That(owner.IsClosed).IsTrue();
     }
 
     /// <summary>Verifies abandon after coordinator disposal returns without publishing replay state.</summary>
     /// <returns>The asynchronous test operation.</returns>
     [Test]
-    public async Task AbandonAsyncAfterCoordinatorDisposeReturnsWithoutPublishing()
+    public async Task AbandonAfterCoordinatorDisposeReturnsWithoutPublishing()
     {
         await using HttpReplayCoordinator coordinator = new(CreateLifecycleOptions(LifecycleSentAtUtc));
         var request = CreateLifecycleRequest(HttpReplayOperationKind.Connect, LifecycleSentAtUtc, LifecycleNonce);
@@ -447,21 +422,18 @@ public sealed partial class HttpReplayCoordinatorTests
         }
 
         await coordinator.DisposeAsync();
-        await coordinator.AbandonAsync(first.Owner, CancellationToken.None);
-
+        coordinator.Abandon(first.Owner);
         await Assert.That(first.Owner.IsClosed).IsTrue();
     }
 
     /// <summary>Verifies same-coordinator abandon with an unknown entry id closes only that owner.</summary>
     /// <returns>The asynchronous test operation.</returns>
     [Test]
-    public async Task AbandonAsyncWithUnknownOwnerEntryReturnsWithoutPublishing()
+    public async Task AbandonWithUnknownOwnerEntryReturnsWithoutPublishing()
     {
         await using HttpReplayCoordinator coordinator = new(CreateLifecycleOptions(LifecycleSentAtUtc));
         HttpReplayOwner owner = new(coordinator, LifecycleUnknownOwnerEntryId);
-
-        await coordinator.AbandonAsync(owner, CancellationToken.None);
-
+        coordinator.Abandon(owner);
         await Assert.That(owner.IsClosed).IsTrue();
     }
 
@@ -487,7 +459,6 @@ public sealed partial class HttpReplayCoordinatorTests
 
         await coordinator.CompleteAsync(first.Owner, new() { StatusCode = HttpStatusCode.OK, ResponseBytes = LifecycleSmallResponseBytes, ConnectSession = session });
         var replay = await coordinator.AdmitAsync(request, static _ => new(HttpReplayAuthorizationResult.Allowed), CancellationToken.None);
-
         await Assert.That(replay.Kind).IsEqualTo(HttpReplayAdmissionKind.ReplayCached);
         await Assert.That(GetHeader(replay.CachedResponse, ReplaySessionExpiresHeader)).IsEqualTo(session.ExpiresAtUtc.ToString("O", System.Globalization.CultureInfo.InvariantCulture));
     }
@@ -527,7 +498,6 @@ public sealed partial class HttpReplayCoordinatorTests
         clock.SetUtcNow(observedNow.Add(LifecycleWindow).AddTicks(LifecycleSingleByteLimit));
         var fresh = CreateLifecycleRequest(HttpReplayOperationKind.Connect, clock.GetUtcNow(), LifecycleAlternateNonce);
         _ = await coordinator.AdmitAsync(fresh, static _ => new(HttpReplayAuthorizationResult.Allowed), CancellationToken.None);
-
         await Assert.That(snapshot.StatusCode).IsEqualTo(HttpStatusCode.OK);
         await AssertByteArrayEqualsAsync(snapshot.Body.ToArray(), LifecycleSmallResponseBytes);
     }
@@ -543,7 +513,6 @@ public sealed partial class HttpReplayCoordinatorTests
         var session = new HttpReplayIssuedSession { SessionId = LifecycleReplaySessionId, SessionSecret = LifecycleSessionSecret, ExpiresAtUtc = expiry };
         coordinator.Sessions.RegisterIssued(new(LifecycleTenantId, LifecycleClientId), session, LifecycleSentAtUtc);
         var boundary = CreateLifecycleAuthenticatedRequestWithSession(HttpReplayOperationKind.Push, session, expiry, LifecycleNonce);
-
         var boundaryDecision = await coordinator.AdmitAsync(boundary, static _ => new(HttpReplayAuthorizationResult.Allowed), CancellationToken.None);
         await Assert.That(boundaryDecision.Kind).IsEqualTo(HttpReplayAdmissionKind.Execute);
         await Assert.That(boundaryDecision.Owner).IsNotNull();
@@ -555,9 +524,8 @@ public sealed partial class HttpReplayCoordinatorTests
         clock.SetUtcNow(expiry.AddTicks(1));
         var expired = CreateLifecycleAuthenticatedRequestWithSession(HttpReplayOperationKind.Push, session, expiry, LifecycleAlternateNonce);
         var expiredDecision = await coordinator.AdmitAsync(expired, static _ => new(HttpReplayAuthorizationResult.Allowed), CancellationToken.None);
-
         await Assert.That(expiredDecision.Kind).IsEqualTo(HttpReplayAdmissionKind.Reject);
-        await Assert.That(expiredDecision.Failure?.Kind).IsEqualTo(HttpTransportFailureKind.Authentication);
+        await Assert.That(expiredDecision.Failure?.Kind).IsEqualTo(HttpTransportFailureKind.StaleReplaySession);
         await Assert.That(expiredDecision.Failure?.StatusCode).IsEqualTo(HttpStatusCode.Unauthorized);
     }
 
@@ -584,15 +552,14 @@ public sealed partial class HttpReplayCoordinatorTests
         clock.SetUtcNow(LifecycleSentAtUtc);
         var request = CreateLifecycleAuthenticatedRequestWithSession(HttpReplayOperationKind.Push, session, LifecycleSentAtUtc, LifecycleNonce);
         var decision = await coordinator.AdmitAsync(request, static _ => new(HttpReplayAuthorizationResult.Allowed), CancellationToken.None);
-
         await Assert.That(decision.Kind).IsEqualTo(HttpReplayAdmissionKind.Reject);
-        await Assert.That(decision.Failure?.Kind).IsEqualTo(HttpTransportFailureKind.Authentication);
+        await Assert.That(decision.Failure?.Kind).IsEqualTo(HttpTransportFailureKind.StaleReplaySession);
     }
 
-    /// <summary>Verifies a signed request is rejected when time advances past session expiry before admission commits.</summary>
+    /// <summary>Verifies a signed request admitted before expiry is retained only until the verified session expiry.</summary>
     /// <returns>The asynchronous test operation.</returns>
     [Test]
-    public async Task AdmitAsyncRejectsSignedRequestWhenSessionExpiresBeforeCommit()
+    public async Task AdmitAsyncCapsSignedRequestEntryAtVerifiedSessionExpiry()
     {
         var expiry = LifecycleSentAtUtc.AddTicks(LifecycleSingleByteLimit);
         LifecycleAdvancingTimeProvider clock = new(LifecycleSentAtUtc, expiry.AddTicks(LifecycleSingleByteLimit));
@@ -601,11 +568,19 @@ public sealed partial class HttpReplayCoordinatorTests
         var session = new HttpReplayIssuedSession { SessionId = LifecycleReplaySessionId, SessionSecret = LifecycleSessionSecret, ExpiresAtUtc = expiry };
         coordinator.Sessions.RegisterIssued(new(LifecycleTenantId, LifecycleClientId), session, LifecycleSentAtUtc);
         var request = CreateLifecycleAuthenticatedRequestWithSession(HttpReplayOperationKind.Push, session, LifecycleSentAtUtc, LifecycleNonce);
-
         var decision = await coordinator.AdmitAsync(request, static _ => new(HttpReplayAuthorizationResult.Allowed), CancellationToken.None);
+        await Assert.That(decision.Kind).IsEqualTo(HttpReplayAdmissionKind.Execute);
+        await Assert.That(decision.Owner).IsNotNull();
+        if (decision.Owner is null)
+        {
+            return;
+        }
 
-        await Assert.That(decision.Kind).IsEqualTo(HttpReplayAdmissionKind.Reject);
-        await Assert.That(decision.Failure?.Kind).IsEqualTo(HttpTransportFailureKind.Authentication);
+        await coordinator.CompleteAsync(decision.Owner, new() { StatusCode = HttpStatusCode.OK, ResponseBytes = LifecycleSmallResponseBytes });
+        var replay = await coordinator.AdmitAsync(request, static _ => new(HttpReplayAuthorizationResult.Allowed), CancellationToken.None);
+        await Assert.That(replay.Kind).IsEqualTo(HttpReplayAdmissionKind.Reject);
+        await Assert.That(replay.Failure?.Kind).IsEqualTo(HttpTransportFailureKind.StaleReplaySession);
+        await Assert.That(replay.Failure?.StatusCode).IsEqualTo(HttpStatusCode.Unauthorized);
     }
 
     /// <summary>Verifies repeated owner disposal performs one safe abandon and permits one reexecution.</summary>
@@ -635,7 +610,6 @@ public sealed partial class HttpReplayCoordinatorTests
         await Assert.That(calls).IsEqualTo(LifecycleDoubleAuthorizationCall);
         await Assert.That(reexecute.Kind).IsEqualTo(HttpReplayAdmissionKind.Execute);
         return;
-
         ValueTask<HttpReplayAuthorizationResult> AuthorizeAsync(CancellationToken _)
         {
             calls++;

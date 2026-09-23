@@ -32,7 +32,11 @@ internal sealed class HttpReplayOwner : IAsyncDisposable
 
     /// <inheritdoc/>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public ValueTask DisposeAsync() => AbandonAsync(CancellationToken.None);
+    public ValueTask DisposeAsync()
+    {
+        _coordinator.Abandon(this);
+        return default;
+    }
 
     /// <summary>Marks this owner as closed exactly once.</summary>
     /// <returns>Whether the caller owns the close transition.</returns>
@@ -43,10 +47,4 @@ internal sealed class HttpReplayOwner : IAsyncDisposable
     /// <returns>Whether the coordinator owns this handle.</returns>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal bool IsOwnedBy(HttpReplayCoordinator coordinator) => ReferenceEquals(_coordinator, coordinator);
-
-    /// <summary>Abandons the owner execution and waits for any required replay drain.</summary>
-    /// <param name="cancellationToken">The cancellation token used only while waiting for drain.</param>
-    /// <returns>The asynchronous abandonment operation.</returns>
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    internal ValueTask AbandonAsync(CancellationToken cancellationToken) => _coordinator.AbandonAsync(this, cancellationToken);
 }

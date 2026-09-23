@@ -1,11 +1,9 @@
 // Copyright (c) 2019-2026 ReactiveUI Association Incorporated. All rights reserved.
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
-
 using System.Net;
 using System.Net.Http;
 using ReactiveUI.Primitives.OccasionallyConnected;
-
 namespace ReactiveUI.Primitives.OccasionallyConnected.Transport.Http.Tests;
 
 /// <summary>Tests <see cref="HttpServerEndpoint"/>.</summary>
@@ -180,7 +178,6 @@ public sealed partial class HttpServerEndpointTests
         {
             DeclaredCapabilities = CreateCapabilities(RemoteTransportCapabilities.StreamingReceive),
         };
-
         await Assert.That(() => new HttpServerEndpoint(options)).ThrowsExactly<ArgumentException>();
     }
 
@@ -192,7 +189,6 @@ public sealed partial class HttpServerEndpointTests
         const RemoteTransportCapabilities features = RemoteTransportCapabilities.BatchPush | RemoteTransportCapabilities.ReceiveAcknowledgements;
         var capabilities = CreateCapabilities(features) with { EffectiveExactlyOnceWindow = TimeSpan.FromMinutes(EffectiveExactlyOnceWindowMinutes) };
         var options = CreateOptions(new RecordingHub()) with { DeclaredCapabilities = capabilities };
-
         await Assert.That(() => new HttpServerEndpoint(options)).ThrowsExactly<ArgumentException>();
     }
 
@@ -202,7 +198,24 @@ public sealed partial class HttpServerEndpointTests
     public async Task ConstructorRejectsDuplicateRoutes()
     {
         var options = CreateOptions(new RecordingHub()) with { PushPath = DuplicatePushPath };
+        await Assert.That(() => new HttpServerEndpoint(options)).ThrowsExactly<ArgumentException>();
+    }
 
+    /// <summary>Verifies route options cannot collapse to empty paths or traverse configured endpoints.</summary>
+    /// <param name="path">The unsafe route path.</param>
+    /// <returns>The asynchronous test operation.</returns>
+    [Test]
+    [Arguments("?")]
+    [Arguments("?streamId=stream-1")]
+    [Arguments(".")]
+    [Arguments("./push")]
+    [Arguments("push/.")]
+    [Arguments("..")]
+    [Arguments("../push")]
+    [Arguments("push/../ack")]
+    public async Task ConstructorRejectsUnsafeRouteOptions(string path)
+    {
+        var options = CreateOptions(new RecordingHub()) with { PushPath = path };
         await Assert.That(() => new HttpServerEndpoint(options)).ThrowsExactly<ArgumentException>();
     }
 
@@ -212,10 +225,10 @@ public sealed partial class HttpServerEndpointTests
     [Test]
     [Arguments(AbsolutePathBase)]
     [Arguments("file:///oc")]
+    [Arguments("mailto:user@example.invalid")]
     public async Task ConstructorRejectsAbsolutePathBase(string pathBase)
     {
         var options = CreateOptions(new RecordingHub()) with { PathBase = pathBase };
-
         await Assert.That(() => new HttpServerEndpoint(options)).ThrowsExactly<ArgumentException>();
     }
 
@@ -225,7 +238,6 @@ public sealed partial class HttpServerEndpointTests
     public async Task ConstructorRejectsInfiniteLongPollTimeout()
     {
         var options = CreateOptions(new RecordingHub()) with { LongPollTimeout = TimeSpan.MaxValue };
-
         await Assert.That(() => new HttpServerEndpoint(options)).ThrowsExactly<ArgumentOutOfRangeException>();
     }
 
@@ -244,7 +256,6 @@ public sealed partial class HttpServerEndpointTests
             PathBase = pathBase,
             DeclaredCapabilities = capabilities,
         });
-
         await Assert.That(endpoint.DeclaredCapabilities).IsSameReferenceAs(capabilities);
     }
 
@@ -255,13 +266,13 @@ public sealed partial class HttpServerEndpointTests
     {
         var codec = CreateCodec();
         await using var endpoint = new HttpServerEndpoint(CreateOptions(new RecordingHub()));
-        using var request = CreateProtocolRequest(HttpMethod.Post, ConnectUri, codec.SerializeConnectRequest(CreateConnectRequest(ClientId)));
-
+        var requestBody = codec.SerializeConnectRequest(CreateConnectRequest(ClientId));
+        using var request = CreateProtocolRequest(HttpMethod.Post, ConnectUri, requestBody);
+        AddConnectReplayHeaders(request, requestBody);
         using var response = await endpoint.HandleAsync(request, CreateAuthenticatedClient(), CancellationToken.None);
-
         await Assert.That(response.StatusCode).IsEqualTo(HttpStatusCode.OK);
-        var body = await ReadResponseBodyAsync(response);
-        var capabilities = codec.DeserializeConnectResponse(body);
+        var responseBody = await ReadResponseBodyAsync(response);
+        var capabilities = codec.DeserializeConnectResponse(responseBody);
         await Assert.That(capabilities.Features).IsEqualTo(CreateCapabilities().Features);
         await Assert.That(capabilities.MaximumBatchOperations).IsEqualTo(CreateCapabilities().MaximumBatchOperations);
     }
@@ -274,9 +285,7 @@ public sealed partial class HttpServerEndpointTests
         await using var endpoint = new HttpServerEndpoint(CreateOptions(new RecordingHub()));
         var body = CreateCodec().SerializeConnectRequest(CreateConnectRequest(ForgedClientId));
         using var request = CreateProtocolRequest(HttpMethod.Post, ConnectUri, body);
-
         using var response = await endpoint.HandleAsync(request, CreateAuthenticatedClient(), CancellationToken.None);
-
         await Assert.That(response.StatusCode).IsEqualTo(HttpStatusCode.Forbidden);
     }
 
@@ -295,10 +304,8 @@ public sealed partial class HttpServerEndpointTests
             },
         };
         await using var endpoint = new HttpServerEndpoint(CreateOptions(hub));
-        using var request = CreateProtocolRequest(HttpMethod.Post, PushUri, CreateCodec().SerializePushRequest(batch));
-
+        using var request = await CreateSignedPushRequestAsync(endpoint, batch);
         using var response = await endpoint.HandleAsync(request, CreateAuthenticatedClient(), CancellationToken.None);
-
         await Assert.That(response.StatusCode).IsEqualTo(HttpStatusCode.OK);
         await Assert.That(hub.ApplyClient).IsEqualTo(CreateAuthenticatedClient());
         var result = CreateCodec().DeserializePushResponse(batch, await ReadResponseBodyAsync(response), retryAfter: null);
@@ -314,10 +321,8 @@ public sealed partial class HttpServerEndpointTests
         var batch = CreateBatch();
         var hub = new RecordingHub();
         await using var endpoint = new HttpServerEndpoint(CreateOptions(hub));
-        using var request = CreateProtocolRequest(HttpMethod.Post, PushUri, CreateCodec().SerializePushRequest(batch));
-
+        using var request = await CreateSignedPushRequestAsync(endpoint, batch);
         using var response = await endpoint.HandleAsync(request, CreateAuthenticatedClient());
-
         await Assert.That(response.StatusCode).IsEqualTo(HttpStatusCode.OK);
         await Assert.That(hub.ApplyClient).IsEqualTo(CreateAuthenticatedClient());
     }
@@ -330,9 +335,7 @@ public sealed partial class HttpServerEndpointTests
         var hub = new RecordingHub();
         await using var endpoint = new HttpServerEndpoint(CreateOptions(hub));
         using var request = CreateProtocolRequest(HttpMethod.Post, PushUri, CreateCodec().SerializePushRequest(CreateBatch()));
-
         using var response = await endpoint.HandleAsync(request, new(string.Empty, ClientId), CancellationToken.None);
-
         await Assert.That(response.StatusCode).IsEqualTo(HttpStatusCode.Unauthorized);
         await Assert.That(hub.ApplyClient).IsNull();
     }
@@ -344,9 +347,7 @@ public sealed partial class HttpServerEndpointTests
     {
         await using var endpoint = new HttpServerEndpoint(CreateOptions(new RecordingHub()));
         using var request = new HttpRequestMessage { Method = HttpMethod.Post };
-
         using var response = await endpoint.HandleAsync(request, CreateAuthenticatedClient(), CancellationToken.None);
-
         await Assert.That(response.StatusCode).IsEqualTo(HttpStatusCode.BadRequest);
     }
 
@@ -357,9 +358,7 @@ public sealed partial class HttpServerEndpointTests
     {
         await using var endpoint = new HttpServerEndpoint(CreateOptions(new RecordingHub()));
         using var request = new HttpRequestMessage(HttpMethod.Get, new Uri(MalformedPercentRouteUri, UriKind.Relative));
-
         using var response = await endpoint.HandleAsync(request, CreateAuthenticatedClient(), CancellationToken.None);
-
         await Assert.That(response.StatusCode).IsEqualTo(HttpStatusCode.BadRequest);
     }
 
@@ -370,9 +369,7 @@ public sealed partial class HttpServerEndpointTests
     {
         await using var endpoint = new HttpServerEndpoint(CreateOptions(new RecordingHub()));
         using var request = new HttpRequestMessage(HttpMethod.Get, RootUri);
-
         using var response = await endpoint.HandleAsync(request, CreateAuthenticatedClient(), CancellationToken.None);
-
         await Assert.That(response.StatusCode).IsEqualTo(HttpStatusCode.NotFound);
     }
 
@@ -383,9 +380,7 @@ public sealed partial class HttpServerEndpointTests
     {
         await using var endpoint = new HttpServerEndpoint(CreateOptions(new RecordingHub()));
         using var request = new HttpRequestMessage(HttpMethod.Get, new Uri(MalformedHexRouteUri, UriKind.Relative));
-
         using var response = await endpoint.HandleAsync(request, CreateAuthenticatedClient(), CancellationToken.None);
-
         await Assert.That(response.StatusCode).IsEqualTo(HttpStatusCode.BadRequest);
     }
 
@@ -397,9 +392,7 @@ public sealed partial class HttpServerEndpointTests
         var hub = new RecordingHub();
         await using var endpoint = new HttpServerEndpoint(CreateOptions(hub));
         using var request = new HttpRequestMessage(HttpMethod.Post, EscapedPushSeparatorUri);
-
         using var response = await endpoint.HandleAsync(request, CreateAuthenticatedClient(), CancellationToken.None);
-
         await Assert.That(response.StatusCode).IsEqualTo(HttpStatusCode.BadRequest);
         await Assert.That(hub.ApplyClient).IsNull();
     }
@@ -411,10 +404,8 @@ public sealed partial class HttpServerEndpointTests
     {
         var hub = new RecordingHub();
         await using var endpoint = new HttpServerEndpoint(CreateOptions(hub));
-        using var request = CreateProtocolRequest(HttpMethod.Post, EscapedPushUri, CreateCodec().SerializePushRequest(CreateBatch()));
-
+        using var request = await CreateSignedPushRequestAsync(endpoint, CreateBatch(), EscapedPushUri, "push");
         using var response = await endpoint.HandleAsync(request, CreateAuthenticatedClient(), CancellationToken.None);
-
         await Assert.That(response.StatusCode).IsEqualTo(HttpStatusCode.OK);
         await Assert.That(hub.ApplyClient).IsEqualTo(CreateAuthenticatedClient());
     }
@@ -427,9 +418,7 @@ public sealed partial class HttpServerEndpointTests
         var hub = new RecordingHub();
         await using var endpoint = new HttpServerEndpoint(CreateOptions(hub));
         using var request = new HttpRequestMessage(HttpMethod.Post, PushUri);
-
         using var response = await endpoint.HandleAsync(request, CreateAuthenticatedClient(), CancellationToken.None);
-
         await Assert.That(response.StatusCode).IsEqualTo(HttpStatusCode.BadRequest);
         await Assert.That(hub.ApplyClient).IsNull();
     }
@@ -443,9 +432,7 @@ public sealed partial class HttpServerEndpointTests
         await using var endpoint = new HttpServerEndpoint(CreateOptions(hub));
         using var content = new ByteArrayContent(CreateCodec().SerializePushRequest(CreateBatch()));
         using var request = new HttpRequestMessage(HttpMethod.Post, PushUri) { Content = content };
-
         using var response = await endpoint.HandleAsync(request, CreateAuthenticatedClient(), CancellationToken.None);
-
         await Assert.That(response.StatusCode).IsEqualTo(HttpStatusCode.UnsupportedMediaType);
         await Assert.That(hub.ApplyClient).IsNull();
     }
@@ -460,9 +447,7 @@ public sealed partial class HttpServerEndpointTests
         using var content = new ByteArrayContent(CreateCodec().SerializePushRequest(CreateBatch()));
         content.Headers.ContentType = System.Net.Http.Headers.MediaTypeHeaderValue.Parse(DuplicateProtocolVersionMediaType);
         using var request = new HttpRequestMessage(HttpMethod.Post, PushUri) { Content = content };
-
         using var response = await endpoint.HandleAsync(request, CreateAuthenticatedClient(), CancellationToken.None);
-
         await Assert.That(response.StatusCode).IsEqualTo(HttpStatusCode.UnsupportedMediaType);
         await Assert.That(hub.ApplyClient).IsNull();
     }
@@ -477,9 +462,7 @@ public sealed partial class HttpServerEndpointTests
         using var content = CreateProtocolContent(CreateCodec().SerializePushRequest(CreateBatch()));
         content.Headers.ContentEncoding.Add("gzip");
         using var request = new HttpRequestMessage(HttpMethod.Post, PushUri) { Content = content };
-
         using var response = await endpoint.HandleAsync(request, CreateAuthenticatedClient(), CancellationToken.None);
-
         await Assert.That(response.StatusCode).IsEqualTo(HttpStatusCode.UnsupportedMediaType);
         await Assert.That(hub.ApplyClient).IsNull();
     }
@@ -490,11 +473,10 @@ public sealed partial class HttpServerEndpointTests
     public async Task HandleAsyncPushRejectsDeclaredOversizedBodyBeforeHub()
     {
         var hub = new RecordingHub();
-        await using var endpoint = new HttpServerEndpoint(CreateOptions(hub) with { MaximumRequestBytes = 1 });
-        using var request = CreateProtocolRequest(HttpMethod.Post, PushUri, CreateCodec().SerializePushRequest(CreateBatch()));
-
+        var connectBody = CreateCodec().SerializeConnectRequest(CreateConnectRequest(ClientId));
+        await using var endpoint = new HttpServerEndpoint(CreateOptions(hub) with { MaximumRequestBytes = connectBody.Length });
+        using var request = await CreateSignedPushRequestAsync(endpoint, CreateBatch());
         using var response = await endpoint.HandleAsync(request, CreateAuthenticatedClient(), CancellationToken.None);
-
         await Assert.That(response.StatusCode).IsEqualTo(HttpStatusCode.RequestEntityTooLarge);
         await Assert.That(hub.ApplyClient).IsNull();
     }
@@ -509,9 +491,7 @@ public sealed partial class HttpServerEndpointTests
         using var content = CreateProtocolNonSeekableStreamContent([1, OversizedBodySecondByte]);
         await Assert.That(content.Headers.ContentLength).IsNull();
         using var request = new HttpRequestMessage(HttpMethod.Post, PushUri) { Content = content };
-
         using var response = await endpoint.HandleAsync(request, CreateAuthenticatedClient(), CancellationToken.None);
-
         await Assert.That(response.StatusCode).IsEqualTo(HttpStatusCode.RequestEntityTooLarge);
         await Assert.That(hub.ApplyClient).IsNull();
     }
@@ -526,9 +506,8 @@ public sealed partial class HttpServerEndpointTests
         using var content = CreateProtocolNonSeekableStreamContent(body);
         await Assert.That(content.Headers.ContentLength).IsNull();
         using var request = new HttpRequestMessage(HttpMethod.Post, ConnectUri) { Content = content };
-
+        AddConnectReplayHeaders(request, body);
         using var response = await endpoint.HandleAsync(request, CreateAuthenticatedClient(), CancellationToken.None);
-
         await Assert.That(response.StatusCode).IsEqualTo(HttpStatusCode.OK);
     }
 
@@ -543,10 +522,8 @@ public sealed partial class HttpServerEndpointTests
         await using var endpoint = new HttpServerEndpoint(CreateOptions(hub));
         using var request = CreateBodyReadRequest(ConnectBodyReadTarget, CreateBlockingProtocolContent(readStarted));
         var responseTask = endpoint.HandleAsync(request, CreateAuthenticatedClient(), cancellation.Token).AsTask();
-
         await readStarted.Task.WaitAsync(TimeSpan.FromSeconds(AsyncWaitTimeoutSeconds)).ConfigureAwait(false);
         await cancellation.CancelAsync().ConfigureAwait(false);
-
         await Assert.That(async () => _ = await AwaitResultAsync(responseTask).ConfigureAwait(false)).Throws<OperationCanceledException>();
         await Assert.That(hub.ApplyClient).IsNull();
     }
@@ -562,10 +539,32 @@ public sealed partial class HttpServerEndpointTests
         await using var endpoint = new HttpServerEndpoint(CreateOptions(hub));
         using var content = CreateThrowingTransportFailureProtocolContent(failure);
         using var request = new HttpRequestMessage(HttpMethod.Post, ConnectUri) { Content = content };
-
         using var response = await endpoint.HandleAsync(request, CreateAuthenticatedClient(), CancellationToken.None);
-
         await Assert.That(response.StatusCode).IsEqualTo(HttpStatusCode.BadRequest);
+        await Assert.That(hub.ApplyClient).IsNull();
+    }
+
+    /// <summary>Verifies pre-effect typed transport failures keep their safe client-visible status.</summary>
+    /// <param name="failureKind">The typed transport failure kind raised before endpoint effects.</param>
+    /// <param name="expectedStatusCode">The expected HTTP response status.</param>
+    /// <returns>The asynchronous test operation.</returns>
+    [Test]
+    [Arguments(HttpTransportFailureKind.Authentication, HttpStatusCode.Unauthorized)]
+    [Arguments(HttpTransportFailureKind.AuthorizationDenied, HttpStatusCode.Forbidden)]
+    [Arguments(HttpTransportFailureKind.Transient, HttpStatusCode.TooManyRequests)]
+    [Arguments(HttpTransportFailureKind.AmbiguousTransportOutcome, HttpStatusCode.InternalServerError)]
+    [Arguments(HttpTransportFailureKind.ValidationRejected, HttpStatusCode.BadRequest)]
+    public async Task HandleAsyncConnectMapsTypedPreEffectTransportFailureToSafeStatus(
+        HttpTransportFailureKind failureKind,
+        HttpStatusCode expectedStatusCode)
+    {
+        var failure = new HttpRemoteTransportException(failureKind);
+        var hub = new RecordingHub();
+        await using var endpoint = new HttpServerEndpoint(CreateOptions(hub));
+        using var content = CreateThrowingTransportFailureProtocolContent(failure);
+        using var request = new HttpRequestMessage(HttpMethod.Post, ConnectUri) { Content = content };
+        using var response = await endpoint.HandleAsync(request, CreateAuthenticatedClient(), CancellationToken.None);
+        await Assert.That(response.StatusCode).IsEqualTo(expectedStatusCode);
         await Assert.That(hub.ApplyClient).IsNull();
     }
 
@@ -576,10 +575,8 @@ public sealed partial class HttpServerEndpointTests
     {
         var hub = new RecordingHub { ApplyHandler = static (_, _, _) => throw new InvalidOperationException("Apply failed after possible effects.") };
         await using var endpoint = new HttpServerEndpoint(CreateOptions(hub));
-        using var request = CreateProtocolRequest(HttpMethod.Post, PushUri, CreateCodec().SerializePushRequest(CreateBatch()));
-
+        using var request = await CreateSignedPushRequestAsync(endpoint, CreateBatch());
         using var response = await endpoint.HandleAsync(request, CreateAuthenticatedClient(), CancellationToken.None);
-
         await Assert.That(response.StatusCode).IsEqualTo(HttpStatusCode.InternalServerError);
         await Assert.That(hub.ApplyClient).IsEqualTo(CreateAuthenticatedClient());
     }
@@ -591,10 +588,8 @@ public sealed partial class HttpServerEndpointTests
     {
         var hub = new RecordingHub { ApplyHandler = static (_, _, _) => throw new ObjectDisposedException("committed-push") };
         await using var endpoint = new HttpServerEndpoint(CreateOptions(hub));
-        using var request = CreateProtocolRequest(HttpMethod.Post, PushUri, CreateCodec().SerializePushRequest(CreateBatch()));
-
+        using var request = await CreateSignedPushRequestAsync(endpoint, CreateBatch());
         using var response = await endpoint.HandleAsync(request, CreateAuthenticatedClient(), CancellationToken.None);
-
         await Assert.That(response.StatusCode).IsEqualTo(HttpStatusCode.InternalServerError);
         await Assert.That(hub.ApplyClient).IsEqualTo(CreateAuthenticatedClient());
     }
@@ -606,11 +601,30 @@ public sealed partial class HttpServerEndpointTests
     {
         var hub = new RecordingHub { ApplyHandler = static (_, _, cancellationToken) => throw new OperationCanceledException(cancellationToken) };
         await using var endpoint = new HttpServerEndpoint(CreateOptions(hub));
-        using var request = CreateProtocolRequest(HttpMethod.Post, PushUri, CreateCodec().SerializePushRequest(CreateBatch()));
-
+        using var request = await CreateSignedPushRequestAsync(endpoint, CreateBatch());
         using var response = await endpoint.HandleAsync(request, CreateAuthenticatedClient(), CancellationToken.None);
-
         await Assert.That(response.StatusCode).IsEqualTo(HttpStatusCode.InternalServerError);
+        await Assert.That(hub.ApplyClient).IsEqualTo(CreateAuthenticatedClient());
+    }
+
+    /// <summary>Verifies caller cancellation after push reaches the hub propagates instead of returning an ambiguous response.</summary>
+    /// <returns>The asynchronous test operation.</returns>
+    [Test]
+    public async Task HandleAsyncPushCallerCancellationAfterHubEntryPropagatesCancellation()
+    {
+        using var callerCancellation = new CancellationTokenSource();
+        var hub = new RecordingHub
+        {
+            ApplyHandler = async (batch, client, cancellationToken) =>
+            {
+                await callerCancellation.CancelAsync().ConfigureAwait(false);
+                cancellationToken.ThrowIfCancellationRequested();
+                return CreateServerResult(batch, client);
+            },
+        };
+        await using var endpoint = new HttpServerEndpoint(CreateOptions(hub));
+        using var request = await CreateSignedPushRequestAsync(endpoint, CreateBatch());
+        await Assert.That(async () => _ = await endpoint.HandleAsync(request, CreateAuthenticatedClient(), callerCancellation.Token)).Throws<OperationCanceledException>();
         await Assert.That(hub.ApplyClient).IsEqualTo(CreateAuthenticatedClient());
     }
 
@@ -619,9 +633,9 @@ public sealed partial class HttpServerEndpointTests
     /// <param name="expectedStatusCode">The HTTP status expected from endpoint response mapping.</param>
     /// <returns>The asynchronous test operation.</returns>
     [Test]
-    [Arguments(HttpTransportFailureKind.Authentication, HttpStatusCode.Unauthorized)]
-    [Arguments(HttpTransportFailureKind.AuthorizationDenied, HttpStatusCode.Forbidden)]
-    [Arguments(HttpTransportFailureKind.Transient, HttpStatusCode.ServiceUnavailable)]
+    [Arguments(HttpTransportFailureKind.Authentication, HttpStatusCode.InternalServerError)]
+    [Arguments(HttpTransportFailureKind.AuthorizationDenied, HttpStatusCode.InternalServerError)]
+    [Arguments(HttpTransportFailureKind.Transient, HttpStatusCode.InternalServerError)]
     [Arguments(HttpTransportFailureKind.AmbiguousTransportOutcome, HttpStatusCode.InternalServerError)]
     [Arguments(HttpTransportFailureKind.ValidationRejected, HttpStatusCode.InternalServerError)]
     [Arguments(HttpTransportFailureKind.SchemaIncompatible, HttpStatusCode.InternalServerError)]
@@ -633,10 +647,8 @@ public sealed partial class HttpServerEndpointTests
     {
         var hub = new RecordingHub { ApplyHandler = (_, _, _) => throw new HttpRemoteTransportException(failureKind) };
         await using var endpoint = new HttpServerEndpoint(CreateOptions(hub));
-        using var request = CreateProtocolRequest(HttpMethod.Post, PushUri, CreateCodec().SerializePushRequest(CreateBatch()));
-
+        using var request = await CreateSignedPushRequestAsync(endpoint, CreateBatch());
         using var response = await endpoint.HandleAsync(request, CreateAuthenticatedClient(), CancellationToken.None);
-
         await Assert.That(response.StatusCode).IsEqualTo(expectedStatusCode);
         await Assert.That(hub.ApplyClient).IsEqualTo(CreateAuthenticatedClient());
     }
@@ -649,10 +661,8 @@ public sealed partial class HttpServerEndpointTests
         var acknowledgement = new ReceiveAcknowledgement(new(Guid.Parse(SubscriptionIdText)), new(StreamName), CursorOne);
         var hub = new RecordingHub();
         await using var endpoint = new HttpServerEndpoint(CreateOptions(hub));
-        using var request = CreateProtocolRequest(HttpMethod.Post, AcknowledgeUri, CreateCodec().SerializeAcknowledgement(acknowledgement));
-
+        using var request = await CreateSignedAcknowledgeRequestAsync(endpoint, acknowledgement);
         using var response = await endpoint.HandleAsync(request, CreateAuthenticatedClient(), CancellationToken.None);
-
         await Assert.That(response.StatusCode).IsEqualTo(HttpStatusCode.NoContent);
         await Assert.That(hub.Acknowledgement).IsEqualTo(acknowledgement);
         await Assert.That(hub.AcknowledgeClient).IsEqualTo(CreateAuthenticatedClient());
@@ -665,10 +675,8 @@ public sealed partial class HttpServerEndpointTests
     {
         var hub = new RecordingHub { AcknowledgeHandler = static (_, _, _) => throw new InvalidOperationException("ACK failed after possible effects.") };
         await using var endpoint = new HttpServerEndpoint(CreateOptions(hub));
-        using var request = CreateProtocolRequest(HttpMethod.Post, AcknowledgeUri, CreateCodec().SerializeAcknowledgement(CreateAcknowledgement()));
-
+        using var request = await CreateSignedAcknowledgeRequestAsync(endpoint, CreateAcknowledgement());
         using var response = await endpoint.HandleAsync(request, CreateAuthenticatedClient(), CancellationToken.None);
-
         await Assert.That(response.StatusCode).IsEqualTo(HttpStatusCode.InternalServerError);
         await Assert.That(hub.AcknowledgeClient).IsEqualTo(CreateAuthenticatedClient());
     }
@@ -680,10 +688,8 @@ public sealed partial class HttpServerEndpointTests
     {
         var hub = new RecordingHub { AcknowledgeHandler = static (_, _, _) => throw new ObjectDisposedException("committed-ack") };
         await using var endpoint = new HttpServerEndpoint(CreateOptions(hub));
-        using var request = CreateProtocolRequest(HttpMethod.Post, AcknowledgeUri, CreateCodec().SerializeAcknowledgement(CreateAcknowledgement()));
-
+        using var request = await CreateSignedAcknowledgeRequestAsync(endpoint, CreateAcknowledgement());
         using var response = await endpoint.HandleAsync(request, CreateAuthenticatedClient(), CancellationToken.None);
-
         await Assert.That(response.StatusCode).IsEqualTo(HttpStatusCode.InternalServerError);
         await Assert.That(hub.AcknowledgeClient).IsEqualTo(CreateAuthenticatedClient());
     }
@@ -695,12 +701,95 @@ public sealed partial class HttpServerEndpointTests
     {
         var hub = new RecordingHub { AcknowledgeHandler = static (_, _, cancellationToken) => throw new OperationCanceledException(cancellationToken) };
         await using var endpoint = new HttpServerEndpoint(CreateOptions(hub));
-        using var request = CreateProtocolRequest(HttpMethod.Post, AcknowledgeUri, CreateCodec().SerializeAcknowledgement(CreateAcknowledgement()));
-
+        using var request = await CreateSignedAcknowledgeRequestAsync(endpoint, CreateAcknowledgement());
         using var response = await endpoint.HandleAsync(request, CreateAuthenticatedClient(), CancellationToken.None);
-
         await Assert.That(response.StatusCode).IsEqualTo(HttpStatusCode.InternalServerError);
         await Assert.That(hub.AcknowledgeClient).IsEqualTo(CreateAuthenticatedClient());
+    }
+
+    /// <summary>Verifies caller cancellation after ACK reaches the hub propagates instead of returning an ambiguous response.</summary>
+    /// <returns>The asynchronous test operation.</returns>
+    [Test]
+    public async Task HandleAsyncAcknowledgeCallerCancellationAfterHubEntryPropagatesCancellation()
+    {
+        using var callerCancellation = new CancellationTokenSource();
+        var hub = new RecordingHub
+        {
+            AcknowledgeHandler = async (acknowledgement, client, cancellationToken) =>
+            {
+                await callerCancellation.CancelAsync().ConfigureAwait(false);
+                cancellationToken.ThrowIfCancellationRequested();
+            },
+        };
+        await using var endpoint = new HttpServerEndpoint(CreateOptions(hub));
+        using var request = await CreateSignedAcknowledgeRequestAsync(endpoint, CreateAcknowledgement());
+        await Assert.That(async () => _ = await endpoint.HandleAsync(request, CreateAuthenticatedClient(), callerCancellation.Token)).Throws<OperationCanceledException>();
+        await Assert.That(hub.AcknowledgeClient).IsEqualTo(CreateAuthenticatedClient());
+    }
+
+    /// <summary>Verifies endpoint disposal during an active subscribe maps to a service-unavailable response.</summary>
+    /// <returns>The asynchronous test operation.</returns>
+    [Test]
+    public async Task HandleAsyncSubscribeEndpointDisposeDuringHubReadReturnsServiceUnavailable()
+    {
+        var hubEntered = CreateSignal();
+        var hub = new RecordingHub { SubscribeHandler = (_, _, cancellationToken) => BlockUntilCancelledAsync(hubEntered, cancellationToken) };
+        await using var endpoint = new HttpServerEndpoint(CreateOptions(hub));
+        using var request = await CreateSignedSubscribeRequestAsync(endpoint);
+        var responseTask = endpoint.HandleAsync(request, CreateAuthenticatedClient(), CancellationToken.None).AsTask();
+        await hubEntered.Task.WaitAsync(TimeSpan.FromSeconds(AsyncWaitTimeoutSeconds)).ConfigureAwait(false);
+        await endpoint.DisposeAsync().ConfigureAwait(false);
+        using var response = await responseTask.ConfigureAwait(false);
+        await Assert.That(response.StatusCode).IsEqualTo(HttpStatusCode.ServiceUnavailable);
+        await Assert.That(hub.SubscribeClient).IsEqualTo(CreateAuthenticatedClient());
+    }
+
+    /// <summary>Verifies shutdown cancellation from subscribe work maps to service unavailable without caller cancellation.</summary>
+    /// <returns>The asynchronous test operation.</returns>
+    [Test]
+    public async Task HandleAsyncSubscribeMapsShutdownOperationCancellationToServiceUnavailable()
+    {
+        using var callerCancellation = new CancellationTokenSource();
+        var hubEntered = CreateSignal();
+        var hub = new RecordingHub { SubscribeHandler = (_, _, cancellationToken) => ThrowWhenCancelledAsync(hubEntered, cancellationToken) };
+        var endpoint = new HttpServerEndpoint(CreateOptions(hub));
+        using var request = await CreateSignedSubscribeRequestAsync(endpoint);
+        Task<HttpResponseMessage>? responseTask = null;
+        Task? disposeTask = null;
+        HttpResponseMessage? response = null;
+        try
+        {
+            responseTask = endpoint.HandleAsync(request, CreateAuthenticatedClient(), callerCancellation.Token).AsTask();
+            await hubEntered.Task.WaitAsync(TimeSpan.FromSeconds(AsyncWaitTimeoutSeconds)).ConfigureAwait(false);
+            disposeTask = endpoint.DisposeAsync().AsTask();
+            response = await AwaitResultAsync(responseTask).ConfigureAwait(false);
+
+            await Assert.That(callerCancellation.IsCancellationRequested).IsFalse();
+            await Assert.That(response.StatusCode).IsEqualTo(HttpStatusCode.ServiceUnavailable);
+            await Assert.That(hub.SubscribeClient).IsEqualTo(CreateAuthenticatedClient());
+        }
+        finally
+        {
+            disposeTask ??= endpoint.DisposeAsync().AsTask();
+            try
+            {
+                if (responseTask is not null && response is null)
+                {
+                    response = await AwaitResultAsync(responseTask).ConfigureAwait(false);
+                }
+            }
+            finally
+            {
+                try
+                {
+                    response?.Dispose();
+                }
+                finally
+                {
+                    await AssertCompletesAsync(disposeTask).ConfigureAwait(false);
+                }
+            }
+        }
     }
 
     /// <summary>Verifies one complete subscription batch is encoded into a successful long-poll response.</summary>
@@ -711,10 +800,8 @@ public sealed partial class HttpServerEndpointTests
         var batch = CreateReceiveBatch();
         var hub = new RecordingHub { SubscribeHandler = (_, _, cancellationToken) => YieldBatches([batch], cancellationToken) };
         await using var endpoint = new HttpServerEndpoint(CreateOptions(hub));
-        using var request = new HttpRequestMessage(HttpMethod.Get, $"{SubscribeUri}{SubscribeQuery}");
-
+        using var request = await CreateSignedSubscribeRequestAsync(endpoint);
         using var response = await endpoint.HandleAsync(request, CreateAuthenticatedClient(), CancellationToken.None);
-
         await Assert.That(response.StatusCode).IsEqualTo(HttpStatusCode.OK);
         await Assert.That(hub.SubscribeClient).IsEqualTo(CreateAuthenticatedClient());
         var batches = CreateCodec().DeserializeSubscribeResponse(await ReadResponseBodyAsync(response), expectedStreamId: null);
@@ -729,10 +816,8 @@ public sealed partial class HttpServerEndpointTests
     {
         var hub = new RecordingHub();
         await using var endpoint = new HttpServerEndpoint(CreateOptions(hub));
-        using var request = new HttpRequestMessage(HttpMethod.Get, new Uri($"{RelativeSubscribeUri}{SubscribeQuery}", UriKind.Relative));
-
+        using var request = await CreateSignedRelativeSubscribeRequestAsync(endpoint);
         using var response = await endpoint.HandleAsync(request, CreateAuthenticatedClient(), CancellationToken.None);
-
         await Assert.That(response.StatusCode).IsEqualTo(HttpStatusCode.NoContent);
         await Assert.That(hub.SubscribeClient).IsEqualTo(CreateAuthenticatedClient());
     }
@@ -745,9 +830,7 @@ public sealed partial class HttpServerEndpointTests
         var hub = new RecordingHub { SubscribeHandler = static (_, _, cancellationToken) => YieldBatches([CreateReceiveBatch()], cancellationToken) };
         await using var endpoint = new HttpServerEndpoint(CreateOptions(hub));
         using var request = new HttpRequestMessage(HttpMethod.Get, $"{SubscribeUri}{SubscribeQuery}") { Content = CreateProtocolContent("{}"u8.ToArray()) };
-
         using var response = await endpoint.HandleAsync(request, CreateAuthenticatedClient(), CancellationToken.None);
-
         await Assert.That(response.StatusCode).IsEqualTo(HttpStatusCode.BadRequest);
         await Assert.That(hub.SubscribeClient).IsNull();
     }
@@ -759,10 +842,8 @@ public sealed partial class HttpServerEndpointTests
     {
         var hub = new RecordingHub { SubscribeHandler = static (_, _, cancellationToken) => YieldBatches([CreateReceiveBatch()], cancellationToken) };
         await using var endpoint = new HttpServerEndpoint(CreateOptions(hub) with { MaximumQueryBytes = 1 });
-        using var request = new HttpRequestMessage(HttpMethod.Get, $"{SubscribeUri}{SubscribeQuery}");
-
+        using var request = await CreateSignedSubscribeRequestAsync(endpoint);
         using var response = await endpoint.HandleAsync(request, CreateAuthenticatedClient(), CancellationToken.None);
-
         await Assert.That(response.StatusCode).IsEqualTo(HttpStatusCode.RequestEntityTooLarge);
         await Assert.That(hub.SubscribeClient).IsNull();
     }
@@ -775,9 +856,7 @@ public sealed partial class HttpServerEndpointTests
         var hub = new RecordingHub { SubscribeHandler = static (_, _, cancellationToken) => YieldBatches([CreateReceiveBatch()], cancellationToken) };
         await using var endpoint = new HttpServerEndpoint(CreateOptions(hub));
         using var request = new HttpRequestMessage(HttpMethod.Get, $"{SubscribeUri}?streamId=stream-1&subscriptionId=x&positionKind=0");
-
         using var response = await endpoint.HandleAsync(request, CreateAuthenticatedClient(), CancellationToken.None);
-
         await Assert.That(response.StatusCode).IsEqualTo(HttpStatusCode.BadRequest);
         await Assert.That(hub.SubscribeClient).IsNull();
     }
@@ -789,10 +868,8 @@ public sealed partial class HttpServerEndpointTests
     {
         var hub = new RecordingHub { SubscribeHandler = static (_, _, cancellationToken) => ThrowSubscriptionAsync(cancellationToken) };
         await using var endpoint = new HttpServerEndpoint(CreateOptions(hub));
-        using var request = new HttpRequestMessage(HttpMethod.Get, $"{SubscribeUri}{SubscribeQuery}");
-
+        using var request = await CreateSignedSubscribeRequestAsync(endpoint);
         using var response = await endpoint.HandleAsync(request, CreateAuthenticatedClient(), CancellationToken.None);
-
         await Assert.That(response.StatusCode).IsEqualTo(HttpStatusCode.InternalServerError);
         await Assert.That(hub.SubscribeClient).IsEqualTo(CreateAuthenticatedClient());
     }
@@ -806,13 +883,11 @@ public sealed partial class HttpServerEndpointTests
         var hubEntered = CreateSignal();
         var hub = new RecordingHub { SubscribeHandler = (_, _, cancellationToken) => BlockUntilCancelledAsync(hubEntered, cancellationToken) };
         await using var endpoint = new HttpServerEndpoint(CreateOptions(hub));
-        using var request = new HttpRequestMessage(HttpMethod.Get, $"{SubscribeUri}{SubscribeQuery}");
+        using var request = await CreateSignedSubscribeRequestAsync(endpoint);
         var responseTask = endpoint.HandleAsync(request, CreateAuthenticatedClient(), cancellation.Token).AsTask();
-
         await hubEntered.Task.WaitAsync(TimeSpan.FromSeconds(AsyncWaitTimeoutSeconds)).ConfigureAwait(false);
         await cancellation.CancelAsync().ConfigureAwait(false);
         using var response = await AwaitResultAsync(responseTask).ConfigureAwait(false);
-
         await Assert.That(response.StatusCode).IsEqualTo(HttpStatusCode.InternalServerError);
     }
 
@@ -823,9 +898,7 @@ public sealed partial class HttpServerEndpointTests
     {
         await using var endpoint = new HttpServerEndpoint(CreateOptions(new RecordingHub()));
         using var request = new HttpRequestMessage(HttpMethod.Get, PushUri);
-
         using var response = await endpoint.HandleAsync(request, CreateAuthenticatedClient(), CancellationToken.None);
-
         await Assert.That(response.StatusCode).IsEqualTo(HttpStatusCode.MethodNotAllowed);
     }
 
@@ -843,9 +916,7 @@ public sealed partial class HttpServerEndpointTests
         var hub = new RecordingHub();
         await using var endpoint = new HttpServerEndpoint(CreateOptions(hub));
         using var request = new HttpRequestMessage(new HttpMethod(method), uri);
-
         using var response = await endpoint.HandleAsync(request, CreateAuthenticatedClient(), CancellationToken.None);
-
         await Assert.That(response.StatusCode).IsEqualTo(HttpStatusCode.MethodNotAllowed);
         await Assert.That(hub.ApplyClient).IsNull();
         await Assert.That(hub.AcknowledgeClient).IsNull();

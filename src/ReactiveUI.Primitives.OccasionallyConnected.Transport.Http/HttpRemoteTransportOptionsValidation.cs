@@ -10,12 +10,14 @@ internal static class HttpRemoteTransportOptionsValidation
     /// <summary>Validates that a route remains relative to the configured base URI.</summary>
     /// <param name="path">The route path.</param>
     /// <param name="parameterName">The option name.</param>
-    /// <exception cref="ArgumentException">The path is empty, rooted, or absolute.</exception>
+    /// <exception cref="ArgumentException">The path is empty, rooted, absolute, query-only, or contains dot segments.</exception>
     internal static void ValidateRelativePath(string path, string parameterName)
     {
         if (!string.IsNullOrWhiteSpace(path)
             && path[0] != '/'
-            && !Uri.TryCreate(path, UriKind.Absolute, out _))
+            && path[0] != '?'
+            && !Uri.TryCreate(path, UriKind.Absolute, out _)
+            && !ContainsDotSegment(path))
         {
             return;
         }
@@ -35,5 +37,29 @@ internal static class HttpRemoteTransportOptionsValidation
         }
 
         throw new ArgumentOutOfRangeException(parameterName, value, "HTTP transport limits must be positive.");
+    }
+
+    /// <summary>Checks route segments without allocating a split path.</summary>
+    /// <param name="path">The configured relative path.</param>
+    /// <returns>Whether a segment changes or collapses the path hierarchy.</returns>
+    private static bool ContainsDotSegment(string path)
+    {
+        var remaining = path.AsSpan();
+        while (true)
+        {
+            var separator = remaining.IndexOf('/');
+            var segment = separator < 0 ? remaining : remaining.Slice(0, separator);
+            if (segment is "." or "..")
+            {
+                return true;
+            }
+
+            if (separator < 0)
+            {
+                return false;
+            }
+
+            remaining = remaining.Slice(separator + 1);
+        }
     }
 }

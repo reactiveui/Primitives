@@ -11,34 +11,21 @@ namespace ReactiveUI.Primitives.OccasionallyConnected.Transport.Http;
 internal sealed partial class HttpRemoteTransportSession
 {
     /// <inheritdoc/>
-    public ValueTask<IPreparedRemotePush> PreparePushAsync(SyncBatch batch, CancellationToken cancellationToken)
+    public async ValueTask<IPreparedRemotePush> PreparePushAsync(SyncBatch batch, CancellationToken cancellationToken)
     {
         ArgumentExceptionHelper.ThrowIfNull(batch);
         cancellationToken.ThrowIfCancellationRequested();
-        var operation = BeginOperation();
-        HttpRequestGate.Lease? admission = null;
-        CancellationTokenSource? lifetime = null;
-        byte[] body;
+        var prepared = new PreparedPush(this);
         try
         {
-            lifetime = CancellationTokenSource.CreateLinkedTokenSource(_shutdown.Token, _adapterShutdownToken);
-            admission = _requestGate.Enter(lifetime.Token);
-            body = _codec.SerializePushRequest(batch);
-            ValidateNegotiatedBatch(batch, body.LongLength);
-            cancellationToken.ThrowIfCancellationRequested();
-            lifetime.Token.ThrowIfCancellationRequested();
+            await prepared.InitializeAsync(batch, cancellationToken).ConfigureAwait(false);
+            return prepared;
         }
         catch
         {
-            admission?.Dispose();
-            lifetime?.Dispose();
-            operation.Dispose();
+            await prepared.DisposeAsync().ConfigureAwait(false);
             throw;
         }
-
-        var prepared = new PreparedPush(this, batch, body, admission, operation, lifetime);
-        prepared.ObserveOwnerCancellation();
-        return new(prepared);
     }
 
     /// <summary>Enforces negotiated operation count and exact encoded request bytes alongside the local HTTP body limit.</summary>
@@ -67,27 +54,25 @@ internal sealed partial class HttpRemoteTransportSession
 
     /// <summary>Retains one bounded request body until its single send or disposal completes.</summary>
     /// <param name="owner">The owning session.</param>
-    /// <param name="batch">The validated batch.</param>
-    /// <param name="body">The exact encoded body.</param>
-    /// <param name="admission">The reserved request capacity.</param>
-    /// <param name="operation">The session lifetime reservation.</param>
-    /// <param name="lifetime">The owner cancellation source.</param>
-    private sealed class PreparedPush(
-        HttpRemoteTransportSession owner,
-        SyncBatch batch,
-        byte[] body,
-        HttpRequestGate.Lease admission,
-        SessionOperation operation,
-        CancellationTokenSource lifetime) : IPreparedRemotePush
+    private sealed class PreparedPush(HttpRemoteTransportSession owner) : IPreparedRemotePush
     {
         /// <summary>Protects send admission and retained buffers.</summary>
         private readonly Lock _gate = new();
 
         /// <summary>The retained batch.</summary>
-        private SyncBatch? _batch = batch;
+        private SyncBatch? _batch;
 
         /// <summary>The retained exact request bytes.</summary>
-        private byte[]? _body = body;
+        private byte[]? _body;
+
+        /// <summary>The reserved request capacity.</summary>
+        private HttpRequestGate.Lease? _admission;
+
+        /// <summary>The session lifetime reservation.</summary>
+        private SessionOperation? _operation;
+
+        /// <summary>The owner cancellation source.</summary>
+        private CancellationTokenSource? _lifetime;
 
         /// <summary>The owner cancellation callback registration.</summary>
         private CancellationTokenRegistration _registration;
@@ -97,6 +82,9 @@ internal sealed partial class HttpRemoteTransportSession
 
         /// <summary>The published active-send drain task.</summary>
         private Task? _activeSend;
+
+        /// <summary>The exact encoded request body size.</summary>
+        private long _encodedSizeBytes;
 
         /// <summary>Whether sending has already started.</summary>
         private bool _sent;
@@ -111,7 +99,7 @@ internal sealed partial class HttpRemoteTransportSession
         public SyncBatch Batch => _batch ?? throw new ObjectDisposedException(nameof(PreparedPush));
 
         /// <inheritdoc/>
-        public long EncodedSizeBytes { get; } = body.LongLength;
+        public long EncodedSizeBytes => _encodedSizeBytes;
 
         /// <inheritdoc/>
         public ValueTask<RemoteSyncResult> SendAsync(CancellationToken cancellationToken)
@@ -147,8 +135,29 @@ internal sealed partial class HttpRemoteTransportSession
             return new(disposal);
         }
 
-        /// <summary>Registers owner cancellation after all reservation fields are initialized.</summary>
-        internal void ObserveOwnerCancellation() => _registration = lifetime.Token.Register(OwnerCanceled);
+        /// <summary>Acquires, validates, and publishes the retained upload state.</summary>
+        /// <param name="batch">The validated batch.</param>
+        /// <param name="cancellationToken">The caller cancellation token.</param>
+        /// <returns>The asynchronous initialization operation.</returns>
+        /// <exception cref="HttpRemoteTransportException">The batch exceeds negotiated limits.</exception>
+        /// <exception cref="ObjectDisposedException">The session is disposed.</exception>
+        internal async ValueTask InitializeAsync(SyncBatch batch, CancellationToken cancellationToken)
+        {
+            var operation = owner.BeginOperation();
+            _operation = operation;
+            var lifetime = CancellationTokenSource.CreateLinkedTokenSource(owner._shutdown.Token, owner._adapterShutdownToken);
+            _lifetime = lifetime;
+            var admission = await owner._requestGate.EnterAsync(lifetime.Token).ConfigureAwait(false);
+            _admission = admission;
+            var body = owner._codec.SerializePushRequest(batch);
+            owner.ValidateNegotiatedBatch(batch, body.LongLength);
+            cancellationToken.ThrowIfCancellationRequested();
+            lifetime.Token.ThrowIfCancellationRequested();
+            _batch = batch;
+            _body = body;
+            _encodedSizeBytes = body.LongLength;
+            _registration = lifetime.Token.Register(OwnerCanceled);
+        }
 
         /// <summary>Publishes send ownership before any HTTP callback can reenter disposal.</summary>
         /// <returns>The owned send state.</returns>
@@ -164,10 +173,14 @@ internal sealed partial class HttpRemoteTransportSession
                     throw new InvalidOperationException("The prepared push has already been sent.");
                 }
 
+                var retainedBatch = _batch;
                 var retainedBody = _body;
+                var lifetime = _lifetime;
+                ArgumentExceptionHelper.ThrowIfNull(retainedBatch);
                 ArgumentExceptionHelper.ThrowIfNull(retainedBody);
+                ArgumentExceptionHelper.ThrowIfNull(lifetime);
                 var completion = new TaskCompletionSource<object?>(TaskCreationOptions.RunContinuationsAsynchronously);
-                var send = new PreparedSend(Batch, retainedBody, completion);
+                var send = new PreparedSend(retainedBatch, retainedBody, lifetime, completion);
                 _sent = true;
                 _activeSend = completion.Task;
                 return send;
@@ -182,7 +195,7 @@ internal sealed partial class HttpRemoteTransportSession
         {
             try
             {
-                using var linked = CancellationTokenSource.CreateLinkedTokenSource(lifetime.Token, cancellationToken);
+                using var linked = CancellationTokenSource.CreateLinkedTokenSource(send.Lifetime.Token, cancellationToken);
                 return await owner.SendPreparedAsync(send.Batch, send.Body, linked.Token).ConfigureAwait(false);
             }
             finally
@@ -218,10 +231,14 @@ internal sealed partial class HttpRemoteTransportSession
         /// <returns>The asynchronous cleanup operation.</returns>
         private async Task DisposeCoreAsync(Task? active, TaskCompletionSource<object?> completion)
         {
+            var lifetime = _lifetime;
             Exception? failure = null;
             try
             {
-                await lifetime.CancelAsync().ConfigureAwait(false);
+                if (lifetime is not null)
+                {
+                    await lifetime.CancelAsync().ConfigureAwait(false);
+                }
             }
             catch (Exception exception)
             {
@@ -235,8 +252,12 @@ internal sealed partial class HttpRemoteTransportSession
             }
 
             ReleaseReservations();
+#if NET5_0_OR_GREATER
+            await _registration.DisposeAsync().ConfigureAwait(false);
+#else
             _registration.Dispose();
-            lifetime.Dispose();
+#endif
+            lifetime?.Dispose();
             if (failure is null)
             {
                 _ = completion.TrySetResult(null);
@@ -265,14 +286,22 @@ internal sealed partial class HttpRemoteTransportSession
                 return;
             }
 
-            admission.Dispose();
-            operation.Dispose();
+            _admission?.Dispose();
+            if (_operation is { } operation)
+            {
+                operation.Dispose();
+            }
         }
 
         /// <summary>Owns the exact state of one active send.</summary>
         /// <param name="Batch">The original batch.</param>
         /// <param name="Body">The encoded body.</param>
+        /// <param name="Lifetime">The owner cancellation source captured for the send.</param>
         /// <param name="Completion">The published drain signal.</param>
-        private sealed record PreparedSend(SyncBatch Batch, byte[] Body, TaskCompletionSource<object?> Completion);
+        private sealed record PreparedSend(
+            SyncBatch Batch,
+            byte[] Body,
+            CancellationTokenSource Lifetime,
+            TaskCompletionSource<object?> Completion);
     }
 }

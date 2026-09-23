@@ -45,6 +45,14 @@ internal static class HttpTransportStatus
         return enumerator.MoveNext() ? null : HttpRetryAfterParser.Parse(value, timeProvider.GetUtcNow());
     }
 
+    /// <summary>Classifies a non-success HTTP response.</summary>
+    /// <param name="response">The HTTP response.</param>
+    /// <returns>The failure kind.</returns>
+    internal static HttpTransportFailureKind Classify(HttpResponseMessage response) =>
+        response.StatusCode == HttpStatusCode.Unauthorized && HasSingleStaleReplaySessionMarker(response)
+            ? HttpTransportFailureKind.StaleReplaySession
+            : Classify(response.StatusCode);
+
     /// <summary>Classifies a non-success HTTP status code.</summary>
     /// <param name="statusCode">The status code.</param>
     /// <returns>The failure kind.</returns>
@@ -80,4 +88,11 @@ internal static class HttpTransportStatus
             ? HttpTransportFailureKind.ProtocolViolation
             : HttpTransportFailureKind.ValidationRejected;
     }
+
+    /// <summary>Checks whether a response carries the exact stale replay-session marker.</summary>
+    /// <param name="response">The HTTP response.</param>
+    /// <returns>Whether the response carries exactly one stale marker.</returns>
+    private static bool HasSingleStaleReplaySessionMarker(HttpResponseMessage response) =>
+        HttpReplayHeaders.ReadValueCount(response.Headers, HttpReplayHeaders.SessionState, out var value) == 1
+        && string.Equals(value, HttpReplayHeaders.StaleSessionState, StringComparison.Ordinal);
 }

@@ -112,6 +112,7 @@ public sealed class HttpRemoteTransportException : Exception, IRemoteTransportFa
         HttpTransportFailureKind.PayloadTooLarge => RetryFailureKind.PayloadTooLarge,
         HttpTransportFailureKind.Transient => RetryFailureKind.Transient,
         HttpTransportFailureKind.AmbiguousTransportOutcome => RetryFailureKind.AmbiguousTransportOutcome,
+        HttpTransportFailureKind.StaleReplaySession => RetryFailureKind.RemoteSessionExpired,
         _ => RetryFailureKind.ValidationRejected,
     };
 }

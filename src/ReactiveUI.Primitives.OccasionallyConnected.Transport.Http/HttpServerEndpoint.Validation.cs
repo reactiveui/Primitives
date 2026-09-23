@@ -19,6 +19,9 @@ public sealed partial class HttpServerEndpoint
     {
         ArgumentExceptionHelper.ThrowIfNull(options.Hub);
         ArgumentExceptionHelper.ThrowIfNull(options.DeclaredCapabilities);
+        ArgumentExceptionHelper.ThrowIfNull(options.ReplayAuthorizer);
+        ArgumentExceptionHelper.ThrowIfNull(options.ReplayProtection);
+        ArgumentExceptionHelper.ThrowIfNull(options.SnapshotRecoveryLimits);
         ArgumentExceptionHelper.ThrowIfNull(options.TimeProvider);
         ValidatePositive(options.MaximumConcurrentRequests, nameof(options.MaximumConcurrentRequests));
         ValidatePositive(options.MaximumConcurrentAcknowledgements, nameof(options.MaximumConcurrentAcknowledgements));
@@ -37,14 +40,17 @@ public sealed partial class HttpServerEndpoint
         ValidatePositive(options.MaximumQueryKeys, nameof(options.MaximumQueryKeys));
         ValidatePositive(options.MaximumProtocolStringBytes, nameof(options.MaximumProtocolStringBytes));
         ValidateTimeout(options.LongPollTimeout);
-        ValidateCapabilities(options.DeclaredCapabilities);
+        options.ReplayProtection.Validate();
+        options.SnapshotRecoveryLimits.Validate();
+        ValidateCapabilities(options.DeclaredCapabilities, options.SnapshotRecoveryHub is not null);
         ValidateRoutes(options);
     }
 
     /// <summary>Validates endpoint capabilities against the portable HTTP guarantees.</summary>
     /// <param name="capabilities">The declared capabilities.</param>
+    /// <param name="hasSnapshotRecoveryHub">Whether the endpoint has a recovery hub for the optional feature.</param>
     /// <exception cref="ArgumentException">The declared capabilities exceed the endpoint guarantees.</exception>
-    private static void ValidateCapabilities(NegotiatedCapabilities capabilities)
+    private static void ValidateCapabilities(NegotiatedCapabilities capabilities, bool hasSnapshotRecoveryHub)
     {
         if ((capabilities.Features & ~SupportedCapabilities) != 0
             || capabilities.MaximumBatchOperations <= 0
@@ -52,6 +58,11 @@ public sealed partial class HttpServerEndpoint
             || capabilities.ProtocolVersion.Major != SupportedProtocolMajor)
         {
             throw new ArgumentException("The HTTP server endpoint capabilities are not supported.", nameof(capabilities));
+        }
+
+        if ((capabilities.Features & RemoteTransportCapabilities.SnapshotRecovery) != 0 && !hasSnapshotRecoveryHub)
+        {
+            throw new ArgumentException("Snapshot recovery capabilities require a snapshot recovery hub.", nameof(capabilities));
         }
 
         if (!capabilities.EffectiveExactlyOnceWindow.HasValue)
@@ -77,6 +88,7 @@ public sealed partial class HttpServerEndpoint
         AddRoute(routes, options.PushPath, nameof(options.PushPath));
         AddRoute(routes, options.SubscribePath, nameof(options.SubscribePath));
         AddRoute(routes, options.AcknowledgePath, nameof(options.AcknowledgePath));
+        AddRoute(routes, options.SnapshotRecoveryPath, nameof(options.SnapshotRecoveryPath));
     }
 
     /// <summary>Adds a normalized route and rejects duplicates.</summary>
@@ -98,22 +110,25 @@ public sealed partial class HttpServerEndpoint
     /// <summary>Creates the endpoint protocol codec.</summary>
     /// <param name="options">The endpoint options.</param>
     /// <returns>The configured protocol codec.</returns>
-    private static HttpProtocolCodec CreateCodec(HttpServerEndpointOptions options) => new(new HttpProtocolLimits
-    {
-        MaximumRequestBytes = options.MaximumRequestBytes,
-        MaximumResponseBytes = options.MaximumResponseBytes,
-        MaximumPayloadBytes = options.MaximumPayloadBytes,
-        MaximumMetadataEntries = options.MaximumMetadataEntries,
-        MaximumMetadataKeyBytes = options.MaximumMetadataKeyBytes,
-        MaximumMetadataValueBytes = options.MaximumMetadataValueBytes,
-        MaximumBatchOperations = options.MaximumBatchOperations,
-        MaximumEventsPerBatch = options.MaximumEventsPerBatch,
-        MaximumCompletedOperationsPerBatch = options.MaximumCompletedOperationsPerBatch,
-        MaximumJsonDepth = options.MaximumJsonDepth,
-        MaximumQueryBytes = options.MaximumQueryBytes,
-        MaximumQueryKeys = options.MaximumQueryKeys,
-        MaximumProtocolStringBytes = options.MaximumProtocolStringBytes,
-    });
+    private static HttpProtocolCodec CreateCodec(HttpServerEndpointOptions options) =>
+        new(
+            new HttpProtocolLimits
+            {
+                MaximumRequestBytes = options.MaximumRequestBytes,
+                MaximumResponseBytes = options.MaximumResponseBytes,
+                MaximumPayloadBytes = options.MaximumPayloadBytes,
+                MaximumMetadataEntries = options.MaximumMetadataEntries,
+                MaximumMetadataKeyBytes = options.MaximumMetadataKeyBytes,
+                MaximumMetadataValueBytes = options.MaximumMetadataValueBytes,
+                MaximumBatchOperations = options.MaximumBatchOperations,
+                MaximumEventsPerBatch = options.MaximumEventsPerBatch,
+                MaximumCompletedOperationsPerBatch = options.MaximumCompletedOperationsPerBatch,
+                MaximumJsonDepth = options.MaximumJsonDepth,
+                MaximumQueryBytes = options.MaximumQueryBytes,
+                MaximumQueryKeys = options.MaximumQueryKeys,
+                MaximumProtocolStringBytes = options.MaximumProtocolStringBytes,
+            },
+            options.SnapshotRecoveryLimits);
 
     /// <summary>Creates the conservative capability response advertised to clients.</summary>
     /// <param name="options">The endpoint options.</param>
@@ -122,7 +137,13 @@ public sealed partial class HttpServerEndpoint
     {
         var maximumBatchOperations = Math.Min(options.DeclaredCapabilities.MaximumBatchOperations, options.MaximumBatchOperations);
         var maximumBatchBytes = Math.Min(options.DeclaredCapabilities.MaximumBatchBytes, options.MaximumRequestBytes);
-        return options.DeclaredCapabilities with { MaximumBatchOperations = maximumBatchOperations, MaximumBatchBytes = maximumBatchBytes };
+        var features = options.DeclaredCapabilities.Features;
+        if (options.SnapshotRecoveryHub is null)
+        {
+            features &= ~RemoteTransportCapabilities.SnapshotRecovery;
+        }
+
+        return options.DeclaredCapabilities with { Features = features, MaximumBatchOperations = maximumBatchOperations, MaximumBatchBytes = maximumBatchBytes };
     }
 
     /// <summary>Validates a positive integer option.</summary>
@@ -178,8 +199,11 @@ public sealed partial class HttpServerEndpoint
     /// <summary>Normalizes a route by trimming separators.</summary>
     /// <param name="path">The configured path.</param>
     /// <returns>The normalized relative path.</returns>
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static string NormalizeRelativePath(string path) => path.Trim('/');
+    /// <exception cref="ArgumentException"><paramref name="path"/> is not a valid relative path.</exception>
+    private static string NormalizeRelativePath(string path) =>
+        TryNormalizeRequestPath(path, out var route)
+            ? route
+            : throw new ArgumentException("HTTP server endpoint routes must be valid percent-encoded relative paths.", nameof(path));
 
     /// <summary>Gets the route status for an actual and expected HTTP method.</summary>
     /// <param name="actual">The request method.</param>

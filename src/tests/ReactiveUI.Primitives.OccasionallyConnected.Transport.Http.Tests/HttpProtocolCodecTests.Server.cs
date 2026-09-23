@@ -1,10 +1,8 @@
 // Copyright (c) 2019-2026 ReactiveUI Association Incorporated. All rights reserved.
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
-
 using System.Globalization;
 using System.Net.Http;
-
 namespace ReactiveUI.Primitives.OccasionallyConnected.Transport.Http.Tests;
 
 /// <summary>Tests <see cref="HttpProtocolCodec"/>.</summary>
@@ -167,9 +165,7 @@ public sealed partial class HttpProtocolCodecTests
             new("wire-client", "wire-tenant"),
             [DeliveryGuarantee.AtLeastOnce, DeliveryGuarantee.ExactlyOnce]);
         var bytes = codec.SerializeConnectRequest(request);
-
         var decoded = codec.DeserializeConnectRequest(bytes);
-
         await Assert.That(decoded.SupportedProtocolVersions.Minimum).IsEqualTo(new(1, 0));
         await Assert.That(decoded.SupportedProtocolVersions.Maximum).IsEqualTo(new(1, 1));
         await Assert.That(decoded.Client).IsEqualTo(new("wire-client", "wire-tenant"));
@@ -184,7 +180,6 @@ public sealed partial class HttpProtocolCodecTests
     public async Task DeserializeAcknowledgementReadsClientWireCursor()
     {
         var decoded = CreateServerCodec().DeserializeAcknowledgement(Encode(AcknowledgementJson()));
-
         await Assert.That(decoded.StreamId.Value).IsEqualTo(ServerStreamName);
         await Assert.That(decoded.SubscriptionId.Value).IsEqualTo(ServerSubscriptionId.Value);
         await Assert.That(decoded.Cursor).IsEqualTo(CursorOne);
@@ -200,9 +195,7 @@ public sealed partial class HttpProtocolCodecTests
         var bytes = SerializeJson(
             new HttpProtocolJsonContext.PushRequestWire { BatchId = batch.BatchId, Operations = [CreateOperationWire(batch.Operations[0])] },
             HttpProtocolJsonContext.Default.PushRequestWireInfo);
-
         var decoded = codec.DeserializePushRequest(bytes);
-
         await Assert.That(decoded.Operations[0].Type).IsEqualTo(SyncOperationType.Custom);
         await Assert.That(decoded.Operations[0].BaseVersion).IsEqualTo("v0");
         await Assert.That(decoded.Operations[0].Metadata[TraceMetadataKey]).IsEqualTo("custom");
@@ -217,9 +210,7 @@ public sealed partial class HttpProtocolCodecTests
     public async Task DeserializePushRequestAllowsTinyPayloadUnderLargeConfiguredPayloadLimits(int maximumPayloadBytes)
     {
         var codec = new HttpProtocolCodec(CreateServerLimits() with { MaximumPayloadBytes = maximumPayloadBytes });
-
         var decoded = codec.DeserializePushRequest(Encode(PushRequestJson(ServerBatchIdText, OperationJson())));
-
         await Assert.That(decoded.Operations[0].Payload.Payload.Length).IsEqualTo(CreateEmptyJsonPayloadBytes().Length);
     }
 
@@ -231,9 +222,7 @@ public sealed partial class HttpProtocolCodecTests
         const string Json = """
             {"batchId":"00000000-0000-0000-0000-000000000100","operations":[{"streamId":"stream-1"}]}
             """;
-
         var exception = CaptureHttpException(static () => CreateServerCodec().DeserializePushRequest(Encode(Json)));
-
         await Assert.That(exception.Kind).IsEqualTo(HttpTransportFailureKind.ProtocolViolation);
     }
 
@@ -244,9 +233,7 @@ public sealed partial class HttpProtocolCodecTests
     {
         var codec = new HttpProtocolCodec(CreateServerLimits() with { MaximumJsonDepth = SecondSequence });
         var json = PushRequestJson(ServerBatchIdText, OperationJson());
-
         var exception = CaptureHttpException(() => codec.DeserializePushRequest(Encode(json)));
-
         await Assert.That(exception.Kind).IsEqualTo(HttpTransportFailureKind.ProtocolViolation);
         await Assert.That(exception.InnerException).IsNull();
     }
@@ -262,9 +249,7 @@ public sealed partial class HttpProtocolCodecTests
             ResumeCursor,
             StartPosition.FromCursor(AnchorCursor));
         var query = await CaptureSubscribeQueryAsync(request);
-
         var decoded = CreateServerCodec().ParseSubscribeRequest(query);
-
         await Assert.That(decoded.StreamId).IsEqualTo(request.StreamId);
         await Assert.That(decoded.SubscriptionId).IsEqualTo(request.SubscriptionId);
         await Assert.That(decoded.Cursor).IsEqualTo(ResumeCursor);
@@ -287,10 +272,10 @@ public sealed partial class HttpProtocolCodecTests
     [Arguments($"{SubscribeMissingPositionQuery}&positionKind=3")]
     [Arguments($"{SubscribeMissingPositionQuery}&positionKind=3&sequence=1&initialCursor=anchor")]
     [Arguments($"{SubscribeQueryPrefix}&cursor=%")]
+    [Arguments($"{SubscribeQueryPrefix}&")]
     public async Task ParseSubscribeRequestRejectsMalformedQuery(string query)
     {
         var exception = CaptureHttpException(() => CreateServerCodec().ParseSubscribeRequest(query));
-
         await Assert.That(exception.Kind).IsEqualTo(HttpTransportFailureKind.ProtocolViolation);
     }
 
@@ -307,9 +292,7 @@ public sealed partial class HttpProtocolCodecTests
             TimeSpan.FromMinutes(1),
             null);
         var bytes = CreateServerCodec().SerializeConnectResponse(expected);
-
         var decoded = CreateServerCodec().DeserializeConnectResponse(bytes);
-
         await Assert.That(decoded).IsEqualTo(expected);
     }
 
@@ -325,9 +308,7 @@ public sealed partial class HttpProtocolCodecTests
             [new(batch.Operations[0].OperationId, OperationResultKind.Accepted, null, ServerVersion)],
             ServerCursor,
             null);
-
         var decoded = codec.DeserializePushResponse(batch, codec.SerializePushResponse(batch, result), null);
-
         await Assert.That(decoded.BatchId).IsEqualTo(result.BatchId);
         await Assert.That(decoded.ServerCursor).IsEqualTo(result.ServerCursor);
         await Assert.That(decoded.RetryAfter).IsEqualTo(result.RetryAfter);
@@ -356,9 +337,7 @@ public sealed partial class HttpProtocolCodecTests
                 new(new("client-2", new(Guid.Parse(SecondOperationIdText))), []),
             ],
         };
-
         var decoded = codec.DeserializeSubscribeResponse(codec.SerializeSubscribeResponse([first, second]), new StreamId(ServerStreamName));
-
         await Assert.That(decoded).Count().IsEqualTo(ExpectedReceiveBatchCount);
         await Assert.That(decoded[0].BatchId).IsEqualTo(first.BatchId);
         await Assert.That(decoded[1].BatchId).IsEqualTo(second.BatchId);
@@ -382,9 +361,7 @@ public sealed partial class HttpProtocolCodecTests
             new(ContractName, 1, PayloadContentType, CreateEmptyJsonPayloadBytes(), PayloadHash),
             new Dictionary<string, string> { [TraceMetadataKey] = CursorOne });
         var batch = new RemoteEventBatch(Guid.Parse(ServerBatchIdText), new(ServerStreamName), null, CursorOne, [remoteEvent]);
-
         var decoded = codec.DeserializeSubscribeResponse(codec.SerializeSubscribeResponse([batch]), new StreamId(ServerStreamName));
-
         await Assert.That(decoded[0].Events[0].CausedByOperationId).IsNull();
         await Assert.That(decoded[0].Events[0].Origin).IsNull();
     }
@@ -396,9 +373,7 @@ public sealed partial class HttpProtocolCodecTests
     {
         var codec = new HttpProtocolCodec(CreateServerLimits() with { MaximumBatchOperations = 1 });
         var batch = new RemoteEventBatch(Guid.NewGuid(), new(ServerStreamName), null, CursorOne, []);
-
         var exception = CaptureHttpException(() => codec.SerializeSubscribeResponse([batch, batch]));
-
         await Assert.That(exception.Kind).IsEqualTo(HttpTransportFailureKind.PayloadTooLarge);
     }
 
@@ -410,8 +385,22 @@ public sealed partial class HttpProtocolCodecTests
     public async Task ServerCodecRejectsMalformedProtocolInputs(ServerHttpExceptionCase testCase)
     {
         var exception = testCase.Act();
-
         await Assert.That(exception.Kind).IsEqualTo(testCase.ExpectedKind);
+    }
+
+    /// <summary>Verifies subscribe parsing returns exact decoded query field text for replay canonicalization.</summary>
+    /// <returns>The asynchronous test operation.</returns>
+    [Test]
+    public async Task ParseSubscribeRequestWithQueryFieldsPreservesDecodedWireValues()
+    {
+        const string Query = "?streamId=stream-1&subscriptionId=00000000-0000-0000-0000-000000000301&positionKind=02&sequence=0042&cursor=resume-%F0%9F%A7%AA";
+        const long ExpectedSequence = 42;
+        var parsed = CreateServerCodec().ParseSubscribeRequestWithQueryFields(Query);
+        await Assert.That(parsed.Request.InitialPosition.Kind).IsEqualTo(StartPositionKind.FromSequence);
+        await Assert.That(parsed.Request.InitialPosition.Sequence).IsEqualTo(ExpectedSequence);
+        await Assert.That(parsed.QueryFields).Contains(new KeyValuePair<string, string>("positionKind", "02"));
+        await Assert.That(parsed.QueryFields).Contains(new KeyValuePair<string, string>("sequence", "0042"));
+        await Assert.That(parsed.QueryFields).Contains(new KeyValuePair<string, string>("cursor", "resume-🧪"));
     }
 
     /// <summary>Verifies raw supplementary Unicode and percent-encoded UTF-8 query values decode identically.</summary>
@@ -423,10 +412,8 @@ public sealed partial class HttpProtocolCodecTests
         const string RawQuery = $"{SubscribeMissingPositionQueryWithPrefix}&cursor=resume-🧪&positionKind=3&initialCursor=anchor-🧪";
         const string EscapedQuery =
             $"{SubscribeMissingPositionQueryWithPrefix}&cursor=resume-%F0%9F%A7%AA&positionKind=3&initialCursor=anchor-%F0%9F%A7%AA";
-
         var raw = CreateServerCodec().ParseSubscribeRequest(RawQuery);
         var escaped = CreateServerCodec().ParseSubscribeRequest(EscapedQuery);
-
         await Assert.That(raw.Cursor).IsEqualTo($"resume-{Scalar}");
         await Assert.That(raw.InitialPosition.Cursor).IsEqualTo($"anchor-{Scalar}");
         await Assert.That(escaped.Cursor).IsEqualTo(raw.Cursor);
@@ -440,9 +427,7 @@ public sealed partial class HttpProtocolCodecTests
     {
         var surrogate = new string(['\ud800']);
         var query = $"{SubscribeQueryPrefix}&cursor={surrogate}";
-
         var exception = CaptureHttpException(() => CreateServerCodec().ParseSubscribeRequest(query));
-
         await Assert.That(exception.Kind).IsEqualTo(HttpTransportFailureKind.ProtocolViolation);
         await Assert.That(exception.InnerException).IsNull();
     }
@@ -456,7 +441,6 @@ public sealed partial class HttpProtocolCodecTests
             $"{SubscribeMissingPositionQueryWithPrefix}&positionKind=1&timestamp=2026-09-13T00%3A00%3A00.0000000%2B00%3A00";
         const string SequenceQuery = $"?streamId=stream-1&subscriptionId=00000000-0000-0000-0000-000000000301&positionKind=2&sequence={QuerySequenceText}";
         const string LowerHexQuery = $"{SubscribeMissingPositionQueryWithPrefix}&cursor=%f0%9f%a7%aa&positionKind=3&initialCursor=anchor";
-
         var timestamp = CreateServerCodec().ParseSubscribeRequest(TimestampQuery);
         var sequence = CreateServerCodec().ParseSubscribeRequest(SequenceQuery);
         var lowerHex = CreateServerCodec().ParseSubscribeRequest(LowerHexQuery);
@@ -470,7 +454,6 @@ public sealed partial class HttpProtocolCodecTests
             static () => CreateServerCodec().ParseSubscribeRequest($"{SubscribeMissingPositionQuery}&positionKind=99"));
         var tooManyKeys = CaptureHttpException(static () => new HttpProtocolCodec(CreateServerLimits() with { MaximumQueryKeys = 1 })
             .ParseSubscribeRequest(SubscribeQueryPrefix));
-
         await Assert.That(timestamp.InitialPosition.Kind).IsEqualTo(StartPositionKind.FromTimestamp);
         await Assert.That(sequence.InitialPosition.Kind).IsEqualTo(StartPositionKind.FromSequence);
         await Assert.That(lowerHex.Cursor).IsEqualTo("🧪");
@@ -496,7 +479,6 @@ public sealed partial class HttpProtocolCodecTests
             static () => CreateServerCodec().ParseSubscribeRequest($"{SubscribeMissingPositionQuery}&positionKind=2&sequence=x"));
         var duplicateSeparator = CaptureHttpException(
             static () => CreateServerCodec().ParseSubscribeRequest($"{SubscribeQueryPrefix}&&cursor=after"));
-
         await Assert.That(latest.InitialPosition.Kind).IsEqualTo(StartPositionKind.Latest);
         await Assert.That(timestampMissing.Kind).IsEqualTo(HttpTransportFailureKind.ProtocolViolation);
         await Assert.That(sequenceMissing.Kind).IsEqualTo(HttpTransportFailureKind.ProtocolViolation);
@@ -520,9 +502,7 @@ public sealed partial class HttpProtocolCodecTests
                 ConflictPolicyValue = (int)ConflictPolicy.LastWriterWins,
             }),
             OperationJson(new() { OperationId = SecondOperationIdText, Sequence = SecondSequence, Type = (int)SyncOperationType.Delete, ConflictPolicyValue = (int)ConflictPolicy.Custom }));
-
         var decoded = CreateServerCodec().DeserializePushRequest(Encode(request));
-
         await Assert.That(decoded.Operations[0].Type).IsEqualTo(SyncOperationType.Update);
         await Assert.That(decoded.Operations[1].Type).IsEqualTo(SyncOperationType.Delete);
         await Assert.That(decoded.Operations[0].Policy.DeliveryGuarantee).IsEqualTo(DeliveryGuarantee.AtMostOnce);
@@ -566,12 +546,12 @@ public sealed partial class HttpProtocolCodecTests
                 }
               ]
             }
+
             """;
         var number = CaptureHttpException(static () => CreateServerCodec().DeserializeConnectResponse(Encode(NumberAsStringJson)));
         var optionalNumber = CaptureHttpException(static () => CreateServerCodec().DeserializeConnectResponse(Encode(OptionalNumberAsStringJson)));
         var requiredGuarantees = CaptureHttpException(static () => CreateServerCodec().DeserializeConnectRequest(Encode(RequiredGuaranteesObjectJson)));
         var completionId = CaptureHttpException(static () => CreateServerCodec().DeserializeSubscribeResponse(Encode(CompletionIdNumberJson)));
-
         await Assert.That(number.Kind).IsEqualTo(HttpTransportFailureKind.ProtocolViolation);
         await Assert.That(optionalNumber.Kind).IsEqualTo(HttpTransportFailureKind.ProtocolViolation);
         await Assert.That(requiredGuarantees.Kind).IsEqualTo(HttpTransportFailureKind.ProtocolViolation);
@@ -592,7 +572,6 @@ public sealed partial class HttpProtocolCodecTests
             OperationResultKind.Rejected,
             OperationResultKind.Retryable,
         };
-
         foreach (var kind in kinds)
         {
             var result = new RemoteSyncResult(
@@ -601,7 +580,6 @@ public sealed partial class HttpProtocolCodecTests
                 ServerCursor,
                 null);
             var decoded = codec.DeserializePushResponse(batch, codec.SerializePushResponse(batch, result), null);
-
             await Assert.That(decoded.Operations[0].Kind).IsEqualTo(kind);
         }
     }
@@ -619,11 +597,9 @@ public sealed partial class HttpProtocolCodecTests
             """;
         var completionJson = SubscribeResponseWithCompletedOperationsJson();
         var codec = new HttpProtocolCodec(CreateServerLimits() with { MaximumEventsPerBatch = SingleOperation });
-
         var features = CaptureHttpException(static () => CreateServerCodec().DeserializeConnectResponse(Encode(FeaturesJson)));
         var duration = CaptureHttpException(static () => CreateServerCodec().DeserializeConnectResponse(Encode(DurationJson)));
         var completions = CaptureHttpException(() => codec.DeserializeSubscribeResponse(Encode(completionJson)));
-
         await Assert.That(features.Kind).IsEqualTo(HttpTransportFailureKind.ProtocolViolation);
         await Assert.That(duration.Kind).IsEqualTo(HttpTransportFailureKind.ProtocolViolation);
         await Assert.That(completions.Kind).IsEqualTo(HttpTransportFailureKind.PayloadTooLarge);
@@ -637,9 +613,7 @@ public sealed partial class HttpProtocolCodecTests
         var expected = TimeSpan.FromTicks(MaximumWholeTimeSpanMilliseconds * TimeSpan.TicksPerMillisecond);
         var json = "{\"protocolVersion\":\"1.0\",\"features\":0,\"maximumBatchOperations\":1,\"maximumBatchBytes\":1,"
             + $"\"serverIdempotencyRetentionMilliseconds\":{MaximumWholeTimeSpanMilliseconds.ToString(CultureInfo.InvariantCulture)}}}";
-
         var decoded = CreateServerCodec().DeserializeConnectResponse(Encode(json));
-
         await Assert.That(decoded.ServerIdempotencyRetention).IsEqualTo(expected);
     }
 
@@ -664,7 +638,6 @@ public sealed partial class HttpProtocolCodecTests
             OperationDurability.Durable,
             OperationPolicy.MaximumPriority + SingleOperation,
             ConflictPolicy.Merge));
-
         var version = CaptureHttpException(() => codec.SerializeConnectResponse(new(new(2, 0), 0, 1, 1, null, null)));
         var features = CaptureHttpException(() => codec.SerializeConnectResponse(new(
             new(1, 0),
@@ -694,7 +667,6 @@ public sealed partial class HttpProtocolCodecTests
         var tooManyGuarantees = CaptureHttpException(() => smallCodec.SerializeConnectRequest(guarantees));
         var operation = CaptureHttpException(() => codec.SerializePushRequest(CreateServerBatchFromOperations(invalidOperation)));
         var policy = CaptureHttpException(() => codec.SerializePushRequest(CreateServerBatchFromOperations(invalidPolicy)));
-
         await Assert.That(version.Kind).IsEqualTo(HttpTransportFailureKind.ProtocolViolation);
         await Assert.That(features.Kind).IsEqualTo(HttpTransportFailureKind.ProtocolViolation);
         await Assert.That(operations.Kind).IsEqualTo(HttpTransportFailureKind.ProtocolViolation);
@@ -716,10 +688,8 @@ public sealed partial class HttpProtocolCodecTests
         var metadataCodec = new HttpProtocolCodec(CreateServerLimits() with { MaximumMetadataEntries = SingleOperation });
         var invalidPayload = new PayloadEnvelope(ContractName, 0, PayloadContentType, CreateEmptyJsonPayloadBytes(), PayloadHash);
         var invalidMetadata = new Dictionary<string, string> { ["first"] = "1", ["second"] = "2" };
-
         var payload = CaptureHttpException(() => codec.SerializePushRequest(CreateServerBatchFromOperations(CreateServerOperation(payload: invalidPayload))));
         var metadata = CaptureHttpException(() => metadataCodec.SerializePushRequest(CreateServerBatchFromOperations(CreateServerOperation(metadata: invalidMetadata))));
-
         await Assert.That(payload.Kind).IsEqualTo(HttpTransportFailureKind.ProtocolViolation);
         await Assert.That(metadata.Kind).IsEqualTo(HttpTransportFailureKind.PayloadTooLarge);
     }
@@ -733,10 +703,8 @@ public sealed partial class HttpProtocolCodecTests
         var streamCodec = new HttpProtocolCodec(CreateServerLimits() with { MaximumProtocolStringBytes = SingleOperation });
         var invalidType = CreateServerOperation(type: (SyncOperationType)InvalidEnumValue);
         var streamOverLimit = CreateServerOperation(streamId: AlternateServerStreamName);
-
         var operationType = CaptureHttpException(() => codec.SerializePushRequest(CreateServerBatchFromOperations(invalidType)));
         var stream = CaptureHttpException(() => streamCodec.SerializePushRequest(CreateServerBatchFromOperations(streamOverLimit)));
-
         await Assert.That(operationType.Kind).IsEqualTo(HttpTransportFailureKind.ProtocolViolation);
         await Assert.That(stream.Kind).IsEqualTo(HttpTransportFailureKind.PayloadTooLarge);
     }
@@ -785,7 +753,6 @@ public sealed partial class HttpProtocolCodecTests
         var payloadBatch = new RemoteEventBatch(Guid.NewGuid(), new(ServerStreamName), null, CursorThree, [payloadEvent])
             { CompletedOperations = [new(origin, [payloadEvent.EventId])] };
         var smallPayloadCodec = new HttpProtocolCodec(CreateServerLimits() with { MaximumPayloadBytes = SingleOperation });
-
         var nullBatch = CaptureHttpException(() => codec.SerializeSubscribeResponse(nullBatches));
         var tooManyEvents = CaptureHttpException(() => smallEventCodec.SerializeSubscribeResponse([overflowingEvents]));
         var tooManyCompletionIds = CaptureHttpException(() => smallEventCodec.SerializeSubscribeResponse([overflowingCompletions]));
@@ -794,7 +761,6 @@ public sealed partial class HttpProtocolCodecTests
         var eventId = CaptureHttpException(() => codec.SerializeSubscribeResponse([badEventBatch]));
         var completion = CaptureHttpException(() => codec.SerializeSubscribeResponse([missingCompletionEvent]));
         var payload = CaptureHttpException(() => smallPayloadCodec.SerializeSubscribeResponse([payloadBatch]));
-
         await Assert.That(nullBatch.Kind).IsEqualTo(HttpTransportFailureKind.ProtocolViolation);
         await Assert.That(tooManyEvents.Kind).IsEqualTo(HttpTransportFailureKind.PayloadTooLarge);
         await Assert.That(tooManyCompletionIds.Kind).IsEqualTo(HttpTransportFailureKind.PayloadTooLarge);
@@ -815,7 +781,6 @@ public sealed partial class HttpProtocolCodecTests
         var batch = CreateServerBatch(SyncOperationType.Append);
         var operation = batch.Operations[0].OperationId;
         var other = new OperationId(Guid.Parse(SecondOperationIdText));
-
         var retry = CaptureHttpException(() => codec.SerializePushResponse(batch, new(
             batch.BatchId,
             [new(operation, OperationResultKind.Accepted, null, ServerVersion)],
@@ -836,7 +801,6 @@ public sealed partial class HttpProtocolCodecTests
             [new(operation, (OperationResultKind)InvalidEnumValue, null, null)],
             ServerCursor,
             null)));
-
         await Assert.That(retry.Kind).IsEqualTo(HttpTransportFailureKind.ProtocolViolation);
         await Assert.That(tooMany.Kind).IsEqualTo(HttpTransportFailureKind.PayloadTooLarge);
         await Assert.That(emptyOperation.Kind).IsEqualTo(HttpTransportFailureKind.ProtocolViolation);
@@ -868,10 +832,9 @@ public sealed partial class HttpProtocolCodecTests
                 }
               ]
             }
+
             """;
-
         var exception = CaptureHttpException(static () => CreateServerCodec().DeserializeSubscribeResponse(Encode(ResponseJson)));
-
         await Assert.That(exception.Kind).IsEqualTo(HttpTransportFailureKind.ProtocolViolation);
         await Assert.That(exception.InnerException).IsNull();
         await Assert.That(exception.Data.Count).IsEqualTo(0);
@@ -914,10 +877,9 @@ public sealed partial class HttpProtocolCodecTests
                 }
               ]
             }
+
             """;
-
         var exception = CaptureHttpException(static () => CreateServerCodec().DeserializeSubscribeResponse(Encode(ResponseJson)));
-
         await Assert.That(exception.Kind).IsEqualTo(HttpTransportFailureKind.ProtocolViolation);
         await Assert.That(exception.InnerException).IsNull();
         await Assert.That(exception.Data.Count).IsEqualTo(0);
@@ -933,7 +895,6 @@ public sealed partial class HttpProtocolCodecTests
             OperationJson(new() { Payload = PayloadLeakSentinel })))));
         var subscribeException = CaptureHttpException(static () =>
             CreateServerCodec().DeserializeSubscribeResponse(Encode(SubscribeResponseJson(PayloadLeakSentinel))));
-
         await Assert.That(exception.Kind).IsEqualTo(HttpTransportFailureKind.ProtocolViolation);
         await Assert.That(exception.InnerException).IsNull();
         await Assert.That(exception.Message.Contains(PayloadLeakSentinel, StringComparison.Ordinal)).IsFalse();

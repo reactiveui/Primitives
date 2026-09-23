@@ -1,10 +1,9 @@
 // Copyright (c) 2019-2026 ReactiveUI Association Incorporated. All rights reserved.
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
-
+using System.Net;
 using System.Security.Cryptography;
 using System.Text;
-
 namespace ReactiveUI.Primitives.OccasionallyConnected.Transport.Http.Tests;
 
 /// <summary>Tests <see cref="HttpReplayEnvelopeHasher"/>.</summary>
@@ -109,6 +108,18 @@ public sealed class HttpReplayEnvelopeHasherTests
     /// <summary>The single byte limit.</summary>
     private const int SingleByteLimit = 1;
 
+    /// <summary>A small replay frame limit.</summary>
+    private const int SmallReplayFrameLimit = 128;
+
+    /// <summary>The small UTF-8 expansion budget used by replay text byte-count tests.</summary>
+    private const int Utf8ExpansionByteBudget = 18;
+
+    /// <summary>The one byte over small replay frame limit.</summary>
+    private const int OversizedReplayFieldLength = SmallReplayFrameLimit + 1;
+
+    /// <summary>The path length that exceeds the small canonical frame limit after framing.</summary>
+    private const int LongCanonicalPathLength = 160;
+
     /// <summary>The number of canonical separators.</summary>
     private const int CanonicalSeparatorCount = 3;
 
@@ -132,7 +143,6 @@ public sealed class HttpReplayEnvelopeHasherTests
         HttpReplayEnvelopeHasher hasher = new();
         var first = hasher.Create(CreateRequest(StableBody));
         var second = hasher.Create(CreateRequest(StableBody));
-
         await Assert.That(hasher.FixedTimeEquals(first.EnvelopeFingerprint, second.EnvelopeFingerprint)).IsTrue();
     }
 
@@ -144,7 +154,6 @@ public sealed class HttpReplayEnvelopeHasherTests
         HttpReplayEnvelopeHasher hasher = new();
         var first = hasher.Create(CreateRequest(StableBody));
         var second = hasher.Create(CreateRequest(ChangedBody));
-
         await Assert.That(hasher.FixedTimeEquals(first.EnvelopeFingerprint, second.EnvelopeFingerprint)).IsFalse();
     }
 
@@ -162,7 +171,6 @@ public sealed class HttpReplayEnvelopeHasherTests
         HttpReplayEnvelopeHasher hasher = new();
         var original = hasher.Create(CreateRequest(StableBody));
         var changed = hasher.Create(ChangeField(CreateRequest(StableBody), field));
-
         await Assert.That(hasher.FixedTimeEquals(original.EnvelopeFingerprint, changed.EnvelopeFingerprint)).IsFalse();
     }
 
@@ -178,7 +186,6 @@ public sealed class HttpReplayEnvelopeHasherTests
         HttpReplayEnvelopeHasher hasher = new();
         var original = hasher.Create(CreateRequest(StableBody));
         var changed = hasher.Create(ChangeCanonicalField(CreateRequest(StableBody), field));
-
         await Assert.That(hasher.FixedTimeEquals(original.EnvelopeFingerprint, changed.EnvelopeFingerprint)).IsFalse();
     }
 
@@ -192,7 +199,6 @@ public sealed class HttpReplayEnvelopeHasherTests
     {
         HttpReplayEnvelopeHasher hasher = new();
         var request = ChangeField(CreateRequest(StableBody), field, NewlineHeader);
-
         await Assert.That(() => hasher.Create(request)).ThrowsExactly<HttpRemoteTransportException>();
     }
 
@@ -208,8 +214,22 @@ public sealed class HttpReplayEnvelopeHasherTests
         var request = field == SessionField
             ? CreateRequest(StableBody) with { ReplaySessionId = null }
             : CreateRequest(StableBody) with { ReplayMac = null };
-
         await Assert.That(() => hasher.Create(request)).ThrowsExactly<HttpRemoteTransportException>();
+    }
+
+    /// <summary>Verifies empty signed replay headers are rejected for non-connect envelopes.</summary>
+    /// <param name="field">The signed header field to empty.</param>
+    /// <returns>The asynchronous test operation.</returns>
+    [Test]
+    [Arguments(SessionField)]
+    [Arguments(MacField)]
+    public async Task CreateRejectsEmptySignedReplayHeadersBeforeMacInput(string field)
+    {
+        HttpReplayEnvelopeHasher hasher = new();
+        var request = ChangeField(CreateRequest(StableBody), field, string.Empty);
+        var exception = CaptureHttpException(() => hasher.Create(request));
+        await Assert.That(exception.Kind).IsEqualTo(HttpTransportFailureKind.ValidationRejected);
+        await Assert.That(exception.StatusCode).IsEqualTo(HttpStatusCode.BadRequest);
     }
 
     /// <summary>Verifies canonical request bytes are bounded before request hashing.</summary>
@@ -218,8 +238,96 @@ public sealed class HttpReplayEnvelopeHasherTests
     public async Task CreateRejectsCanonicalBytesAboveLimit()
     {
         HttpReplayEnvelopeHasher hasher = new(new() { MaximumCanonicalRequestBytes = SingleByteLimit });
-
         await Assert.That(() => hasher.Create(CreateRequest(StableBody))).ThrowsExactly<HttpRemoteTransportException>();
+    }
+
+    /// <summary>Verifies canonical bytes are bounded after replay header preflight succeeds.</summary>
+    /// <returns>The asynchronous test operation.</returns>
+    [Test]
+    public async Task CreateRejectsCanonicalBytesAboveLimitAfterReplayPreflight()
+    {
+        HttpReplayEnvelopeHasher hasher = new(new() { MaximumCanonicalRequestBytes = SmallReplayFrameLimit });
+        var request = new HttpReplayRequest
+        {
+            Operation = HttpReplayOperationKind.Push,
+            Principal = new("t", "c"),
+            MessageId = "m",
+            Nonce = "n",
+            SentAtUtc = SentAtUtc,
+            ReplaySessionId = "s",
+            ReplayMac = "x",
+            CanonicalRequest = CreateCanonical(PostMethod, new('p', LongCanonicalPathLength), string.Empty, StableBody),
+        };
+        var exception = CaptureHttpException(() => hasher.Create(request));
+        await Assert.That(exception.Kind).IsEqualTo(HttpTransportFailureKind.PayloadTooLarge);
+        await Assert.That(exception.StatusCode).IsEqualTo(HttpStatusCode.RequestEntityTooLarge);
+    }
+
+    /// <summary>Verifies oversized replay text fields are rejected before framed input allocation.</summary>
+    /// <param name="field">The oversized field.</param>
+    /// <returns>The asynchronous test operation.</returns>
+    [Test]
+    [Arguments("tenant")]
+    [Arguments("client")]
+    [Arguments(MessageField)]
+    [Arguments(NonceField)]
+    [Arguments(SessionField)]
+    [Arguments(MacField)]
+    public async Task CreateRejectsOversizedReplayFieldsBeforeMacInput(string field)
+    {
+        HttpReplayEnvelopeHasher hasher = new(new() { MaximumCanonicalRequestBytes = SmallReplayFrameLimit });
+        var oversized = new string('a', OversizedReplayFieldLength);
+        var request = field switch
+        {
+            "tenant" => CreateRequest(StableBody) with { Principal = new(oversized, Principal.ClientId) },
+            "client" => CreateRequest(StableBody) with { Principal = new(Principal.TenantId, oversized) },
+            _ => ChangeField(CreateRequest(StableBody), field, oversized),
+        };
+        var exception = CaptureHttpException(() => hasher.Create(request));
+        await Assert.That(exception.Kind).IsEqualTo(HttpTransportFailureKind.PayloadTooLarge);
+        await Assert.That(exception.StatusCode).IsEqualTo(HttpStatusCode.RequestEntityTooLarge);
+    }
+
+    /// <summary>Verifies malformed UTF-16 identity material is rejected before hashing.</summary>
+    /// <returns>The asynchronous test operation.</returns>
+    [Test]
+    public async Task CreateRejectsMalformedUtf16ReplayIdentityBeforeHashing()
+    {
+        HttpReplayEnvelopeHasher hasher = new();
+        var request = CreateRequest(StableBody) with { MessageId = $"message{'\uD800'}" };
+        var exception = CaptureHttpException(() => hasher.Create(request));
+        await Assert.That(exception.Kind).IsEqualTo(HttpTransportFailureKind.ValidationRejected);
+        await Assert.That(exception.StatusCode).IsEqualTo(HttpStatusCode.BadRequest);
+    }
+
+    /// <summary>Verifies valid UTF-16 text that expands past the UTF-8 byte budget is rejected before hashing.</summary>
+    /// <returns>The asynchronous test operation.</returns>
+    [Test]
+    public async Task CreateRejectsReplayTextWhoseUtf8ByteCountExceedsBudget()
+    {
+        HttpReplayEnvelopeHasher hasher = new(new() { MaximumCanonicalRequestBytes = Utf8ExpansionByteBudget });
+        var request = CreateRequest(StableBody) with
+        {
+            Principal = new(new string('é', Utf8ExpansionByteBudget), "c"),
+            MessageId = "m",
+            Nonce = "n",
+            ReplaySessionId = "s",
+            ReplayMac = "h",
+        };
+        var exception = CaptureHttpException(() => hasher.Create(request));
+        await Assert.That(exception.Kind).IsEqualTo(HttpTransportFailureKind.PayloadTooLarge);
+        await Assert.That(exception.StatusCode).IsEqualTo(HttpStatusCode.RequestEntityTooLarge);
+    }
+
+    /// <summary>Verifies framed replay material must fit the configured canonical request budget before allocation.</summary>
+    /// <returns>The asynchronous test operation.</returns>
+    [Test]
+    public async Task CreateRejectsMacInputFrameAboveLimitBeforeAllocation()
+    {
+        HttpReplayEnvelopeHasher hasher = new(new() { MaximumCanonicalRequestBytes = SmallReplayFrameLimit });
+        var exception = CaptureHttpException(() => hasher.Create(CreateRequest(StableBody)));
+        await Assert.That(exception.Kind).IsEqualTo(HttpTransportFailureKind.PayloadTooLarge);
+        await Assert.That(exception.StatusCode).IsEqualTo(HttpStatusCode.RequestEntityTooLarge);
     }
 
     /// <summary>Verifies MAC computation rejects missing or oversized protected input.</summary>
@@ -239,7 +347,6 @@ public sealed class HttpReplayEnvelopeHasherTests
             "oversized-input" => new byte[BodyByteTwo],
             _ => new byte[SingleByteLimit],
         };
-
         await Assert.That(() => hasher.ComputeMac(secret, input)).ThrowsExactly<HttpRemoteTransportException>();
     }
 
@@ -249,7 +356,6 @@ public sealed class HttpReplayEnvelopeHasherTests
     public async Task FixedTimeEqualsRejectsInvalidInputLengths()
     {
         HttpReplayEnvelopeHasher hasher = new(new() { MaximumCanonicalRequestBytes = SingleByteLimit });
-
         await Assert.That(hasher.FixedTimeEquals(new byte[BodyByteTwo], new byte[BodyByteTwo])).IsFalse();
         await Assert.That(hasher.FixedTimeEquals(new byte[SingleByteLimit], ReadOnlyMemory<byte>.Empty)).IsFalse();
     }
@@ -264,7 +370,6 @@ public sealed class HttpReplayEnvelopeHasherTests
         var second = CreateRequest(StableBody) with { MessageId = AdjacentMessageTwo, Nonce = AdjacentNonceTwo };
         var firstEnvelope = hasher.Create(first);
         var secondEnvelope = hasher.Create(second);
-
         await Assert.That(hasher.FixedTimeEquals(firstEnvelope.MacInput, secondEnvelope.MacInput)).IsFalse();
         await Assert.That(hasher.FixedTimeEquals(firstEnvelope.EnvelopeFingerprint, secondEnvelope.EnvelopeFingerprint)).IsFalse();
     }
@@ -279,7 +384,6 @@ public sealed class HttpReplayEnvelopeHasherTests
         var second = CreateRequest(StableBody) with { CanonicalRequest = CreateCanonical(AmbiguousMethodTwo, AmbiguousPathTwo, string.Empty, StableBody) };
         var firstEnvelope = hasher.Create(first);
         var secondEnvelope = hasher.Create(second);
-
         await Assert.That(hasher.FixedTimeEquals(firstEnvelope.MacInput, secondEnvelope.MacInput)).IsFalse();
         await Assert.That(hasher.FixedTimeEquals(firstEnvelope.EnvelopeFingerprint, secondEnvelope.EnvelopeFingerprint)).IsFalse();
     }
@@ -292,7 +396,6 @@ public sealed class HttpReplayEnvelopeHasherTests
         HttpReplayEnvelopeHasher hasher = new();
         var request = CreateRequest(StableBody) with { Operation = HttpReplayOperationKind.Connect, ReplaySessionId = null, ReplayMac = null };
         var envelope = hasher.Create(request);
-
         await Assert.That(envelope.MacInput.Length).IsGreaterThan(0);
     }
 
@@ -324,7 +427,6 @@ public sealed class HttpReplayEnvelopeHasherTests
             PathField => CreateCanonical(original.Method, AckPath, original.CanonicalQuery, StableBody),
             _ => CreateCanonical(original.Method, original.NormalizedRelativePath, ChangedQuery, StableBody),
         };
-
         return request with { CanonicalRequest = canonical };
     }
 
@@ -345,6 +447,24 @@ public sealed class HttpReplayEnvelopeHasherTests
             ReplayMac = ReplayMac,
             CanonicalRequest = canonical,
         };
+    }
+
+    /// <summary>Captures the expected HTTP transport exception.</summary>
+    /// <param name="action">The throwing action.</param>
+    /// <returns>The captured exception.</returns>
+    /// <exception cref="InvalidOperationException">The action did not throw the expected exception.</exception>
+    private static HttpRemoteTransportException CaptureHttpException(Action action)
+    {
+        try
+        {
+            action();
+        }
+        catch (HttpRemoteTransportException exception)
+        {
+            return exception;
+        }
+
+        throw new InvalidOperationException("Expected HTTP transport exception.");
     }
 
     /// <summary>Creates a canonical request whose hash and bytes are derived from the supplied body.</summary>
@@ -374,7 +494,6 @@ public sealed class HttpReplayEnvelopeHasherTests
         canonicalBytes[offset] = LineFeedByte;
         offset++;
         bodyHash.CopyTo(canonicalBytes.AsSpan(offset));
-
         return new(method, path, query, bodyHash, canonicalBytes);
     }
 }

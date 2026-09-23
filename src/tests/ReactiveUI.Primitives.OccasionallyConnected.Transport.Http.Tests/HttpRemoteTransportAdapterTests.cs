@@ -1,7 +1,6 @@
 // Copyright (c) 2019-2026 ReactiveUI Association Incorporated. All rights reserved.
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
-
 using System.Globalization;
 using System.Net;
 using System.Net.Http;
@@ -10,7 +9,6 @@ using System.Runtime.CompilerServices;
 using System.Text;
 using System.Text.Json;
 using ReactiveUI.Primitives.OccasionallyConnected;
-
 namespace ReactiveUI.Primitives.OccasionallyConnected.Transport.Http.Tests;
 
 /// <summary>Tests the HTTP remote transport adapter.</summary>
@@ -89,9 +87,7 @@ public sealed partial class HttpRemoteTransportAdapterTests
         var handler = new RecordingHttpHandler(static request => CreateProtocolResponse(HttpStatusCode.OK, ConnectResponseJson));
         using var httpClient = CreateHttpClient(handler);
         await using var adapter = CreateAdapter(httpClient);
-
         var session = await adapter.ConnectAsync(CreateConnectRequest(), CancellationToken.None);
-
         await Assert.That(session.NegotiatedCapabilities.ProtocolVersion).IsEqualTo(new(1, 0));
         await Assert.That(session.NegotiatedCapabilities.Features).IsEqualTo(
             RemoteTransportCapabilities.BatchPush
@@ -113,9 +109,7 @@ public sealed partial class HttpRemoteTransportAdapterTests
         var handler = new RecordingHttpHandler(static request => CreateProtocolResponse(HttpStatusCode.OK, ConnectResponseJson));
         using var httpClient = CreateHttpClient(handler);
         await using var adapter = CreateAdapter(httpClient);
-
         _ = await adapter.ConnectAsync(CreateConnectRequest(), CancellationToken.None);
-
         await Assert.That(handler.Requests[0].Authorization).IsNull();
         await Assert.That(handler.Requests[0].Headers.Any(static header => header.Key.Contains("Tenant", StringComparison.OrdinalIgnoreCase))).IsFalse();
     }
@@ -128,7 +122,6 @@ public sealed partial class HttpRemoteTransportAdapterTests
         using var httpClient = CreateHttpClient(new RecordingHttpHandler(static request => CreateProtocolResponse(HttpStatusCode.OK, ConnectResponseJson)));
         var remoteOptions = new HttpRemoteTransportOptions { HttpClient = httpClient, BaseAddress = new("http://example.invalid/oc/") };
         var loopbackOptions = new HttpRemoteTransportOptions { HttpClient = httpClient, BaseAddress = new("http://127.0.0.1:6553/oc/"), AllowInsecureLoopbackHttp = true };
-
         await Assert.That(remoteOptions.Validate).ThrowsExactly<ArgumentException>();
         loopbackOptions.Validate();
     }
@@ -146,9 +139,7 @@ public sealed partial class HttpRemoteTransportAdapterTests
                 httpClient,
                 server.BaseAddress,
                 static options => options with { AllowInsecureLoopbackHttp = true });
-
             var session = await adapter.ConnectAsync(CreateConnectRequest(), CancellationToken.None);
-
             await Assert.That(session.NegotiatedCapabilities.MaximumBatchOperations).IsEqualTo(NegotiatedBatchOperations);
             await Assert.That(server.RequestLine).IsEqualTo("POST /oc/connect HTTP/1.1");
         }
@@ -173,9 +164,7 @@ public sealed partial class HttpRemoteTransportAdapterTests
         using var httpClient = CreateHttpClient(handler);
         await using var adapter = CreateAdapter(httpClient);
         var session = await adapter.ConnectAsync(CreateConnectRequest(), CancellationToken.None);
-
         var result = await session.PushAsync(batch, CancellationToken.None);
-
         var push = handler.Requests[1];
         using var document = JsonDocument.Parse(push.Body);
         await Assert.That(push.RequestUri).IsEqualTo(new(PushEndpoint));
@@ -211,10 +200,8 @@ public sealed partial class HttpRemoteTransportAdapterTests
         using var httpClient = CreateHttpClient(handler);
         await using var adapter = CreateAdapter(httpClient);
         var session = await adapter.ConnectAsync(CreateConnectRequest(), CancellationToken.None);
-
         var exception = await CaptureHttpExceptionAsync(async () => _ = await session.PushAsync(batch, CancellationToken.None));
         var result = await session.PushAsync(batch, CancellationToken.None);
-
         await Assert.That(exception.Kind).IsEqualTo(HttpTransportFailureKind.AmbiguousTransportOutcome);
         await Assert.That(result.BatchId).IsEqualTo(batch.BatchId);
         await Assert.That(handler.Requests[1].Body).IsEqualTo(handler.Requests[2].Body);
@@ -237,7 +224,6 @@ public sealed partial class HttpRemoteTransportAdapterTests
         using var httpClient = CreateHttpClient(handler);
         await using var adapter = CreateAdapter(httpClient);
         var session = await adapter.ConnectAsync(CreateConnectRequest(), CancellationToken.None);
-
         _ = await CaptureSyncBatchExceptionAsync(async () => _ = await session.PushAsync(batch, CancellationToken.None));
     }
 
@@ -254,9 +240,7 @@ public sealed partial class HttpRemoteTransportAdapterTests
             static options => options with { MaximumBatchOperations = 1 });
         var session = await adapter.ConnectAsync(CreateConnectRequest(), CancellationToken.None);
         var batch = new SyncBatch(Guid.Parse("00000000-0000-0000-0000-000000000002"), [CreateOperation(1), CreateOperation(SecondSequence)]);
-
         var exception = await CaptureHttpExceptionAsync(async () => _ = await session.PushAsync(batch, CancellationToken.None));
-
         await Assert.That(exception.Kind).IsEqualTo(HttpTransportFailureKind.PayloadTooLarge);
         await Assert.That(handler.Requests.Count).IsEqualTo(1);
     }
@@ -275,9 +259,7 @@ public sealed partial class HttpRemoteTransportAdapterTests
         var session = await adapter.ConnectAsync(CreateConnectRequest(), CancellationToken.None);
         var operation = CreateOperation(1) with { Metadata = new Dictionary<string, string> { ["notes"] = new('x', LargeMetadataCharacters) } };
         var batch = new SyncBatch(Guid.Parse("00000000-0000-0000-0000-000000000003"), [operation]);
-
         var exception = await CaptureHttpExceptionAsync(async () => _ = await session.PushAsync(batch, CancellationToken.None));
-
         await Assert.That(exception.Kind).IsEqualTo(HttpTransportFailureKind.PayloadTooLarge);
         await Assert.That(handler.Requests.Count).IsEqualTo(1);
     }
@@ -290,9 +272,7 @@ public sealed partial class HttpRemoteTransportAdapterTests
         var handler = new RecordingHttpHandler(static request => CreateProtocolResponse(HttpStatusCode.OK, "{not-json"));
         using var httpClient = CreateHttpClient(handler);
         await using var adapter = CreateAdapter(httpClient);
-
         var exception = await CaptureHttpExceptionAsync(async () => _ = await adapter.ConnectAsync(CreateConnectRequest(), CancellationToken.None));
-
         await Assert.That(exception.Kind).IsEqualTo(HttpTransportFailureKind.ProtocolViolation);
     }
 
@@ -304,9 +284,7 @@ public sealed partial class HttpRemoteTransportAdapterTests
         var handler = new RecordingHttpHandler(static request => CreateJsonResponse(HttpStatusCode.OK, ConnectResponseJson, "application/json"));
         using var httpClient = CreateHttpClient(handler);
         await using var adapter = CreateAdapter(httpClient);
-
         var exception = await CaptureHttpExceptionAsync(async () => _ = await adapter.ConnectAsync(CreateConnectRequest(), CancellationToken.None));
-
         await Assert.That(exception.Kind).IsEqualTo(HttpTransportFailureKind.SchemaIncompatible);
     }
 
@@ -321,9 +299,7 @@ public sealed partial class HttpRemoteTransportAdapterTests
             "application/vnd.reactiveui.occasionally-connected+json"));
         using var httpClient = CreateHttpClient(handler);
         await using var adapter = CreateAdapter(httpClient);
-
         var exception = await CaptureHttpExceptionAsync(async () => _ = await adapter.ConnectAsync(CreateConnectRequest(), CancellationToken.None));
-
         await Assert.That(exception.Kind).IsEqualTo(HttpTransportFailureKind.SchemaIncompatible);
     }
 
@@ -338,9 +314,7 @@ public sealed partial class HttpRemoteTransportAdapterTests
             "application/vnd.reactiveui.occasionally-connected+json; v=2"));
         using var httpClient = CreateHttpClient(handler);
         await using var adapter = CreateAdapter(httpClient);
-
         var exception = await CaptureHttpExceptionAsync(async () => _ = await adapter.ConnectAsync(CreateConnectRequest(), CancellationToken.None));
-
         await Assert.That(exception.Kind).IsEqualTo(HttpTransportFailureKind.SchemaIncompatible);
     }
 
@@ -355,9 +329,7 @@ public sealed partial class HttpRemoteTransportAdapterTests
             "application/vnd.reactiveui.occasionally-connected+json; v=1; v=1"));
         using var httpClient = CreateHttpClient(handler);
         await using var adapter = CreateAdapter(httpClient);
-
         var exception = await CaptureHttpExceptionAsync(async () => _ = await adapter.ConnectAsync(CreateConnectRequest(), CancellationToken.None));
-
         await Assert.That(exception.Kind).IsEqualTo(HttpTransportFailureKind.SchemaIncompatible);
     }
 
@@ -377,9 +349,7 @@ public sealed partial class HttpRemoteTransportAdapterTests
             httpClient,
             CreateBaseAddress(),
             static options => options with { MaximumResponseBytes = SmallResponseBytes });
-
         var exception = await CaptureHttpExceptionAsync(async () => _ = await adapter.ConnectAsync(CreateConnectRequest(), CancellationToken.None));
-
         await Assert.That(exception.Kind).IsEqualTo(HttpTransportFailureKind.PayloadTooLarge);
     }
 
@@ -396,9 +366,7 @@ public sealed partial class HttpRemoteTransportAdapterTests
         });
         using var httpClient = CreateHttpClient(handler);
         await using var adapter = CreateAdapter(httpClient);
-
         var exception = await CaptureHttpExceptionAsync(async () => _ = await adapter.ConnectAsync(CreateConnectRequest(), CancellationToken.None));
-
         await Assert.That(exception.Kind).IsEqualTo(HttpTransportFailureKind.Transient);
         await Assert.That(exception.StatusCode).IsEqualTo(HttpStatusCode.TooManyRequests);
         await Assert.That(exception.RetryAfter).IsEqualTo(TimeSpan.FromSeconds(RetryAfterSeconds));
@@ -417,9 +385,7 @@ public sealed partial class HttpRemoteTransportAdapterTests
         });
         using var httpClient = CreateHttpClient(handler);
         await using var adapter = CreateAdapter(httpClient);
-
         var exception = await CaptureHttpExceptionAsync(async () => _ = await adapter.ConnectAsync(CreateConnectRequest(), CancellationToken.None));
-
         await Assert.That(exception.Kind).IsEqualTo(HttpTransportFailureKind.ProtocolViolation);
         await Assert.That(exception.StatusCode).IsEqualTo(HttpStatusCode.Redirect);
     }
@@ -445,11 +411,9 @@ public sealed partial class HttpRemoteTransportAdapterTests
             new SubscriptionId(Guid.Parse("00000000-0000-0000-0000-000000000010")),
             "cursor-0",
             StartPosition.Latest);
-
         await using var enumerator = session.SubscribeAsync(subscribe, CancellationToken.None).GetAsyncEnumerator(CancellationToken.None);
         var hasBatch = await enumerator.MoveNextAsync();
         await session.AcknowledgeAsync(new(subscribe.SubscriptionId, subscribe.StreamId, enumerator.Current.NextCursor), CancellationToken.None);
-
         await Assert.That(hasBatch).IsTrue();
         await Assert.That(enumerator.Current.Events).Count().IsEqualTo(1);
         await Assert.That(enumerator.Current.CompletedOperations).Count().IsEqualTo(1);
@@ -494,10 +458,8 @@ public sealed partial class HttpRemoteTransportAdapterTests
         await using var enumerator = session.SubscribeAsync(subscribe, CancellationToken.None).GetAsyncEnumerator(CancellationToken.None);
         var moveNext = enumerator.MoveNextAsync().AsTask();
         await AwaitWithTimeoutAsync(subscribeEntered.Task);
-
         await AwaitWithTimeoutAsync(session.AcknowledgeAsync(new(subscribe.SubscriptionId, subscribe.StreamId, "cursor-1"), CancellationToken.None).AsTask());
         await session.DisposeAsync();
-
         await Assert.That(handler.Requests.Exists(static request => request.RequestUri?.AbsolutePath == AcknowledgeRoute)).IsTrue();
         await AssertCompletesAsync(moveNext);
     }
@@ -533,10 +495,8 @@ public sealed partial class HttpRemoteTransportAdapterTests
         await using var enumerator = session.SubscribeAsync(subscribe, CancellationToken.None).GetAsyncEnumerator(CancellationToken.None);
         var moveNext = enumerator.MoveNextAsync().AsTask();
         await AwaitWithTimeoutAsync(subscribeEntered.Task);
-
         var exception = await CaptureHttpExceptionAsync(async () => await session.PushAsync(CreateBatch(), CancellationToken.None));
         await AwaitWithTimeoutAsync(session.DisposeAsync().AsTask());
-
         await Assert.That(exception.Kind).IsEqualTo(HttpTransportFailureKind.Transient);
         await Assert.That(handler.Requests.Exists(static request => request.RequestUri?.AbsolutePath == PushRoute)).IsFalse();
         await AssertCompletesAsync(moveNext);
@@ -558,9 +518,7 @@ public sealed partial class HttpRemoteTransportAdapterTests
         var adapter = CreateAdapter(httpClient);
         var connect = adapter.ConnectAsync(CreateConnectRequest(), CancellationToken.None).AsTask();
         await AwaitWithTimeoutAsync(connectEntered.Task);
-
         await AwaitWithTimeoutAsync(adapter.DisposeAsync().AsTask());
-
         await Assert.That(async () => await connect).Throws<OperationCanceledException>();
     }
 
@@ -592,9 +550,7 @@ public sealed partial class HttpRemoteTransportAdapterTests
         await using var enumerator = session.SubscribeAsync(subscribe, CancellationToken.None).GetAsyncEnumerator(CancellationToken.None);
         var moveNext = enumerator.MoveNextAsync().AsTask();
         await AwaitWithTimeoutAsync(subscribeEntered.Task);
-
         await AwaitWithTimeoutAsync(session.DisposeAsync().AsTask());
-
         await AssertCompletesAsync(moveNext);
     }
 
@@ -626,9 +582,7 @@ public sealed partial class HttpRemoteTransportAdapterTests
         await using var enumerator = session.SubscribeAsync(subscribe, CancellationToken.None).GetAsyncEnumerator(CancellationToken.None);
         var moveNext = enumerator.MoveNextAsync().AsTask();
         await AwaitWithTimeoutAsync(subscribeEntered.Task);
-
         await AwaitWithTimeoutAsync(adapter.DisposeAsync().AsTask());
-
         await AssertCompletesAsync(moveNext);
         await AwaitWithTimeoutAsync(session.DisposeAsync().AsTask());
     }
@@ -734,9 +688,26 @@ public sealed partial class HttpRemoteTransportAdapterTests
     /// <param name="statusCode">The response status code.</param>
     /// <param name="json">The JSON response.</param>
     /// <returns>The response.</returns>
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static HttpResponseMessage CreateProtocolResponse(HttpStatusCode statusCode, string json) =>
-        CreateJsonResponse(statusCode, json, ProtocolMediaType);
+    private static HttpResponseMessage CreateProtocolResponse(HttpStatusCode statusCode, string json)
+    {
+        var response = CreateJsonResponse(statusCode, json, ProtocolMediaType);
+        if (statusCode == HttpStatusCode.OK)
+        {
+            AddReplaySessionHeaders(response);
+        }
+
+        return response;
+    }
+
+    /// <summary>Adds a valid replay session envelope to a connect response fixture.</summary>
+    /// <param name="response">The response.</param>
+    private static void AddReplaySessionHeaders(HttpResponseMessage response)
+    {
+        response.Headers.Add(ReplayTenantIdHeader, ReplayTenantId);
+        response.Headers.Add(ReplaySessionIdHeader, ReplaySessionId);
+        response.Headers.Add(ReplaySessionSecretHeader, ReplaySessionSecret);
+        response.Headers.Add(ReplaySessionExpiresHeader, ReplaySessionExpires);
+    }
 
     /// <summary>Creates a JSON response.</summary>
     /// <param name="statusCode">The response status code.</param>
@@ -939,7 +910,7 @@ public sealed partial class HttpRemoteTransportAdapterTests
                     break;
                 }
 
-                memory.Write(buffer, 0, read);
+                await memory.WriteAsync(buffer.AsMemory(0, read), cancellationToken).ConfigureAwait(false);
                 var text = Encoding.ASCII.GetString(memory.ToArray());
                 if (text.Contains("\r\n\r\n"))
                 {
@@ -949,6 +920,17 @@ public sealed partial class HttpRemoteTransportAdapterTests
 
             return Encoding.ASCII.GetString(memory.ToArray());
         }
+
+        /// <summary>Creates replay session response header text for connect fixtures.</summary>
+        /// <returns>The replay response headers.</returns>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static string CreateReplayHeaderText() =>
+            string.Create(
+                CultureInfo.InvariantCulture,
+                $"{ReplayTenantIdHeader}: {ReplayTenantId}\r\n"
+                + $"{ReplaySessionIdHeader}: {ReplaySessionId}\r\n"
+                + $"{ReplaySessionSecretHeader}: {ReplaySessionSecret}\r\n"
+                + $"{ReplaySessionExpiresHeader}: {ReplaySessionExpires}\r\n");
 
         /// <summary>Serves one request.</summary>
         /// <param name="json">The response JSON.</param>
@@ -964,7 +946,7 @@ public sealed partial class HttpRemoteTransportAdapterTests
             var body = Encoding.UTF8.GetBytes(json);
             var header = string.Create(
                 CultureInfo.InvariantCulture,
-                $"HTTP/1.1 200 OK\r\nContent-Type: {ProtocolMediaType}\r\nContent-Length: {body.Length}\r\nConnection: close\r\n\r\n");
+                $"HTTP/1.1 200 OK\r\nContent-Type: {ProtocolMediaType}\r\nContent-Length: {body.Length}\r\n{CreateReplayHeaderText()}Connection: close\r\n\r\n");
             var headerBytes = Encoding.ASCII.GetBytes(header);
             await stream.WriteAsync(headerBytes.AsMemory(), cancellationToken).ConfigureAwait(false);
             await stream.WriteAsync(body.AsMemory(), cancellationToken).ConfigureAwait(false);

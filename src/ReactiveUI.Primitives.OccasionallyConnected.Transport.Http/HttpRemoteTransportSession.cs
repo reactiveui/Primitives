@@ -2,14 +2,16 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Globalization;
 using System.Net.Http;
 using System.Runtime.CompilerServices;
+using System.Security.Cryptography;
 using System.Text;
 
 namespace ReactiveUI.Primitives.OccasionallyConnected.Transport.Http;
 
 /// <summary>Represents an active bounded HTTP remote transport session.</summary>
-internal sealed partial class HttpRemoteTransportSession : IRemoteTransportSession, IRemoteTransportBatchPreparer
+internal sealed partial class HttpRemoteTransportSession : IRemoteTransportSession, IRemoteTransportBatchPreparer, IRemoteSnapshotRecoverySession
 {
     /// <summary>The adapter options.</summary>
     private readonly HttpRemoteTransportOptions _options;
@@ -44,6 +46,21 @@ internal sealed partial class HttpRemoteTransportSession : IRemoteTransportSessi
     /// <summary>The protocol codec.</summary>
     private readonly HttpProtocolCodec _codec;
 
+    /// <summary>The replay envelope hasher.</summary>
+    private readonly HttpReplayEnvelopeHasher _replayHasher;
+
+    /// <summary>The trusted replay tenant identifier returned by connect.</summary>
+    private readonly string? _replayTenantId;
+
+    /// <summary>The retained replay session identifier.</summary>
+    private readonly string? _replaySessionId;
+
+    /// <summary>The retained replay session secret.</summary>
+    private readonly HttpReplaySessionSecretOwner? _replaySessionSecret;
+
+    /// <summary>The client identity used for replay MAC input.</summary>
+    private readonly ClientIdentity _clientIdentity;
+
     /// <summary>The active request count.</summary>
     private int _activeRequests;
 
@@ -53,25 +70,35 @@ internal sealed partial class HttpRemoteTransportSession : IRemoteTransportSessi
     /// <summary>Initializes a new instance of the <see cref="HttpRemoteTransportSession"/> class.</summary>
     /// <param name="options">The adapter options.</param>
     /// <param name="negotiatedCapabilities">The negotiated capabilities.</param>
-    /// <param name="requestGate">The shared request gate.</param>
-    /// <param name="acknowledgementGate">The reserved acknowledgement gate.</param>
-    /// <param name="subscriptionGate">The active subscription gate.</param>
+    /// <param name="gates">The bounded adapter request gates.</param>
+    /// <param name="replaySession">The replay session issued by connect, when available.</param>
+    /// <param name="clientIdentity">The client identity from connect.</param>
     /// <param name="adapterShutdownToken">The adapter shutdown token.</param>
     internal HttpRemoteTransportSession(
         HttpRemoteTransportOptions options,
         NegotiatedCapabilities negotiatedCapabilities,
-        HttpRequestGate requestGate,
-        HttpRequestGate acknowledgementGate,
-        HttpRequestGate subscriptionGate,
+        HttpRemoteTransportSessionGates gates,
+        HttpReplayIssuedSession? replaySession,
+        ClientIdentity clientIdentity,
         CancellationToken adapterShutdownToken)
     {
         _options = options;
         _negotiatedCapabilities = negotiatedCapabilities;
-        _requestGate = requestGate;
-        _acknowledgementGate = acknowledgementGate;
-        _subscriptionGate = subscriptionGate;
+        _requestGate = gates.Request;
+        _acknowledgementGate = gates.Acknowledgement;
+        _subscriptionGate = gates.Subscription;
         _adapterShutdownToken = adapterShutdownToken;
+        _clientIdentity = clientIdentity;
         _codec = new(options);
+        _replayHasher = new(options.ReplayProtection);
+        if (replaySession is null)
+        {
+            return;
+        }
+
+        _replayTenantId = replaySession.TenantId;
+        _replaySessionId = replaySession.SessionId;
+        _replaySessionSecret = new(Encoding.UTF8.GetBytes(replaySession.SessionSecret));
     }
 
     /// <inheritdoc/>
@@ -97,10 +124,48 @@ internal sealed partial class HttpRemoteTransportSession : IRemoteTransportSessi
     {
         ArgumentExceptionHelper.ThrowIfNull(acknowledgement);
         using var operation = BeginOperation();
-        using var linked = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, _shutdown.Token, _adapterShutdownToken);
+        using var linked = CancellationTokenSource.CreateLinkedTokenSource(
+            cancellationToken,
+            _shutdown.Token,
+            _adapterShutdownToken);
         using var admission = await _acknowledgementGate.EnterAsync(linked.Token).ConfigureAwait(false);
         var body = _codec.SerializeAcknowledgement(acknowledgement);
         using var response = await SendAsync(HttpMethod.Post, _options.AcknowledgePath, body, linked.Token).ConfigureAwait(false);
+    }
+
+    /// <inheritdoc/>
+    public async ValueTask<RemoteSnapshotRecoveryResult> GetSnapshotAsync(RemoteSnapshotRecoveryRequest request, CancellationToken cancellationToken)
+    {
+        ArgumentExceptionHelper.ThrowIfNull(request);
+        using var operation = BeginOperation();
+        using var linked = CancellationTokenSource.CreateLinkedTokenSource(
+            cancellationToken,
+            _shutdown.Token,
+            _adapterShutdownToken);
+        try
+        {
+            if ((_negotiatedCapabilities.Features & RemoteTransportCapabilities.SnapshotRecovery) != RemoteTransportCapabilities.SnapshotRecovery)
+            {
+                throw new HttpRemoteTransportException(HttpTransportFailureKind.Configuration);
+            }
+
+            using var admission = await _requestGate.EnterAsync(linked.Token).ConfigureAwait(false);
+            var body = _codec.SerializeSnapshotRecoveryRequest(request);
+            using var response = await SendAsync(
+                HttpMethod.Post,
+                _options.SnapshotRecoveryPath,
+                body,
+                linked.Token).ConfigureAwait(false);
+            var responseBytes = await HttpProtocolContent.ReadBoundedBytesAsync(
+                response,
+                _options,
+                linked.Token).ConfigureAwait(false);
+            return _codec.DeserializeSnapshotRecoveryResponse(request, responseBytes);
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw new OperationCanceledException(cancellationToken);
+        }
     }
 
     /// <inheritdoc/>
@@ -131,6 +196,7 @@ internal sealed partial class HttpRemoteTransportSession : IRemoteTransportSessi
         }
 
         await _drained.Task.ConfigureAwait(false);
+        _replaySessionSecret?.Dispose();
         _shutdown.Dispose();
         if (failure is null)
         {
@@ -142,6 +208,91 @@ internal sealed partial class HttpRemoteTransportSession : IRemoteTransportSessi
         }
 
         await _disposeCompleted.Task.ConfigureAwait(false);
+    }
+
+    /// <summary>Gets the request path without query text for canonical signing.</summary>
+    /// <param name="endpoint">The resolved endpoint URI.</param>
+    /// <returns>The canonical path.</returns>
+    /// <exception cref="HttpRemoteTransportException">The resolved endpoint path is malformed.</exception>
+    private static string GetCanonicalPath(Uri endpoint)
+    {
+        var rawPath = endpoint.GetComponents(UriComponents.Path, UriFormat.UriEscaped);
+        var path = rawPath.Trim('/');
+        if (path.Length == 0)
+        {
+            return string.Empty;
+        }
+
+        var segments = path.Split('/');
+        for (var index = 0; index < segments.Length; index++)
+        {
+            var segment = Uri.UnescapeDataString(segments[index]);
+            if (segment.Length == 0 || ContainsRouteSeparator(segment))
+            {
+                throw new HttpRemoteTransportException(HttpTransportFailureKind.ValidationRejected);
+            }
+
+            segments[index] = segment;
+        }
+
+        return string.Join("/", segments);
+    }
+
+    /// <summary>Determines whether a decoded route segment contains a route separator.</summary>
+    /// <param name="value">The decoded route segment.</param>
+    /// <returns><see langword="true"/> when the route segment contains a separator.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static bool ContainsRouteSeparator(string value)
+    {
+#if NET8_0_OR_GREATER
+        return value.Contains('/') || value.Contains('\\');
+#else
+        return value.Contains("/") || value.Contains("\\");
+#endif
+    }
+
+    /// <summary>Gets decoded query fields from a resolved endpoint.</summary>
+    /// <param name="endpoint">The resolved endpoint URI.</param>
+    /// <returns>The decoded query fields.</returns>
+    /// <exception cref="HttpRemoteTransportException">The query contains malformed fields.</exception>
+    private static KeyValuePair<string, string>[] GetCanonicalQueryFields(Uri endpoint)
+    {
+        var queryText = endpoint.GetComponents(UriComponents.Query, UriFormat.UriEscaped);
+        if (queryText.Length == 0)
+        {
+            return [];
+        }
+
+        var segments = queryText.Split('&');
+        var fields = new KeyValuePair<string, string>[segments.Length];
+        for (var index = 0; index < segments.Length; index++)
+        {
+            var separator = segments[index].IndexOf('=');
+            if (separator <= 0)
+            {
+                throw new HttpRemoteTransportException(HttpTransportFailureKind.ValidationRejected);
+            }
+
+#if NET9_0_OR_GREATER
+            var key = Uri.UnescapeDataString(segments[index].AsSpan(0, separator));
+#else
+            var key = Uri.UnescapeDataString(segments[index].Substring(0, separator));
+#endif
+            var value = Uri.UnescapeDataString(segments[index].Remove(0, separator + 1));
+            fields[index] = new(key, value);
+        }
+
+        return fields;
+    }
+
+    /// <summary>Creates an unpredictable replay header token.</summary>
+    /// <returns>The replay token.</returns>
+    private static string CreateReplayToken()
+    {
+        var bytes = new byte[16];
+        using var generator = RandomNumberGenerator.Create();
+        generator.GetBytes(bytes);
+        return HttpReplayBase64Url.Encode(bytes);
     }
 
     /// <summary>Throws if this session has been disposed.</summary>
@@ -202,7 +353,7 @@ internal sealed partial class HttpRemoteTransportSession : IRemoteTransportSessi
         }
 
         var retryAfter = HttpTransportStatus.GetRetryAfter(response, _options.TimeProvider);
-        var kind = HttpTransportStatus.Classify(response.StatusCode);
+        var kind = HttpTransportStatus.Classify(response);
         response.Dispose();
         throw new HttpRemoteTransportException(kind, response.StatusCode, retryAfter);
     }
@@ -223,6 +374,7 @@ internal sealed partial class HttpRemoteTransportSession : IRemoteTransportSessi
 
         var request = new HttpRequestMessage(method, endpoint);
         request.Headers.Accept.ParseAdd(HttpProtocolContent.MediaType);
+        AddReplaySessionHeaders(request, method, endpoint, body ?? []);
         if (body is not null)
         {
             request.Content = new ByteArrayContent(body);
@@ -231,6 +383,84 @@ internal sealed partial class HttpRemoteTransportSession : IRemoteTransportSessi
 
         return request;
     }
+
+    /// <summary>Adds session replay headers to a request when connect returned a replay session.</summary>
+    /// <param name="request">The HTTP request.</param>
+    /// <param name="method">The HTTP method.</param>
+    /// <param name="endpoint">The resolved endpoint URI.</param>
+    /// <param name="body">The exact body bytes.</param>
+    private void AddReplaySessionHeaders(HttpRequestMessage request, HttpMethod method, Uri endpoint, byte[] body)
+    {
+        if (_replayTenantId is null || _replaySessionId is null || _replaySessionSecret is null)
+        {
+            return;
+        }
+
+        var observedUtc = _options.ReplayProtection.TimeProvider.GetUtcNow();
+        var messageId = CreateReplayToken();
+        var nonce = CreateReplayToken();
+        var canonicalPath = GetCanonicalPath(endpoint);
+        var query = GetCanonicalQueryFields(endpoint);
+        var operation = GetReplayOperation(canonicalPath);
+        var canonical = new HttpCanonicalRequestBuilder(_options.ReplayProtection)
+            .Build(operation, method.Method, canonicalPath, query, observedUtc, body);
+        var replayRequest = new HttpReplayRequest
+        {
+            Operation = operation,
+            Principal = new(_replayTenantId, _clientIdentity.ClientId),
+            MessageId = messageId,
+            Nonce = nonce,
+            SentAtUtc = observedUtc,
+            ReplaySessionId = _replaySessionId,
+            ReplayMac = "placeholder",
+            CanonicalRequest = canonical,
+        };
+        var envelope = _replayHasher.Create(replayRequest);
+        byte[]? secret = null;
+        try
+        {
+            secret = _replaySessionSecret.Copy();
+            var mac = _replayHasher.ComputeMac(secret, envelope.MacInput);
+            request.Headers.Add(HttpReplayHeaders.MessageId, messageId);
+            request.Headers.Add(HttpReplayHeaders.Nonce, nonce);
+            request.Headers.Add(HttpReplayHeaders.SentAt, observedUtc.ToString("O", CultureInfo.InvariantCulture));
+            request.Headers.Add(HttpReplayHeaders.SessionId, _replaySessionId);
+            request.Headers.Add(HttpReplayHeaders.Mac, mac);
+        }
+        finally
+        {
+            if (secret is not null)
+            {
+                HttpReplayCryptography.ZeroMemory(secret);
+            }
+        }
+    }
+
+    /// <summary>Gets the replay operation represented by a configured path.</summary>
+    /// <param name="path">The configured path without query text.</param>
+    /// <returns>The replay operation.</returns>
+    private HttpReplayOperationKind GetReplayOperation(string path)
+    {
+        if (StringComparer.Ordinal.Equals(path, GetConfiguredCanonicalPath(_options.PushPath)))
+        {
+            return HttpReplayOperationKind.Push;
+        }
+
+        if (StringComparer.Ordinal.Equals(path, GetConfiguredCanonicalPath(_options.SubscribePath)))
+        {
+            return HttpReplayOperationKind.Subscribe;
+        }
+
+        return StringComparer.Ordinal.Equals(path, GetConfiguredCanonicalPath(_options.SnapshotRecoveryPath))
+            ? HttpReplayOperationKind.SnapshotRecovery
+            : HttpReplayOperationKind.Acknowledge;
+    }
+
+    /// <summary>Gets the canonical path for a configured route resolved under the trusted base address.</summary>
+    /// <param name="path">The configured route.</param>
+    /// <returns>The canonical route path.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private string GetConfiguredCanonicalPath(string path) => GetCanonicalPath(new(_options.BaseAddress, path));
 
     /// <summary>Creates the subscription long-poll endpoint and query.</summary>
     /// <param name="request">The subscribe request.</param>
@@ -310,6 +540,15 @@ internal sealed partial class HttpRemoteTransportSession : IRemoteTransportSessi
         }
     }
 
+    /// <summary>The bounded request gates shared with the adapter.</summary>
+    /// <param name="Request">The shared request gate.</param>
+    /// <param name="Acknowledgement">The reserved acknowledgement gate.</param>
+    /// <param name="Subscription">The active subscription gate.</param>
+    internal readonly record struct HttpRemoteTransportSessionGates(
+        HttpRequestGate Request,
+        HttpRequestGate Acknowledgement,
+        HttpRequestGate Subscription);
+
     /// <summary>Represents one session-scoped request lease.</summary>
     private readonly struct SessionOperation : IDisposable
     {
@@ -349,10 +588,9 @@ internal sealed partial class HttpRemoteTransportSession : IRemoteTransportSessi
         }
 
         /// <inheritdoc/>
-        public IAsyncEnumerator<RemoteEventBatch> GetAsyncEnumerator(CancellationToken cancellationToken = default)
-        {
-            return new HttpRemoteSubscriptionEnumerator(_owner, _request, _cancellationToken, cancellationToken);
-        }
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public IAsyncEnumerator<RemoteEventBatch> GetAsyncEnumerator(CancellationToken cancellationToken = default) =>
+            new HttpRemoteSubscriptionEnumerator(_owner, _request, _cancellationToken, cancellationToken);
     }
 
     /// <summary>Owns one HTTP subscription enumeration and its retained receive state.</summary>
@@ -546,7 +784,11 @@ internal sealed partial class HttpRemoteTransportSession : IRemoteTransportSessi
                 await activeMove.ConfigureAwait(false);
             }
 
+#if NET5_0_OR_GREATER
+            await _disposeRegistration.DisposeAsync().ConfigureAwait(false);
+#else
             _disposeRegistration.Dispose();
+#endif
             _linked.Dispose();
             if (failure is null)
             {
