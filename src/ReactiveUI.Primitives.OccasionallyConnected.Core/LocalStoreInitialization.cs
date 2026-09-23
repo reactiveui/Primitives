@@ -16,4 +16,7 @@ public sealed record LocalStoreInitialization(
 {
     /// <summary>Gets the optional client identity bound to this local store partition.</summary>
     public string? ClientId { get; init; }
+
+    /// <summary>Gets optional global capacity for unresolved outgoing operations.</summary>
+    public OutboxOptions? Outbox { get; init; }
 }

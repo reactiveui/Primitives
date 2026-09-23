@@ -43,6 +43,9 @@ internal sealed partial class SqliteLocalCommitStore : IDisposable
     /// <summary>The initialized client identity binding.</summary>
     private string? _clientId;
 
+    /// <summary>The outbox limits selected for this instance at initialization.</summary>
+    private OutboxOptions? _outboxOptions;
+
     /// <summary>A value indicating whether this instance has been disposed.</summary>
     private bool _disposed;
 
@@ -109,6 +112,7 @@ internal sealed partial class SqliteLocalCommitStore : IDisposable
         ArgumentExceptionHelper.ThrowIfNull(initialization);
         SqliteLocalCommitValidation.ValidateInitialization(initialization);
         var clientId = SqliteClientIdentityBinding.ValidateClientId(initialization.ClientId, nameof(initialization));
+        initialization.Outbox?.Validate();
         if (initialization.RequireAuthenticatedEncryptionAtRest)
         {
             throw new NotSupportedException("SQLite authenticated encryption at rest has not been configured for this store.");
@@ -120,6 +124,11 @@ internal sealed partial class SqliteLocalCommitStore : IDisposable
             ThrowIfDisposed();
             ThrowIfStoreIdentityConflicts(initialization.StoreIdentity);
             ThrowIfClientIdentityConflicts(clientId);
+            if (_storeIdentity is not null && _outboxOptions != initialization.Outbox)
+            {
+                throw new InvalidOperationException("The SQLite local commit store has already been initialized with different outbox limits.");
+            }
+
             cancellationToken.ThrowIfCancellationRequested();
             _ = Directory.CreateDirectory(SqliteIdentityStoreData.GetDirectoryForCreate(_databasePath));
             using var connection = SqliteLocalCommitConnection.OpenConnection(_databasePath);
@@ -136,6 +145,7 @@ internal sealed partial class SqliteLocalCommitStore : IDisposable
             transaction.Commit();
             _storeIdentity = initialization.StoreIdentity;
             _clientId = clientId;
+            _outboxOptions = initialization.Outbox;
         }
     }
 
@@ -230,6 +240,7 @@ internal sealed partial class SqliteLocalCommitStore : IDisposable
             }
 
             var nextRevision = snapshotMutation.ExpectedRevision + 1;
+            SqliteOutboxCapacitySql.EnsureCapacityFor(connection, transaction, storeIdentity, operation, _outboxOptions);
             SqliteLocalCommitSql.InsertOutboxOperation(connection, transaction, storeIdentity, operation, nextRevision, fingerprint, committedAtUtc);
             SqliteLocalCommitSql.InsertOutboxAuthoritativeMutation(
                 connection,
