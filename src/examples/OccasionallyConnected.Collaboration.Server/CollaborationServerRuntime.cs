@@ -213,5 +213,21 @@ public sealed class CollaborationServerRuntime : IAsyncDisposable
             MaximumCompletedOperationsPerBatch = options.MaximumReceiveGroups,
             PathBase = options.PathBase,
             LongPollTimeout = options.LongPollTimeout,
+            ReplayAuthorizer = ConfiguredReplayAuthorizer.Instance,
         };
+
+    /// <summary>Allows replay admission after the ASP.NET bridge has authenticated the development client.</summary>
+    private sealed class ConfiguredReplayAuthorizer : IHttpReplayAuthorizer
+    {
+        /// <summary>The shared stateless instance.</summary>
+        public static readonly ConfiguredReplayAuthorizer Instance = new();
+
+        /// <inheritdoc/>
+        public ValueTask<bool> AuthorizeReplayAsync(HttpReplayAuthorizationContext context, CancellationToken cancellationToken)
+        {
+            ArgumentNullException.ThrowIfNull(context);
+            cancellationToken.ThrowIfCancellationRequested();
+            return new(true);
+        }
+    }
 }
