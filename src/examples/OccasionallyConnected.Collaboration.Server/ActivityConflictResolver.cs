@@ -6,20 +6,20 @@ using ReactiveUI.Primitives.OccasionallyConnected;
 
 namespace ReactiveUI.Primitives.OccasionallyConnected.Collaboration.Server;
 
-/// <summary>Resolves custom activity operations with schema validation and canonical server payloads.</summary>
+/// <summary>Resolves activity updates and custom operations with schema validation and canonical server payloads.</summary>
 [System.Diagnostics.DebuggerDisplay("Activity conflict resolver")]
 internal sealed class ActivityConflictResolver : IConflictResolver
 {
     /// <summary>The reason returned when trusted server provenance is missing.</summary>
     private const string MissingServerProvenanceReason = "activity-missing-server-provenance";
 
-    /// <summary>The reason returned when the operation type is not custom.</summary>
+    /// <summary>The reason returned when the operation type is not an activity mutation.</summary>
     private const string OperationTypeMismatchReason = "activity-operation-type-mismatch";
 
     /// <summary>The reason returned when the incoming operation count is not supported.</summary>
     private const string OperationCountMismatchReason = "activity-operation-count-mismatch";
 
-    /// <summary>The resolution code used when a custom activity payload is canonicalized.</summary>
+    /// <summary>The resolution code used when an activity payload is canonicalized.</summary>
     private const string AcceptedResolutionCode = "activity.custom.canonicalized";
 
     /// <summary>The version factory used for accepted activity writes.</summary>
@@ -43,7 +43,7 @@ internal sealed class ActivityConflictResolver : IConflictResolver
             return ValueTask.FromResult(Reject(operation.OperationId, MissingServerProvenanceReason, context.Current.Version));
         }
 
-        if (operation.Type != SyncOperationType.Custom)
+        if (operation.Type is not (SyncOperationType.Custom or SyncOperationType.Update))
         {
             return ValueTask.FromResult(Reject(operation.OperationId, OperationTypeMismatchReason, context.Current.Version));
         }
@@ -63,7 +63,7 @@ internal sealed class ActivityConflictResolver : IConflictResolver
             version));
     }
 
-    /// <summary>Creates a rejected custom activity resolution.</summary>
+    /// <summary>Creates a rejected activity resolution.</summary>
     /// <param name="operationId">The operation identifier.</param>
     /// <param name="reasonCode">The stable rejection reason.</param>
     /// <param name="serverVersion">The current server version.</param>
