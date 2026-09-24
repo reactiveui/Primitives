@@ -89,7 +89,7 @@ public sealed partial class CollaborationClientApplicationTests
     private sealed class RecordingObserver<T> : IObserver<T>
     {
         /// <summary>Protects observer state.</summary>
-        private readonly object _gate = new();
+        private readonly Lock _gate = new();
 
         /// <summary>Stores observed values.</summary>
         private readonly List<T> _values = [];
@@ -280,7 +280,7 @@ public sealed partial class CollaborationClientApplicationTests
     private sealed class ActivityViewObserver : IObserver<ActivityView>
     {
         /// <summary>Protects observer state.</summary>
-        private readonly object _gate = new();
+        private readonly Lock _gate = new();
 
         /// <summary>Stores pending waits.</summary>
         private readonly List<TaskCompletionSource<ActivityView>> _waiters = [];

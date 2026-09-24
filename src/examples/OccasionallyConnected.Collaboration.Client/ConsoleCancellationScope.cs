@@ -8,7 +8,7 @@ namespace ReactiveUI.Primitives.OccasionallyConnected.Collaboration.Client;
 internal sealed class ConsoleCancellationScope : IAsyncDisposable
 {
     /// <summary>Protects cancellation and disposal state.</summary>
-    private readonly object _gate = new();
+    private readonly Lock _gate = new();
 
     /// <summary>The cancellation source passed to the command.</summary>
     private readonly CancellationTokenSource _source = new();

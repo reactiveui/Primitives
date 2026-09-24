@@ -395,7 +395,7 @@ public sealed partial class CollaborationClientApplicationTests
     private sealed class BlockingActivityObserver(Func<ActivityView, bool> shouldBlock) : IObserver<ActivityView>, IDisposable
     {
         /// <summary>Protects terminal observer state.</summary>
-        private readonly object _gate = new();
+        private readonly Lock _gate = new();
 
         /// <summary>Completes when the selected callback enters the blocked section.</summary>
         private readonly TaskCompletionSource<ActivityView> _blocked =

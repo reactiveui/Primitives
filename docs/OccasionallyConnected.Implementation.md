@@ -1,6 +1,7 @@
 # OccasionallyConnected implementation
 
 The normative feature specification is [ReactiveUI.Primitives.OccasionallyConnected.md](ReactiveUI.Primitives.OccasionallyConnected.md).
+The [compatibility fixture matrix](OccasionallyConnected.Compatibility.md) maps protocol, payload and SQLite versions to their tests.
 Implementation remains on the local `OccasionallyConnected` feature branch. Nothing is pushed until all v1 work is complete and verified; publication will use one final PR.
 
 ## Delivery stages
