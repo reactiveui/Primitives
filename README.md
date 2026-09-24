@@ -185,8 +185,8 @@ cancel the work. `DisposeWith` adds a disposable to a `MultipleDisposable` so yo
 
 > [!NOTE]
 > Another package can pull in System.Reactive, which declares its own `Subscribe` extension methods for
-> `IObservable<T>`. Both sets are then in scope and the call is ambiguous. Call `SubscribePrimitives` to pick this
-> library's implementation. It has the same callback overloads and the same behaviour as `Subscribe`.
+> `IObservable<T>`. Both sets are then in scope and the call is ambiguous. See
+> [Using both libraries in one project](#using-both-libraries-in-one-project) for the fixes.
 
 ## Install
 
@@ -2703,6 +2703,52 @@ dotnet add xyz.Reactive/xyz.Reactive.csproj package ReactiveUI.Primitives.Maui.R
    packages supply those names over the Primitives implementation.
 8. Build both packages side by side. `xyz` should carry no System.Reactive runtime dependency. `xyz.Reactive` should
    keep its System.Reactive-facing APIs for existing consumers.
+
+### Using both libraries in one project
+
+Your project can use ReactiveUI.Primitives while another package still brings in System.Reactive. Both libraries declare
+`Subscribe` extension methods for `IObservable<T>` with the same shapes. When both are in scope, the compiler cannot pick
+one and reports error CS0121. Choose one of these fixes.
+
+**Give System.Reactive an alias.** This fixes the whole project at once. Add a direct reference to System.Reactive with
+an alias, in the project file or in `Directory.Build.props`:
+
+```xml
+<ItemGroup>
+  <PackageReference Include="System.Reactive" Version="6.1.0" Aliases="SystemReactive" />
+</ItemGroup>
+```
+
+An alias keeps a package's types out of normal scope. Every `Subscribe` call then uses ReactiveUI.Primitives, and other
+packages that depend on System.Reactive keep working. Use the same version as those packages need, or a newer one. When
+a file does need System.Reactive, declare the alias at the top of that file:
+
+```csharp
+extern alias SystemReactive;
+
+using SystemReactive::System.Reactive.Linq;
+```
+
+**Import the namespace inside your namespace.** This fixes one file. A `using` directive placed after the `namespace`
+line takes priority over the ones outside it:
+
+```csharp
+namespace MyApp;
+
+using ReactiveUI.Primitives;
+
+public sealed class Worker
+{
+    public IDisposable Watch(IObservable<Exception> errors) => errors.Subscribe(e => Console.WriteLine(e.Message));
+}
+```
+
+**Call `SubscribePrimitives`.** This fixes one call. It has the same overloads and behaviour as `Subscribe`, under a
+name no other library uses. `SubscribeSafePrimitives` does the same for `SubscribeSafe`.
+
+```csharp
+errors.SubscribePrimitives(e => Console.WriteLine(e.Message));
+```
 
 ### Factory mapping
 
