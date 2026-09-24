@@ -2,8 +2,8 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Globalization;
 using System.Runtime.CompilerServices;
-using System.Text;
 using System.Text.Json;
 using ReactiveUI.Primitives.OccasionallyConnected;
 using ReactiveUI.Primitives.OccasionallyConnected.Collaboration.Server;
@@ -35,6 +35,21 @@ public sealed class CollaborationStreamRegistrationsTests
 
     /// <summary>The ready activity JSON used by custom resolver tests.</summary>
     private const string ReadyActivityPayloadJson = """{"status":"ready"}""";
+
+    /// <summary>The canonical activity status property name.</summary>
+    private const string StatusPropertyName = "status";
+
+    /// <summary>The trusted client identifier property name.</summary>
+    private const string AcceptedClientIdPropertyName = "acceptedClientId";
+
+    /// <summary>The trusted operation identifier property name.</summary>
+    private const string AcceptedOperationIdPropertyName = "acceptedOperationId";
+
+    /// <summary>The accepted server version property name.</summary>
+    private const string AcceptedVersionPropertyName = "acceptedVersion";
+
+    /// <summary>The trusted server timestamp property name.</summary>
+    private const string ServerAcceptedUtcPropertyName = "serverAcceptedUtc";
 
     /// <summary>The invalid payload hash used by integrity tests.</summary>
     private const string InvalidPayloadHash = "sha256-invalid";
@@ -108,7 +123,7 @@ public sealed class CollaborationStreamRegistrationsTests
         await Assert.That(registration.DomainHandler).IsTypeOf<ActivityDomainHandler>();
     }
 
-    /// <summary>Verifies the registered custom resolver canonicalizes valid activity payloads.</summary>
+    /// <summary>Verifies the custom resolver and domain handler emit the same canonical activity payload.</summary>
     /// <returns>The assertion task.</returns>
     /// <exception cref="InvalidOperationException">Thrown when the resolver does not produce a canonical payload.</exception>
     [Test]
@@ -116,25 +131,15 @@ public sealed class CollaborationStreamRegistrationsTests
     {
         var registration = FindActivityRegistration(CollaborationStreamRegistrations.CreateAll());
         var operation = CreateActivityOperation();
-        var current = new ServerState(
-            CollaborationStreamRegistrations.ActivityStream,
-            InitialActivityVersion,
-            ActivityPayloadTestFactory.CreateInitialState(InitialActivityVersion));
         var context = new ConflictContext(
-            current,
+            CreateInitialState(),
             [operation],
             new(ClientId, TenantHint),
-            new() { CandidateWrite = new() { ClientId = ClientId, CommittedAtUtc = ServerCommittedAtUtc, OperationId = operation.OperationId } });
+            CreateServerContext(operation));
 
         var result = await registration.CustomResolver.ResolveAsync(context, CancellationToken.None).ConfigureAwait(false);
 
-        await Assert.That(result.AcceptedOperations).Count().IsEqualTo(1);
-        await Assert.That(result.Conflicts).Count().IsEqualTo(1);
-        var payload = result.Conflicts[0].ResolvedPayload
-            ?? throw new InvalidOperationException("The custom resolver should produce a canonical payload.");
-        var json = Encoding.UTF8.GetString(payload.Payload.Span);
-        await Assert.That(json.Contains("serverAcceptedUtc", StringComparison.Ordinal)).IsTrue();
-        await Assert.That(json.Contains("acceptedClientId", StringComparison.Ordinal)).IsTrue();
+        await AssertDomainCanonicalPayloadAsync(registration, context, result, operation).ConfigureAwait(false);
     }
 
     /// <summary>Verifies the registered resolver accepts a valid typed-client update with trusted server provenance.</summary>
@@ -161,6 +166,29 @@ public sealed class CollaborationStreamRegistrationsTests
         using var document = JsonDocument.Parse(payload.Payload.ToArray());
         await Assert.That(document.RootElement.GetProperty("acceptedClientId").GetString()).IsEqualTo(ClientId);
         await Assert.That(document.RootElement.GetProperty("status").GetString()).IsEqualTo("ready");
+    }
+
+    /// <summary>Verifies the merge resolver and domain handler emit the same canonical typed update.</summary>
+    /// <returns>The assertion task.</returns>
+    /// <exception cref="InvalidOperationException">Thrown when the resolver does not produce a canonical payload.</exception>
+    [Test]
+    public async Task ActivityRegistrationMergeResolverProducesDomainCanonicalUpdate()
+    {
+        var registration = FindActivityRegistration(CollaborationStreamRegistrations.CreateAll());
+        var operation = CreateActivityOperation() with
+        {
+            Type = SyncOperationType.Update,
+            Policy = SyncOperation.DefaultPolicy with { ConflictPolicy = ConflictPolicy.Merge },
+        };
+        var context = new ConflictContext(
+            CreateInitialState(),
+            [operation],
+            new(ClientId, TenantHint),
+            CreateServerContext(operation));
+
+        var result = await registration.MergeResolver.ResolveAsync(context, CancellationToken.None).ConfigureAwait(false);
+
+        await AssertDomainCanonicalPayloadAsync(registration, context, result, operation).ConfigureAwait(false);
     }
 
     /// <summary>Verifies corrupted current canonical state is not merged into new activity state.</summary>
@@ -238,6 +266,13 @@ public sealed class CollaborationStreamRegistrationsTests
         var root = document.RootElement;
         await Assert.That(root.GetProperty(TitlePropertyName).GetString()).IsEqualTo(OriginalTitle);
         await Assert.That(root.GetProperty(DetailsPropertyName).GetString()).IsEqualTo(SecondDetails);
+        await Assert.That(root.GetProperty(AcceptedClientIdPropertyName).GetString()).IsEqualTo(ClientId);
+        await Assert.That(root.GetProperty(AcceptedOperationIdPropertyName).GetString())
+            .IsEqualTo(second.OperationId.Value.ToString("N"));
+        await Assert.That(root.GetProperty(AcceptedVersionPropertyName).GetString())
+            .IsEqualTo(result.Result.Operations[0].ServerVersion);
+        await Assert.That(root.GetProperty(ServerAcceptedUtcPropertyName).GetString())
+            .IsEqualTo(ServerCommittedAtUtc.ToString("O", CultureInfo.InvariantCulture));
     }
 
     /// <summary>Verifies explicit null clears an optional activity field while omitted fields preserve.</summary>
@@ -415,6 +450,64 @@ public sealed class CollaborationStreamRegistrationsTests
         await Assert.That(result.AcceptedOperations).Count().IsEqualTo(0);
         await Assert.That(result.RejectedOperations).Count().IsEqualTo(1);
         await Assert.That(result.RejectedOperations[0].ReasonCode).IsEqualTo("activity-status-type");
+    }
+
+    /// <summary>Asserts resolver, state, and event share one canonical envelope and trusted provenance.</summary>
+    /// <param name="registration">The configured activity registration.</param>
+    /// <param name="context">The conflict context used by the resolver.</param>
+    /// <param name="result">The accepted resolution.</param>
+    /// <param name="operation">The accepted activity operation.</param>
+    /// <returns>The assertion task.</returns>
+    /// <exception cref="InvalidOperationException">Thrown when the resolver omits its canonical payload.</exception>
+    private static async Task AssertDomainCanonicalPayloadAsync(
+        ServerConflictStreamRegistration registration,
+        ConflictContext context,
+        ConflictResolutionResult result,
+        SyncOperation operation)
+    {
+        await Assert.That(result.AcceptedOperations).Count().IsEqualTo(1);
+        await Assert.That(result.AcceptedOperations[0]).IsEqualTo(operation.OperationId);
+        await Assert.That(result.RejectedOperations).Count().IsEqualTo(0);
+        await Assert.That(result.Conflicts).Count().IsEqualTo(1);
+        await Assert.That(result.Conflicts[0].OperationId).IsEqualTo(operation.OperationId);
+        var resolved = result.Conflicts[0].ResolvedPayload
+            ?? throw new InvalidOperationException("The activity resolver should produce a canonical payload.");
+        var domain = await registration.DomainHandler.ApplyAsync(
+            new() { Client = context.Client, Operation = operation, Conflict = context, Resolution = result },
+            CancellationToken.None).ConfigureAwait(false);
+
+        await Assert.That(domain.Events).Count().IsEqualTo(1);
+        await Assert.That(domain.NewState.StreamId).IsEqualTo(operation.StreamId);
+        await Assert.That(domain.NewState.Version).IsEqualTo(result.ServerVersion);
+        await AssertSamePayloadEnvelopeAsync(resolved, domain.NewState.State).ConfigureAwait(false);
+        await AssertSamePayloadEnvelopeAsync(resolved, domain.Events[0].Payload).ConfigureAwait(false);
+        await Assert.That(domain.Events[0].Metadata["authenticated-client"]).IsEqualTo(ClientId);
+        await Assert.That(domain.Events[0].Metadata["server-version"]).IsEqualTo(result.ServerVersion);
+
+        using var document = JsonDocument.Parse(resolved.Payload.ToArray());
+        var root = document.RootElement;
+        await Assert.That(root.GetProperty(StatusPropertyName).GetString()).IsEqualTo("ready");
+        await Assert.That(root.GetProperty(TitlePropertyName).ValueKind).IsEqualTo(JsonValueKind.Null);
+        await Assert.That(root.GetProperty(DetailsPropertyName).ValueKind).IsEqualTo(JsonValueKind.Null);
+        await Assert.That(root.GetProperty(AcceptedClientIdPropertyName).GetString()).IsEqualTo(ClientId);
+        await Assert.That(root.GetProperty(AcceptedOperationIdPropertyName).GetString())
+            .IsEqualTo(operation.OperationId.Value.ToString("N"));
+        await Assert.That(root.GetProperty(AcceptedVersionPropertyName).GetString()).IsEqualTo(result.ServerVersion);
+        await Assert.That(root.GetProperty(ServerAcceptedUtcPropertyName).GetString())
+            .IsEqualTo(ServerCommittedAtUtc.ToString("O", CultureInfo.InvariantCulture));
+    }
+
+    /// <summary>Asserts two payload envelopes carry identical metadata and bytes.</summary>
+    /// <param name="actual">The actual payload envelope.</param>
+    /// <param name="expected">The expected payload envelope.</param>
+    /// <returns>The assertion task.</returns>
+    private static async Task AssertSamePayloadEnvelopeAsync(PayloadEnvelope actual, PayloadEnvelope expected)
+    {
+        await Assert.That(actual.ContractId).IsEqualTo(expected.ContractId);
+        await Assert.That(actual.SchemaVersion).IsEqualTo(expected.SchemaVersion);
+        await Assert.That(actual.ContentType).IsEqualTo(expected.ContentType);
+        await Assert.That(actual.PayloadHash).IsEqualTo(expected.PayloadHash);
+        await Assert.That(actual.Payload.Span.SequenceEqual(expected.Payload.Span)).IsTrue();
     }
 
     /// <summary>Checks whether the registrations contain the expected CRDT stream for the requested kind.</summary>
