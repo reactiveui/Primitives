@@ -14,6 +14,13 @@ namespace ReactiveUI.Primitives.Concurrency;
 [System.Diagnostics.DebuggerDisplay("{DebuggerDisplay,nq}")]
 public sealed class DispatcherSequencer : ISequencer
 {
+    /// <summary>The shared main-thread sequencer, set once the application's dispatcher is available.</summary>
+    private static DispatcherSequencer? _main;
+
+    /// <summary>The sequencer for the calling thread's dispatcher, cached per thread.</summary>
+    [ThreadStatic]
+    private static DispatcherSequencer? _current;
+
     /// <summary>Coalescing dispatch engine.</summary>
     private DispatchSequencerState _state;
 
@@ -51,6 +58,23 @@ public sealed class DispatcherSequencer : ISequencer
         _state = new(this, post ?? Post, RunDrain, scheduleDelayed ?? ScheduleDelayed);
     }
 
+    /// <summary>Gets the shared sequencer for the WPF main (UI) thread.</summary>
+    /// <exception cref="InvalidOperationException">No application exists yet and the calling thread has no dispatcher.</exception>
+    /// <remarks>
+    /// Bound once to the running <see cref="System.Windows.Application"/>'s dispatcher, from any thread. Until an
+    /// application exists nothing is cached, and the calling thread's existing dispatcher is used instead.
+    /// </remarks>
+    public static DispatcherSequencer Main =>
+        Volatile.Read(ref _main) ?? BindMain(ref _main, System.Windows.Application.Current?.Dispatcher) ?? Current;
+
+    /// <summary>Gets the sequencer for the calling thread's dispatcher.</summary>
+    /// <exception cref="InvalidOperationException">The calling thread has no dispatcher.</exception>
+    /// <remarks>
+    /// Cached per thread, for applications that run UI on more than one thread. Never creates a dispatcher: a thread
+    /// that has none cannot run the scheduled work.
+    /// </remarks>
+    public static DispatcherSequencer Current => _current ??= new(ResolveCurrentDispatcher());
+
     /// <summary>Gets the dispatcher whose thread runs the scheduled work.</summary>
     public Dispatcher Dispatcher { get; }
 
@@ -74,6 +98,29 @@ public sealed class DispatcherSequencer : ISequencer
     /// <inheritdoc/>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void Schedule(IWorkItem item, long dueTimestamp) => _state.Schedule(item, dueTimestamp);
+
+    /// <summary>Caches the shared main-thread sequencer for the application's dispatcher, keeping the first one bound.</summary>
+    /// <param name="slot">The field that holds the shared sequencer.</param>
+    /// <param name="applicationDispatcher">The application's dispatcher, or <see langword="null"/> when no application exists.</param>
+    /// <returns>The shared sequencer, or <see langword="null"/> when <paramref name="applicationDispatcher"/> is <see langword="null"/>.</returns>
+    internal static DispatcherSequencer? BindMain(ref DispatcherSequencer? slot, Dispatcher? applicationDispatcher)
+    {
+        if (applicationDispatcher is null)
+        {
+            return null;
+        }
+
+        DispatcherSequencer created = new(applicationDispatcher);
+        return Interlocked.CompareExchange(ref slot, created, null) ?? created;
+    }
+
+    /// <summary>Returns the calling thread's existing dispatcher without creating one.</summary>
+    /// <returns>The calling thread's dispatcher.</returns>
+    /// <exception cref="InvalidOperationException">The calling thread has no dispatcher.</exception>
+    internal static Dispatcher ResolveCurrentDispatcher() =>
+        Dispatcher.FromThread(Thread.CurrentThread)
+        ?? throw new InvalidOperationException(
+            "The calling thread has no WPF dispatcher. Use DispatcherSequencer.Main or Current from a UI thread, or after the Application is created.");
 
     /// <summary>Marshals the cached drain callback onto the dispatcher.</summary>
     /// <param name="drain">The drain callback.</param>

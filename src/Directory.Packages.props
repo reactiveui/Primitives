@@ -5,8 +5,8 @@
     <CentralPackageTransitivePinningEnabled>true</CentralPackageTransitivePinningEnabled>
     <!-- StyleSharp.Analyzers, PerformanceSharp.Analyzers and SecuritySharp.Analyzers ship from the
          same release pipeline and always share a version. -->
-    <RoslynCommonAnalyzersVersion>5.1.1</RoslynCommonAnalyzersVersion>
-    <AvaloniaVersion>12.1.2</AvaloniaVersion>
+    <RoslynCommonAnalyzersVersion>5.1.2</RoslynCommonAnalyzersVersion>
+    <AvaloniaVersion>12.1.3</AvaloniaVersion>
   </PropertyGroup>
   <ItemGroup>
     <PackageVersion Include="Microsoft.SourceLink.GitHub" Version="10.0.401"/>
@@ -21,8 +21,8 @@
   </ItemGroup>
   <!-- Benchmarks + tests -->
   <ItemGroup>
-    <PackageVersion Include="BenchmarkDotNet" Version="0.16.0-preview.1"/>
-    <PackageVersion Include="BenchmarkDotNet.Diagnostics.Windows" Version="0.16.0-preview.1"/>
+    <PackageVersion Include="BenchmarkDotNet" Version="0.16.0-preview.2"/>
+    <PackageVersion Include="BenchmarkDotNet.Diagnostics.Windows" Version="0.16.0-preview.2"/>
     <PackageVersion Include="Microsoft.Extensions.TimeProvider.Testing" Version="10.10.0"/>
     <PackageVersion Include="System.Reactive" Version="7.0.0"/>
     <PackageVersion Include="Microsoft.Reactive.Testing" Version="7.0.0"/>
@@ -68,7 +68,7 @@
     <!-- BenchmarkDotNet needs Roslyn 5.3+; this also reaches the job projects it generates under the benchmark bin folders. -->
     <PackageVersion Include="Microsoft.CodeAnalysis.CSharp" Version="5.9.0" Condition="$(MSBuildProjectDirectory.Replace('\', '/').Contains('/benchmarks/'))"/>
     <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="18.10.1"/>
-    <PackageVersion Include="TUnit" Version="1.68.4"/>
+    <PackageVersion Include="TUnit" Version="1.69.0"/>
     <PackageVersion Include="Microsoft.Testing.Extensions.CodeCoverage" Version="18.11.2"/>
   </ItemGroup>
   <Import Project="$(MSBuildThisFileDirectory)/directory.packages.support.props" Condition="Exists('$(MSBuildThisFileDirectory)/directory.packages.support.props')"/>

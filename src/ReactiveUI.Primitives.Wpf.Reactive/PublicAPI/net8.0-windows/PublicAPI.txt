@@ -8,6 +8,8 @@ public sealed class DispatcherSequencer : System.Reactive.Concurrency.LocalSched
     public DispatcherSequencer(System.Windows.Threading.Dispatcher dispatcher) { }
     public DispatcherSequencer(System.Windows.Threading.Dispatcher dispatcher, System.Windows.Threading.DispatcherPriority priority) { }
     public System.Windows.Threading.Dispatcher Dispatcher { get; }
+    public static ReactiveUI.Primitives.Reactive.Concurrency.DispatcherSequencer Current { get; }
+    public static ReactiveUI.Primitives.Reactive.Concurrency.DispatcherSequencer Main { get; }
     public System.Windows.Threading.DispatcherPriority Priority { get; }
     [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
     public override System.IDisposable Schedule<TState>(TState state, System.Func<System.Reactive.Concurrency.IScheduler, TState, System.IDisposable> action) { }
