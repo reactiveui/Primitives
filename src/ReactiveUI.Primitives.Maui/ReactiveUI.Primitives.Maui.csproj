@@ -17,4 +17,8 @@
     <PackageReference Include="Microsoft.Extensions.Logging"/>
   </ItemGroup>
 
+  <ItemGroup>
+    <InternalsVisibleTo Include="ReactiveUI.Primitives.Maui.Tests"/>
+  </ItemGroup>
+
 </Project>

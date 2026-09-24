@@ -6,6 +6,8 @@ public sealed class MauiDispatcherSequencer : System.Reactive.Concurrency.LocalS
 {
     public MauiDispatcherSequencer(Microsoft.Maui.Dispatching.IDispatcher dispatcher) { }
     public Microsoft.Maui.Dispatching.IDispatcher Dispatcher { get; }
+    public static ReactiveUI.Primitives.Reactive.Concurrency.MauiDispatcherSequencer Current { get; }
+    public static ReactiveUI.Primitives.Reactive.Concurrency.MauiDispatcherSequencer Main { get; }
     [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
     public override System.IDisposable Schedule<TState>(TState state, System.Func<System.Reactive.Concurrency.IScheduler, TState, System.IDisposable> action) { }
     [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]

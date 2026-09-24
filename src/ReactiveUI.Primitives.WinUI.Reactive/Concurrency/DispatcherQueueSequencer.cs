@@ -15,6 +15,13 @@ namespace ReactiveUI.Primitives.Reactive.Concurrency;
 [System.Diagnostics.DebuggerDisplay("DispatcherQueueSequencer: DispatcherQueue = {DispatcherQueue}, Priority = {Priority}")]
 public sealed class DispatcherQueueSequencer : LocalScheduler
 {
+    /// <summary>The shared main-thread scheduler, set once a UI thread first reads it.</summary>
+    private static DispatcherQueueSequencer? _main;
+
+    /// <summary>The scheduler for the calling thread's dispatcher queue, cached per thread.</summary>
+    [ThreadStatic]
+    private static DispatcherQueueSequencer? _current;
+
     /// <summary>Optional callback for enqueueing native drain delegates.</summary>
     private readonly Func<DispatcherQueuePriority, DispatcherQueueHandler, bool>? _tryEnqueue;
 
@@ -66,6 +73,25 @@ public sealed class DispatcherQueueSequencer : LocalScheduler
         _dispatch = new(RunDrain, DefaultScheduler.Instance);
     }
 
+    /// <summary>Gets the shared scheduler for the WinUI main (UI) thread.</summary>
+    /// <exception cref="InvalidOperationException">Main is not bound yet and the calling thread has no dispatcher queue.</exception>
+    /// <remarks>
+    /// WinUI has no dispatcher queue that any thread can reach, so the first read from a UI thread binds Main to that
+    /// thread's dispatcher queue. After that, every thread gets the same scheduler. A read from a thread without a
+    /// dispatcher queue before then throws, and nothing is cached, so a later read from the UI thread still binds.
+    /// </remarks>
+    public static DispatcherQueueSequencer Main =>
+        Volatile.Read(ref _main) ?? BindMain(ref _main, DispatcherQueue.GetForCurrentThread()) ?? throw NoDispatcherQueue();
+
+    /// <summary>Gets the scheduler for the calling thread's dispatcher queue.</summary>
+    /// <exception cref="InvalidOperationException">The calling thread has no dispatcher queue.</exception>
+    /// <remarks>
+    /// Cached per thread, for applications that run UI on more than one thread. Never creates a dispatcher queue: a
+    /// thread that has none cannot run the scheduled work.
+    /// </remarks>
+    public static DispatcherQueueSequencer Current =>
+        _current ??= new(DispatcherQueue.GetForCurrentThread() ?? throw NoDispatcherQueue());
+
     /// <summary>Gets the dispatcher queue used to marshal work to the UI thread.</summary>
     public DispatcherQueue DispatcherQueue { get; }
 
@@ -85,6 +111,26 @@ public sealed class DispatcherQueueSequencer : LocalScheduler
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public override IDisposable Schedule<TState>(TState state, TimeSpan dueTime, Func<IScheduler, TState, IDisposable> action) =>
         _dispatch.Schedule(new DispatchHost(this), this, state, dueTime, action);
+
+    /// <summary>Caches the shared main-thread scheduler for a dispatcher queue, keeping the first one bound.</summary>
+    /// <param name="slot">The field that holds the shared scheduler.</param>
+    /// <param name="dispatcherQueue">The calling thread's dispatcher queue, or <see langword="null"/> when it has none.</param>
+    /// <returns>The shared scheduler, or <see langword="null"/> when <paramref name="dispatcherQueue"/> is <see langword="null"/>.</returns>
+    internal static DispatcherQueueSequencer? BindMain(ref DispatcherQueueSequencer? slot, DispatcherQueue? dispatcherQueue)
+    {
+        if (dispatcherQueue is null)
+        {
+            return null;
+        }
+
+        DispatcherQueueSequencer created = new(dispatcherQueue);
+        return Interlocked.CompareExchange(ref slot, created, null) ?? created;
+    }
+
+    /// <summary>Creates the error for a thread that has no dispatcher queue.</summary>
+    /// <returns>The exception to throw.</returns>
+    internal static InvalidOperationException NoDispatcherQueue() =>
+        new("The calling thread has no WinUI dispatcher queue. Use DispatcherQueueSequencer.Main or Current from a UI thread.");
 
     /// <summary>Enqueues the drain callback on the dispatcher queue.</summary>
     /// <param name="drain">The drain callback.</param>

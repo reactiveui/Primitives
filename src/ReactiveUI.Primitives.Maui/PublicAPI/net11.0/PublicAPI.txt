@@ -1,3 +1,4 @@
+[assembly: System.Runtime.CompilerServices.InternalsVisibleTo("ReactiveUI.Primitives.Maui.Tests")]
 namespace ReactiveUI.Primitives.Concurrency;
 
 [System.Diagnostics.DebuggerDisplay("{DebuggerDisplay,nq}")]
@@ -5,6 +6,8 @@ public sealed class MauiDispatcherSequencer : ReactiveUI.Primitives.Concurrency.
 {
     public MauiDispatcherSequencer(Microsoft.Maui.Dispatching.IDispatcher dispatcher) { }
     public Microsoft.Maui.Dispatching.IDispatcher Dispatcher { get; }
+    public static ReactiveUI.Primitives.Concurrency.MauiDispatcherSequencer Current { get; }
+    public static ReactiveUI.Primitives.Concurrency.MauiDispatcherSequencer Main { get; }
     public System.DateTimeOffset Now { get; }
     public long Timestamp { get; }
     [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]

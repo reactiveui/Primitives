@@ -15,6 +15,9 @@ namespace ReactiveUI.Primitives.Concurrency;
 [System.Diagnostics.DebuggerDisplay("{DebuggerDisplay,nq}")]
 public sealed class ControlSequencer : ISequencer
 {
+    /// <summary>The shared main-thread sequencer, set once a UI thread first reads it.</summary>
+    private static ControlSequencer? _main;
+
     /// <summary>Optional callback for posting ready work.</summary>
     private readonly Func<Action, bool>? _post;
 
@@ -42,6 +45,17 @@ public sealed class ControlSequencer : ISequencer
         Control.HandleCreated += OnHandleCreated;
     }
 
+    /// <summary>Gets the shared sequencer for the Windows Forms main (UI) thread.</summary>
+    /// <exception cref="InvalidOperationException">Main is not bound yet and the calling thread is not an STA thread.</exception>
+    /// <remarks>
+    /// The first read binds Main to a hidden control whose handle belongs to the calling thread. Windows Forms UI
+    /// threads are always STA and thread-pool threads never are, so a read from any other thread throws and nothing is
+    /// cached. Read it first on the thread that runs the message loop, such as in <c>Main</c> before
+    /// <see cref="Application.Run()"/>.
+    /// </remarks>
+    public static ControlSequencer Main =>
+        Volatile.Read(ref _main) ?? BindMain(ref _main, Thread.CurrentThread.GetApartmentState());
+
     /// <summary>Gets the control used to marshal work to the UI thread.</summary>
     public Control Control { get; }
 
@@ -62,6 +76,32 @@ public sealed class ControlSequencer : ISequencer
     /// <inheritdoc/>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void Schedule(IWorkItem item, long dueTimestamp) => _state.Schedule(item, dueTimestamp);
+
+    /// <summary>Caches the shared main-thread sequencer for a hidden control on the calling thread, keeping the first one bound.</summary>
+    /// <param name="slot">The field that holds the shared sequencer.</param>
+    /// <param name="apartment">The calling thread's apartment state.</param>
+    /// <returns>The shared sequencer.</returns>
+    /// <exception cref="InvalidOperationException"><paramref name="apartment"/> is not <see cref="ApartmentState.STA"/>.</exception>
+    internal static ControlSequencer BindMain(ref ControlSequencer? slot, ApartmentState apartment)
+    {
+        if (apartment != ApartmentState.STA)
+        {
+            throw new InvalidOperationException(
+                "The calling thread is not a Windows Forms UI thread. Read ControlSequencer.Main first on the STA thread that runs the message loop.");
+        }
+
+        Control control = new();
+        _ = control.Handle;
+        ControlSequencer created = new(control);
+        var bound = Interlocked.CompareExchange(ref slot, created, null);
+        if (bound is null)
+        {
+            return created;
+        }
+
+        control.Dispose();
+        return bound;
+    }
 
     /// <summary>Posts work when the control is live and its handle is available.</summary>
     /// <param name="control">The control whose disposal state is checked.</param>

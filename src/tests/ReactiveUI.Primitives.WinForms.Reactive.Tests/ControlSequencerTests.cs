@@ -190,6 +190,82 @@ public sealed class ControlSequencerTests
         handle.Dispose();
     }
 
+    /// <summary>A thread that is not STA gets an error, and nothing is cached.</summary>
+    /// <param name="apartment">The calling thread's apartment state.</param>
+    /// <returns>The test operation.</returns>
+    [Test]
+    [Arguments(ApartmentState.MTA)]
+    [Arguments(ApartmentState.Unknown)]
+    public async Task BindMainRejectsAThreadThatIsNotStaAndCachesNothing(ApartmentState apartment)
+    {
+        ControlSequencer? slot = null;
+        InvalidOperationException? error = null;
+        try
+        {
+            _ = ControlSequencer.BindMain(ref slot, apartment);
+        }
+        catch (InvalidOperationException ex)
+        {
+            error = ex;
+        }
+
+        await Assert.That(error).IsNotNull();
+        await Assert.That(slot).IsNull();
+    }
+
+    /// <summary>On an STA thread, Main owns a hidden control whose handle belongs to that thread, and the first binding stays bound.</summary>
+    /// <returns>The test operation.</returns>
+    [Test]
+    public async Task BindMainOnAnStaThreadCreatesTheHandleOnThatThread()
+    {
+        var captured = await RunOnStaThread(static () =>
+        {
+            ControlSequencer? slot = null;
+            var bound = ControlSequencer.BindMain(ref slot, ApartmentState.STA);
+            var rebound = ControlSequencer.BindMain(ref slot, ApartmentState.STA);
+            return (Bound: bound, Rebound: rebound, Slot: slot, bound.Control.IsHandleCreated, bound.Control.InvokeRequired);
+        });
+
+        await Assert.That(captured.IsHandleCreated).IsTrue();
+        await Assert.That(captured.InvokeRequired).IsFalse();
+        await Assert.That(captured.Slot).IsSameReferenceAs(captured.Bound);
+        await Assert.That(captured.Rebound).IsSameReferenceAs(captured.Bound);
+    }
+
+    /// <summary>Once an STA thread binds Main, every thread gets the same sequencer.</summary>
+    /// <returns>The test operation.</returns>
+    [Test]
+    public async Task MainIsSharedWithEveryThreadOnceAnStaThreadBindsIt()
+    {
+        var onSta = await RunOnStaThread(static () => ControlSequencer.Main);
+        var onPool = await Task.Run(static () => ControlSequencer.Main);
+
+        await Assert.That(onPool).IsSameReferenceAs(onSta);
+    }
+
+    /// <summary>Runs a function on a fresh STA thread and returns its result or exception.</summary>
+    /// <typeparam name="T">The result type.</typeparam>
+    /// <param name="func">The function to run.</param>
+    /// <returns>The function's result.</returns>
+    private static Task<T> RunOnStaThread<T>(Func<T> func)
+    {
+        TaskCompletionSource<T> completion = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        Thread thread = new(() =>
+        {
+            try
+            {
+                completion.SetResult(func());
+            }
+            catch (Exception ex)
+            {
+                completion.SetException(ex);
+            }
+        });
+        thread.SetApartmentState(ApartmentState.STA);
+        thread.Start();
+        return completion.Task;
+    }
+
     /// <summary>Creates a control without changing the caller's synchronization context.</summary>
     /// <returns>The control.</returns>
     private static Control CreateControl()

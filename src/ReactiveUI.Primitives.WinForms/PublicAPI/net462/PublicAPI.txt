@@ -6,6 +6,7 @@ public sealed class ControlSequencer : ReactiveUI.Primitives.Concurrency.ISequen
 {
     public ControlSequencer(System.Windows.Forms.Control control) { }
     public System.Windows.Forms.Control Control { get; }
+    public static ReactiveUI.Primitives.Concurrency.ControlSequencer Main { get; }
     public System.DateTimeOffset Now { get; }
     public long Timestamp { get; }
     [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]

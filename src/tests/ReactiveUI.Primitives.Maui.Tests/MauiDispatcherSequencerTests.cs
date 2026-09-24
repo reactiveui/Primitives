@@ -3,6 +3,7 @@
 // See the LICENSE file in the project root for full license information.
 
 using System.Runtime.CompilerServices;
+using Microsoft.Maui;
 using Microsoft.Maui.Dispatching;
 using ReactiveUI.Primitives.Concurrency;
 
@@ -13,6 +14,10 @@ public sealed class MauiDispatcherSequencerTests
 {
     /// <summary>The values an immediate burst produces, in the FIFO order asserted.</summary>
     private static readonly int[] ExpectedBurst = [1, 2, 3];
+
+    /// <summary>Installs a dispatcher provider that returns the dispatcher each test thread registers.</summary>
+    [Before(Class)]
+    public static void InstallThreadDispatcherProvider() => _ = DispatcherProvider.SetCurrent(new ThreadDispatcherProvider());
 
     /// <summary>Verifies the constructor rejects a null dispatcher.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
@@ -113,6 +118,161 @@ public sealed class MauiDispatcherSequencerTests
 
         await Assert.That(sequencer.Now).IsGreaterThan(DateTimeOffset.MinValue);
         await Assert.That(sequencer.Timestamp).IsGreaterThanOrEqualTo(before);
+    }
+
+    /// <summary>A thread without a dispatcher gets an error rather than a sequencer that could never run work.</summary>
+    /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
+    [Test]
+    public async Task CurrentThrowsWhenTheThreadHasNoDispatcher() =>
+        await Assert.That(static () => RunOnNewThread<MauiDispatcherSequencer?>(null, static () => MauiDispatcherSequencer.Current))
+            .ThrowsExactly<InvalidOperationException>();
+
+    /// <summary>Each thread gets its own cached sequencer bound to that thread's dispatcher.</summary>
+    /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
+    [Test]
+    public async Task CurrentIsCachedPerThreadAndBoundToThatThreadsDispatcher()
+    {
+        FakeDispatcher firstDispatcher = new();
+        FakeDispatcher secondDispatcher = new();
+
+        var first = await RunOnNewThread(firstDispatcher, CaptureCurrent);
+        var second = await RunOnNewThread(secondDispatcher, CaptureCurrent);
+
+        await Assert.That(first.Repeat).IsSameReferenceAs(first.Sequencer);
+        await Assert.That(first.Sequencer.Dispatcher).IsSameReferenceAs(firstDispatcher);
+        await Assert.That(second.Sequencer).IsNotSameReferenceAs(first.Sequencer);
+        await Assert.That(second.Sequencer.Dispatcher).IsSameReferenceAs(secondDispatcher);
+    }
+
+    /// <summary>Before an application exists, Main uses the calling thread's dispatcher and never the thread pool.</summary>
+    /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
+    [Test]
+    public async Task MainFallsBackToCurrentBeforeAnApplicationExists()
+    {
+        if (IPlatformApplication.Current is not null)
+        {
+            return;
+        }
+
+        FakeDispatcher dispatcher = new();
+        var captured = await RunOnNewThread(
+            dispatcher,
+            static () => (MauiDispatcherSequencer.Main, MauiDispatcherSequencer.Current));
+
+        await Assert.That(captured.Main).IsSameReferenceAs(captured.Current);
+        await Assert.That(captured.Main.Dispatcher).IsSameReferenceAs(dispatcher);
+        await Assert.That(static () => RunOnNewThread<MauiDispatcherSequencer?>(null, static () => MauiDispatcherSequencer.Main))
+            .ThrowsExactly<InvalidOperationException>();
+    }
+
+    /// <summary>The application's dispatcher comes from the running application's services.</summary>
+    /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
+    [Test]
+    public async Task ResolveApplicationDispatcherReadsTheApplicationServices()
+    {
+        FakeDispatcher dispatcher = new();
+
+        await Assert.That(MauiDispatcherSequencer.ResolveApplicationDispatcher(null)).IsNull();
+        await Assert.That(MauiDispatcherSequencer.ResolveApplicationDispatcher(new FakePlatformApplication(null))).IsNull();
+        await Assert.That(MauiDispatcherSequencer.ResolveApplicationDispatcher(new FakePlatformApplication(new DispatcherServices(null))))
+            .IsNull();
+        await Assert.That(MauiDispatcherSequencer.ResolveApplicationDispatcher(new FakePlatformApplication(new DispatcherServices(dispatcher))))
+            .IsSameReferenceAs(dispatcher);
+    }
+
+    /// <summary>Without an application dispatcher there is nothing to bind, and nothing is cached.</summary>
+    /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
+    [Test]
+    public async Task BindMainReturnsNullWithoutAnApplicationDispatcher()
+    {
+        MauiDispatcherSequencer? slot = null;
+        await Assert.That(MauiDispatcherSequencer.BindMain(ref slot, null)).IsNull();
+        await Assert.That(slot).IsNull();
+    }
+
+    /// <summary>The first application dispatcher bound stays bound.</summary>
+    /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
+    [Test]
+    public async Task BindMainKeepsTheFirstBinding()
+    {
+        FakeDispatcher first = new();
+        FakeDispatcher second = new();
+        MauiDispatcherSequencer? slot = null;
+
+        var bound = MauiDispatcherSequencer.BindMain(ref slot, first);
+        var rebound = MauiDispatcherSequencer.BindMain(ref slot, second);
+
+        await Assert.That(bound).IsNotNull();
+        await Assert.That(bound!.Dispatcher).IsSameReferenceAs(first);
+        await Assert.That(slot).IsSameReferenceAs(bound);
+        await Assert.That(rebound).IsSameReferenceAs(bound);
+    }
+
+    /// <summary>Reads <see cref="MauiDispatcherSequencer.Current"/> twice on the calling thread.</summary>
+    /// <returns>Both reads.</returns>
+    private static (MauiDispatcherSequencer Sequencer, MauiDispatcherSequencer Repeat) CaptureCurrent() =>
+        (MauiDispatcherSequencer.Current, MauiDispatcherSequencer.Current);
+
+    /// <summary>Runs a function on a fresh thread that reports the given dispatcher as its own.</summary>
+    /// <typeparam name="T">The result type.</typeparam>
+    /// <param name="dispatcher">The dispatcher the thread reports, or <see langword="null"/> for none.</param>
+    /// <param name="func">The function to run.</param>
+    /// <returns>The function's result.</returns>
+    private static Task<T> RunOnNewThread<T>(IDispatcher? dispatcher, Func<T> func)
+    {
+        TaskCompletionSource<T> completion = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        Thread thread = new(() =>
+        {
+            ThreadDispatcherProvider.ForThread = dispatcher;
+            try
+            {
+                completion.SetResult(func());
+            }
+            catch (Exception ex)
+            {
+                completion.SetException(ex);
+            }
+        });
+        thread.Start();
+        return completion.Task;
+    }
+
+    /// <summary>Dispatcher provider that reports the dispatcher registered by the calling thread.</summary>
+    private sealed class ThreadDispatcherProvider : IDispatcherProvider
+    {
+        /// <summary>The dispatcher registered by the calling thread.</summary>
+        [ThreadStatic]
+        private static IDispatcher? _forThread;
+
+        /// <summary>Gets or sets the dispatcher registered by the calling thread.</summary>
+        public static IDispatcher? ForThread
+        {
+            get => _forThread;
+            set => _forThread = value;
+        }
+
+        /// <inheritdoc/>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public IDispatcher? GetForCurrentThread() => _forThread;
+    }
+
+    /// <summary>Platform application that exposes the given services.</summary>
+    /// <param name="services">The application services, or <see langword="null"/> before MAUI sets them.</param>
+    private sealed class FakePlatformApplication(IServiceProvider? services) : IPlatformApplication
+    {
+        /// <inheritdoc/>
+        public IServiceProvider Services => services!;
+
+        /// <inheritdoc/>
+        public IApplication Application => null!;
+    }
+
+    /// <summary>Service provider that resolves only <see cref="IDispatcher"/>.</summary>
+    /// <param name="dispatcher">The dispatcher to return, or <see langword="null"/> for none.</param>
+    private sealed class DispatcherServices(IDispatcher? dispatcher) : IServiceProvider
+    {
+        /// <inheritdoc/>
+        public object? GetService(Type serviceType) => serviceType == typeof(IDispatcher) ? dispatcher : null;
     }
 
     /// <summary>Work item that invokes a delegate when executed.</summary>
