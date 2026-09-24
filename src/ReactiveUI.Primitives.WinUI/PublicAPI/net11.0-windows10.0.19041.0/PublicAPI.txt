@@ -8,6 +8,8 @@ public sealed class DispatcherQueueSequencer : ReactiveUI.Primitives.Concurrency
     public DispatcherQueueSequencer(Microsoft.UI.Dispatching.DispatcherQueue dispatcherQueue) { }
     public DispatcherQueueSequencer(Microsoft.UI.Dispatching.DispatcherQueue dispatcherQueue, Microsoft.UI.Dispatching.DispatcherQueuePriority priority) { }
     public Microsoft.UI.Dispatching.DispatcherQueue DispatcherQueue { get; }
+    public static ReactiveUI.Primitives.Concurrency.DispatcherQueueSequencer Current { get; }
+    public static ReactiveUI.Primitives.Concurrency.DispatcherQueueSequencer Main { get; }
     public System.DateTimeOffset Now { get; }
     public Microsoft.UI.Dispatching.DispatcherQueuePriority Priority { get; }
     public long Timestamp { get; }

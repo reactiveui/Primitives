@@ -148,6 +148,142 @@ public sealed class DispatcherQueueSequencerTests
         await Assert.That(calls).IsEqualTo(cancel ? 0 : 1);
     }
 
+    /// <summary>A thread without a dispatcher queue gets an error rather than a sequencer that could never run work.</summary>
+    /// <returns>The test operation.</returns>
+    [Test]
+    public async Task CurrentThrowsWhenTheThreadHasNoDispatcherQueue() =>
+        await Assert.That(static () => RunOnNewThread<DispatcherQueueSequencer?>(static () => DispatcherQueueSequencer.Current))
+            .ThrowsExactly<InvalidOperationException>();
+
+    /// <summary>Each dispatcher queue thread gets its own cached sequencer bound to that thread's queue.</summary>
+    /// <returns>The test operation.</returns>
+    [Test]
+    public async Task CurrentIsCachedPerThreadAndBoundToThatThreadsQueue()
+    {
+        var firstController = DispatcherQueueController.CreateOnDedicatedThread();
+        var secondController = DispatcherQueueController.CreateOnDedicatedThread();
+        try
+        {
+            var first = await RunOnQueue(firstController.DispatcherQueue, CaptureCurrent);
+            var second = await RunOnQueue(secondController.DispatcherQueue, CaptureCurrent);
+
+            await Assert.That(first.Repeat).IsSameReferenceAs(first.Sequencer);
+            await Assert.That(first.Sequencer.DispatcherQueue).IsSameReferenceAs(firstController.DispatcherQueue);
+            await Assert.That(first.Sequencer.Priority).IsEqualTo(DispatcherQueuePriority.Normal);
+            await Assert.That(second.Sequencer).IsNotSameReferenceAs(first.Sequencer);
+            await Assert.That(second.Sequencer.DispatcherQueue).IsSameReferenceAs(secondController.DispatcherQueue);
+        }
+        finally
+        {
+            await firstController.ShutdownQueueAsync();
+            await secondController.ShutdownQueueAsync();
+        }
+    }
+
+    /// <summary>Once a UI thread binds Main, a thread without a dispatcher queue gets the same sequencer.</summary>
+    /// <returns>The test operation.</returns>
+    [Test]
+    public async Task MainIsSharedWithEveryThreadOnceAUiThreadBindsIt()
+    {
+        var controller = DispatcherQueueController.CreateOnDedicatedThread();
+        try
+        {
+            var onQueue = await RunOnQueue(controller.DispatcherQueue, static () => DispatcherQueueSequencer.Main);
+            var offQueue = await RunOnNewThread(static () => DispatcherQueueSequencer.Main);
+
+            await Assert.That(offQueue).IsSameReferenceAs(onQueue);
+        }
+        finally
+        {
+            await controller.ShutdownQueueAsync();
+        }
+    }
+
+    /// <summary>Without a dispatcher queue there is nothing to bind, and nothing is cached.</summary>
+    /// <returns>The test operation.</returns>
+    [Test]
+    public async Task BindMainReturnsNullWithoutADispatcherQueue()
+    {
+        DispatcherQueueSequencer? slot = null;
+        await Assert.That(DispatcherQueueSequencer.BindMain(ref slot, null)).IsNull();
+        await Assert.That(slot).IsNull();
+    }
+
+    /// <summary>The first dispatcher queue bound stays bound.</summary>
+    /// <returns>The test operation.</returns>
+    [Test]
+    public async Task BindMainKeepsTheFirstBinding()
+    {
+        var firstController = DispatcherQueueController.CreateOnDedicatedThread();
+        var secondController = DispatcherQueueController.CreateOnDedicatedThread();
+        try
+        {
+            DispatcherQueueSequencer? slot = null;
+
+            var bound = DispatcherQueueSequencer.BindMain(ref slot, firstController.DispatcherQueue);
+            var rebound = DispatcherQueueSequencer.BindMain(ref slot, secondController.DispatcherQueue);
+
+            await Assert.That(bound).IsNotNull();
+            await Assert.That(bound!.DispatcherQueue).IsSameReferenceAs(firstController.DispatcherQueue);
+            await Assert.That(slot).IsSameReferenceAs(bound);
+            await Assert.That(rebound).IsSameReferenceAs(bound);
+        }
+        finally
+        {
+            await firstController.ShutdownQueueAsync();
+            await secondController.ShutdownQueueAsync();
+        }
+    }
+
+    /// <summary>Reads <see cref="DispatcherQueueSequencer.Current"/> twice on the calling thread.</summary>
+    /// <returns>Both reads.</returns>
+    private static (DispatcherQueueSequencer Sequencer, DispatcherQueueSequencer Repeat) CaptureCurrent() =>
+        (DispatcherQueueSequencer.Current, DispatcherQueueSequencer.Current);
+
+    /// <summary>Runs a function on a dispatcher queue's thread and returns its result or exception.</summary>
+    /// <typeparam name="T">The result type.</typeparam>
+    /// <param name="queue">The dispatcher queue whose thread runs the function.</param>
+    /// <param name="func">The function to run.</param>
+    /// <returns>The function's result.</returns>
+    private static Task<T> RunOnQueue<T>(DispatcherQueue queue, Func<T> func)
+    {
+        TaskCompletionSource<T> completion = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        if (!queue.TryEnqueue(() => Complete(completion, func)))
+        {
+            completion.SetException(new InvalidOperationException("The dispatcher queue rejected the work."));
+        }
+
+        return completion.Task;
+    }
+
+    /// <summary>Runs a function on a fresh thread that has no dispatcher queue and returns its result or exception.</summary>
+    /// <typeparam name="T">The result type.</typeparam>
+    /// <param name="func">The function to run.</param>
+    /// <returns>The function's result.</returns>
+    private static Task<T> RunOnNewThread<T>(Func<T> func)
+    {
+        TaskCompletionSource<T> completion = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        Thread thread = new(() => Complete(completion, func));
+        thread.Start();
+        return completion.Task;
+    }
+
+    /// <summary>Completes a task with a function's result or exception.</summary>
+    /// <typeparam name="T">The result type.</typeparam>
+    /// <param name="completion">The task to complete.</param>
+    /// <param name="func">The function to run.</param>
+    private static void Complete<T>(TaskCompletionSource<T> completion, Func<T> func)
+    {
+        try
+        {
+            completion.SetResult(func());
+        }
+        catch (Exception ex)
+        {
+            completion.SetException(ex);
+        }
+    }
+
     /// <summary>Retains callbacks until they are explicitly delivered.</summary>
     private sealed class ManualDispatcher
     {

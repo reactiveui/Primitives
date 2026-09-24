@@ -7,6 +7,7 @@ public sealed class ControlSequencer : System.Reactive.Concurrency.LocalSchedule
 {
     public ControlSequencer(System.Windows.Forms.Control control) { }
     public System.Windows.Forms.Control Control { get; }
+    public static ReactiveUI.Primitives.Reactive.Concurrency.ControlSequencer Main { get; }
     [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
     public override System.IDisposable Schedule<TState>(TState state, System.Func<System.Reactive.Concurrency.IScheduler, TState, System.IDisposable> action) { }
     [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
