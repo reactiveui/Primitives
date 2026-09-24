@@ -74,7 +74,7 @@ public sealed class DispatcherSequencer : LocalScheduler
     /// application exists nothing is cached, and the calling thread's existing dispatcher is used instead.
     /// </remarks>
     public static DispatcherSequencer Main =>
-        Volatile.Read(ref _main) ?? BindMain(System.Windows.Application.Current?.Dispatcher) ?? Current;
+        Volatile.Read(ref _main) ?? BindMain(ref _main, System.Windows.Application.Current?.Dispatcher) ?? Current;
 
     /// <summary>Gets the scheduler for the calling thread's dispatcher.</summary>
     /// <exception cref="InvalidOperationException">The calling thread has no dispatcher.</exception>
@@ -103,9 +103,10 @@ public sealed class DispatcherSequencer : LocalScheduler
         _dispatch.Schedule(new DispatchHost(this), this, state, dueTime, action);
 
     /// <summary>Caches the shared main-thread scheduler for the application's dispatcher, keeping the first one bound.</summary>
+    /// <param name="slot">The field that holds the shared scheduler.</param>
     /// <param name="applicationDispatcher">The application's dispatcher, or <see langword="null"/> when no application exists.</param>
     /// <returns>The shared scheduler, or <see langword="null"/> when <paramref name="applicationDispatcher"/> is <see langword="null"/>.</returns>
-    internal static DispatcherSequencer? BindMain(Dispatcher? applicationDispatcher)
+    internal static DispatcherSequencer? BindMain(ref DispatcherSequencer? slot, Dispatcher? applicationDispatcher)
     {
         if (applicationDispatcher is null)
         {
@@ -113,7 +114,7 @@ public sealed class DispatcherSequencer : LocalScheduler
         }
 
         DispatcherSequencer created = new(applicationDispatcher);
-        return Interlocked.CompareExchange(ref _main, created, null) ?? created;
+        return Interlocked.CompareExchange(ref slot, created, null) ?? created;
     }
 
     /// <summary>Returns the calling thread's existing dispatcher without creating one.</summary>

@@ -84,11 +84,33 @@ public sealed class DispatcherSequencerTests
             .ThrowsExactly<InvalidOperationException>();
     }
 
-    /// <summary>Without an application dispatcher there is nothing to bind.</summary>
+    /// <summary>Without an application dispatcher there is nothing to bind, and nothing is cached.</summary>
     /// <returns>The test operation.</returns>
     [Test]
-    public async Task BindMainReturnsNullWithoutAnApplicationDispatcher() =>
-        await Assert.That(DispatcherSequencer.BindMain(null)).IsNull();
+    public async Task BindMainReturnsNullWithoutAnApplicationDispatcher()
+    {
+        DispatcherSequencer? slot = null;
+        await Assert.That(DispatcherSequencer.BindMain(ref slot, null)).IsNull();
+        await Assert.That(slot).IsNull();
+    }
+
+    /// <summary>The first application dispatcher bound stays bound.</summary>
+    /// <returns>The test operation.</returns>
+    [Test]
+    public async Task BindMainKeepsTheFirstBinding()
+    {
+        var first = await RunOnNewThread(static () => Dispatcher.CurrentDispatcher);
+        var second = await RunOnNewThread(static () => Dispatcher.CurrentDispatcher);
+        DispatcherSequencer? slot = null;
+
+        var bound = DispatcherSequencer.BindMain(ref slot, first);
+        var rebound = DispatcherSequencer.BindMain(ref slot, second);
+
+        await Assert.That(bound).IsNotNull();
+        await Assert.That(bound!.Dispatcher).IsSameReferenceAs(first);
+        await Assert.That(slot).IsSameReferenceAs(bound);
+        await Assert.That(rebound).IsSameReferenceAs(bound);
+    }
 
     /// <summary>The dispatcher sequencer shares the monotonic timestamp scale used by scheduled work.</summary>
     /// <returns>A task representing the asynchronous test.</returns>
