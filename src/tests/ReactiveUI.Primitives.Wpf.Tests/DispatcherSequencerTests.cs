@@ -41,6 +41,26 @@ public sealed class DispatcherSequencerTests
         await Assert.That(sequencer.DebuggerDisplay).IsEqualTo(typeof(DispatcherSequencer).FullName);
     }
 
+    /// <summary>The shared main-thread sequencer is a single instance bound to a dispatcher at normal priority.</summary>
+    /// <returns>The test operation.</returns>
+    [Test]
+    public async Task MainIsSharedAndBoundToADispatcher()
+    {
+        var main = DispatcherSequencer.Main;
+        await Assert.That(DispatcherSequencer.Main).IsSameReferenceAs(main);
+        await Assert.That(main.Dispatcher).IsNotNull();
+        await Assert.That(main.Priority).IsEqualTo(DispatcherPriority.Normal);
+    }
+
+    /// <summary>Without a running application the main dispatcher falls back to the calling thread's dispatcher.</summary>
+    /// <returns>The test operation.</returns>
+    [Test]
+    public async Task ResolveMainDispatcherFallsBackToCurrentDispatcher()
+    {
+        var expected = System.Windows.Application.Current?.Dispatcher ?? Dispatcher.CurrentDispatcher;
+        await Assert.That(DispatcherSequencer.ResolveMainDispatcher()).IsSameReferenceAs(expected);
+    }
+
     /// <summary>The dispatcher sequencer shares the monotonic timestamp scale used by scheduled work.</summary>
     /// <returns>A task representing the asynchronous test.</returns>
     [Test]

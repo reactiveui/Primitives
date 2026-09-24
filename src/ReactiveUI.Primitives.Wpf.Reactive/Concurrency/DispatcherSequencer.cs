@@ -15,6 +15,9 @@ namespace ReactiveUI.Primitives.Reactive.Concurrency;
 [System.Diagnostics.DebuggerDisplay("DispatcherSequencer: Dispatcher = {Dispatcher}, Priority = {Priority}")]
 public sealed class DispatcherSequencer : LocalScheduler
 {
+    /// <summary>Lazily binds the shared main-thread scheduler to the application's dispatcher on first use.</summary>
+    private static readonly Lazy<DispatcherSequencer> LazyMain = new(static () => new(ResolveMainDispatcher()));
+
     /// <summary>Optional callback for posting ready work.</summary>
     private readonly Func<Action, bool>? _post;
 
@@ -60,6 +63,13 @@ public sealed class DispatcherSequencer : LocalScheduler
         _dispatch = new(RunDrain, DefaultScheduler.Instance);
     }
 
+    /// <summary>Gets the shared scheduler for the WPF main (UI) thread.</summary>
+    /// <remarks>
+    /// Bound on first access to the running <see cref="System.Windows.Application"/>'s dispatcher, or to the calling
+    /// thread's dispatcher when no application exists yet.
+    /// </remarks>
+    public static DispatcherSequencer Main => LazyMain.Value;
+
     /// <summary>Gets the dispatcher whose thread runs the scheduled work.</summary>
     public Dispatcher Dispatcher { get; }
 
@@ -77,6 +87,11 @@ public sealed class DispatcherSequencer : LocalScheduler
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public override IDisposable Schedule<TState>(TState state, TimeSpan dueTime, Func<IScheduler, TState, IDisposable> action) =>
         _dispatch.Schedule(new DispatchHost(this), this, state, dueTime, action);
+
+    /// <summary>Resolves the dispatcher that owns the WPF main (UI) thread.</summary>
+    /// <returns>The application's dispatcher, or the calling thread's dispatcher when no application exists yet.</returns>
+    internal static Dispatcher ResolveMainDispatcher() =>
+        System.Windows.Application.Current?.Dispatcher ?? Dispatcher.CurrentDispatcher;
 
     /// <summary>Posts the drain callback, through the test hook when one was supplied.</summary>
     /// <param name="drain">The drain callback.</param>

@@ -14,6 +14,9 @@ namespace ReactiveUI.Primitives.Concurrency;
 [System.Diagnostics.DebuggerDisplay("{DebuggerDisplay,nq}")]
 public sealed class DispatcherSequencer : ISequencer
 {
+    /// <summary>Lazily binds the shared main-thread sequencer to the application's dispatcher on first use.</summary>
+    private static readonly Lazy<DispatcherSequencer> LazyMain = new(static () => new(ResolveMainDispatcher()));
+
     /// <summary>Coalescing dispatch engine.</summary>
     private DispatchSequencerState _state;
 
@@ -51,6 +54,13 @@ public sealed class DispatcherSequencer : ISequencer
         _state = new(this, post ?? Post, RunDrain, scheduleDelayed ?? ScheduleDelayed);
     }
 
+    /// <summary>Gets the shared sequencer for the WPF main (UI) thread.</summary>
+    /// <remarks>
+    /// Bound on first access to the running <see cref="System.Windows.Application"/>'s dispatcher, or to the calling
+    /// thread's dispatcher when no application exists yet.
+    /// </remarks>
+    public static DispatcherSequencer Main => LazyMain.Value;
+
     /// <summary>Gets the dispatcher whose thread runs the scheduled work.</summary>
     public Dispatcher Dispatcher { get; }
 
@@ -74,6 +84,11 @@ public sealed class DispatcherSequencer : ISequencer
     /// <inheritdoc/>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void Schedule(IWorkItem item, long dueTimestamp) => _state.Schedule(item, dueTimestamp);
+
+    /// <summary>Resolves the dispatcher that owns the WPF main (UI) thread.</summary>
+    /// <returns>The application's dispatcher, or the calling thread's dispatcher when no application exists yet.</returns>
+    internal static Dispatcher ResolveMainDispatcher() =>
+        System.Windows.Application.Current?.Dispatcher ?? Dispatcher.CurrentDispatcher;
 
     /// <summary>Marshals the cached drain callback onto the dispatcher.</summary>
     /// <param name="drain">The drain callback.</param>

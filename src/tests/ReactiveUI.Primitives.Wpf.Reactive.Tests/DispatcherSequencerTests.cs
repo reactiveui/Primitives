@@ -38,6 +38,26 @@ public sealed class DispatcherSequencerTests
         await Assert.That(new DispatcherSequencer(dispatcher).Priority).IsEqualTo(DispatcherPriority.Normal);
     }
 
+    /// <summary>The shared main-thread scheduler is a single instance bound to a dispatcher at normal priority.</summary>
+    /// <returns>The test operation.</returns>
+    [Test]
+    public async Task MainIsSharedAndBoundToADispatcher()
+    {
+        var main = DispatcherSequencer.Main;
+        await Assert.That(DispatcherSequencer.Main).IsSameReferenceAs(main);
+        await Assert.That(main.Dispatcher).IsNotNull();
+        await Assert.That(main.Priority).IsEqualTo(DispatcherPriority.Normal);
+    }
+
+    /// <summary>Without a running application the main dispatcher falls back to the calling thread's dispatcher.</summary>
+    /// <returns>The test operation.</returns>
+    [Test]
+    public async Task ResolveMainDispatcherFallsBackToCurrentDispatcher()
+    {
+        var expected = System.Windows.Application.Current?.Dispatcher ?? Dispatcher.CurrentDispatcher;
+        await Assert.That(DispatcherSequencer.ResolveMainDispatcher()).IsSameReferenceAs(expected);
+    }
+
     /// <summary>A posted batch preserves order and skips cancelled work.</summary>
     /// <returns>The test operation.</returns>
     [Test]
