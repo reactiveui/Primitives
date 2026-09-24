@@ -6,8 +6,10 @@
         <Project Path="benchmarks/ReactiveUI.Primitives.Blazor.Benchmarks/ReactiveUI.Primitives.Blazor.Benchmarks.csproj" />
     </Folder>
     <Folder Name="/examples/">
+        <Project Path="examples/OccasionallyConnected.Collaboration.Client/OccasionallyConnected.Collaboration.Client.csproj" />
         <Project Path="examples/OccasionallyConnected.Collaboration.Server/OccasionallyConnected.Collaboration.Server.csproj" />
         <Project Path="examples/OccasionallyConnected.DurableOutbox/OccasionallyConnected.DurableOutbox.csproj" />
+        <Project Path="examples/OccasionallyConnected.ResilienceLab/ReactiveUI.Primitives.OccasionallyConnected.ResilienceLab.csproj" />
     </Folder>
     <Folder Name="/SolutionConfig/">
         <File Path="../.editorconfig" />
@@ -57,10 +59,12 @@
     <Folder Name="/tests/">
         <Project Path="tests/ReactiveUI.Disposables.Tests/ReactiveUI.Disposables.Tests.csproj" />
         <Project Path="tests/ReactiveUI.Primitives.ObservableEvents.Tests/ReactiveUI.Primitives.ObservableEvents.Tests.csproj" />
+        <Project Path="tests/ReactiveUI.Primitives.OccasionallyConnected.Collaboration.Client.Tests/ReactiveUI.Primitives.OccasionallyConnected.Collaboration.Client.Tests.csproj" />
         <Project Path="tests/ReactiveUI.Primitives.OccasionallyConnected.Collaboration.Server.Tests/ReactiveUI.Primitives.OccasionallyConnected.Collaboration.Server.Tests.csproj" />
         <Project Path="tests/ReactiveUI.Primitives.OccasionallyConnected.Core.Tests/ReactiveUI.Primitives.OccasionallyConnected.Core.Tests.csproj" />
         <Project Path="tests/ReactiveUI.Primitives.OccasionallyConnected.DependencyInjection.Tests/ReactiveUI.Primitives.OccasionallyConnected.DependencyInjection.Tests.csproj" />
         <Project Path="tests/ReactiveUI.Primitives.OccasionallyConnected.Examples.Tests/ReactiveUI.Primitives.OccasionallyConnected.Examples.Tests.csproj" />
+        <Project Path="tests/ReactiveUI.Primitives.OccasionallyConnected.ResilienceLab.Tests/ReactiveUI.Primitives.OccasionallyConnected.ResilienceLab.Tests.csproj" />
         <Project Path="tests/ReactiveUI.Primitives.OccasionallyConnected.Server.Tests/ReactiveUI.Primitives.OccasionallyConnected.Server.Tests.csproj" />
         <Project Path="tests/ReactiveUI.Primitives.OccasionallyConnected.Transport.Http.Tests/ReactiveUI.Primitives.OccasionallyConnected.Transport.Http.Tests.csproj" />
         <Project Path="tests/ReactiveUI.Primitives.OccasionallyConnected.Storage.Sqlite.Tests/ReactiveUI.Primitives.OccasionallyConnected.Storage.Sqlite.Tests.csproj" />
