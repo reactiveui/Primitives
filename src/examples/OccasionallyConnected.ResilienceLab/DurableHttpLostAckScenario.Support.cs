@@ -331,7 +331,7 @@ internal static partial class DurableHttpLostAckScenario
     internal sealed class MutableTimeProvider(DateTimeOffset utcNow) : TimeProvider
     {
         /// <summary>The gate.</summary>
-        private readonly object _gate = new();
+        private readonly Lock _gate = new();
 
         /// <summary>The timers.</summary>
         private readonly List<ManualTimer> _timers = [];
@@ -504,7 +504,7 @@ internal static partial class DurableHttpLostAckScenario
     internal sealed class RecordingObserver<T> : IObserver<T>
     {
         /// <summary>The gate.</summary>
-        private readonly object _gate = new();
+        private readonly Lock _gate = new();
 
         /// <summary>The values.</summary>
         private readonly List<T> _values = [];

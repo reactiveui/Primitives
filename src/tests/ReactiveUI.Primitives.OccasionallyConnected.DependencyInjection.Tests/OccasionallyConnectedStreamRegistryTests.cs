@@ -357,6 +357,7 @@ public sealed class OccasionallyConnectedStreamRegistryTests
 
     /// <summary>Forces finalizers so unobserved task faults are published deterministically.</summary>
     [MethodImpl(MethodImplOptions.NoInlining | MethodImplOptions.NoOptimization)]
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("Allocations", "PSH1021:Do not force garbage collection", Justification = "Test helper to force finalizers.")]
     private static void ForceFinalizers()
     {
         for (var pass = 0; pass < FinalizerPasses; pass++)

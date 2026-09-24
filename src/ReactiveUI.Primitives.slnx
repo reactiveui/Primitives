@@ -1,9 +1,9 @@
 <Solution>
     <Folder Name="/benchmarks/">
-        <Project Path="benchmarks/ReactiveUI.Primitives.Benchmarks/ReactiveUI.Primitives.Benchmarks.csproj" />
-        <Project Path="benchmarks/ReactiveUI.Primitives.ObservableEvents.Benchmarks/ReactiveUI.Primitives.ObservableEvents.Benchmarks.csproj" />
         <Project Path="benchmarks/ReactiveUI.Primitives.Avalonia.Benchmarks/ReactiveUI.Primitives.Avalonia.Benchmarks.csproj" />
+        <Project Path="benchmarks/ReactiveUI.Primitives.Benchmarks/ReactiveUI.Primitives.Benchmarks.csproj" />
         <Project Path="benchmarks/ReactiveUI.Primitives.Blazor.Benchmarks/ReactiveUI.Primitives.Blazor.Benchmarks.csproj" />
+        <Project Path="benchmarks/ReactiveUI.Primitives.ObservableEvents.Benchmarks/ReactiveUI.Primitives.ObservableEvents.Benchmarks.csproj" />
     </Folder>
     <Folder Name="/examples/">
         <Project Path="examples/OccasionallyConnected.Collaboration.Client/OccasionallyConnected.Collaboration.Client.csproj" />
@@ -29,8 +29,8 @@
         <File Path="testconfig.json" />
     </Folder>
     <Folder Name="/Lean/">
-        <Project Path="ReactiveUI.Primitives.Avalonia/ReactiveUI.Primitives.Avalonia.csproj" />
         <Project Path="ReactiveUI.Primitives.Async/ReactiveUI.Primitives.Async.csproj" />
+        <Project Path="ReactiveUI.Primitives.Avalonia/ReactiveUI.Primitives.Avalonia.csproj" />
         <Project Path="ReactiveUI.Primitives.Blazor/ReactiveUI.Primitives.Blazor.csproj" />
         <Project Path="ReactiveUI.Primitives.Maui/ReactiveUI.Primitives.Maui.csproj" />
         <Project Path="ReactiveUI.Primitives.WinForms/ReactiveUI.Primitives.WinForms.csproj" />
@@ -47,8 +47,8 @@
         <Project Path="ReactiveUI.Primitives.OccasionallyConnected/ReactiveUI.Primitives.OccasionallyConnected.csproj" />
     </Folder>
     <Folder Name="/Reactive/">
-        <Project Path="ReactiveUI.Primitives.Avalonia.Reactive/ReactiveUI.Primitives.Avalonia.Reactive.csproj" />
         <Project Path="ReactiveUI.Primitives.Async.Reactive/ReactiveUI.Primitives.Async.Reactive.csproj" />
+        <Project Path="ReactiveUI.Primitives.Avalonia.Reactive/ReactiveUI.Primitives.Avalonia.Reactive.csproj" />
         <Project Path="ReactiveUI.Primitives.Blazor.Reactive/ReactiveUI.Primitives.Blazor.Reactive.csproj" />
         <Project Path="ReactiveUI.Primitives.Maui.Reactive/ReactiveUI.Primitives.Maui.Reactive.csproj" />
         <Project Path="ReactiveUI.Primitives.Reactive/ReactiveUI.Primitives.Reactive.csproj" />
@@ -66,13 +66,13 @@
         <Project Path="tests/ReactiveUI.Primitives.OccasionallyConnected.Examples.Tests/ReactiveUI.Primitives.OccasionallyConnected.Examples.Tests.csproj" />
         <Project Path="tests/ReactiveUI.Primitives.OccasionallyConnected.ResilienceLab.Tests/ReactiveUI.Primitives.OccasionallyConnected.ResilienceLab.Tests.csproj" />
         <Project Path="tests/ReactiveUI.Primitives.OccasionallyConnected.Server.Tests/ReactiveUI.Primitives.OccasionallyConnected.Server.Tests.csproj" />
-        <Project Path="tests/ReactiveUI.Primitives.OccasionallyConnected.Transport.Http.Tests/ReactiveUI.Primitives.OccasionallyConnected.Transport.Http.Tests.csproj" />
         <Project Path="tests/ReactiveUI.Primitives.OccasionallyConnected.Storage.Sqlite.Tests/ReactiveUI.Primitives.OccasionallyConnected.Storage.Sqlite.Tests.csproj" />
         <Project Path="tests/ReactiveUI.Primitives.OccasionallyConnected.Tests/ReactiveUI.Primitives.OccasionallyConnected.Tests.csproj" />
+        <Project Path="tests/ReactiveUI.Primitives.OccasionallyConnected.Transport.Http.Tests/ReactiveUI.Primitives.OccasionallyConnected.Transport.Http.Tests.csproj" />
     </Folder>
     <Folder Name="/tests/Lean/">
-        <Project Path="tests/ReactiveUI.Primitives.Avalonia.Tests/ReactiveUI.Primitives.Avalonia.Tests.csproj" />
         <Project Path="tests/ReactiveUI.Primitives.Async.Tests/ReactiveUI.Primitives.Async.Tests.csproj" />
+        <Project Path="tests/ReactiveUI.Primitives.Avalonia.Tests/ReactiveUI.Primitives.Avalonia.Tests.csproj" />
         <Project Path="tests/ReactiveUI.Primitives.Blazor.Tests/ReactiveUI.Primitives.Blazor.Tests.csproj" />
         <Project Path="tests/ReactiveUI.Primitives.Extensions.Tests/ReactiveUI.Primitives.Extensions.Tests.csproj" />
         <Project Path="tests/ReactiveUI.Primitives.Maui.Tests/ReactiveUI.Primitives.Maui.Tests.csproj" />
@@ -82,8 +82,8 @@
         <Project Path="tests/ReactiveUI.Primitives.Wpf.Tests/ReactiveUI.Primitives.Wpf.Tests.csproj" />
     </Folder>
     <Folder Name="/tests/Reactive/">
-        <Project Path="tests/ReactiveUI.Primitives.Avalonia.Reactive.Tests/ReactiveUI.Primitives.Avalonia.Reactive.Tests.csproj" />
         <Project Path="tests/ReactiveUI.Primitives.Async.Reactive.Tests/ReactiveUI.Primitives.Async.Reactive.Tests.csproj" />
+        <Project Path="tests/ReactiveUI.Primitives.Avalonia.Reactive.Tests/ReactiveUI.Primitives.Avalonia.Reactive.Tests.csproj" />
         <Project Path="tests/ReactiveUI.Primitives.Blazor.Reactive.Tests/ReactiveUI.Primitives.Blazor.Reactive.Tests.csproj" />
         <Project Path="tests/ReactiveUI.Primitives.Extensions.Reactive.Tests/ReactiveUI.Primitives.Extensions.Reactive.Tests.csproj" />
         <Project Path="tests/ReactiveUI.Primitives.Maui.Reactive.Tests/ReactiveUI.Primitives.Maui.Reactive.Tests.csproj" />

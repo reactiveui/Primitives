@@ -184,7 +184,7 @@ internal static class CollaborationClientApplication
         using var faultSubscription = session.Activity.Faults.Subscribe(diagnostics);
         var receipt = await session.PublishAsync(command.Update, linked.Token).ConfigureAwait(false);
         diagnostics.TrackOperation(receipt.OperationId);
-        await output.WriteLineAsync($"queued {receipt.OperationId.Value:N}").ConfigureAwait(false);
+        await output.WriteLineAsync($"queued {receipt.OperationId.Value:N}".AsMemory(), cancellationToken).ConfigureAwait(false);
         if (!command.Options.AutoStart)
         {
             await WriteOperationSummaryAsync(output, receipt).ConfigureAwait(false);
@@ -209,7 +209,7 @@ internal static class CollaborationClientApplication
         }
         else
         {
-            await output.WriteLineAsync($"operation: {receipt.OperationId.Value:N} Faulted").ConfigureAwait(false);
+            await output.WriteLineAsync($"operation: {receipt.OperationId.Value:N} Faulted".AsMemory(), cancellationToken).ConfigureAwait(false);
         }
 
         await WriteDiagnosticsSummaryAsync(output, diagnostics).ConfigureAwait(false);
@@ -370,7 +370,7 @@ internal static class CollaborationClientApplication
         private const int MaxRetainedFaultCount = 64;
 
         /// <summary>The synchronization gate.</summary>
-        private readonly object _gate = new();
+        private readonly Lock _gate = new();
 
         /// <summary>The recent operation states.</summary>
         private readonly List<SyncOperationStatus> _operationStates = [];

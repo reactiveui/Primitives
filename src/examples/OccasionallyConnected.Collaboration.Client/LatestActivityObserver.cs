@@ -11,7 +11,7 @@ namespace ReactiveUI.Primitives.OccasionallyConnected.Collaboration.Client;
 internal sealed class LatestActivityObserver : IObserver<ActivityView>
 {
     /// <summary>Protects observer state.</summary>
-    private readonly object _gate = new();
+    private readonly Lock _gate = new();
 
     /// <summary>Stores the single publish confirmation waiter.</summary>
     private TaskCompletionSource<ActivityView>? _waiter;
