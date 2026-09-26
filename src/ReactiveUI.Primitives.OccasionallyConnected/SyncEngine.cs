@@ -22,6 +22,9 @@ internal sealed partial class SyncEngine : ISyncEngine, IOccasionallyConnectedSt
     /// <summary>Selects ready streams for bounded upload attempts.</summary>
     private readonly FairStreamScheduler _scheduler;
 
+    /// <summary>Guards connections to the shared transport endpoint.</summary>
+    private readonly CircuitBreaker _circuitBreaker;
+
     /// <summary>Stores registered stream participants by stream identity.</summary>
     private readonly Dictionary<StreamId, ParticipantRegistration> _participants = [];
 
@@ -178,6 +181,7 @@ internal sealed partial class SyncEngine : ISyncEngine, IOccasionallyConnectedSt
         _activities = new(options.Options.Diagnostics.Enabled, options.Options.Diagnostics.ActivitySamplingRatio);
         _scheduler = new(new(options.MaxRegisteredStreams, options.MaxSchedulerDescriptorBytes, options.Options.MinimumPriority, options.Options.MaximumPriority), options.TimeProvider);
         _snapshotRecoveryAdmissionQueue = new(_gate, options.Options.MaxConcurrentStreams);
+        _circuitBreaker = new(CircuitBreakerEndpoint, options.Options.CircuitBreaker, options.TimeProvider);
         _lifecycle = new(StartCoreAsync, StopCoreAsync);
     }
 
@@ -549,6 +553,11 @@ internal sealed partial class SyncEngine : ISyncEngine, IOccasionallyConnectedSt
         lock (_gate)
         {
             ThrowIfDisposedLocked();
+            if (TryWakeConnectLoopLocked())
+            {
+                return;
+            }
+
             if (_admissionState != EngineAdmissionState.Running)
             {
                 throw new InvalidOperationException("The synchronization engine must be running before synchronization can be triggered.");
@@ -962,6 +971,8 @@ internal sealed partial class SyncEngine : ISyncEngine, IOccasionallyConnectedSt
         failure = await CaptureLifecycleDisposeFailureAsync(failure).ConfigureAwait(false);
         _uploadCancellation?.Dispose();
         _uploadCancellation = null;
+        _connectCancellation?.Dispose();
+        _connectCancellation = null;
         failure = await CaptureCleanupFailureAsync(failure, () => new(WaitForDrainAsync())).ConfigureAwait(false);
         failure = DisposeRegisteredReceiveCancellations(failure);
         var receiveStopTasks = TakeReceiveStopTasks();
@@ -1182,8 +1193,9 @@ internal sealed partial class SyncEngine : ISyncEngine, IOccasionallyConnectedSt
     private async ValueTask StopCoreAsync()
     {
         await WaitForDrainAsync().ConfigureAwait(false);
-        var resources = TakeStopResources();
         Exception? failure = null;
+        failure = await CaptureCleanupFailureAsync(failure, () => new(StopConnectLoopAsync())).ConfigureAwait(false);
+        var resources = TakeStopResources();
         if (resources.UploadCancellation is not null)
         {
             failure = await CaptureCleanupFailureAsync(failure, () => new(resources.UploadCancellation.CancelAsync())).ConfigureAwait(false);
@@ -1240,32 +1252,6 @@ internal sealed partial class SyncEngine : ISyncEngine, IOccasionallyConnectedSt
                 })
             .ConfigureAwait(false);
         ThrowCaptured(failure);
-    }
-
-    /// <summary>Publishes a lifecycle state transition.</summary>
-    /// <param name="status">The lifecycle status.</param>
-    /// <param name="networkAvailable">Whether network transport is available.</param>
-    private void PublishLifecycleState(SyncLifecycleStatus status, bool networkAvailable)
-    {
-        SyncState aggregate;
-        (IOccasionallyConnectedStreamDiagnosticsSink Sink, SyncState State)[] streams;
-        long revision;
-        lock (_gate)
-        {
-            _diagnosticLifecycleStatus = status;
-            _diagnosticNetworkAvailable = networkAvailable;
-            revision = ++_diagnosticRevision;
-            aggregate = CreateAggregateSyncStateLocked();
-            streams = CaptureStreamSyncStatesLocked();
-        }
-
-        PublishGlobalSyncState(aggregate, revision);
-        for (var i = 0; i < streams.Length; i++)
-        {
-            PublishStreamDiagnostic(streams[i].Sink, streams[i].State, revision);
-        }
-
-        RecordConnectionStateChange();
     }
 
     /// <summary>Ensures the local store has been initialized once.</summary>

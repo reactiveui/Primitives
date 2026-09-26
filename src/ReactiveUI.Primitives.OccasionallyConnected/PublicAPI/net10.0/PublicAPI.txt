@@ -80,6 +80,7 @@ public sealed class OccasionallyConnectedBuilder
 {
     public OccasionallyConnectedBuilder() { }
     public ReactiveUI.Primitives.OccasionallyConnected.OccasionallyConnectedContext Build() { }
+    public ReactiveUI.Primitives.OccasionallyConnected.OccasionallyConnectedBuilder ConfigureOptions(System.Func<ReactiveUI.Primitives.OccasionallyConnected.OccasionallyConnectedOptions, ReactiveUI.Primitives.OccasionallyConnected.OccasionallyConnectedOptions> configure) { }
     public ReactiveUI.Primitives.OccasionallyConnected.OccasionallyConnectedBuilder UseBorrowedStore(ReactiveUI.Primitives.OccasionallyConnected.ILocalStoreAdapter store) { }
     public ReactiveUI.Primitives.OccasionallyConnected.OccasionallyConnectedBuilder UseBorrowedTransport(ReactiveUI.Primitives.OccasionallyConnected.IRemoteTransportAdapter transport) { }
     public ReactiveUI.Primitives.OccasionallyConnected.OccasionallyConnectedBuilder UseClient(ReactiveUI.Primitives.OccasionallyConnected.ClientIdentity client) { }
@@ -109,6 +110,31 @@ public sealed class OccasionallyConnectedContext : ReactiveUI.Primitives.Occasio
     public ReactiveUI.Primitives.OccasionallyConnected.IOccasionallyConnectedStream<TState, TInput> GetOrCreateStream<TState, TInput>(ReactiveUI.Primitives.OccasionallyConnected.StreamDefinition<TState, TInput> definition) { }
     public System.Threading.Tasks.ValueTask StartAsync(System.Threading.CancellationToken cancellationToken) { }
     public System.Threading.Tasks.ValueTask StopAsync(System.Threading.CancellationToken cancellationToken) { }
+}
+public static class OccasionallyConnectedHealth
+{
+    public static string FaultedReasonCode { get; }
+    public static string NotRunningReasonCode { get; }
+    public static string PendingRemoteWorkReasonCode { get; }
+    public static ReactiveUI.Primitives.OccasionallyConnected.OccasionallyConnectedHealthReport Evaluate(ReactiveUI.Primitives.OccasionallyConnected.SyncState state, System.DateTimeOffset nowUtc) { }
+}
+[System.Diagnostics.DebuggerDisplay("{Status,nq}: {ReasonCode,nq}")]
+public record OccasionallyConnectedHealthReport : System.IEquatable<ReactiveUI.Primitives.OccasionallyConnected.OccasionallyConnectedHealthReport>
+{
+    public OccasionallyConnectedHealthReport(ReactiveUI.Primitives.OccasionallyConnected.OccasionallyConnectedHealthStatus Status, ReactiveUI.Primitives.OccasionallyConnected.SyncLifecycleStatus LifecycleStatus, string? ReasonCode, int PendingOperations, long PendingBytes, System.TimeSpan? RetryAfter, System.TimeSpan StateAge) { }
+    public ReactiveUI.Primitives.OccasionallyConnected.SyncLifecycleStatus LifecycleStatus { get; init; }
+    public long PendingBytes { get; init; }
+    public int PendingOperations { get; init; }
+    public string? ReasonCode { get; init; }
+    public System.TimeSpan? RetryAfter { get; init; }
+    public System.TimeSpan StateAge { get; init; }
+    public ReactiveUI.Primitives.OccasionallyConnected.OccasionallyConnectedHealthStatus Status { get; init; }
+}
+public enum OccasionallyConnectedHealthStatus
+{
+    Healthy = 0,
+    Degraded = 1,
+    Unhealthy = 2,
 }
 public static class OccasionallyConnectedExtensions
 {

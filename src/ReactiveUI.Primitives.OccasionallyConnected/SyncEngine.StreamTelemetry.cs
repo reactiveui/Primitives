@@ -44,7 +44,7 @@ internal sealed partial class SyncEngine
     /// <param name="pendingBytes">The pending byte count.</param>
     /// <returns>The immutable synchronization state.</returns>
     private SyncState CreateSyncState(SyncLifecycleStatus status, bool networkAvailable, long pendingOperations, long pendingBytes) =>
-        new(status, networkAvailable, checked((int)pendingOperations), pendingBytes, _options.TimeProvider.GetUtcNow(), null, null, null);
+        new(status, networkAvailable, checked((int)pendingOperations), pendingBytes, _options.TimeProvider.GetUtcNow(), null, _diagnosticRetryAfter, _diagnosticReasonCode);
 
     /// <summary>Captures all registered stream states while the engine gate is held.</summary>
     /// <returns>The captured stream states and sinks.</returns>

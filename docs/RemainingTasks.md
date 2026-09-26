@@ -4,9 +4,16 @@ This list is limited to requirements from [ReactiveUI.Primitives.OccasionallyCon
 
 ## Runtime composition
 
-- [ ] Implement the public builder, context, stream factory, and synchronization engine composition described in sections 6, 7, 13, and 16. Wire the existing local commit, upload, receive, retry, circuit-breaker, scheduler, observer, and capability components through one lifecycle.
+- [x] Implement the public builder, context, stream factory, and synchronization engine composition described in sections 6, 7, 13, and 16. Wire the existing local commit, upload, receive, retry, circuit-breaker, scheduler, observer, and capability components through one lifecycle.
+  - The builder configures options with `ConfigureOptions`, which takes a transform of the current options.
+  - The engine starts offline when the first connection fails with a transient error. A background loop then reconnects through the retry policy and the endpoint circuit breaker.
+  - While disconnected, `SyncStates` reports `Offline`, `Connecting`, or `Faulted` with `RetryAfter` and a stable reason code.
+  - `TriggerSyncAsync` starts an immediate reconnect attempt.
+  - Evidence: `SyncEngineTests.OfflineStartup*.cs` and `OccasionallyConnectedBuilderTests.OfflineStartup.cs`. The second test starts a SQLite-backed context offline, commits a write, reconnects, and synchronizes the write. The runtime suite passes 1549/1549 on `net8.0`, `net9.0`, and `net10.0`.
 - [ ] Complete durable admission, `stream.Input`, `IRemoteObserver<T>`, upload/result/status handling, remote projection, and terminal local-failure routing. Verify count and byte limits, cancellation, disposal, and every supported buffer strategy at the public API boundary.
 - [ ] Integrate the context with DI/hosting, health, logging, metrics, trace propagation, and graceful shutdown. Keep the core independent of Microsoft.Extensions dependencies.
+  - Done: `OccasionallyConnectedHealth.Evaluate` maps a `SyncState` to a health report. The report holds a `Healthy`, `Degraded`, or `Unhealthy` status (section 14.4), counts, age, and a reason code. It needs no Microsoft.Extensions dependency.
+  - Remaining: the hosting package (hosted service, health check, graceful shutdown) and transport trace propagation.
 
 ## Server and transport integration
 

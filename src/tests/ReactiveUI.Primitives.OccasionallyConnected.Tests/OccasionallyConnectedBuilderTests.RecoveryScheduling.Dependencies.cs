@@ -184,6 +184,9 @@ public sealed partial class OccasionallyConnectedBuilderTests
         /// <summary>Gets the first pushed batch.</summary>
         public TaskCompletionSource<SyncBatch> Pushed { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
+        /// <summary>Gets failures thrown by successive connection attempts before sessions are created.</summary>
+        public System.Collections.Concurrent.ConcurrentQueue<Exception> ConnectFailures { get; } = new();
+
         /// <summary>Gets the number of prepared upload calls.</summary>
         public int PrepareCalls => Volatile.Read(ref _prepareCalls);
 
@@ -199,7 +202,9 @@ public sealed partial class OccasionallyConnectedBuilderTests
         {
             _ = request;
             cancellationToken.ThrowIfCancellationRequested();
-            return new(new RecoveredUploadTransportSession(this));
+            return ConnectFailures.TryDequeue(out var failure)
+                ? ValueTask.FromException<IRemoteTransportSession>(failure)
+                : new(new RecoveredUploadTransportSession(this));
         }
 
         /// <inheritdoc />

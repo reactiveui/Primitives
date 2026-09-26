@@ -168,6 +168,18 @@ public sealed class OccasionallyConnectedBuilder
         return this;
     }
 
+    /// <summary>Configures occasionally connected behavior options with a transform of the current options.</summary>
+    /// <param name="configure">The option transform.</param>
+    /// <returns>The current builder.</returns>
+    /// <exception cref="InvalidOperationException">The transform returned <see langword="null"/>.</exception>
+    public OccasionallyConnectedBuilder ConfigureOptions(Func<OccasionallyConnectedOptions, OccasionallyConnectedOptions> configure)
+    {
+        EnsureMutable();
+        ArgumentExceptionHelper.ThrowIfNull(configure);
+        _options = configure(_options) ?? throw new InvalidOperationException("Options transform returned null.");
+        return this;
+    }
+
     /// <summary>Configures the store partition identity used by default store initialization.</summary>
     /// <param name="storeIdentity">The store identity.</param>
     /// <returns>The current builder.</returns>

@@ -162,6 +162,49 @@ public sealed partial class OccasionallyConnectedBuilderTests
         await Assert.That(transport.ConnectCalls).IsEqualTo(1);
     }
 
+    /// <summary>Verifies option transforms compose in order and reach the built context.</summary>
+    /// <returns>A task representing the assertions.</returns>
+    [Test]
+    public async Task ConfigureOptionsComposesTransformsIntoBuiltContext()
+    {
+        await using var store = new RecordingStoreAdapter();
+        await using var transport = new RecordingTransportAdapter();
+        var observedAutoStart = false;
+        await using var context = CreateReadyBuilder(store, transport)
+            .ConfigureOptions(static options => options with { AutoStart = true })
+            .ConfigureOptions(options =>
+            {
+                observedAutoStart = options.AutoStart;
+                return options;
+            })
+            .Build();
+
+        await context.StartupTask.WaitAsync(GuardTimeout);
+
+        await Assert.That(observedAutoStart).IsTrue();
+        await Assert.That(transport.ConnectCalls).IsEqualTo(1);
+    }
+
+    /// <summary>Verifies option transforms reject missing delegates, null results, and use after build.</summary>
+    /// <returns>A task representing the assertions.</returns>
+    [Test]
+    public async Task ConfigureOptionsRejectsInvalidTransformsAndConsumedBuilder()
+    {
+        await using var store = new RecordingStoreAdapter();
+        await using var transport = new RecordingTransportAdapter();
+
+        await Assert.That(static () => CreateBuilder().ConfigureOptions(NullReference<Func<OccasionallyConnectedOptions, OccasionallyConnectedOptions>>()))
+            .ThrowsExactly<ArgumentNullException>();
+        await Assert.That(static () => CreateBuilder().ConfigureOptions(static _ => NullReference<OccasionallyConnectedOptions>()))
+            .ThrowsExactly<InvalidOperationException>();
+
+        var builder = CreateReadyBuilder(store, transport);
+        await using var context = builder.Build();
+
+        await Assert.That(() => builder.ConfigureOptions(static options => options))
+            .ThrowsExactly<InvalidOperationException>();
+    }
+
     /// <summary>Creates a schema registry for the counter stream payload types.</summary>
     /// <returns>The registry.</returns>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]

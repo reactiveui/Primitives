@@ -83,8 +83,6 @@
   </ItemGroup>
   <!-- OccasionallyConnected storage and serialization dependencies. -->
   <ItemGroup>
-    <PackageVersion Include="Microsoft.Data.Sqlite" Version="10.0.12"/>
-    <PackageVersion Include="SQLitePCLRaw.bundle_e_sqlite3" Version="2.1.13"/>
     <PackageVersion Include="Avalonia.Headless" Version="$(AvaloniaVersion)"/>
     <PackageVersion Include="System.Text.Json" Version="10.0.12"/>
     <PackageVersion Include="System.Diagnostics.DiagnosticSource" Version="10.0.12"/>

@@ -576,10 +576,11 @@ internal sealed partial class SyncEngine
     {
         var request = CreateTransportConnectRequest(requiredGuarantees);
         using var activity = StartDiagnosticActivity(OccasionallyConnectedActivityName.TransportConnect);
+        AcquireCircuitBreaker();
         IRemoteTransportSession? session = null;
         try
         {
-            session = await _options.Transport.ConnectAsync(request, cancellationToken).ConfigureAwait(false);
+            session = await ConnectThroughCircuitBreakerAsync(request, cancellationToken).ConfigureAwait(false);
             ValidateTransportSessionGuarantees(session, requiredGuarantees);
             ValidateTransportSessionClientInboxRequirement(session);
             return session;

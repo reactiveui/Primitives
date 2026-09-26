@@ -25,16 +25,25 @@ internal sealed partial class SyncEngine
                 return false;
             }
 
-            _session = session;
-            _sessionGeneration++;
-            _sharedSessionLease = new(session, _sessionGeneration);
-            _remoteSessionRenewalUsedSinceProgress = false;
-            uploadCancellation = new();
-            _uploadCancellation = uploadCancellation;
-            _admissionState = EngineAdmissionState.Running;
-            ScheduleDeferredUploadHeadsLocked();
+            uploadCancellation = PublishSessionLocked(session);
             return true;
         }
+    }
+
+    /// <summary>Publishes a connected session and opens upload admission while the engine lock is held.</summary>
+    /// <param name="session">The connected transport session.</param>
+    /// <returns>The created upload cancellation source.</returns>
+    private CancellationTokenSource PublishSessionLocked(IRemoteTransportSession session)
+    {
+        _session = session;
+        _sessionGeneration++;
+        _sharedSessionLease = new(session, _sessionGeneration);
+        _remoteSessionRenewalUsedSinceProgress = false;
+        var uploadCancellation = new CancellationTokenSource();
+        _uploadCancellation = uploadCancellation;
+        _admissionState = EngineAdmissionState.Running;
+        ScheduleDeferredUploadHeadsLocked();
+        return uploadCancellation;
     }
 
     /// <summary>Starts shared store and transport state.</summary>
@@ -46,7 +55,16 @@ internal sealed partial class SyncEngine
     {
         await EnsureStoreInitializedAsync(CancellationToken.None).ConfigureAwait(false);
         var requiredGuarantees = await GetRequiredTransportGuaranteesAsync(cancellation.Token).ConfigureAwait(false);
-        var session = await ConnectValidatedSessionAsync(requiredGuarantees, cancellation.Token).ConfigureAwait(false);
+        IRemoteTransportSession session;
+        try
+        {
+            session = await ConnectValidatedSessionAsync(requiredGuarantees, cancellation.Token).ConfigureAwait(false);
+        }
+        catch (Exception exception) when (!cancellation.Token.IsCancellationRequested && IsTransientConnectFailure(exception))
+        {
+            BeginOfflineConnect(exception, cancellation);
+            return;
+        }
 
         if (!TryPublishStartedSession(session, cancellation, out var uploadCancellation))
         {
@@ -55,6 +73,13 @@ internal sealed partial class SyncEngine
             throw new OperationCanceledException("Startup was superseded by an accepted stop.", cancellation.Token);
         }
 
+        StartSessionPumps(uploadCancellation);
+    }
+
+    /// <summary>Starts upload and receive pumps for a newly published session and reports the online state.</summary>
+    /// <param name="uploadCancellation">The upload cancellation created when the session was published.</param>
+    private void StartSessionPumps(CancellationTokenSource? uploadCancellation)
+    {
         if (uploadCancellation is not null)
         {
             var pumpTask = RunUploadPumpAsync(uploadCancellation.Token);
