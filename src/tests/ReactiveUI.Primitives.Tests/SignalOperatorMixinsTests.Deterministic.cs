@@ -41,9 +41,6 @@ public partial class SignalOperatorMixinsTests
     /// <summary>The long constant three.</summary>
     private const long ThreeLong = 3L;
 
-    /// <summary>The completion guard for asynchronously scheduled enumeration on instrumented CI hosts.</summary>
-    private static readonly TimeSpan AsyncEnumerationCompletionTimeout = TimeSpan.FromSeconds(30);
-
     /// <summary>A fixed deterministic timestamp used in place of the current time.</summary>
     private static readonly DateTimeOffset FixedTimestamp = new(2024, 1, 1, 0, 0, 0, TimeSpan.Zero);
 
@@ -160,12 +157,14 @@ public partial class SignalOperatorMixinsTests
         await VerifyFlatMapTerminalAndErrorBranches();
     }
 
-    /// <summary>Async enumerable sources, race, switch, probe, calm, and fork-join coordinators gate their terminals.</summary>
+    /// <summary>Verifies optimized coordinator and async enumerable branches cover remaining gaps.</summary>
+    /// <param name="token">The test cancellation token.</param>
     /// <returns>A task representing the asynchronous test.</returns>
     [Test]
-    public async Task OptimizedCoordinatorAndAsyncEnumerableBranchesCoverRemainingGaps()
+    [Timeout(30_000)]
+    public async Task OptimizedCoordinatorAndAsyncEnumerableBranchesCoverRemainingGaps(CancellationToken token)
     {
-        await VerifyAsyncEnumerableShiftAndExpireAsync().ConfigureAwait(false);
+        await VerifyAsyncEnumerableShiftAndExpireAsync(token).ConfigureAwait(false);
         await VerifyRaceSyncLatestAndSwitchBranches();
         await VerifyProbeBranches();
         await VerifyCalmAppendAndForkJoinBranches();
@@ -457,9 +456,10 @@ public partial class SignalOperatorMixinsTests
         await Assert.That(subscribeErrors.SequenceEqual(ExpectedInnerSubscribe)).IsTrue();
     }
 
-    /// <summary>Async enumerable sources drain to their subscriber, and shift and expire follow the virtual clock.</summary>
+    /// <summary>Verifies async enumerable subscription, shift timing, and expire timeout branches.</summary>
+    /// <param name="token">The test cancellation token.</param>
     /// <returns>A task representing the asynchronous verification.</returns>
-    private static async Task VerifyAsyncEnumerableShiftAndExpireAsync()
+    private static async Task VerifyAsyncEnumerableShiftAndExpireAsync(CancellationToken token)
     {
         _ = Assert.Throws<ArgumentNullException>(static () => Signal.FromAsyncEnumerable(AsyncValues(One)).Subscribe(null!));
         List<int> asyncValues = [];
@@ -469,7 +469,7 @@ public partial class SignalOperatorMixinsTests
             asyncValues.Add,
             ex => asyncCompleted.TrySetException(ex),
             () => asyncCompleted.TrySetResult(null));
-        await asyncCompleted.Task.WaitAsync(AsyncEnumerationCompletionTimeout).ConfigureAwait(false);
+        await asyncCompleted.Task.WaitAsync(token).ConfigureAwait(false);
         int[] expectedAsyncValues = [0, One, Two];
         await Assert.That(asyncValues.SequenceEqual(expectedAsyncValues)).IsTrue();
         var exact = await Signal.FromAsyncEnumerable(AsyncValues(Sixteen)).CollectArrayAsync().ConfigureAwait(false);

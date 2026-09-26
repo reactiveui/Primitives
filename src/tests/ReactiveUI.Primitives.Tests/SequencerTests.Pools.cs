@@ -189,6 +189,13 @@ public partial class SequencerTests
         await Assert.That(context.PostCount).IsEqualTo(0);
     }
 
+    /// <summary>The delayed scheduler dependency cannot be absent.</summary>
+    /// <returns>A task representing the asynchronous test.</returns>
+    [Test]
+    public async Task SynchronizationContextSequencerRejectsMissingDelayScheduler() =>
+        await Assert.That(static () => new SynchronizationContextSequencer(new RecordingSynchronizationContext(), null!))
+            .ThrowsExactly<ArgumentNullException>();
+
     /// <summary>Repeated disposal releases queued work once and keeps the sequencer closed.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
