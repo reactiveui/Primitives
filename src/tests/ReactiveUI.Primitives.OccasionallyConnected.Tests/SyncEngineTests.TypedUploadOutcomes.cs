@@ -14,7 +14,7 @@ public sealed partial class SyncEngineTests
     {
         var clock = new ManualTimerTimeProvider(DateTimeOffset.UnixEpoch);
         var store = CreateDiagnosticsMemoryStore(clock);
-        var session = new PreparedSession(ExpectedSingleOperation, DiagnosticsStoreBytes) { ResultKind = OperationResultKind.Rejected };
+        var session = new PreparedSession(ExpectedSingleOperation, DiagnosticsStoreBytes) { ResultFactory = PreparedSession.ResultsOf(OperationResultKind.Rejected) };
         var options = CreateDiagnosticsBatchOptions(ExpectedSingleOperation, DiagnosticsStoreBytes);
         await using var engine = CreateEngine(store, new() { SessionOverride = session }, options, timeProvider: clock);
         await using var stream = CreateUploadOnlyCounterStream(store, engine, new(), clock);
@@ -57,7 +57,7 @@ public sealed partial class SyncEngineTests
         var clock = new ManualTimerTimeProvider(DateTimeOffset.UnixEpoch);
         var store = CreateDiagnosticsMemoryStore(clock);
         using var metrics = CreateEngineMetricListener(out var capture);
-        var session = new PreparedSession(ExpectedSingleOperation, DiagnosticsStoreBytes) { ResultKind = resultKind };
+        var session = new PreparedSession(ExpectedSingleOperation, DiagnosticsStoreBytes) { ResultFactory = PreparedSession.ResultsOf(resultKind) };
         var options = CreateDiagnosticsBatchOptions(ExpectedSingleOperation, DiagnosticsStoreBytes);
         await using var engine = CreateEngine(store, new() { SessionOverride = session }, options, timeProvider: clock);
         await using var stream = CreateUploadOnlyCounterStream(store, engine, new(), clock);

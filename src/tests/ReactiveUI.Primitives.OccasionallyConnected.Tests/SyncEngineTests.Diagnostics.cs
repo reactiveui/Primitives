@@ -435,7 +435,10 @@ public sealed partial class SyncEngineTests
         using var metrics = CreateEngineMetricListener(out var metricCapture);
         var operation = CreateOperation();
         var store = CreateUploadStore([operation]);
-        var session = new PreparedSession(maximumBatchOperations: ExpectedSingleOperation, maximumBatchBytes: PreparedUploadBytes) { ResultKind = OperationResultKind.Conflict };
+        var session = new PreparedSession(maximumBatchOperations: ExpectedSingleOperation, maximumBatchBytes: PreparedUploadBytes)
+        {
+            ResultFactory = PreparedSession.ResultsOf(OperationResultKind.Conflict),
+        };
 
         var options = CreateDiagnosticsOptions(enabled: true);
         await using var engine = CreateEngine(store, new() { SessionOverride = session }, options);

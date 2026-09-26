@@ -373,11 +373,8 @@ public sealed partial class SyncEngineTests
         /// <summary>Gets or sets the optional callback invoked before a prepared send completes.</summary>
         public Action? OnSend { get; init; }
 
-        /// <summary>Gets or sets the operation result kind returned for each sent operation.</summary>
-        public OperationResultKind ResultKind { get; init; } = OperationResultKind.Accepted;
-
-        /// <summary>Gets or sets the optional result factory for sent batches.</summary>
-        public Func<SyncBatch, RemoteSyncResult>? ResultFactory { get; init; }
+        /// <summary>Gets or sets the result factory for sent batches. Defaults to accepting every operation.</summary>
+        public Func<SyncBatch, RemoteSyncResult> ResultFactory { get; init; } = ResultsOf(OperationResultKind.Accepted);
 
         /// <summary>Gets or sets the one-based send attempt to pause before completing network I/O.</summary>
         public int PauseBeforeSendNumber { get; init; }
@@ -450,6 +447,21 @@ public sealed partial class SyncEngineTests
             return DisposeException is null ? default : ValueTask.FromException(DisposeException);
         }
 
+        /// <summary>Creates a result factory that gives every operation in a batch the same result kind.</summary>
+        /// <param name="resultKind">The operation result kind.</param>
+        /// <returns>The result factory.</returns>
+        internal static Func<SyncBatch, RemoteSyncResult> ResultsOf(OperationResultKind resultKind) =>
+            batch =>
+            {
+                var results = new OperationSyncResult[batch.Operations.Count];
+                for (var i = 0; i < results.Length; i++)
+                {
+                    results[i] = new(batch.Operations[i].OperationId, resultKind, ReasonCode: null, ServerVersion: "v1");
+                }
+
+                return new(batch.BatchId, results, serverCursor: null, retryAfter: null);
+            };
+
         /// <summary>Releases a send attempt paused by <see cref="PauseBeforeSendNumber"/>.</summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         internal void ReleasePausedSendAttempt() => _ = _releasePausedSend.TrySetResult();
@@ -503,27 +515,12 @@ public sealed partial class SyncEngineTests
                     throw owner.SendException;
                 }
 
-                return owner.ResultFactory?.Invoke(Batch) ?? CreateResult(Batch, owner.ResultKind);
+                return owner.ResultFactory(Batch);
             }
 
             /// <inheritdoc/>
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             public ValueTask DisposeAsync() => default;
-
-            /// <summary>Creates an accepted result for every operation in a batch.</summary>
-            /// <param name="batch">The sent batch.</param>
-            /// <param name="resultKind">The operation result kind.</param>
-            /// <returns>The accepted result.</returns>
-            private static RemoteSyncResult CreateResult(SyncBatch batch, OperationResultKind resultKind)
-            {
-                var results = new OperationSyncResult[batch.Operations.Count];
-                for (var i = 0; i < results.Length; i++)
-                {
-                    results[i] = new(batch.Operations[i].OperationId, resultKind, ReasonCode: null, ServerVersion: "v1");
-                }
-
-                return new(batch.BatchId, results, serverCursor: null, retryAfter: null);
-            }
         }
     }
 }
