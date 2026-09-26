@@ -2,6 +2,7 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Runtime.CompilerServices;
 using ReactiveUI.Primitives.OccasionallyConnected.ResilienceLab;
 
 namespace ReactiveUI.Primitives.OccasionallyConnected.ResilienceLab.Tests;
@@ -113,6 +114,96 @@ public sealed class ResilienceLabRunnerTests
         await Assert.That(result.ExitCode).IsEqualTo(0);
         await Assert.That(writer.ToString()).Contains("retry-backoff.server-hint-applied");
         await Assert.That(writer.ToString()).Contains("retry-backoff.attempts-exhausted");
+    }
+
+    /// <summary>Verifies duplicate batches keep one canonical effect and reordered CRDT delivery converges.</summary>
+    /// <returns>The assertion task.</returns>
+    [Test]
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public Task RunAsyncDuplicateReorderedDeliveryKeepsOneCanonicalEffect() =>
+        AssertScenarioPassesAsync(
+            "duplicate-reordered-delivery",
+            "duplicate-reordered-delivery.duplicate-returns-original-result",
+            "duplicate-reordered-delivery.canonical-event-count: expected=1; actual=1; passed=True",
+            "duplicate-reordered-delivery.orset-orders-equal: expected=True; actual=True; passed=True");
+
+    /// <summary>Verifies a peer without exactly-once capabilities is rejected while at-least-once still works.</summary>
+    /// <returns>The assertion task.</returns>
+    [Test]
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public Task RunAsyncCapabilityDowngradeRejectsExactlyOnceExplicitly() =>
+        AssertScenarioPassesAsync(
+            "capability-downgrade",
+            "capability-downgrade.exactly-once-rejected: expected=InvalidOperationException; actual=InvalidOperationException; passed=True",
+            "capability-downgrade.at-least-once-accepted: expected=Accepted; actual=Accepted; passed=True",
+            "capability-downgrade.at-least-once-no-silent-upgrade: expected=absent; actual=absent; passed=True");
+
+    /// <summary>Verifies a full outbox rejects or blocks publishers until synchronization frees capacity.</summary>
+    /// <returns>The assertion task.</returns>
+    [Test]
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public Task RunAsyncBackpressureRejectsThenBlocksUntilCapacityFrees() =>
+        AssertScenarioPassesAsync(
+            "backpressure",
+            "backpressure.reject-when-full: expected=QueueCapacityExceededException; actual=QueueCapacityExceededException; passed=True",
+            "backpressure.block-waits-while-full: expected=waiting; actual=waiting; passed=True",
+            "backpressure.block-completes-after-sync: expected=completed; actual=completed; passed=True");
+
+    /// <summary>Verifies blocked observers do not hold up publication and later receive the latest state.</summary>
+    /// <returns>The assertion task.</returns>
+    [Test]
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public Task RunAsyncSlowObserversDoNotBlockPublication() =>
+        AssertScenarioPassesAsync(
+            "slow-observers",
+            "slow-observers.receipts-while-blocked: expected=3; actual=3; passed=True",
+            "slow-observers.durable-commit-while-blocked: expected=persisted; actual=persisted; passed=True",
+            "slow-observers.local-observer-receives-latest: expected=3; actual=3; passed=True");
+
+    /// <summary>Verifies a corrupt SQLite record is quarantined while a healthy stream still recovers.</summary>
+    /// <returns>The assertion task.</returns>
+    [Test]
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public Task RunAsyncCorruptionQuarantineIsolatesCorruptRecord() =>
+        AssertScenarioPassesAsync(
+            "corruption-quarantine",
+            "corruption-quarantine.healthy-snapshot-survives: expected=healthy; actual=healthy; passed=True",
+            "corruption-quarantine.corrupt-quarantine-reason: expected=PersistedRecordCorrupt; actual=PersistedRecordCorrupt; passed=True",
+            "corruption-quarantine.reason-sanitized: expected=True; actual=True; passed=True");
+
+    /// <summary>Verifies a cursor outside server retention fails explicitly and recovers through a snapshot.</summary>
+    /// <returns>The assertion task.</returns>
+    [Test]
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public Task RunAsyncRetentionGapRecoveryUsesSnapshot() =>
+        AssertScenarioPassesAsync(
+            "retention-gap-recovery",
+            "retention-gap-recovery.expired-cursor-raises-gap: expected=server-receive-retention-gap",
+            "retention-gap-recovery.snapshot-recovered: expected=Recovered; actual=Recovered; passed=True",
+            "retention-gap-recovery.resume-after-snapshot-value: expected=4; actual=4; passed=True");
+
+    /// <summary>Runs one scenario and asserts every invariant passed and the transcript holds the expected lines.</summary>
+    /// <param name="scenario">The scenario name.</param>
+    /// <param name="expectedLines">Transcript fragments that must appear.</param>
+    /// <returns>The assertion task.</returns>
+    private static async Task AssertScenarioPassesAsync(string scenario, params string[] expectedLines)
+    {
+        await using var writer = new StringWriter();
+
+        var result = await ResilienceLabRunner.RunAsync(new(scenario), writer, CancellationToken.None);
+
+        var failures = string.Join(
+            "; ",
+            result.Cases.Where(static item => !item.Succeeded)
+                .Select(static item => $"{item.Name}: expected={item.Expected}, actual={item.Actual}"));
+        await Assert.That(result.Scenario).IsEqualTo(scenario);
+        await Assert.That(result.Succeeded).IsTrue().Because(failures);
+        await Assert.That(result.ExitCode).IsEqualTo(0);
+        var transcript = writer.ToString();
+        foreach (var line in expectedLines)
+        {
+            await Assert.That(transcript).Contains(line);
+        }
     }
 
     /// <summary>Asserts the durable HTTP lost-ACK scenario runner envelope.</summary>

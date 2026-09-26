@@ -20,34 +20,38 @@ public static class ResilienceLabRunner
         ArgumentNullException.ThrowIfNull(options);
         ArgumentNullException.ThrowIfNull(writer);
         cancellationToken.ThrowIfCancellationRequested();
-        if (string.Equals(options.Scenario, CrdtLoopbackScenarioShape.ScenarioName, StringComparison.Ordinal))
-        {
-            var cases = await CrdtLoopbackScenario.RunAsync(cancellationToken).ConfigureAwait(false);
-            await WriteAsync(writer, options.Scenario, cases).ConfigureAwait(false);
-            return new(options.Scenario, cases);
-        }
-
-        if (string.Equals(options.Scenario, RetryBackoffScenario.ScenarioName, StringComparison.Ordinal))
-        {
-            var cases = await RetryBackoffScenario.RunAsync(TimeProvider.System, cancellationToken).ConfigureAwait(false);
-            await WriteAsync(writer, options.Scenario, cases).ConfigureAwait(false);
-            return new(options.Scenario, cases);
-        }
-
-        if (string.Equals(options.Scenario, DurableHttpLostAckScenario.ScenarioName, StringComparison.Ordinal))
-        {
-            var cases = await DurableHttpLostAckScenario.RunAsync(cancellationToken).ConfigureAwait(false);
-            await WriteAsync(writer, options.Scenario, cases).ConfigureAwait(false);
-            return new(options.Scenario, cases);
-        }
-
-        var unknown = ResilienceLabCaseResult.Fail(
-            "scenario",
-            CrdtLoopbackScenarioShape.ScenarioName,
-            options.Scenario);
-        await WriteAsync(writer, options.Scenario, [unknown]).ConfigureAwait(false);
-        return new(options.Scenario, [unknown]);
+        var run = SelectScenario(options.Scenario);
+        var cases = run is null
+            ? CreateUnknownScenarioCases(options.Scenario)
+            : await run(cancellationToken).ConfigureAwait(false);
+        await WriteAsync(writer, options.Scenario, cases).ConfigureAwait(false);
+        return new(options.Scenario, cases);
     }
+
+    /// <summary>Creates the failed case reported for an unknown scenario name.</summary>
+    /// <param name="requested">The unknown scenario name.</param>
+    /// <returns>The failed case list.</returns>
+    private static IReadOnlyList<ResilienceLabCaseResult> CreateUnknownScenarioCases(string requested) =>
+        [ResilienceLabCaseResult.Fail("scenario", CrdtLoopbackScenarioShape.ScenarioName, requested)];
+
+    /// <summary>Selects the scenario runner for a command-line scenario name.</summary>
+    /// <param name="scenario">The scenario name.</param>
+    /// <returns>The scenario runner, or null when the name is unknown.</returns>
+    private static Func<CancellationToken, ValueTask<IReadOnlyList<ResilienceLabCaseResult>>>? SelectScenario(string scenario) =>
+        scenario switch
+        {
+            _ when string.Equals(scenario, CrdtLoopbackScenarioShape.ScenarioName, StringComparison.Ordinal) =>
+                CrdtLoopbackScenario.RunAsync,
+            RetryBackoffScenario.ScenarioName => static token => RetryBackoffScenario.RunAsync(TimeProvider.System, token),
+            DurableHttpLostAckScenario.ScenarioName => DurableHttpLostAckScenario.RunAsync,
+            DuplicateReorderedDeliveryScenario.ScenarioName => DuplicateReorderedDeliveryScenario.RunAsync,
+            CapabilityDowngradeScenario.ScenarioName => CapabilityDowngradeScenario.RunAsync,
+            BackpressureScenario.ScenarioName => BackpressureScenario.RunAsync,
+            SlowObserversScenario.ScenarioName => SlowObserversScenario.RunAsync,
+            CorruptionQuarantineScenario.ScenarioName => CorruptionQuarantineScenario.RunAsync,
+            RetentionGapRecoveryScenario.ScenarioName => RetentionGapRecoveryScenario.RunAsync,
+            _ => null,
+        };
 
     /// <summary>Writes a stable result transcript.</summary>
     /// <param name="writer">The destination writer.</param>

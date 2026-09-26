@@ -51,12 +51,16 @@ This list is limited to requirements from [ReactiveUI.Primitives.OccasionallyCon
 
 - [ ] Complete protocol-v1 golden fixtures and cross-version upcast/migration tests for wire envelopes, store schemas, snapshots, cursors, and operation results.
 - [ ] Complete application-level security tests for authenticated tenant/client binding, nonce and replay handling, authorization, stale credentials, tampering, path traversal, SQL metacharacters, oversized/deep payloads, decompression limits, and redacted diagnostics.
+  - Found by the `corruption-quarantine` scenario: the SQLite `PersistedRecordCorrupt` marker keeps a bounded prefix of the raw payload as evidence. The message and reason code are clean, but section 12.3 forbids payloads in diagnostics. Redact this evidence.
 - [ ] Add adapter-specific protocol fuzzing and verify that transport adapters do not introduce hidden unbounded retries.
 
 ## Examples and release gates
 
 - [ ] Run the section 16 samples against the freshly packed public packages produced for every supported target framework. Demonstrate offline startup, optimistic writes, reconnect and restart recovery, conflict reconciliation, `PublishAsync`, observer input, and operation synchronization.
-- [ ] Add the remaining ResilienceLab demonstrations for duplicate/reordered delivery, capability downgrade, backpressure, slow observers, corruption/quarantine, and retention-gap recovery. The deterministic retry/backoff demonstration is now implemented and covered by 103 passing TUnit tests.
+- [x] Add the remaining ResilienceLab demonstrations for duplicate/reordered delivery, capability downgrade, backpressure, slow observers, corruption/quarantine, and retention-gap recovery.
+  - Scenarios: `duplicate-reordered-delivery`, `capability-downgrade`, `backpressure`, `slow-observers`, `corruption-quarantine`, and `retention-gap-recovery`. Each scenario uses public APIs only and reports expected against actual values. `README.md` lists how to run each one.
+  - The lab tests pass 109/109 on `net8.0` and `net10.0`.
+  - Limitation: the retention-gap scenario recovers through `ServerStreamHub.GetSnapshotAsync` directly. The loopback transport does not advertise `SnapshotRecovery`, so the engine recovers from a gap by itself only over HTTP.
 - [ ] Complete the quality gates in section 17.4: full transition/invariant coverage, mutation testing, child-process crash tests, and bounded throughput/allocation/recovery/compaction/slow-observer soak measurements. The supported framework builds and API baselines have passed; the remaining gates need their independent reports.
 - [ ] Complete the remaining release gates from section 18: clean-project pack/install tests, deterministic package comparison, Source Link and symbol-package verification, trimming/NativeAOT smoke tests, SBOM and dependency/license/security scans, and scheduled cross-platform crash/soak/performance jobs. All six feature packages now pack successfully for `net8.0`, `net9.0`, `net10.0`, `net11.0`, `net462`, `net472`, `net48`, and `net481`.
 

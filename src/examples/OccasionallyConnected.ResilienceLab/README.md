@@ -8,6 +8,18 @@ The `durable-http-lost-ack` scenario runs a local Kestrel HTTP server with a dur
 
 The `retry-backoff` scenario exercises the public retry policy with a deterministic jitter source. It verifies that a server retry hint is honored, the next attempt count is persisted, the computed delay stays within configured bounds, and the policy stops after the configured attempt budget.
 
+The `duplicate-reordered-delivery` scenario sends the same operation batch to the in-memory hub twice. The second call returns the original result, and the stream holds one canonical event. The scenario also merges OR-set replica states in forward, reverse and duplicated order. Every order ends with the same elements.
+
+The `capability-downgrade` scenario connects a loopback peer that lacks the features exactly-once delivery needs. A connection that requires `ExactlyOnce` fails with an `InvalidOperationException`, and no session is created. The same peer accepts an `AtLeastOnce` push, and its negotiated features never gain the missing capability.
+
+The `backpressure` scenario builds a context whose outbox holds one operation. A second publish with `BufferStrategy.Reject` fails with `QueueCapacityExceededException`. A publish with `BufferStrategy.Block` waits until synchronization frees the slot, then completes.
+
+The `slow-observers` scenario blocks one `Local` observer and one `SyncStates` observer inside their callbacks. Three publishes still return receipts, and the store holds each operation durably. After the observers are released, both receive the latest state.
+
+The `corruption-quarantine` scenario writes two streams to a SQLite store, then corrupts one stored snapshot row directly in the database file. Recovery of the corrupt stream fails closed and writes a quarantine marker with the stable reason code `sqlite-payload-row-corrupt`. The failure message and reason code do not contain the stored payload text. The healthy stream still recovers its snapshot and pending operation.
+
+The `retention-gap-recovery` scenario moves a manual server clock past the operation retention window. Resuming from the old cursor raises `ServerReceiveRetentionGapException`. The client then asks the hub for a snapshot, gets the latest server state and a new frontier cursor, and resumes receiving from that cursor.
+
 ## Project
 
 - App project: `src/examples/OccasionallyConnected.ResilienceLab/ReactiveUI.Primitives.OccasionallyConnected.ResilienceLab.csproj`
@@ -23,6 +35,13 @@ From the repository root:
 dotnet build src/examples/OccasionallyConnected.ResilienceLab/ReactiveUI.Primitives.OccasionallyConnected.ResilienceLab.csproj -c Release -f net8.0 -m:1 --disable-build-servers
 dotnet src/examples/OccasionallyConnected.ResilienceLab/bin/Release/net8.0/ReactiveUI.Primitives.OccasionallyConnected.ResilienceLab.dll --scenario crdt-loopback
 dotnet src/examples/OccasionallyConnected.ResilienceLab/bin/Release/net8.0/ReactiveUI.Primitives.OccasionallyConnected.ResilienceLab.dll --scenario durable-http-lost-ack
+dotnet src/examples/OccasionallyConnected.ResilienceLab/bin/Release/net8.0/ReactiveUI.Primitives.OccasionallyConnected.ResilienceLab.dll --scenario retry-backoff
+dotnet src/examples/OccasionallyConnected.ResilienceLab/bin/Release/net8.0/ReactiveUI.Primitives.OccasionallyConnected.ResilienceLab.dll --scenario duplicate-reordered-delivery
+dotnet src/examples/OccasionallyConnected.ResilienceLab/bin/Release/net8.0/ReactiveUI.Primitives.OccasionallyConnected.ResilienceLab.dll --scenario capability-downgrade
+dotnet src/examples/OccasionallyConnected.ResilienceLab/bin/Release/net8.0/ReactiveUI.Primitives.OccasionallyConnected.ResilienceLab.dll --scenario backpressure
+dotnet src/examples/OccasionallyConnected.ResilienceLab/bin/Release/net8.0/ReactiveUI.Primitives.OccasionallyConnected.ResilienceLab.dll --scenario slow-observers
+dotnet src/examples/OccasionallyConnected.ResilienceLab/bin/Release/net8.0/ReactiveUI.Primitives.OccasionallyConnected.ResilienceLab.dll --scenario corruption-quarantine
+dotnet src/examples/OccasionallyConnected.ResilienceLab/bin/Release/net8.0/ReactiveUI.Primitives.OccasionallyConnected.ResilienceLab.dll --scenario retention-gap-recovery
 ```
 
 The process prints each expected/actual case and exits with `0` only when every case passes. Unsupported scenarios print the expected scenario name and return a nonzero exit code.
