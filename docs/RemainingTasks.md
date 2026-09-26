@@ -25,7 +25,14 @@ This list is limited to requirements from [ReactiveUI.Primitives.OccasionallyCon
 ## Server and transport integration
 
 - [ ] Deliver the public server hub and HTTP endpoints. Connect authenticated authorization, subscription admission, initial positions, replay paging, receive offers and acknowledgements, idempotency, canonical cursors, conflict resolution, and durable server effects.
-- [ ] Compose CRDT resolvers and domain materializers on the server and prove canonical events, provenance, and rejection behaviour through the public hub.
+- [x] Compose CRDT resolvers and domain materializers on the server and prove canonical events, provenance, and rejection behaviour through the public hub.
+  - Evidence: `ServerStreamHubTests.Crdt.cs`. The tests use a SQLite-backed `ServerStreamHub` through its public methods only, with the public CRDT resolver, version factory, initial-state factory, and domain handler. They prove these five behaviours:
+    - Canonical events keep increasing cursors and stay identical after the hub reopens.
+    - `Origin` and `CausedByOperationId` match the authenticated client.
+    - Hash, payload, contract, and state-kind mismatches are rejected with no event or state change.
+    - A snapshot from a CRDT materializer resumes with no duplicates.
+    - A duplicate operation replays its original result after the hub reopens.
+  - The server test suite passes 545/545 on `net8.0` and `net10.0`.
 - [ ] Finish shared store and transport conformance suites for every advertised capability. Include cursor gaps, duplicate and reordered delivery, dropped acknowledgements, partial results, streaming receive, and unsupported-capability startup failures.
 
 ## Durability and delivery guarantees
