@@ -41,6 +41,7 @@
     <Folder Name="/OccasionallyConnected/">
         <Project Path="ReactiveUI.Primitives.OccasionallyConnected.Core/ReactiveUI.Primitives.OccasionallyConnected.Core.csproj" />
         <Project Path="ReactiveUI.Primitives.OccasionallyConnected.DependencyInjection/ReactiveUI.Primitives.OccasionallyConnected.DependencyInjection.csproj" />
+        <Project Path="ReactiveUI.Primitives.OccasionallyConnected.Hosting/ReactiveUI.Primitives.OccasionallyConnected.Hosting.csproj" />
         <Project Path="ReactiveUI.Primitives.OccasionallyConnected.Server/ReactiveUI.Primitives.OccasionallyConnected.Server.csproj" />
         <Project Path="ReactiveUI.Primitives.OccasionallyConnected.Storage.Sqlite/ReactiveUI.Primitives.OccasionallyConnected.Storage.Sqlite.csproj" />
         <Project Path="ReactiveUI.Primitives.OccasionallyConnected.Transport.Http/ReactiveUI.Primitives.OccasionallyConnected.Transport.Http.csproj" />
@@ -64,6 +65,7 @@
         <Project Path="tests/ReactiveUI.Primitives.OccasionallyConnected.Core.Tests/ReactiveUI.Primitives.OccasionallyConnected.Core.Tests.csproj" />
         <Project Path="tests/ReactiveUI.Primitives.OccasionallyConnected.DependencyInjection.Tests/ReactiveUI.Primitives.OccasionallyConnected.DependencyInjection.Tests.csproj" />
         <Project Path="tests/ReactiveUI.Primitives.OccasionallyConnected.Examples.Tests/ReactiveUI.Primitives.OccasionallyConnected.Examples.Tests.csproj" />
+        <Project Path="tests/ReactiveUI.Primitives.OccasionallyConnected.Hosting.Tests/ReactiveUI.Primitives.OccasionallyConnected.Hosting.Tests.csproj" />
         <Project Path="tests/ReactiveUI.Primitives.OccasionallyConnected.ResilienceLab.Tests/ReactiveUI.Primitives.OccasionallyConnected.ResilienceLab.Tests.csproj" />
         <Project Path="tests/ReactiveUI.Primitives.OccasionallyConnected.Server.Tests/ReactiveUI.Primitives.OccasionallyConnected.Server.Tests.csproj" />
         <Project Path="tests/ReactiveUI.Primitives.OccasionallyConnected.Storage.Sqlite.Tests/ReactiveUI.Primitives.OccasionallyConnected.Storage.Sqlite.Tests.csproj" />

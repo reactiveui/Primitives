@@ -13,7 +13,8 @@ This list is limited to requirements from [ReactiveUI.Primitives.OccasionallyCon
 - [ ] Complete durable admission, `stream.Input`, `IRemoteObserver<T>`, upload/result/status handling, remote projection, and terminal local-failure routing. Verify count and byte limits, cancellation, disposal, and every supported buffer strategy at the public API boundary.
 - [ ] Integrate the context with DI/hosting, health, logging, metrics, trace propagation, and graceful shutdown. Keep the core independent of Microsoft.Extensions dependencies.
   - Done: `OccasionallyConnectedHealth.Evaluate` maps a `SyncState` to a health report. The report holds a `Healthy`, `Degraded`, or `Unhealthy` status (section 14.4), counts, age, and a reason code. It needs no Microsoft.Extensions dependency.
-  - Remaining: the hosting package (hosted service, health check, graceful shutdown) and transport trace propagation.
+  - Done: the `ReactiveUI.Primitives.OccasionallyConnected.Hosting` package. `AddOccasionallyConnectedHosting()` registers a hosted service. The service starts the context with the host and stops it gracefully on shutdown. `AddHealthChecks().AddOccasionallyConnected()` adds a health check that reports status, counts, age, and reason code. Evidence: `ReactiveUI.Primitives.OccasionallyConnected.Hosting.Tests` passes 6/6 on `net8.0` through `net11.0`.
+  - Remaining: trace-context propagation through the HTTP transport.
 
 ## Server and transport integration
 

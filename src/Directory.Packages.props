@@ -50,6 +50,9 @@
     <PackageVersion Include="Microsoft.Extensions.DependencyInjection" Version="10.0.12" Condition="!$([MSBuild]::IsTargetFrameworkCompatible('$(TargetFramework)', 'net11.0'))"/>
     <PackageVersion Include="Microsoft.Extensions.DependencyInjection" Version="11.0.0-rc.1.26425.128" Condition="$([MSBuild]::IsTargetFrameworkCompatible('$(TargetFramework)', 'net11.0'))"/>
     <PackageVersion Include="Microsoft.Extensions.Hosting.Abstractions" Version="11.0.0-rc.1.26425.128" Condition="$([MSBuild]::IsTargetFrameworkCompatible('$(TargetFramework)', 'net11.0'))"/>
+    <PackageVersion Include="Microsoft.Extensions.Hosting.Abstractions" Version="10.0.12" Condition="!$([MSBuild]::IsTargetFrameworkCompatible('$(TargetFramework)', 'net11.0'))"/>
+    <PackageVersion Include="Microsoft.Extensions.Diagnostics.HealthChecks" Version="10.0.12" Condition="!$([MSBuild]::IsTargetFrameworkCompatible('$(TargetFramework)', 'net11.0'))"/>
+    <PackageVersion Include="Microsoft.Extensions.Diagnostics.HealthChecks" Version="11.0.0-rc.1.26425.128" Condition="$([MSBuild]::IsTargetFrameworkCompatible('$(TargetFramework)', 'net11.0'))"/>
     <PackageVersion Include="Microsoft.Extensions.Logging" Version="10.0.12" Condition="!$([MSBuild]::IsTargetFrameworkCompatible('$(TargetFramework)', 'net11.0'))"/>
     <PackageVersion Include="Microsoft.Extensions.Logging" Version="11.0.0-rc.1.26425.128" Condition="$([MSBuild]::IsTargetFrameworkCompatible('$(TargetFramework)', 'net11.0'))"/>
     <PackageVersion Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.12" Condition="!$([MSBuild]::IsTargetFrameworkCompatible('$(TargetFramework)', 'net11.0'))"/>

@@ -1,0 +1,39 @@
+namespace ReactiveUI.Primitives.OccasionallyConnected.Hosting;
+
+public sealed class OccasionallyConnectedHealthCheck : Microsoft.Extensions.Diagnostics.HealthChecks.IHealthCheck
+{
+    public OccasionallyConnectedHealthCheck(ReactiveUI.Primitives.OccasionallyConnected.Hosting.OccasionallyConnectedHealthMonitor monitor) { }
+    public static string LifecycleStatusKey { get; }
+    public static string PendingBytesKey { get; }
+    public static string PendingOperationsKey { get; }
+    public static string ReasonCodeKey { get; }
+    public static string RetryAfterKey { get; }
+    public static string StateAgeKey { get; }
+    public System.Threading.Tasks.Task<Microsoft.Extensions.Diagnostics.HealthChecks.HealthCheckResult> CheckHealthAsync(Microsoft.Extensions.Diagnostics.HealthChecks.HealthCheckContext context, System.Threading.CancellationToken cancellationToken = default) { }
+}
+[System.Diagnostics.DebuggerDisplay("Latest = {_latest}")]
+public sealed class OccasionallyConnectedHealthMonitor : System.IDisposable, System.IObserver<ReactiveUI.Primitives.OccasionallyConnected.SyncState>
+{
+    public OccasionallyConnectedHealthMonitor(ReactiveUI.Primitives.OccasionallyConnected.IOccasionallyConnectedContext context, System.TimeProvider timeProvider) { }
+    public ReactiveUI.Primitives.OccasionallyConnected.OccasionallyConnectedHealthReport Current { get; }
+    [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+    public void Dispose() { }
+    public void OnCompleted() { }
+    [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+    public void OnError(System.Exception error) { }
+    public void OnNext(ReactiveUI.Primitives.OccasionallyConnected.SyncState value) { }
+}
+public static class OccasionallyConnectedHostingExtensions
+{
+    public static string DefaultHealthCheckName { get; }
+    extension(Microsoft.Extensions.DependencyInjection.IHealthChecksBuilder builder)
+    {
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public Microsoft.Extensions.DependencyInjection.IHealthChecksBuilder AddOccasionallyConnected() { }
+        public Microsoft.Extensions.DependencyInjection.IHealthChecksBuilder AddOccasionallyConnected(string name) { }
+    }
+    extension(Microsoft.Extensions.DependencyInjection.IServiceCollection services)
+    {
+        public Microsoft.Extensions.DependencyInjection.IServiceCollection AddOccasionallyConnectedHosting() { }
+    }
+}
