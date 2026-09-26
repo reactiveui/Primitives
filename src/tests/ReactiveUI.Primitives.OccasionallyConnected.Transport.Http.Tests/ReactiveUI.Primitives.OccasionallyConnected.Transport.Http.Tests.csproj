@@ -7,6 +7,7 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\..\ReactiveUI.Primitives.OccasionallyConnected.Server\ReactiveUI.Primitives.OccasionallyConnected.Server.csproj" />
     <ProjectReference Include="..\..\ReactiveUI.Primitives.OccasionallyConnected.Transport.Http\ReactiveUI.Primitives.OccasionallyConnected.Transport.Http.csproj" />
   </ItemGroup>
 

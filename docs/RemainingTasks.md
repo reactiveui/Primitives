@@ -24,7 +24,13 @@ This list is limited to requirements from [ReactiveUI.Primitives.OccasionallyCon
 
 ## Server and transport integration
 
-- [ ] Deliver the public server hub and HTTP endpoints. Connect authenticated authorization, subscription admission, initial positions, replay paging, receive offers and acknowledgements, idempotency, canonical cursors, conflict resolution, and durable server effects.
+- [x] Deliver the public server hub and HTTP endpoints. Connect authenticated authorization, subscription admission, initial positions, replay paging, receive offers and acknowledgements, idempotency, canonical cursors, conflict resolution, and durable server effects.
+  - Evidence: public `ServerStreamHub` tests in `ServerStreamHubTests.Idempotency.cs`, `.LastWriterWins.cs`, `.ReplayPaging.cs`, and `.StartPositions.cs`.
+    - A repeated operation ID returns the original result, with one domain call and one event, including after SQLite reopens. A changed payload under the same ID is rejected.
+    - Last-writer-wins resolves stale writes the same way every time.
+    - Replay pages by event count and logical bytes, and resumes from the acknowledged cursor after reopen.
+    - `Latest`, `FromSequence`, `FromTimestamp`, and `FromCursor` all start in the right place. Cursors from another tenant or stream, or ahead of the stream, are rejected without leaking events.
+  - `HttpRemoteTransportAdapterTests.ServerStreamHub.cs` drives the HTTP adapter through `HttpServerEndpoint` into a SQLite hub, including after the hub reopens. The server suite passes 560/560 and the HTTP suite 776/776 on `net10.0`.
 - [x] Compose CRDT resolvers and domain materializers on the server and prove canonical events, provenance, and rejection behaviour through the public hub.
   - Evidence: `ServerStreamHubTests.Crdt.cs`. The tests use a SQLite-backed `ServerStreamHub` through its public methods only, with the public CRDT resolver, version factory, initial-state factory, and domain handler. They prove these five behaviours:
     - Canonical events keep increasing cursors and stay identical after the hub reopens.
