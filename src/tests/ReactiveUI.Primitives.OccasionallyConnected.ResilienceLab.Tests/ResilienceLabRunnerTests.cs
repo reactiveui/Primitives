@@ -12,6 +12,9 @@ public sealed class ResilienceLabRunnerTests
     /// <summary>The durable HTTP lost acknowledgement scenario name.</summary>
     private const string DurableHttpLostAckScenarioName = "durable-http-lost-ack";
 
+    /// <summary>The deterministic retry-backoff scenario name.</summary>
+    private const string RetryBackoffScenarioName = "retry-backoff";
+
     /// <summary>The expected authoritative GCounter value.</summary>
     private const int ExpectedGCounterValue = 8;
 
@@ -91,6 +94,25 @@ public sealed class ResilienceLabRunnerTests
         await AssertDurableHttpLostAckRetryProofsAsync(result);
         await AssertDurableHttpLostAckRecoveryProofsAsync(result);
         await Assert.That(writer.ToString()).Contains("durable-http-lost-ack.server-effect-count: expected=1; actual=1; passed=True");
+    }
+
+    /// <summary>Verifies the retry-backoff scenario proves bounded scheduling and persisted attempts.</summary>
+    /// <returns>The assertion task.</returns>
+    [Test]
+    public async Task RunAsyncRetryBackoffReportsBoundedScheduling()
+    {
+        await using var writer = new StringWriter();
+
+        var result = await ResilienceLabRunner.RunAsync(
+            new(RetryBackoffScenarioName),
+            writer,
+            CancellationToken.None);
+
+        await Assert.That(result.Scenario).IsEqualTo(RetryBackoffScenarioName);
+        await Assert.That(result.Succeeded).IsTrue();
+        await Assert.That(result.ExitCode).IsEqualTo(0);
+        await Assert.That(writer.ToString()).Contains("retry-backoff.server-hint-applied");
+        await Assert.That(writer.ToString()).Contains("retry-backoff.attempts-exhausted");
     }
 
     /// <summary>Asserts the durable HTTP lost-ACK scenario runner envelope.</summary>

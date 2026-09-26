@@ -6,6 +6,8 @@ The `crdt-loopback` scenario uses the public in-memory server stream hub and loo
 
 The `durable-http-lost-ack` scenario runs a local Kestrel HTTP server with a durable SQLite journal and the built-in CRDT server registration. It drops a successful push response after the server commits, closes the writer, then reopens its SQLite store and retries the same operation. An independent SQLite-backed observer receives the effect. The printed cases report the server journal count, retry identity, pending queue before and after restart, restored client state, cursor, snapshot, and observer inbox count. The clients request `AtLeastOnce` delivery, and the single observed durable server effect comes from server deduplication of the stable operation ID within its configured retention window. This scenario covers one lost-ACK boundary. The other failure points in the resilience matrix remain future work.
 
+The `retry-backoff` scenario exercises the public retry policy with a deterministic jitter source. It verifies that a server retry hint is honored, the next attempt count is persisted, the computed delay stays within configured bounds, and the policy stops after the configured attempt budget.
+
 ## Project
 
 - App project: `src/examples/OccasionallyConnected.ResilienceLab/ReactiveUI.Primitives.OccasionallyConnected.ResilienceLab.csproj`

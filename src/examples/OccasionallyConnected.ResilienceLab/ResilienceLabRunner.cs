@@ -27,6 +27,13 @@ public static class ResilienceLabRunner
             return new(options.Scenario, cases);
         }
 
+        if (string.Equals(options.Scenario, RetryBackoffScenario.ScenarioName, StringComparison.Ordinal))
+        {
+            var cases = await RetryBackoffScenario.RunAsync(TimeProvider.System, cancellationToken).ConfigureAwait(false);
+            await WriteAsync(writer, options.Scenario, cases).ConfigureAwait(false);
+            return new(options.Scenario, cases);
+        }
+
         if (string.Equals(options.Scenario, DurableHttpLostAckScenario.ScenarioName, StringComparison.Ordinal))
         {
             var cases = await DurableHttpLostAckScenario.RunAsync(cancellationToken).ConfigureAwait(false);
