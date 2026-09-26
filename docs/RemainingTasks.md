@@ -11,10 +11,11 @@ This list is limited to requirements from [ReactiveUI.Primitives.OccasionallyCon
   - `TriggerSyncAsync` starts an immediate reconnect attempt.
   - Evidence: `SyncEngineTests.OfflineStartup*.cs` and `OccasionallyConnectedBuilderTests.OfflineStartup.cs`. The second test starts a SQLite-backed context offline, commits a write, reconnects, and synchronizes the write. The runtime suite passes 1549/1549 on `net8.0`, `net9.0`, and `net10.0`.
 - [ ] Complete durable admission, `stream.Input`, `IRemoteObserver<T>`, upload/result/status handling, remote projection, and terminal local-failure routing. Verify count and byte limits, cancellation, disposal, and every supported buffer strategy at the public API boundary.
-- [ ] Integrate the context with DI/hosting, health, logging, metrics, trace propagation, and graceful shutdown. Keep the core independent of Microsoft.Extensions dependencies.
+- [x] Integrate the context with DI/hosting, health, logging, metrics, trace propagation, and graceful shutdown. Keep the core independent of Microsoft.Extensions dependencies.
   - Done: `OccasionallyConnectedHealth.Evaluate` maps a `SyncState` to a health report. The report holds a `Healthy`, `Degraded`, or `Unhealthy` status (section 14.4), counts, age, and a reason code. It needs no Microsoft.Extensions dependency.
   - Done: the `ReactiveUI.Primitives.OccasionallyConnected.Hosting` package. `AddOccasionallyConnectedHosting()` registers a hosted service. The service starts the context with the host and stops it gracefully on shutdown. `AddHealthChecks().AddOccasionallyConnected()` adds a health check that reports status, counts, age, and reason code. Evidence: `ReactiveUI.Primitives.OccasionallyConnected.Hosting.Tests` passes 6/6 on `net8.0` through `net11.0`.
-  - Remaining: trace-context propagation through the HTTP transport.
+  - Done: the HTTP transport propagates W3C trace context. The client adds `traceparent` and `tracestate` from `Activity.Current` unless the caller already set them. The server endpoint starts an `oc.transport.server` activity whose parent is the incoming context. It ignores repeated, oversized, or malformed headers. Payloads never go into headers or spans. Evidence: `HttpRemoteTransportAdapterTests.TraceContext.cs` and `HttpServerEndpointTests.TraceContext.cs`. The HTTP transport suite passes 775/775 on `net8.0` and `net10.0`.
+  - Logging comes from the existing `OccasionallyConnectedLoggerBridge` in the DI package. Metrics come from the core `Meter`. The core package still has no Microsoft.Extensions dependency.
 
 ## Server and transport integration
 

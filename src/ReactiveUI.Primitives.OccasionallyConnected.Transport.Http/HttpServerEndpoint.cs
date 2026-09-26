@@ -187,9 +187,14 @@ public sealed partial class HttpServerEndpoint : IAsyncDisposable
         CancellationToken cancellationToken)
     {
         var earlyResponse = TryCreateEarlyResponse(request, authenticatedClient, cancellationToken);
-        return earlyResponse is null
-            ? DispatchAsync(request, authenticatedClient, cancellationToken)
-            : new(earlyResponse);
+        if (earlyResponse is not null)
+        {
+            return new(earlyResponse);
+        }
+
+        return HttpTraceContext.HasServerListeners
+            ? DispatchTracedAsync(request, authenticatedClient, cancellationToken)
+            : DispatchAsync(request, authenticatedClient, cancellationToken);
     }
 
     /// <summary>Handles a portable HTTP request without external cancellation.</summary>

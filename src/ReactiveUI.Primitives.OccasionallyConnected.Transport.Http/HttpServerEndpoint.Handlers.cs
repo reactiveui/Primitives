@@ -63,6 +63,20 @@ public sealed partial class HttpServerEndpoint
             : CreateResponse(HttpStatusCode.Unauthorized);
     }
 
+    /// <summary>Dispatches a validated request inside a server activity parented to the incoming trace context.</summary>
+    /// <param name="request">The HTTP request.</param>
+    /// <param name="authenticatedClient">The host-authenticated client principal.</param>
+    /// <param name="cancellationToken">The request cancellation token.</param>
+    /// <returns>The caller-owned response.</returns>
+    private async ValueTask<HttpResponseMessage> DispatchTracedAsync(
+        HttpRequestMessage request,
+        ServerAuthenticatedClient authenticatedClient,
+        CancellationToken cancellationToken)
+    {
+        using var activity = HttpTraceContext.StartServerActivity(request);
+        return await DispatchAsync(request, authenticatedClient, cancellationToken).ConfigureAwait(false);
+    }
+
     /// <summary>Dispatches a validated request to its configured route.</summary>
     /// <param name="request">The HTTP request.</param>
     /// <param name="authenticatedClient">The host-authenticated client principal.</param>

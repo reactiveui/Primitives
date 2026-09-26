@@ -375,6 +375,7 @@ internal sealed partial class HttpRemoteTransportSession : IRemoteTransportSessi
         var request = new HttpRequestMessage(method, endpoint);
         request.Headers.Accept.ParseAdd(HttpProtocolContent.MediaType);
         AddReplaySessionHeaders(request, method, endpoint, body ?? []);
+        HttpTraceContext.Inject(request, _options.HttpClient);
         if (body is not null)
         {
             request.Content = new ByteArrayContent(body);

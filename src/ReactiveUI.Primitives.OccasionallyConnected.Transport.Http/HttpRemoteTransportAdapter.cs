@@ -341,6 +341,7 @@ public sealed class HttpRemoteTransportAdapter : IRemoteTransportAdapter
         HttpRequestMessage request = new(HttpMethod.Post, uri);
         request.Headers.Accept.ParseAdd(HttpProtocolContent.MediaType);
         AddConnectReplayHeaders(request, body);
+        HttpTraceContext.Inject(request, _options.HttpClient);
         request.Content = new ByteArrayContent(body);
         request.Content.Headers.ContentType = System.Net.Http.Headers.MediaTypeHeaderValue.Parse(HttpProtocolContent.MediaType);
         return request;
