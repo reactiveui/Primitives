@@ -8,8 +8,15 @@ namespace ReactiveUI.Primitives.OccasionallyConnected.Server;
 
 /// <summary>Configures the built-in CRDT conflict resolver.</summary>
 [System.Diagnostics.DebuggerDisplay("{Kind,nq}")]
+#if NET11_0_OR_GREATER
+public sealed record CrdtResolverOptions : System.Runtime.CompilerServices.IUnion
+#else
 public sealed record CrdtResolverOptions
+#endif
 {
+#if NET11_0_OR_GREATER
+    object System.Runtime.CompilerServices.IUnion.Value => this;
+#endif
     /// <summary>Gets the registered CRDT kind.</summary>
     public required CrdtKind Kind { get; init; }
 

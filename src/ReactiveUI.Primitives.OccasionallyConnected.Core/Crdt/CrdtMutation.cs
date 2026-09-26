@@ -8,8 +8,15 @@ namespace ReactiveUI.Primitives.OccasionallyConnected.Crdt;
 
 /// <summary>Describes a local CRDT mutation.</summary>
 [System.Diagnostics.DebuggerDisplay("{Kind,nq} {ActorId,nq}")]
+#if NET11_0_OR_GREATER
+public sealed record CrdtMutation : IUnion
+#else
 public sealed record CrdtMutation
+#endif
 {
+#if NET11_0_OR_GREATER
+    object IUnion.Value => this;
+#endif
     /// <summary>The owned element or register bytes.</summary>
     private readonly byte[] _bytes = [];
 

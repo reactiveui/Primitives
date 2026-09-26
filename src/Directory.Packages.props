@@ -69,7 +69,6 @@
     <PackageVersion Include="System.Buffers" Version="4.6.1"/>
     <PackageVersion Include="System.Memory" Version="4.6.3"/>
     <PackageVersion Include="System.Collections.Immutable" Version="10.0.12"/>
-    <PackageVersion Include="System.Text.Json" Version="10.0.11"/>
   </ItemGroup>
   <!-- Test infrastructure. Microsoft.CodeAnalysis.CSharp is deliberately held on the 4.x line: the
        R3 bridge generator has to load in the oldest SDK we still support, and a 5.x reference raises
@@ -81,6 +80,12 @@
     <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="18.10.1"/>
     <PackageVersion Include="TUnit" Version="1.69.0"/>
     <PackageVersion Include="Microsoft.Testing.Extensions.CodeCoverage" Version="18.11.2"/>
+  </ItemGroup>
+  <!-- OccasionallyConnected storage and serialization dependencies. -->
+  <ItemGroup>
+    <PackageVersion Include="Avalonia.Headless" Version="$(AvaloniaVersion)"/>
+    <PackageVersion Include="System.Text.Json" Version="10.0.12"/>
+    <PackageVersion Include="System.Diagnostics.DiagnosticSource" Version="10.0.12"/>
   </ItemGroup>
   <Import Project="$(MSBuildThisFileDirectory)/directory.packages.support.props" Condition="Exists('$(MSBuildThisFileDirectory)/directory.packages.support.props')"/>
 </Project>

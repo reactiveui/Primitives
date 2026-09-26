@@ -11,7 +11,7 @@ namespace ReactiveUI.Primitives.OccasionallyConnected.Storage.Sqlite;
 
 /// <summary>Persists occasionally connected stream state in SQLite on a bounded single-command worker.</summary>
 [DebuggerDisplay("Capabilities = {Capabilities}")]
-public sealed partial class SqliteLocalStoreAdapter : ILocalStoreAdapter, ILocalPayloadQuarantineStore, ILocalSnapshotRecoveryStore
+public sealed partial class SqliteLocalStoreAdapter : ILocalStoreAdapter, ILocalPayloadQuarantineStore, ILocalSnapshotRecoveryStore, ILocalSnapshotRecoveryCaptureStore
 {
     /// <summary>The current SQLite local commit backend schema version.</summary>
     private const int CurrentSchemaVersion = SqliteStoreSchema.LocalCommitSchemaVersion;

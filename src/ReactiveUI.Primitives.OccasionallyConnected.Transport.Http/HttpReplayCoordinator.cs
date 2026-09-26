@@ -809,8 +809,15 @@ internal sealed class HttpReplayCoordinator : IAsyncDisposable
         _sessions.Verify(request.Principal, envelope.ReplaySessionId, envelope.MacInput, envelope.ReplayMac, observedUtc);
 
     /// <summary>Represents one retained replay nonce entry.</summary>
+#if NET11_0_OR_GREATER
+    private sealed class ReplayEntry : IDisposable, IUnion
+#else
     private sealed class ReplayEntry : IDisposable
+#endif
     {
+#if NET11_0_OR_GREATER
+        object IUnion.Value => this;
+#endif
         /// <summary>The retained byte budget lease.</summary>
         private readonly IDisposable _lease;
 
@@ -1020,8 +1027,15 @@ internal sealed class HttpReplayCoordinator : IAsyncDisposable
 
     /// <summary>Represents one in-flight duplicate waiter.</summary>
     /// <param name="entry">The retained entry.</param>
+#if NET11_0_OR_GREATER
+    private sealed class ReplayWaiter(ReplayEntry entry) : IUnion
+#else
     private sealed class ReplayWaiter(ReplayEntry entry)
+#endif
     {
+#if NET11_0_OR_GREATER
+        object IUnion.Value => this;
+#endif
         /// <summary>The asynchronous completion source.</summary>
         private readonly TaskCompletionSource<HttpReplayDecision> _completion = new(TaskCreationOptions.RunContinuationsAsynchronously);
 

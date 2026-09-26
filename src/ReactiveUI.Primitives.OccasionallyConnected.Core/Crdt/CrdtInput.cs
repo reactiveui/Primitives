@@ -2,12 +2,21 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Runtime.CompilerServices;
+
 namespace ReactiveUI.Primitives.OccasionallyConnected.Crdt;
 
 /// <summary>Represents one CRDT stream input, either a local mutation or a complete authoritative state event.</summary>
 [System.Diagnostics.DebuggerDisplay("{Kind,nq}")]
+#if NET11_0_OR_GREATER
+public sealed record CrdtInput : IUnion
+#else
 public sealed record CrdtInput
+#endif
 {
+#if NET11_0_OR_GREATER
+    object IUnion.Value => this;
+#endif
     /// <summary>Gets the input kind.</summary>
     public required CrdtInputKind Kind { get; init; }
 

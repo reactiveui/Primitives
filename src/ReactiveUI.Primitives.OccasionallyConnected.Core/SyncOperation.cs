@@ -3,13 +3,21 @@
 // See the LICENSE file in the project root for full license information.
 
 using System.Diagnostics;
+using System.Runtime.CompilerServices;
 
 namespace ReactiveUI.Primitives.OccasionallyConnected;
 
 /// <summary>Describes an immutable client-originated mutation stored in the local outbox.</summary>
 [DebuggerDisplay("{OperationId,nq} {Type,nq}")]
+#if NET11_0_OR_GREATER
+public sealed record SyncOperation : IUnion
+#else
 public sealed record SyncOperation
+#endif
 {
+#if NET11_0_OR_GREATER
+    object IUnion.Value => this;
+#endif
     /// <summary>Gets the default policy assigned to operations that do not override synchronization behavior.</summary>
     public static OperationPolicy DefaultPolicy => OperationPolicy.Default;
 

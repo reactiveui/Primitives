@@ -5,8 +5,15 @@
 namespace ReactiveUI.Primitives.OccasionallyConnected.Server;
 
 /// <summary>Describes trusted server proof for one pending snapshot recovery operation.</summary>
+#if NET11_0_OR_GREATER
+internal sealed record ServerSnapshotOperationDisposition : System.Runtime.CompilerServices.IUnion
+#else
 internal sealed record ServerSnapshotOperationDisposition
+#endif
 {
+#if NET11_0_OR_GREATER
+    object System.Runtime.CompilerServices.IUnion.Value => this;
+#endif
     /// <summary>Gets the requested pending operation identifier.</summary>
     internal required OperationId OperationId { get; init; }
 

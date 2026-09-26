@@ -7,8 +7,15 @@ using System.Net;
 namespace ReactiveUI.Primitives.OccasionallyConnected.Transport.Http;
 
 /// <summary>Represents the result of HTTP replay admission.</summary>
+#if NET11_0_OR_GREATER
+internal sealed record HttpReplayDecision : System.Runtime.CompilerServices.IUnion
+#else
 internal sealed record HttpReplayDecision
+#endif
 {
+#if NET11_0_OR_GREATER
+    object System.Runtime.CompilerServices.IUnion.Value => this;
+#endif
     /// <summary>Default safe failure for incomplete replay decisions.</summary>
     private static readonly HttpReplayFailure DefaultFailure = new(HttpStatusCode.ServiceUnavailable, HttpTransportFailureKind.Transient);
 

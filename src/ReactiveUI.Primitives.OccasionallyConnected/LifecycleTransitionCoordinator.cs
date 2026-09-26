@@ -15,8 +15,15 @@ namespace ReactiveUI.Primitives.OccasionallyConnected;
 /// before retry, cleanup failures leave cleanup required, and disposal permanently prevents startup while still joining or
 /// running cleanup.
 /// </remarks>
+#if NET11_0_OR_GREATER
+internal sealed class LifecycleTransitionCoordinator : IAsyncDisposable, IUnion
+#else
 internal sealed class LifecycleTransitionCoordinator : IAsyncDisposable
+#endif
 {
+#if NET11_0_OR_GREATER
+    object IUnion.Value => this;
+#endif
     /// <summary>Protects lifecycle state.</summary>
     private readonly Lock _gate = new();
 

@@ -8,8 +8,9 @@ public sealed class CrdtInitialStateFactory : ReactiveUI.Primitives.Occasionally
     public System.Threading.Tasks.ValueTask<ReactiveUI.Primitives.OccasionallyConnected.ServerState> CreateInitialStateAsync(ReactiveUI.Primitives.OccasionallyConnected.StreamId streamId, System.Threading.CancellationToken cancellationToken) { }
 }
 [System.Diagnostics.DebuggerDisplay("{Kind,nq} {InitialVersion,nq}")]
-public record CrdtInitialStateFactoryOptions : System.IEquatable<ReactiveUI.Primitives.OccasionallyConnected.Server.CrdtInitialStateFactoryOptions>
+public record CrdtInitialStateFactoryOptions : System.IEquatable<ReactiveUI.Primitives.OccasionallyConnected.Server.CrdtInitialStateFactoryOptions>, System.Runtime.CompilerServices.IUnion
 {
+    object System.Runtime.CompilerServices.IUnion.Value { get; }
     public ReactiveUI.Primitives.OccasionallyConnected.Crdt.CrdtBounds Bounds { get; init; }
     public string InitialVersion { get; init; }
     public required ReactiveUI.Primitives.OccasionallyConnected.Crdt.CrdtKind Kind { get; init; }
@@ -21,8 +22,9 @@ public sealed class CrdtResolver : ReactiveUI.Primitives.OccasionallyConnected.I
     public System.Threading.Tasks.ValueTask<ReactiveUI.Primitives.OccasionallyConnected.ConflictResolutionResult> ResolveAsync(ReactiveUI.Primitives.OccasionallyConnected.ConflictContext context, System.Threading.CancellationToken cancellationToken) { }
 }
 [System.Diagnostics.DebuggerDisplay("{Kind,nq}")]
-public record CrdtResolverOptions : System.IEquatable<ReactiveUI.Primitives.OccasionallyConnected.Server.CrdtResolverOptions>
+public record CrdtResolverOptions : System.IEquatable<ReactiveUI.Primitives.OccasionallyConnected.Server.CrdtResolverOptions>, System.Runtime.CompilerServices.IUnion
 {
+    object System.Runtime.CompilerServices.IUnion.Value { get; }
     public ReactiveUI.Primitives.OccasionallyConnected.Crdt.CrdtBounds Bounds { get; init; }
     public required ReactiveUI.Primitives.OccasionallyConnected.Crdt.CrdtKind Kind { get; init; }
     public required ReactiveUI.Primitives.OccasionallyConnected.Server.IServerConflictVersionFactory VersionFactory { get; init; }
@@ -66,8 +68,9 @@ public static class CrdtServerStreamRegistration
     public static ReactiveUI.Primitives.OccasionallyConnected.Server.ServerConflictStreamRegistration Create(ReactiveUI.Primitives.OccasionallyConnected.Server.CrdtServerStreamRegistrationOptions options) { }
 }
 [System.Diagnostics.DebuggerDisplay("{StreamId,nq} {Kind,nq}")]
-public record CrdtServerStreamRegistrationOptions : System.IEquatable<ReactiveUI.Primitives.OccasionallyConnected.Server.CrdtServerStreamRegistrationOptions>
+public record CrdtServerStreamRegistrationOptions : System.IEquatable<ReactiveUI.Primitives.OccasionallyConnected.Server.CrdtServerStreamRegistrationOptions>, System.Runtime.CompilerServices.IUnion
 {
+    object System.Runtime.CompilerServices.IUnion.Value { get; }
     public ReactiveUI.Primitives.OccasionallyConnected.Crdt.CrdtBounds Bounds { get; init; }
     public string InitialVersion { get; init; }
     public required ReactiveUI.Primitives.OccasionallyConnected.Crdt.CrdtKind Kind { get; init; }

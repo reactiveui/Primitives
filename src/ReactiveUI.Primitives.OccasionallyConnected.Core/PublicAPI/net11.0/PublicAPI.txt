@@ -1333,8 +1333,9 @@ public enum SyncLifecycleStatus
     Faulted = 9,
 }
 [System.Diagnostics.DebuggerDisplay("{OperationId,nq} {Type,nq}")]
-public record SyncOperation : System.IEquatable<ReactiveUI.Primitives.OccasionallyConnected.SyncOperation>
+public record SyncOperation : System.IEquatable<ReactiveUI.Primitives.OccasionallyConnected.SyncOperation>, System.Runtime.CompilerServices.IUnion
 {
+    object System.Runtime.CompilerServices.IUnion.Value { get; }
     public string? BaseVersion { get; init; }
     public required long ClientSequence { get; init; }
     public System.Collections.Generic.IReadOnlyDictionary<string, string> Metadata { get; init; }
@@ -1487,8 +1488,9 @@ public static class CrdtFunctions
     public static void ValidateState(ReactiveUI.Primitives.OccasionallyConnected.Crdt.CrdtState state, ReactiveUI.Primitives.OccasionallyConnected.Crdt.CrdtBounds bounds) { }
 }
 [System.Diagnostics.DebuggerDisplay("{Kind,nq}")]
-public record CrdtInput : System.IEquatable<ReactiveUI.Primitives.OccasionallyConnected.Crdt.CrdtInput>
+public record CrdtInput : System.IEquatable<ReactiveUI.Primitives.OccasionallyConnected.Crdt.CrdtInput>, System.Runtime.CompilerServices.IUnion
 {
+    object System.Runtime.CompilerServices.IUnion.Value { get; }
     public required ReactiveUI.Primitives.OccasionallyConnected.Crdt.CrdtInputKind Kind { get; init; }
     public ReactiveUI.Primitives.OccasionallyConnected.Crdt.CrdtMutation? Mutation { get; init; }
     public ReactiveUI.Primitives.OccasionallyConnected.Crdt.CrdtState? State { get; init; }
@@ -1510,8 +1512,9 @@ public enum CrdtKind
     LwwRegister = 4,
 }
 [System.Diagnostics.DebuggerDisplay("{Kind,nq} {ActorId,nq}")]
-public record CrdtMutation : System.IEquatable<ReactiveUI.Primitives.OccasionallyConnected.Crdt.CrdtMutation>
+public record CrdtMutation : System.IEquatable<ReactiveUI.Primitives.OccasionallyConnected.Crdt.CrdtMutation>, System.Runtime.CompilerServices.IUnion
 {
+    object System.Runtime.CompilerServices.IUnion.Value { get; }
     public string? ActorId { get; init; }
     public int ByteLength { get; }
     public System.ReadOnlyMemory<byte> Bytes { get; init; }
@@ -1539,8 +1542,9 @@ public enum CrdtMutationKind
     LwwRegisterSet = 5,
 }
 [System.Diagnostics.DebuggerDisplay("{Kind,nq} Value = {Value}")]
-public record CrdtState : System.IEquatable<ReactiveUI.Primitives.OccasionallyConnected.Crdt.CrdtState>
+public record CrdtState : System.IEquatable<ReactiveUI.Primitives.OccasionallyConnected.Crdt.CrdtState>, System.Runtime.CompilerServices.IUnion
 {
+    object System.Runtime.CompilerServices.IUnion.Value { get; }
     public System.Collections.Generic.IReadOnlyList<ReactiveUI.Primitives.OccasionallyConnected.Crdt.CrdtDotElement> DotBindings { get; init; }
     public System.Collections.Generic.IReadOnlyDictionary<string, long> GCounterComponents { get; init; }
     public required ReactiveUI.Primitives.OccasionallyConnected.Crdt.CrdtKind Kind { get; init; }

@@ -8,8 +8,15 @@ namespace ReactiveUI.Primitives.OccasionallyConnected.Server;
 
 /// <summary>Configures one built-in CRDT server stream registration.</summary>
 [System.Diagnostics.DebuggerDisplay("{StreamId,nq} {Kind,nq}")]
+#if NET11_0_OR_GREATER
+public sealed record CrdtServerStreamRegistrationOptions : System.Runtime.CompilerServices.IUnion
+#else
 public sealed record CrdtServerStreamRegistrationOptions
+#endif
 {
+#if NET11_0_OR_GREATER
+    object System.Runtime.CompilerServices.IUnion.Value => this;
+#endif
     /// <summary>Gets the stream identifier.</summary>
     public required StreamId StreamId { get; init; }
 

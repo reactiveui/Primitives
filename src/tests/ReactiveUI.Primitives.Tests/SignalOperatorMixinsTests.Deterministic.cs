@@ -41,9 +41,6 @@ public partial class SignalOperatorMixinsTests
     /// <summary>The long constant three.</summary>
     private const long ThreeLong = 3L;
 
-    /// <summary>The number of threads that rendezvous before the disposal race starts.</summary>
-    private const int RacingThreadCount = 2;
-
     /// <summary>The completion guard for asynchronously scheduled enumeration on instrumented CI hosts.</summary>
     private static readonly TimeSpan AsyncEnumerationCompletionTimeout = TimeSpan.FromSeconds(30);
 

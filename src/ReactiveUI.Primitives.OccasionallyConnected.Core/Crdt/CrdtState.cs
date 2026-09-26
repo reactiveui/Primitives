@@ -2,12 +2,21 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Runtime.CompilerServices;
+
 namespace ReactiveUI.Primitives.OccasionallyConnected.Crdt;
 
 /// <summary>Stores the complete public state and metadata for one built-in CRDT stream.</summary>
 [System.Diagnostics.DebuggerDisplay("{Kind,nq} Value = {Value}")]
+#if NET11_0_OR_GREATER
+public sealed record CrdtState : IUnion
+#else
 public sealed record CrdtState
+#endif
 {
+#if NET11_0_OR_GREATER
+    object IUnion.Value => this;
+#endif
     /// <summary>The owned LWW register bytes.</summary>
     private readonly byte[] _registerValue = [];
 
