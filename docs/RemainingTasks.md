@@ -28,10 +28,10 @@ This list is limited to requirements from [ReactiveUI.Primitives.OccasionallyCon
 
 ## Examples and release gates
 
-- [ ] Make the section 16 samples compile and run against freshly packed public packages. Demonstrate offline startup, optimistic writes, reconnect and restart recovery, conflict reconciliation, `PublishAsync`, observer input, and operation synchronization.
+- [ ] Run the section 16 samples against the freshly packed public packages produced for every supported target framework. Demonstrate offline startup, optimistic writes, reconnect and restart recovery, conflict reconciliation, `PublishAsync`, observer input, and operation synchronization.
 - [ ] Add the remaining ResilienceLab demonstrations for duplicate/reordered delivery, retry/backoff, capability downgrade, backpressure, slow observers, corruption/quarantine, and retention-gap recovery.
-- [ ] Complete the quality gates in section 17.4: full transition/invariant coverage, at least 95% line and 90% branch coverage for core runtime projects, mutation testing, child-process crash tests, and bounded throughput/allocation/recovery/compaction/slow-observer soak measurements.
-- [ ] Complete build and packaging gates from section 18: all supported desktop target frameworks, API compatibility baselines, clean-project pack/install tests, deterministic package comparison, Source Link and symbol packages, trimming/NativeAOT smoke tests, SBOM, dependency/license/security scans, and scheduled cross-platform crash/soak/performance jobs.
+- [ ] Complete the quality gates in section 17.4: full transition/invariant coverage, mutation testing, child-process crash tests, and bounded throughput/allocation/recovery/compaction/slow-observer soak measurements. The supported framework builds and API baselines have passed; the remaining gates need their independent reports.
+- [ ] Complete the remaining release gates from section 18: clean-project pack/install tests, deterministic package comparison, Source Link and symbol-package verification, trimming/NativeAOT smoke tests, SBOM and dependency/license/security scans, and scheduled cross-platform crash/soak/performance jobs. All six feature packages now pack successfully for `net8.0`, `net9.0`, `net10.0`, `net11.0`, `net462`, `net472`, `net48`, and `net481`.
 
 ## Final release acceptance
 
