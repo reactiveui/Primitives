@@ -8,7 +8,7 @@ using ReactiveUI.Primitives.OccasionallyConnected;
 namespace ReactiveUI.Primitives.OccasionallyConnected.Tests;
 
 /// <summary>Tests capability negotiation before stream startup.</summary>
-public sealed class CapabilityNegotiatorTests
+public sealed partial class CapabilityNegotiatorTests
 {
     /// <summary>The count limit offered by the peer.</summary>
     private const int PeerCount = 20;
