@@ -1,0 +1,15 @@
+# Protocol-v1 error responses have no body. The status code, and for 401 the replay session header, carry the error.
+# Format: <status>[;<header>=<value>] <HttpTransportFailureKind>
+301 ProtocolViolation
+400 ValidationRejected
+401 Authentication
+401;X-ReactiveUI-Replay-Session-State=stale StaleReplaySession
+403 AuthorizationDenied
+404 ValidationRejected
+409 ValidationRejected
+413 PayloadTooLarge
+415 SchemaIncompatible
+422 ValidationRejected
+429 Transient
+500 Transient
+503 Transient

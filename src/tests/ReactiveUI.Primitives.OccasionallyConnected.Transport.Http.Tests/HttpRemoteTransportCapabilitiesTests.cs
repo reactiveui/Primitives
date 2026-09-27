@@ -8,7 +8,7 @@ using ReactiveUI.Primitives.OccasionallyConnected;
 namespace ReactiveUI.Primitives.OccasionallyConnected.Transport.Http.Tests;
 
 /// <summary>Tests <see cref="HttpRemoteTransportCapabilities"/>.</summary>
-public sealed class HttpRemoteTransportCapabilitiesTests
+public sealed partial class HttpRemoteTransportCapabilitiesTests
 {
     /// <summary>The supported adapter capabilities.</summary>
     private const RemoteTransportCapabilities AdapterCapabilities =

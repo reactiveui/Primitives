@@ -8,7 +8,7 @@ using System.Text;
 namespace ReactiveUI.Primitives.OccasionallyConnected.Transport.Http.Tests;
 
 /// <summary>Tests <see cref="HttpProtocolContent"/>.</summary>
-public sealed class HttpProtocolContentTests
+public sealed partial class HttpProtocolContentTests
 {
     /// <summary>The protocol media type.</summary>
     private const string ProtocolMediaType = "application/vnd.reactiveui.occasionally-connected+json;v=1";

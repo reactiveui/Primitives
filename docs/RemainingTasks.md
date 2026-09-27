@@ -62,6 +62,12 @@ This list is limited to requirements from [ReactiveUI.Primitives.OccasionallyCon
 ## Protocol, security, and compatibility
 
 - [ ] Complete protocol-v1 golden fixtures and cross-version upcast/migration tests for wire envelopes, store schemas, snapshots, cursors, and operation results.
+  - Done: canonical fixtures live in `GoldenFixtures/protocol-v1/` folders and are checked into source control.
+    - HTTP wire messages: connect, push with every result kind, subscribe, acknowledge, and snapshot recovery. Also the cursor query forms and the status classification.
+    - The SQLite schema DDL, plus a populated v1 database that current code must open and recover. An unknown `user_version` fails closed without changing the file.
+    - A v1 to v2 to v3 payload upcast chain.
+    - Tests: `HttpProtocolCodecTests.Golden*.cs`, `SqliteLocalStoreAdapterTests.GoldenSchema.cs`, and `JsonPayloadSerializerTests.Golden.cs`.
+  - Remaining: the strict HTTP codec rejects unknown fields with `ProtocolViolation`. Section 18.3 requires older peers to read newer optional fields. The protocol also has no error body (errors are status codes only) and no binary format.
 - [ ] Complete application-level security tests for authenticated tenant/client binding, nonce and replay handling, authorization, stale credentials, tampering, path traversal, SQL metacharacters, oversized/deep payloads, decompression limits, and redacted diagnostics.
 - [ ] Add adapter-specific protocol fuzzing and verify that transport adapters do not introduce hidden unbounded retries.
 

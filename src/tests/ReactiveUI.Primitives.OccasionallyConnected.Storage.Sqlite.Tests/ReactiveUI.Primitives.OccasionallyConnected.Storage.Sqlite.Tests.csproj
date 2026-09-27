@@ -10,4 +10,8 @@
     <ProjectReference Include="..\..\ReactiveUI.Primitives.OccasionallyConnected.Storage.Sqlite\ReactiveUI.Primitives.OccasionallyConnected.Storage.Sqlite.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <None Update="GoldenFixtures\**\*" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
 </Project>

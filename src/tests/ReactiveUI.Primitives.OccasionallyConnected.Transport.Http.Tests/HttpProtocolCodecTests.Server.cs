@@ -241,6 +241,7 @@ public sealed partial class HttpProtocolCodecTests
     /// <summary>Verifies current subscribe query output parses into the server request contract.</summary>
     /// <returns>The asynchronous test operation.</returns>
     [Test]
+    [NotInParallel(SubscribeQueryCaptureKey)]
     public async Task ParseSubscribeRequestReadsCurrentClientQueryShape()
     {
         var request = new RemoteSubscribeRequest(

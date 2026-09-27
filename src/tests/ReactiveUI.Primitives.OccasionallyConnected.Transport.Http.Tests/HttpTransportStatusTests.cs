@@ -7,7 +7,7 @@ using System.Net;
 namespace ReactiveUI.Primitives.OccasionallyConnected.Transport.Http.Tests;
 
 /// <summary>Tests <see cref="HttpTransportStatus"/>.</summary>
-public sealed class HttpTransportStatusTests
+public sealed partial class HttpTransportStatusTests
 {
     /// <summary>The retry-after delay in seconds.</summary>
     private const int RetryAfterSeconds = 3;

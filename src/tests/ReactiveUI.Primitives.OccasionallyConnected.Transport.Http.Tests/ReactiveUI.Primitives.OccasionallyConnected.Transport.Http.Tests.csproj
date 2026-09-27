@@ -11,4 +11,8 @@
     <ProjectReference Include="..\..\ReactiveUI.Primitives.OccasionallyConnected.Transport.Http\ReactiveUI.Primitives.OccasionallyConnected.Transport.Http.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <None Update="GoldenFixtures\**\*" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
 </Project>
