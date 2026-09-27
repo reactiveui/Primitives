@@ -186,7 +186,9 @@ public sealed partial class OperationSynchronizationWaiterTests
             new FakeTimeProvider(),
             CancellationToken.None);
 
-        await Assert.That(() => wait).ThrowsExactly<InvalidOperationException>();
+        var failure = await Assert.That(() => wait).ThrowsExactly<SyncOperationFailedException>();
+        await Assert.That(failure?.State).IsEqualTo(terminalState);
+        await Assert.That(failure?.Status?.OperationId).IsEqualTo(operationId);
         await Assert.That(states.HasObservers).IsFalse();
     }
 

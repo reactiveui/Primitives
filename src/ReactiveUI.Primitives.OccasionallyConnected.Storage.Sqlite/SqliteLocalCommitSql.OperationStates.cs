@@ -360,14 +360,7 @@ internal static partial class SqliteLocalCommitSql
             """;
         _ = command.Parameters.AddWithValue(OperationStateParameter, (int)SyncOperationState.QueuedForUpload);
         _ = command.Parameters.AddWithValue(ChangedAtUtcParameter, FormatDateTimeOffset(changedAtUtc));
-        _ = command.Parameters.AddWithValue("$retryStartedUtc", FormatDateTimeOffset(retryState.StartedUtc));
-        _ = command.Parameters.AddWithValue("$retryDueUtc", (object?)FormatNullableDateTimeOffset(retryState.DueUtc) ?? DBNull.Value);
-        _ = command.Parameters.AddWithValue(
-            "$retryPreviousDelayTicks",
-            retryState.PreviousDelay.HasValue ? retryState.PreviousDelay.GetValueOrDefault().Ticks : DBNull.Value);
-        _ = command.Parameters.AddWithValue("$retryTransientAttemptCount", retryState.TransientAttemptCount);
-        _ = command.Parameters.AddWithValue("$retryAuthenticationState", (int)retryState.AuthenticationState);
-        _ = command.Parameters.AddWithValue("$retryCredentialsVersion", (object?)retryState.CredentialsVersion ?? DBNull.Value);
+        AddRetryStateParameters(command, retryState);
         _ = command.Parameters.AddWithValue(StoreIdentityParameter, storeIdentity);
         _ = command.Parameters.AddWithValue(OperationIdParameter, operationId.Value.ToString("D"));
         if (command.ExecuteNonQuery() == 1)
@@ -409,10 +402,14 @@ internal static partial class SqliteLocalCommitSql
             UPDATE oc_outbox_operation_states
             SET operation_state = $operationState,
                 changed_at_utc = $changedAtUtc,
-                reason_code = $reasonCode
+                reason_code = CASE
+                    WHEN reason_code = $downgradedReasonCode AND $operationState IN (1, 2) THEN reason_code
+                    ELSE $reasonCode
+                END
             WHERE store_identity = $storeIdentity AND operation_id = $operationId;
             """;
         AddStatusParameters(command, storeIdentity, operationId, state, changedAtUtc, reasonCode);
+        AddDowngradedReasonCodeParameter(command);
         if (command.ExecuteNonQuery() == 1)
         {
             return;
@@ -444,9 +441,14 @@ internal static partial class SqliteLocalCommitSql
                 operation_state = excluded.operation_state,
                 attempt_count = excluded.attempt_count,
                 changed_at_utc = excluded.changed_at_utc,
-                reason_code = excluded.reason_code;
+                reason_code = CASE
+                    WHEN oc_outbox_operation_states.reason_code = $downgradedReasonCode AND excluded.operation_state IN (1, 2)
+                        THEN oc_outbox_operation_states.reason_code
+                    ELSE excluded.reason_code
+                END;
             """;
         AddStatusParameters(command, storeIdentity, state.OperationId, state.State, state.ChangedAtUtc, state.ReasonCode);
+        AddDowngradedReasonCodeParameter(command);
         _ = command.Parameters.AddWithValue(AttemptCountParameter, state.Attempt);
         if (command.ExecuteNonQuery() == 1)
         {

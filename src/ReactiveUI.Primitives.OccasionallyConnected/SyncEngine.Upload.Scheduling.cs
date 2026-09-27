@@ -322,7 +322,11 @@ internal sealed partial class SyncEngine
         PreparedUploadAttemptOptions AttemptOptions,
         RetryOptions RetryOptions,
         bool RequiresDurableRetryAnchor,
-        long SessionGeneration);
+        long SessionGeneration)
+    {
+        /// <summary>Gets the effective exactly-once deduplication window that bounds the leased retry options.</summary>
+        public TimeSpan? ExactlyOnceWindow { get; init; }
+    }
 
     /// <summary>Describes the outcome of a shared-session renewal attempt.</summary>
     /// <param name="Renewed">Whether renewal succeeded or another generation already replaced the observed session.</param>

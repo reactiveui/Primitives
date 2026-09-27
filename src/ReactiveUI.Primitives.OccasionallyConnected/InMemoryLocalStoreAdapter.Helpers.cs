@@ -1027,8 +1027,11 @@ internal sealed partial class InMemoryLocalStoreAdapter
         for (var index = 0; index < result.Operations.Count; index++)
         {
             var resultOperation = result.Operations[index];
-            var operation = _operations[resultOperation.OperationId].Operation;
-            var status = CreateStatus(operation, GetResultState(resultOperation.Kind), GetOperation(operation.OperationId).Attempt, nowUtc, resultOperation.ReasonCode);
+            var record = _operations[resultOperation.OperationId];
+            var operation = record.Operation;
+            var state = GetResultState(resultOperation.Kind);
+            var reasonCode = KeepDowngradeMarker(record.Status, state, resultOperation.ReasonCode);
+            var status = CreateStatus(operation, state, GetOperation(operation.OperationId).Attempt, nowUtc, reasonCode);
             statuses.Add(operation.OperationId, status);
         }
 

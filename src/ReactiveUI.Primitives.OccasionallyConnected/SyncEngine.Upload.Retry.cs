@@ -105,10 +105,13 @@ internal sealed partial class SyncEngine
         }
 
         var planned = await PlanLeasedUploadAsync(lease, head, maximumOperations, maximumBytes).ConfigureAwait(false);
-        if (!planned.Handled
-            && !await TryPrepareUploadRetryAnchorsAsync(lease, streamId, leasedCapabilities, retryOptions).ConfigureAwait(false))
+        if (!planned.Handled)
         {
-            return null;
+            var anchors = await TryPrepareUploadRetryAnchorsAsync(lease, streamId, leasedCapabilities, retryOptions).ConfigureAwait(false);
+            if (anchors != UploadAnchorPreparation.Proceed)
+            {
+                return anchors == UploadAnchorPreparation.GuaranteeExpired ? CreateImmediateReschedule(head, maximumOperations: 0) : null;
+            }
         }
 
         var execution = new PreparedUploadExecution(
@@ -116,7 +119,7 @@ internal sealed partial class SyncEngine
             attemptOptions,
             retryOptions,
             requiresDurableRetryAnchor,
-            context.SessionLease.Generation);
+            context.SessionLease.Generation) { ExactlyOnceWindow = leasedCapabilities.EffectiveExactlyOnceWindow };
         return planned.Handled ? planned.Reschedule : await ExecutePreparedUploadAsync(lease, execution, head, streamId, cancellationToken).ConfigureAwait(false);
     }
 
@@ -136,35 +139,39 @@ internal sealed partial class SyncEngine
     /// <param name="streamId">The leased stream identity.</param>
     /// <param name="capabilities">The normalized leased upload capabilities.</param>
     /// <param name="retryOptions">The retry options bounded by leased capabilities.</param>
-    /// <returns><see langword="true"/> when the upload may proceed.</returns>
-    private async Task<bool> TryPrepareUploadRetryAnchorsAsync(
+    /// <returns>Whether the upload may proceed, was faulted, or stopped an expired exactly-once guarantee.</returns>
+    private async Task<UploadAnchorPreparation> TryPrepareUploadRetryAnchorsAsync(
         LeasedOperationBatch lease,
         StreamId streamId,
         NegotiatedCapabilities capabilities,
         RetryOptions retryOptions) =>
-        capabilities.EffectiveExactlyOnceWindow is null
-        || await TryPrepareExactlyOnceUploadRetryAnchorsAsync(lease, streamId, retryOptions).ConfigureAwait(false);
+        capabilities.EffectiveExactlyOnceWindow is not { } window
+            ? UploadAnchorPreparation.Proceed
+            : await TryPrepareExactlyOnceUploadRetryAnchorsAsync(lease, streamId, retryOptions, window).ConfigureAwait(false);
 
     /// <summary>Persists and validates exactly-once retry anchors for every operation in a leased batch.</summary>
     /// <param name="lease">The active lease.</param>
     /// <param name="streamId">The leased stream identity.</param>
     /// <param name="retryOptions">The retry options bounded by leased capabilities.</param>
-    /// <returns><see langword="true"/> when the upload may proceed.</returns>
-    private async Task<bool> TryPrepareExactlyOnceUploadRetryAnchorsAsync(
+    /// <param name="window">The effective exactly-once deduplication window.</param>
+    /// <returns>Whether the upload may proceed, was faulted, or stopped an expired exactly-once guarantee.</returns>
+    private async Task<UploadAnchorPreparation> TryPrepareExactlyOnceUploadRetryAnchorsAsync(
         LeasedOperationBatch lease,
         StreamId streamId,
-        RetryOptions retryOptions)
+        RetryOptions retryOptions,
+        TimeSpan window)
     {
         for (var i = 0; i < lease.Operations.Count; i++)
         {
             var operation = lease.Operations[i];
-            if (!await TryPrepareUploadRetryAnchorAsync(lease.LeaseId, streamId, operation, retryOptions).ConfigureAwait(false))
+            var preparation = await TryPrepareUploadRetryAnchorAsync(lease.LeaseId, streamId, operation, retryOptions, window).ConfigureAwait(false);
+            if (preparation != UploadAnchorPreparation.Proceed)
             {
-                return false;
+                return preparation;
             }
         }
 
-        return true;
+        return UploadAnchorPreparation.Proceed;
     }
 
     /// <summary>Persists and validates one exactly-once retry anchor before remote effects can occur.</summary>
@@ -172,21 +179,25 @@ internal sealed partial class SyncEngine
     /// <param name="streamId">The leased stream identity.</param>
     /// <param name="operation">The leased operation.</param>
     /// <param name="retryOptions">The retry options bounded by leased capabilities.</param>
-    /// <returns><see langword="true"/> when the operation may proceed.</returns>
-    private async Task<bool> TryPrepareUploadRetryAnchorAsync(
+    /// <param name="window">The effective exactly-once deduplication window.</param>
+    /// <returns>Whether the operation may proceed, was faulted, or stopped an expired exactly-once guarantee.</returns>
+    private async Task<UploadAnchorPreparation> TryPrepareUploadRetryAnchorAsync(
         Guid leaseId,
         StreamId streamId,
         SyncOperation operation,
-        RetryOptions retryOptions)
+        RetryOptions retryOptions,
+        TimeSpan window)
     {
         var retryState = await TryGetUploadRetryAnchorAsync(leaseId, streamId, operation.OperationId).ConfigureAwait(false);
         if (retryState.Faulted)
         {
-            return false;
+            return UploadAnchorPreparation.Faulted;
         }
 
         var anchor = retryState.RetryState ?? await TryCreateUploadRetryAnchorAsync(leaseId, streamId, operation).ConfigureAwait(false);
-        return anchor is not null && await TryValidateUploadRetryAnchorAgeAsync(leaseId, streamId, anchor, retryOptions).ConfigureAwait(false);
+        return anchor is null
+            ? UploadAnchorPreparation.Faulted
+            : await TryValidateUploadRetryAnchorAgeAsync(leaseId, streamId, operation, anchor, retryOptions, window).ConfigureAwait(false);
     }
 
     /// <summary>Reads one durable retry anchor and releases the lease on lookup failure.</summary>
@@ -282,28 +293,44 @@ internal sealed partial class SyncEngine
     /// <summary>Validates that a durable retry anchor is still inside the effective exactly-once window.</summary>
     /// <param name="leaseId">The active lease identifier.</param>
     /// <param name="streamId">The leased stream identity.</param>
+    /// <param name="operation">The leased operation.</param>
     /// <param name="retryState">The retry anchor.</param>
     /// <param name="retryOptions">The retry options bounded by leased capabilities.</param>
-    /// <returns><see langword="true"/> when the anchor is still usable.</returns>
-    private async Task<bool> TryValidateUploadRetryAnchorAgeAsync(
+    /// <param name="window">The effective exactly-once deduplication window.</param>
+    /// <returns>Whether the operation may proceed, was faulted, or stopped an expired exactly-once guarantee.</returns>
+    private async Task<UploadAnchorPreparation> TryValidateUploadRetryAnchorAgeAsync(
         Guid leaseId,
         StreamId streamId,
+        SyncOperation operation,
         RetryState retryState,
-        RetryOptions retryOptions)
+        RetryOptions retryOptions,
+        TimeSpan window)
     {
-        var nowUtc = _options.TimeProvider.GetUtcNow();
-        if (nowUtc - retryState.StartedUtc < retryOptions.MaximumRetryAge)
+        var age = _options.TimeProvider.GetUtcNow() - retryState.StartedUtc;
+        if (age < retryOptions.MaximumRetryAge)
         {
-            return true;
+            return UploadAnchorPreparation.Proceed;
         }
 
-        await ReleaseFaultedUploadLeaseAsync(
-                leaseId,
-                streamId,
-                new InvalidOperationException("The exactly-once upload retry window has expired."))
-            .ConfigureAwait(false);
-        return false;
+        if (age >= window && CanApplyExactlyOnceExpiry(operation, out var guaranteeStore))
+        {
+            return await ApplyExactlyOnceExpiryAsync(guaranteeStore, leaseId, streamId, operation, age).ConfigureAwait(false);
+        }
+
+        await ReleaseExpiredUploadRetryWindowAsync(leaseId, streamId).ConfigureAwait(false);
+        return UploadAnchorPreparation.Faulted;
     }
+
+    /// <summary>Releases a lease whose exactly-once retry window expired without a durable expiry policy.</summary>
+    /// <param name="leaseId">The active lease identifier.</param>
+    /// <param name="streamId">The leased stream identity.</param>
+    /// <returns>The release task.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private Task ReleaseExpiredUploadRetryWindowAsync(Guid leaseId, StreamId streamId) =>
+        ReleaseFaultedUploadLeaseAsync(
+            leaseId,
+            streamId,
+            new InvalidOperationException("The exactly-once upload retry window has expired."));
 
     /// <summary>Validates and normalizes every leased operation against the acquired session before remote attempt work starts.</summary>
     /// <param name="lease">The active lease.</param>

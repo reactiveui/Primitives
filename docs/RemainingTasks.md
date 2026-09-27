@@ -67,7 +67,13 @@ This list is limited to requirements from [ReactiveUI.Primitives.OccasionallyCon
     - The in-memory store skips each durable case with a stated reason.
   - Remaining: migration crashes and disk-full, crashes across the transport, and the producer-by-buffer-strategy matrix.
 - [ ] Prove restartable migrations, ownership coordination, authenticated encryption at rest, quarantine/dead-letter recovery, compaction, and retention without losing data required to rebuild snapshots or resolve pending operations.
-- [ ] Complete end-to-end at-most-once, at-least-once, and capability-gated exactly-once-effect behaviour, including retention expiry, explicit downgrade, ambiguous outcomes, and server idempotency. The current components validate capabilities but do not yet prove the complete application path.
+- [x] Complete end-to-end at-most-once, at-least-once, and capability-gated exactly-once-effect behaviour, including retention expiry, explicit downgrade, ambiguous outcomes, and server idempotency. The current components validate capabilities but do not yet prove the complete application path.
+  - Done: `OccasionallyConnectedBuilderTests.DeliveryGuarantees*.cs` runs end to end over Loopback and HTTP against a SQLite `ServerStreamHub`. A fault injector drops the push response after the server commits.
+    - `AtMostOnce` ends `Ambiguous` with no resend and emits `OC.AtMostOnceAmbiguous`.
+    - `AtLeastOnce` and `ExactlyOnce` resend the same operation ID and produce exactly one server effect.
+    - With `ExactlyOnceExpiryBehavior.StopAndReport`, an operation that reaches the effective window moves to `GuaranteeExpired` and stays there after reopen. It emits `OC.GuaranteeExpired`, and `AwaitSynchronizedAsync` throws `SyncOperationFailedException`.
+    - With `FallbackToAtLeastOnce`, the engine emits `OC.GuaranteeDowngraded` before it resends. The downgrade survives a restart.
+  - Public API: `ILocalDeliveryGuaranteeStore` (implemented by the SQLite store), `SyncReasonCodes`, and `SyncOperationFailedException`.
 
 ## Protocol, security, and compatibility
 

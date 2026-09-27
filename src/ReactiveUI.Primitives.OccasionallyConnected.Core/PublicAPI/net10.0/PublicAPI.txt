@@ -204,6 +204,11 @@ public interface ILocalProjection<TState, in TInput>
     TState ApplyRemote(TState state, TInput input, ReactiveUI.Primitives.OccasionallyConnected.RemoteEvent remoteEvent) { }
     TState Reconcile(TState state, ReactiveUI.Primitives.OccasionallyConnected.ConflictResolutionResult result) { }
 }
+public interface ILocalDeliveryGuaranteeStore
+{
+    System.Threading.Tasks.ValueTask<ReactiveUI.Primitives.OccasionallyConnected.SyncOperationStatus> DowngradeDeliveryGuaranteeAsync(System.Guid leaseId, ReactiveUI.Primitives.OccasionallyConnected.OperationId operationId, ReactiveUI.Primitives.OccasionallyConnected.RetryState retryState, System.Threading.CancellationToken cancellationToken) { }
+    System.Threading.Tasks.ValueTask<ReactiveUI.Primitives.OccasionallyConnected.SyncOperationStatus> ExpireDeliveryGuaranteeAsync(System.Guid leaseId, ReactiveUI.Primitives.OccasionallyConnected.OperationId operationId, System.Threading.CancellationToken cancellationToken) { }
+}
 public interface ILocalPayloadQuarantineStore
 {
     System.Threading.Tasks.ValueTask<ReactiveUI.Primitives.OccasionallyConnected.LocalPayloadQuarantineRecord?> GetPayloadQuarantineAsync(ReactiveUI.Primitives.OccasionallyConnected.StreamId streamId, System.Threading.CancellationToken cancellationToken) { }
@@ -1386,6 +1391,17 @@ public record SyncOperation : System.IEquatable<ReactiveUI.Primitives.Occasional
     public required ReactiveUI.Primitives.OccasionallyConnected.SyncOperationType Type { get; init; }
     public static ReactiveUI.Primitives.OccasionallyConnected.OperationPolicy DefaultPolicy { get; }
 }
+[System.Diagnostics.DebuggerDisplay("{Message,nq}")]
+public sealed class SyncOperationFailedException : System.InvalidOperationException
+{
+    public SyncOperationFailedException() { }
+    public SyncOperationFailedException(ReactiveUI.Primitives.OccasionallyConnected.SyncOperationStatus status) { }
+    public SyncOperationFailedException(string message) { }
+    public SyncOperationFailedException(string message, System.Exception innerException) { }
+    public string? ReasonCode { get; }
+    public ReactiveUI.Primitives.OccasionallyConnected.SyncOperationState? State { get; }
+    public ReactiveUI.Primitives.OccasionallyConnected.SyncOperationStatus? Status { get; }
+}
 public enum SyncOperationState
 {
     SavedLocally = 0,
@@ -1415,6 +1431,12 @@ public enum SyncOperationType
     Update = 1,
     Delete = 2,
     Custom = 3,
+}
+public static class SyncReasonCodes
+{
+    public static string AtMostOnceAmbiguous { get; }
+    public static string GuaranteeDowngraded { get; }
+    public static string GuaranteeExpired { get; }
 }
 [System.Diagnostics.DebuggerDisplay("{Status,nq}")]
 public record SyncState : System.IEquatable<ReactiveUI.Primitives.OccasionallyConnected.SyncState>

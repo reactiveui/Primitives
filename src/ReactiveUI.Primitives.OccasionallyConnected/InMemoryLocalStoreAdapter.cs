@@ -520,7 +520,7 @@ internal sealed partial class InMemoryLocalStoreAdapter : ILocalStoreAdapter, IL
             else
             {
                 var state = GetAttemptState(record.Operation.Policy);
-                var status = CreateStatus(record.Operation, state, nextAttempt, nowUtc, null);
+                var status = CreateStatus(record.Operation, state, nextAttempt, nowUtc, KeepDowngradeMarker(record.Status, state, reasonCode: null));
                 var terminalAtUtc = record.TerminalAtUtc;
                 if (state == SyncOperationState.Ambiguous)
                 {

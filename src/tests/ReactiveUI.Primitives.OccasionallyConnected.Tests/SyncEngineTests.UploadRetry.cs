@@ -829,7 +829,7 @@ public sealed partial class SyncEngineTests
         return session;
     }
 
-    /// <summary>Asserts the reopened SQLite store refuses an expired exactly-once upload before prepare.</summary>
+    /// <summary>Asserts the reopened SQLite store stops an expired exactly-once upload as guarantee-expired before prepare.</summary>
     /// <param name="databasePath">The physical SQLite database path.</param>
     /// <param name="clock">The shared manual clock.</param>
     /// <param name="operationId">The operation identity.</param>
@@ -857,11 +857,15 @@ public sealed partial class SyncEngineTests
         await TriggerAndDrainUploadWithTraceAsync(engine, clock, session, faults, operationStates: null);
 
         var retryState = await store.GetRetryStateAsync(operationId, CancellationToken.None);
+        var status = await store.GetOperationStatusAsync(operationId, CancellationToken.None);
         await Assert.That(session.PrepareCalls).IsEqualTo(0);
         await Assert.That(session.SentBatches.Count).IsEqualTo(0);
         await Assert.That(retryState?.StartedUtc).IsEqualTo(DateTimeOffset.UnixEpoch);
+        await Assert.That(status?.State).IsEqualTo(SyncOperationState.GuaranteeExpired);
+        await Assert.That(status?.ReasonCode).IsEqualTo(SyncReasonCodes.GuaranteeExpired);
         await Assert.That(faults.Values.Count).IsEqualTo(ExpectedSingleOperation);
-        await Assert.That(faults.Values[0].Code).IsEqualTo(UploadAttemptFaultCode);
+        await Assert.That(faults.Values[0].Code).IsEqualTo(SyncReasonCodes.GuaranteeExpired);
+        await Assert.That(faults.Values[0].OperationId).IsEqualTo(operationId);
     }
 
     /// <summary>Creates an initialized SQLite store for sync engine restart tests.</summary>

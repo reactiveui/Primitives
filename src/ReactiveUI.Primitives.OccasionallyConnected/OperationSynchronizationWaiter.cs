@@ -125,7 +125,7 @@ internal static class OperationSynchronizationWaiter
 
                 default:
                 {
-                    OnError(new InvalidOperationException($"The operation cannot synchronize from state {value.State}."));
+                    OnError(new SyncOperationFailedException(value));
                     return;
                 }
             }

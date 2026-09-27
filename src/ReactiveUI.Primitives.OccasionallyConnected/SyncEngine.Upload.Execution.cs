@@ -116,6 +116,7 @@ internal sealed partial class SyncEngine
         CancellationToken cancellationToken)
     {
         var failure = ClassifyRetryFailure(exception);
+        var ambiguous = await ReportAmbiguousAtMostOnceOperationsAsync(lease, streamId).ConfigureAwait(false);
         if (failure.Kind == RetryFailureKind.RemoteSessionExpired)
         {
             return await HandleRemoteSessionExpiredUploadAsync(
@@ -127,38 +128,69 @@ internal sealed partial class SyncEngine
                 .ConfigureAwait(false);
         }
 
+        if (ambiguous?.Count == lease.Operations.Count)
+        {
+            return null;
+        }
+
         if (!IsRetryableFailure(failure))
         {
             PublishUploadAttemptFault(streamId, exception);
             return null;
         }
 
+        return await ScheduleUploadRetriesAsync(lease, head, streamId, execution, failure, exception, ambiguous).ConfigureAwait(false);
+    }
+
+    /// <summary>Persists retry state for every retryable operation in a failed lease and computes the next due time.</summary>
+    /// <param name="lease">The failed lease.</param>
+    /// <param name="head">The upload head metadata.</param>
+    /// <param name="streamId">The acquired stream identity.</param>
+    /// <param name="execution">The immutable upload attempt context.</param>
+    /// <param name="failure">The classified failure.</param>
+    /// <param name="exception">The observed failure.</param>
+    /// <param name="ambiguous">The at-most-once operations that must not be retried.</param>
+    /// <returns>The optional retry reschedule.</returns>
+    private async Task<UploadReschedule?> ScheduleUploadRetriesAsync(
+        LeasedOperationBatch lease,
+        UploadHead head,
+        StreamId streamId,
+        PreparedUploadExecution execution,
+        RetryFailure failure,
+        Exception exception,
+        HashSet<OperationId>? ambiguous)
+    {
         var retryPolicy = new RetryPolicy(execution.RetryOptions, _options.TimeProvider, _options.RetryRandomSource);
         DateTimeOffset? latestDueUtc = null;
+        var retried = 0;
         for (var i = 0; i < lease.Operations.Count; i++)
         {
-            var operationId = lease.Operations[i].OperationId;
-            var state = await GetUploadFailureRetryStateAsync(operationId, streamId, execution.RequiresDurableRetryAnchor).ConfigureAwait(false);
-            if (state is null)
+            var operation = lease.Operations[i];
+            if (ambiguous?.Contains(operation.OperationId) == true)
             {
+                continue;
+            }
+
+            var schedule = await ScheduleOperationRetryAsync(operation, streamId, failure, retryPolicy, execution).ConfigureAwait(false);
+            if (schedule.Stopped)
+            {
+                if (!schedule.Reported)
+                {
+                    PublishUploadAttemptFault(streamId, exception);
+                }
+
                 return null;
             }
 
-            var decision = retryPolicy.GetDecision(failure, state);
-            if (decision.Kind == RetryDecisionKind.Stop)
-            {
-                PublishUploadAttemptFault(streamId, exception);
-                return null;
-            }
-
-            await _options.Store.SaveRetryStateAsync(operationId, decision.NextState, CancellationToken.None).ConfigureAwait(false);
-            if (decision.DueUtc is { } dueUtc && (latestDueUtc is null || dueUtc > latestDueUtc.Value))
-            {
-                latestDueUtc = dueUtc;
-            }
+            retried += schedule.Retried ? 1 : 0;
+            latestDueUtc = schedule.DueUtc is { } dueUtc ? GetLatestDueUtc(latestDueUtc, dueUtc) : latestDueUtc;
         }
 
-        RecordRetry(lease.Operations.Count);
+        if (retried > 0)
+        {
+            RecordRetry(retried);
+        }
+
         return new(
             head.Priority,
             head.ReadySinceUtc,
@@ -166,6 +198,42 @@ internal sealed partial class SyncEngine
             MaximumOperations: 0,
             DeadLetterOversizedHead: false,
             ForceReady: false) { IsRetryBackoff = true };
+    }
+
+    /// <summary>Applies retry policy to one failed operation.</summary>
+    /// <param name="operation">The failed operation.</param>
+    /// <param name="streamId">The acquired stream identity.</param>
+    /// <param name="failure">The classified failure.</param>
+    /// <param name="retryPolicy">The retry policy bounded by leased capabilities.</param>
+    /// <param name="execution">The immutable upload attempt context.</param>
+    /// <returns>The operation retry schedule.</returns>
+    private async Task<OperationRetrySchedule> ScheduleOperationRetryAsync(
+        SyncOperation operation,
+        StreamId streamId,
+        RetryFailure failure,
+        RetryPolicy retryPolicy,
+        PreparedUploadExecution execution)
+    {
+        var state = await GetUploadFailureRetryStateAsync(operation.OperationId, streamId, execution.RequiresDurableRetryAnchor).ConfigureAwait(false);
+        if (state is null)
+        {
+            return new(Stopped: true, Reported: true, Retried: false, DueUtc: null);
+        }
+
+        var outcome = await GetUploadFailureDecisionAsync(operation, failure, state, retryPolicy, execution).ConfigureAwait(false);
+        if (outcome.ExpiryDueUtc is { } expiryDueUtc)
+        {
+            return new(Stopped: false, Reported: false, Retried: false, expiryDueUtc);
+        }
+
+        var decision = outcome.Decision;
+        if (decision.Kind == RetryDecisionKind.Stop)
+        {
+            return new(Stopped: true, Reported: false, Retried: false, DueUtc: null);
+        }
+
+        await _options.Store.SaveRetryStateAsync(operation.OperationId, decision.NextState, CancellationToken.None).ConfigureAwait(false);
+        return new(Stopped: false, Reported: false, Retried: true, decision.DueUtc);
     }
 
     /// <summary>Renews an expired shared remote session before durable retry policy is consumed.</summary>
