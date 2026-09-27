@@ -173,6 +173,7 @@ public enum FaultCategory
     Conflict = 8,
     Observer = 9,
     InternalInvariant = 10,
+    Security = 11,
 }
 public enum FaultSeverity
 {
@@ -290,6 +291,11 @@ public static class ILocalStoreAdapterExtensions
         [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
         public System.Threading.Tasks.ValueTask<ReactiveUI.Primitives.OccasionallyConnected.AttemptBarrierResult> TryBeginRemoteAttemptAsync(System.Guid leaseId, ReactiveUI.Primitives.OccasionallyConnected.OperationId operationId, int nextAttempt) { }
     }
+}
+public interface ILocalStoreKeyProvider
+{
+    ReactiveUI.Primitives.OccasionallyConnected.LocalStoreKey GetCurrentKey() { }
+    ReactiveUI.Primitives.OccasionallyConnected.LocalStoreKey? GetKey(string keyId) { }
 }
 public interface IOccasionallyConnectedContext : System.IAsyncDisposable
 {
@@ -697,6 +703,24 @@ public record LocalStoreInitialization : System.IEquatable<ReactiveUI.Primitives
     public bool RequireAuthenticatedEncryptionAtRest { get; init; }
     public int RequiredSchemaVersion { get; init; }
     public string StoreIdentity { get; init; }
+}
+[System.Diagnostics.DebuggerDisplay("KeyId = {KeyId,nq}")]
+public sealed class LocalStoreKey
+{
+    public LocalStoreKey(string keyId, byte[] keyMaterial) { }
+    public string KeyId { get; }
+    public System.ReadOnlySpan<byte> KeyMaterial { get; }
+    public static ReactiveUI.Primitives.OccasionallyConnected.LocalStoreKey CreateRandom(string keyId) { }
+    public override string ToString() { }
+    public static void ValidateKeyId(string keyId) { }
+}
+[System.Diagnostics.DebuggerDisplay("{Message,nq}")]
+public sealed class LocalStoreRecordAuthenticationException : System.InvalidOperationException
+{
+    public LocalStoreRecordAuthenticationException() { }
+    public LocalStoreRecordAuthenticationException(string message) { }
+    public LocalStoreRecordAuthenticationException(string message, System.Exception innerException) { }
+    public static bool IsInChain(System.Exception? exception) { }
 }
 [System.Diagnostics.DebuggerDisplay("{ProtocolVersion,nq}")]
 public record NegotiatedCapabilities : System.IEquatable<ReactiveUI.Primitives.OccasionallyConnected.NegotiatedCapabilities>
@@ -1293,6 +1317,15 @@ public enum StartPositionKind
     FromTimestamp = 1,
     FromSequence = 2,
     FromCursor = 3,
+}
+[System.Diagnostics.DebuggerDisplay("Current = {_currentKey.KeyId,nq}, Keys = {_keys.Count}")]
+public sealed class StaticLocalStoreKeyProvider : ReactiveUI.Primitives.OccasionallyConnected.ILocalStoreKeyProvider
+{
+    public StaticLocalStoreKeyProvider(ReactiveUI.Primitives.OccasionallyConnected.LocalStoreKey currentKey) { }
+    public StaticLocalStoreKeyProvider(ReactiveUI.Primitives.OccasionallyConnected.LocalStoreKey currentKey, System.Collections.Generic.IEnumerable<ReactiveUI.Primitives.OccasionallyConnected.LocalStoreKey> retiredKeys) { }
+    [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+    public ReactiveUI.Primitives.OccasionallyConnected.LocalStoreKey GetCurrentKey() { }
+    public ReactiveUI.Primitives.OccasionallyConnected.LocalStoreKey? GetKey(string keyId) { }
 }
 [System.Diagnostics.DebuggerDisplay("{StreamId.Value,nq}; Subscription={SubscriptionId,nq}")]
 public record StreamDefinition<TState, TInput> : System.IEquatable<ReactiveUI.Primitives.OccasionallyConnected.StreamDefinition<TState, TInput>>

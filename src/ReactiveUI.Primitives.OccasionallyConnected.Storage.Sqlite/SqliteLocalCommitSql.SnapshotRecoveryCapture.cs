@@ -31,6 +31,12 @@ internal static partial class SqliteLocalCommitSql
     /// <summary>The invalid subscription identity message.</summary>
     private const string InvalidSnapshotRecoverySubscriptionIdentityMessage = "The SQLite subscription identity is invalid.";
 
+    /// <summary>The invalid stream cursor message.</summary>
+    private const string InvalidStreamCursorMessage = "The SQLite stream cursor is invalid.";
+
+    /// <summary>The invalid metadata bytes message.</summary>
+    private const string InvalidMetadataBytesMessage = "The SQLite metadata bytes are invalid.";
+
     /// <summary>The maximum timestamp text length admitted before decoder validation.</summary>
     private const int SnapshotRecoveryCaptureTimestampTextLength = 64;
 
@@ -199,6 +205,12 @@ internal static partial class SqliteLocalCommitSql
     /// <summary>Column index used by snapshot recovery capture preflight.</summary>
     private const int OperationConflictValueIndex = 24;
 
+    /// <summary>Column index used by snapshot recovery capture preflight.</summary>
+    private const int OperationMetadataKeyBytesIndex = 25;
+
+    /// <summary>Column index used by snapshot recovery capture preflight.</summary>
+    private const int OperationMetadataValueBytesIndex = 26;
+
     /// <summary>SQL statement used by snapshot recovery capture preflight.</summary>
     private const string SnapshotRecoveryCaptureOperationBytesSql = """
         SELECT typeof(outbox.payload_schema_version),
@@ -225,7 +237,9 @@ internal static partial class SqliteLocalCommitSql
                typeof(outbox.policy_priority),
                CASE WHEN typeof(outbox.policy_priority) = 'integer' THEN outbox.policy_priority ELSE NULL END,
                typeof(outbox.policy_conflict),
-               CASE WHEN typeof(outbox.policy_conflict) = 'integer' THEN outbox.policy_conflict ELSE NULL END
+               CASE WHEN typeof(outbox.policy_conflict) = 'integer' THEN outbox.policy_conflict ELSE NULL END,
+               COALESCE(SUM(length(CAST(metadata.key AS BLOB))), 0),
+               COALESCE(SUM(length(CAST(metadata.value AS BLOB))), 0)
         FROM oc_outbox AS outbox
         LEFT JOIN oc_outbox_operation_states AS state
             ON state.store_identity = outbox.store_identity
@@ -365,8 +379,12 @@ internal static partial class SqliteLocalCommitSql
                 ON identity.store_identity = stream.store_identity AND identity.stream_id = stream.stream_id
             WHERE stream.store_identity = $storeIdentity AND stream.stream_id = $streamId;
         """;
+        var isProtected = SqliteRecordCipher.For(connection) is not null;
+        var storedCursorLimit = isProtected
+            ? SqliteRecordCipher.ProtectedTextLengthUpperBound(request.Limits.MaximumCursorUtf8Bytes)
+            : request.Limits.MaximumCursorUtf8Bytes;
         AddStreamParameters(command, storeIdentity, request.StreamId);
-        _ = command.Parameters.AddWithValue("$cursorLimit", request.Limits.MaximumCursorUtf8Bytes);
+        _ = command.Parameters.AddWithValue("$cursorLimit", storedCursorLimit);
         _ = command.Parameters.AddWithValue("$subscriptionIdTextLength", SnapshotRecoverySubscriptionIdTextLength);
         using var reader = command.ExecuteReader();
         if (!reader.Read())
@@ -389,10 +407,51 @@ internal static partial class SqliteLocalCommitSql
             throw new InvalidOperationException("The SQLite stream subscription identity is inconsistent.");
         }
 
-        var cursorBytes = ReadNonNegativeLong(reader, StreamCursorLengthIndex, "The SQLite stream cursor is invalid.");
-        ThrowIfSnapshotRecoveryCapacityExceeded(cursorBytes, request.Limits.MaximumCursorUtf8Bytes, nameof(SnapshotRecoveryLimits.MaximumCursorUtf8Bytes));
-        var cursor = ReadSnapshotRecoveryCaptureNullableText(reader, StreamCursorTypeIndex, StreamCursorValueIndex, "The SQLite stream cursor is invalid.");
+        var cursor = ReadSnapshotRecoveryCaptureCursor(connection, reader, request, storedCursorLimit);
         return new(ReadPositiveLong(reader, StreamSequenceIndex, "The SQLite stream sequence is invalid."), cursor);
+    }
+
+    /// <summary>Reads the bounded stream cursor and checks it against the cursor limit.</summary>
+    /// <param name="connection">The connection that carries the optional cipher.</param>
+    /// <param name="reader">The reader.</param>
+    /// <param name="request">The capture request.</param>
+    /// <param name="storedCursorLimit">The stored-length limit that matches the plaintext cursor limit.</param>
+    /// <returns>The plaintext cursor, or null.</returns>
+    /// <exception cref="InvalidOperationException">The stored cursor is invalid or fails authentication.</exception>
+    /// <exception cref="SnapshotRecoveryCapacityExceededException">The cursor exceeds the configured limit.</exception>
+    private static string? ReadSnapshotRecoveryCaptureCursor(
+        SqliteConnection connection,
+        SqliteDataReader reader,
+        LocalSnapshotRecoveryCaptureRequest request,
+        long storedCursorLimit)
+    {
+        var isProtected = SqliteRecordCipher.For(connection) is not null;
+        var cursorBytes = ReadNonNegativeLong(reader, StreamCursorLengthIndex, InvalidStreamCursorMessage);
+        if (cursorBytes > storedCursorLimit)
+        {
+            var observed = isProtected
+                ? Math.Max(request.Limits.MaximumCursorUtf8Bytes + 1L, SqliteRecordCipher.PlaintextUpperBoundFromText(cursorBytes))
+                : cursorBytes;
+            throw new SnapshotRecoveryCapacityExceededException(
+                nameof(SnapshotRecoveryLimits.MaximumCursorUtf8Bytes),
+                request.Limits.MaximumCursorUtf8Bytes,
+                observed);
+        }
+
+        var cursor = UnprotectNullableText(
+            connection,
+            ReadSnapshotRecoveryCaptureNullableText(reader, StreamCursorTypeIndex, StreamCursorValueIndex, InvalidStreamCursorMessage),
+            SqliteRecordContext.Stream(request.StreamId),
+            SqliteRecordContext.ServerCursorColumn);
+        if (isProtected && cursor is not null)
+        {
+            ThrowIfSnapshotRecoveryCapacityExceeded(
+                Encoding.UTF8.GetByteCount(cursor),
+                request.Limits.MaximumCursorUtf8Bytes,
+                nameof(SnapshotRecoveryLimits.MaximumCursorUtf8Bytes));
+        }
+
+        return cursor;
     }
 
     /// <summary>Determines whether a stream already has a quarantine marker without materializing it.</summary>
@@ -459,7 +518,10 @@ internal static partial class SqliteLocalCommitSql
             return logicalBytes;
         }
 
-        var snapshotCursorLength = ReadNonNegativeLong(reader, SnapshotCursorLengthIndex, "The SQLite snapshot cursor is invalid.");
+        var isProtected = SqliteRecordCipher.For(connection) is not null;
+        var snapshotCursorLength = ToPlaintextTextLength(
+            ReadNonNegativeLong(reader, SnapshotCursorLengthIndex, "The SQLite snapshot cursor is invalid."),
+            isProtected);
         ThrowIfSnapshotRecoveryCapacityExceeded(snapshotCursorLength, request.Limits.MaximumCursorUtf8Bytes, nameof(SnapshotRecoveryLimits.MaximumCursorUtf8Bytes));
         logicalBytes = checked(logicalBytes
             + Encoding.UTF8.GetByteCount(request.StreamId.Value)
@@ -471,7 +533,8 @@ internal static partial class SqliteLocalCommitSql
                 SnapshotPayloadContentTypeLengthIndex,
                 SnapshotPayloadHashLengthIndex,
                 SnapshotPayloadLengthIndex,
-                request.Limits)
+                request.Limits,
+                isProtected)
             + SnapshotRecoveryCaptureInt64Bytes
             + SnapshotRecoveryCaptureDateTimeOffsetBytes);
         ThrowIfSnapshotRecoveryCapacityExceeded(logicalBytes, request.Limits.MaximumLogicalBytes, nameof(SnapshotRecoveryLimits.MaximumLogicalBytes));
@@ -518,7 +581,8 @@ internal static partial class SqliteLocalCommitSql
             AuthoritativePayloadContentTypeLengthIndex,
             AuthoritativePayloadHashLengthIndex,
             AuthoritativePayloadLengthIndex,
-            request.Limits));
+            request.Limits,
+            SqliteRecordCipher.For(connection) is not null));
         ThrowIfSnapshotRecoveryCapacityExceeded(logicalBytes, request.Limits.MaximumLogicalBytes, nameof(SnapshotRecoveryLimits.MaximumLogicalBytes));
         ValidateSnapshotRecoveryCapturePayloadSchemaType(
             reader,
@@ -551,6 +615,7 @@ internal static partial class SqliteLocalCommitSql
         using var reader = command.ExecuteReader();
         long count = 0;
         var streamIdBytes = Encoding.UTF8.GetByteCount(request.StreamId.Value);
+        var isProtected = SqliteRecordCipher.For(connection) is not null;
         while (reader.Read())
         {
             cancellationToken.ThrowIfCancellationRequested();
@@ -558,9 +623,13 @@ internal static partial class SqliteLocalCommitSql
             ThrowIfSnapshotRecoveryCapacityExceeded(count, request.Limits.MaximumPendingOperations, nameof(SnapshotRecoveryLimits.MaximumPendingOperations));
             var metadataCount = ReadNonNegativeLong(reader, OperationMetadataCountIndex, "The SQLite metadata count is invalid.");
             ThrowIfSnapshotRecoveryCapacityExceeded(metadataCount, request.Limits.MaximumMetadataEntries, nameof(SnapshotRecoveryLimits.MaximumMetadataEntries));
-            var metadataBytes = ReadNonNegativeLong(reader, OperationMetadataBytesIndex, "The SQLite metadata bytes are invalid.");
+            var metadataBytes = isProtected
+                ? GetProtectedMetadataBytes(reader, metadataCount)
+                : ReadNonNegativeLong(reader, OperationMetadataBytesIndex, InvalidMetadataBytesMessage);
             ThrowIfSnapshotRecoveryCapacityExceeded(metadataBytes, request.Limits.MaximumMetadataBytes, nameof(SnapshotRecoveryLimits.MaximumMetadataBytes));
-            var baseVersionBytes = ReadNonNegativeLong(reader, OperationBaseVersionLengthIndex, "The SQLite operation base version is invalid.");
+            var baseVersionBytes = ToPlaintextTextLength(
+                ReadNonNegativeLong(reader, OperationBaseVersionLengthIndex, "The SQLite operation base version is invalid."),
+                isProtected);
             ThrowIfSnapshotRecoveryCapacityExceeded(baseVersionBytes, request.Limits.MaximumContractUtf8Bytes, nameof(SnapshotRecoveryLimits.MaximumContractUtf8Bytes));
             logicalBytes = checked(logicalBytes
                 + SnapshotRecoveryCaptureGuidBytes
@@ -574,7 +643,8 @@ internal static partial class SqliteLocalCommitSql
                     OperationPayloadContentTypeLengthIndex,
                     OperationPayloadHashLengthIndex,
                     OperationPayloadLengthIndex,
-                    request.Limits)
+                    request.Limits,
+                    isProtected)
                 + baseVersionBytes
                 + metadataBytes
                 + SnapshotRecoveryCaptureInt32Bytes
@@ -595,6 +665,7 @@ internal static partial class SqliteLocalCommitSql
     /// <param name="hashLengthIndex">The hash length column index.</param>
     /// <param name="payloadLengthIndex">The payload length column index.</param>
     /// <param name="limits">The capture limits.</param>
+    /// <param name="isProtected">Whether the store encrypts the hash and payload columns.</param>
     /// <returns>The payload logical byte count.</returns>
     private static long GetSnapshotRecoveryCapturePayloadLogicalBytes(
         SqliteDataReader reader,
@@ -602,15 +673,17 @@ internal static partial class SqliteLocalCommitSql
         int contentTypeLengthIndex,
         int hashLengthIndex,
         int payloadLengthIndex,
-        SnapshotRecoveryLimits limits)
+        SnapshotRecoveryLimits limits,
+        bool isProtected)
     {
         var contractLength = ReadNonNegativeLong(reader, contractLengthIndex, "The SQLite payload contract is invalid.");
         ThrowIfSnapshotRecoveryCapacityExceeded(contractLength, limits.MaximumContractUtf8Bytes, nameof(SnapshotRecoveryLimits.MaximumContractUtf8Bytes));
         var contentTypeLength = ReadNonNegativeLong(reader, contentTypeLengthIndex, "The SQLite payload content type is invalid.");
         ThrowIfSnapshotRecoveryCapacityExceeded(contentTypeLength, limits.MaximumContractUtf8Bytes, nameof(SnapshotRecoveryLimits.MaximumContractUtf8Bytes));
-        var hashLength = ReadNonNegativeLong(reader, hashLengthIndex, "The SQLite payload hash is invalid.");
+        var hashLength = ToPlaintextTextLength(ReadNonNegativeLong(reader, hashLengthIndex, "The SQLite payload hash is invalid."), isProtected);
         ThrowIfSnapshotRecoveryCapacityExceeded(hashLength, limits.MaximumContractUtf8Bytes, nameof(SnapshotRecoveryLimits.MaximumContractUtf8Bytes));
-        var payloadLength = ReadNonNegativeLong(reader, payloadLengthIndex, "The SQLite payload bytes are invalid.");
+        var storedPayloadLength = ReadNonNegativeLong(reader, payloadLengthIndex, "The SQLite payload bytes are invalid.");
+        var payloadLength = isProtected ? SqliteRecordCipher.PlaintextUpperBoundFromBlob(storedPayloadLength) : storedPayloadLength;
         ThrowIfSnapshotRecoveryCapacityExceeded(payloadLength, limits.MaximumPayloadBytes, nameof(SnapshotRecoveryLimits.MaximumPayloadBytes));
         return SnapshotRecoveryCaptureInt32Bytes
             + SnapshotRecoveryCaptureInt64Bytes
@@ -618,6 +691,25 @@ internal static partial class SqliteLocalCommitSql
             + contentTypeLength
             + hashLength
             + payloadLength;
+    }
+
+    /// <summary>Converts a stored TEXT length to the plaintext length upper bound when the column is protected.</summary>
+    /// <param name="storedLength">The stored length.</param>
+    /// <param name="isProtected">Whether the column holds a protected envelope.</param>
+    /// <returns>The logical length used for capacity checks.</returns>
+    private static long ToPlaintextTextLength(long storedLength, bool isProtected) =>
+        isProtected ? SqliteRecordCipher.PlaintextUpperBoundFromText(storedLength) : storedLength;
+
+    /// <summary>Gets the logical metadata bytes for protected metadata values from separate key and value sums.</summary>
+    /// <param name="reader">The reader.</param>
+    /// <param name="metadataCount">The metadata entry count.</param>
+    /// <returns>The logical metadata byte upper bound.</returns>
+    private static long GetProtectedMetadataBytes(SqliteDataReader reader, long metadataCount)
+    {
+        const long MetadataCountBytes = 4;
+        var keyBytes = ReadNonNegativeLong(reader, OperationMetadataKeyBytesIndex, InvalidMetadataBytesMessage);
+        var valueBytes = ReadNonNegativeLong(reader, OperationMetadataValueBytesIndex, InvalidMetadataBytesMessage);
+        return checked(MetadataCountBytes + keyBytes + SqliteRecordCipher.PlaintextUpperBoundFromText(valueBytes, metadataCount));
     }
 
     /// <summary>Reads a nullable bounded text projection.</summary>

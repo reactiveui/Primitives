@@ -235,9 +235,12 @@ internal sealed partial class SyncEngine
     /// <param name="streamId">The related stream, if any.</param>
     /// <param name="exception">The observed exception.</param>
     /// <param name="category">The fault category; credential and permission faults are not transient.</param>
+    /// <remarks>A local record that failed authentication always publishes a critical <see cref="FaultCategory.Security"/> fault.</remarks>
     private void PublishFault(string code, string message, StreamId? streamId, Exception exception, FaultCategory category)
     {
         const int maximumDiagnosticTypeNameLength = 256;
+        var isSecurityFault = LocalStoreRecordAuthenticationException.IsInChain(exception);
+        category = isSecurityFault ? FaultCategory.Security : category;
         var diagnosticType = exception.GetType().ToString();
         if (diagnosticType.Length > maximumDiagnosticTypeNameLength)
         {
@@ -250,7 +253,12 @@ internal sealed partial class SyncEngine
             _options.TimeProvider.GetUtcNow(),
             streamId,
             OperationId: null,
-            new InvalidOperationException(diagnosticType)) { Category = category, Severity = FaultSeverity.Warning, IsTransient = category == FaultCategory.Transport };
+            new InvalidOperationException(diagnosticType))
+        {
+            Category = category,
+            Severity = isSecurityFault ? FaultSeverity.Critical : FaultSeverity.Warning,
+            IsTransient = category == FaultCategory.Transport,
+        };
         _faults.Publish(fault);
     }
 

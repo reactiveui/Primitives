@@ -481,14 +481,17 @@ internal static partial class SqliteLocalCommitSql
         var streamId = new StreamId(ReadString(reader, StreamIdIndex, InvalidOperationStreamMessage));
         var leaseStreamId = new StreamId(ReadString(reader, LeaseRowStreamIdIndex, InvalidOperationStreamMessage));
         ValidateLeaseStream(streamId, leaseStreamId);
+        var clientSequence = ReadPositiveLong(reader, ClientSequenceIndex, InvalidOperationSequenceMessage);
+        var operationType = ReadOperationType(reader, TypeIndex);
+        var context = SqliteRecordContext.Outbox(operationId, streamId, clientSequence, operationType);
         var operation = new SyncOperation
         {
             OperationId = operationId,
             StreamId = streamId,
-            ClientSequence = ReadPositiveLong(reader, ClientSequenceIndex, InvalidOperationSequenceMessage),
+            ClientSequence = clientSequence,
             TimestampUtc = ReadDateTimeOffset(reader, TimestampIndex, "The SQLite operation timestamp is invalid."),
-            BaseVersion = ReadNullableString(reader, BaseVersionIndex),
-            Type = ReadOperationType(reader, TypeIndex),
+            BaseVersion = ReadProtectedNullableText(connection, reader, BaseVersionIndex, context, SqliteRecordContext.BaseVersionColumn, operationId),
+            Type = operationType,
             Payload = ReadOperationPayload(
                 connection,
                 reader,
@@ -498,7 +501,7 @@ internal static partial class SqliteLocalCommitSql
                     PayloadContentTypeIndex,
                     PayloadIndex,
                     PayloadHashIndex,
-                    new(RowIdIndex, SqliteStoreSchema.OutboxTableName, PayloadColumnName),
+                    new(RowIdIndex, SqliteStoreSchema.OutboxTableName, PayloadColumnName, context),
                     EvidenceIndex),
                 operationId,
                 maximumPayloadBytes),

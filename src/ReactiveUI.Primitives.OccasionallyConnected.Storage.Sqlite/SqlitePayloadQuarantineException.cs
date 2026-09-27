@@ -58,8 +58,18 @@ internal sealed class SqlitePayloadQuarantineException : InvalidOperationExcepti
     /// <summary>Gets the bounded raw payload evidence.</summary>
     internal LocalPayloadQuarantineEvidence Evidence { get; }
 
+    /// <summary>Gets a value indicating whether the row failed decryption or authentication rather than a shape check.</summary>
+    internal bool IsAuthenticationFailure => LocalStoreRecordAuthenticationException.IsInChain(InnerException);
+
     /// <summary>Gets the affected operation identifier, when known.</summary>
     internal OperationId? OperationId { get; }
+
+    /// <summary>Creates the exception for a protected column that failed authentication outside payload evidence capture.</summary>
+    /// <param name="operationId">The affected operation identifier, when known.</param>
+    /// <param name="innerException">The authentication failure.</param>
+    /// <returns>The quarantine exception.</returns>
+    internal static SqlitePayloadQuarantineException ForAuthenticationFailure(OperationId? operationId, Exception innerException) =>
+        new(EmptyEvidence, operationId, innerException);
 
     /// <summary>Resolves the affected operation identifier for a corrupt leased row.</summary>
     /// <param name="fallback">The selected lease operation identifier to use when the corrupt row did not identify itself.</param>

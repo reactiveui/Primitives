@@ -130,13 +130,18 @@ internal static partial class SqliteLocalCommitSql
         }
 
         var streamId = new StreamId(ReadString(reader, StatusStreamIndex, "The SQLite operation stream is invalid."));
+        var state = ReadOperationState(reader, StatusStateIndex);
+        var attemptCount = ReadNonNegativeInt(reader, StatusAttemptIndex, InvalidAttemptCountMessage);
+        var reasonCode = state == SyncOperationState.DeadLettered
+            ? ReadDeadLetterReasonCode(connection, reader, StatusReasonCodeIndex, operationId, attemptCount, StatusChangedAtIndex)
+            : ReadReasonCode(reader, StatusReasonCodeIndex);
         return new(
             operationId,
             streamId,
-            ReadOperationState(reader, StatusStateIndex),
-            ReadNonNegativeInt(reader, StatusAttemptIndex, InvalidAttemptCountMessage),
+            state,
+            attemptCount,
             ReadDateTimeOffset(reader, StatusChangedAtIndex, "The SQLite operation state timestamp is invalid."),
-            ReadReasonCode(reader, StatusReasonCodeIndex));
+            reasonCode);
     }
 
     /// <summary>Reads persisted retry state for an operation.</summary>
@@ -309,6 +314,11 @@ internal static partial class SqliteLocalCommitSql
             WHERE store_identity = $storeIdentity AND operation_id = $operationId;
             """;
         AddStatusParameters(command, storeIdentity, operationId, SyncOperationState.DeadLettered, changedAtUtc, reasonCode);
+        command.Parameters[ReasonCodeParameter].Value = ProtectText(
+            command,
+            reasonCode,
+            SqliteRecordContext.DeadLetter(operationId, current.Attempt, FormatDateTimeOffset(changedAtUtc)),
+            SqliteRecordContext.ReasonCodeColumn);
         if (command.ExecuteNonQuery() == 1)
         {
             return;

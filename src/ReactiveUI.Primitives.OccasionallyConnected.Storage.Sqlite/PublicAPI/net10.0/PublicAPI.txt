@@ -29,12 +29,14 @@ public sealed class SqliteLocalStoreAdapter : ReactiveUI.Primitives.Occasionally
     public System.Threading.Tasks.ValueTask<ReactiveUI.Primitives.OccasionallyConnected.RecoveredStream> RecoverStreamAsync(ReactiveUI.Primitives.OccasionallyConnected.StreamId streamId, ReactiveUI.Primitives.OccasionallyConnected.SubscriptionId subscriptionId, System.Threading.CancellationToken cancellationToken) { }
     public System.Threading.Tasks.ValueTask ReleaseLeaseAsync(System.Guid leaseId, System.Threading.CancellationToken cancellationToken) { }
     public System.Threading.Tasks.ValueTask RenewLeaseAsync(System.Guid leaseId, System.TimeSpan extension, System.Threading.CancellationToken cancellationToken) { }
+    public System.Threading.Tasks.ValueTask<long> RotateEncryptionKeyAsync(System.Threading.CancellationToken cancellationToken) { }
     public System.Threading.Tasks.ValueTask SaveRetryStateAsync(ReactiveUI.Primitives.OccasionallyConnected.OperationId operationId, ReactiveUI.Primitives.OccasionallyConnected.RetryState retryState, System.Threading.CancellationToken cancellationToken) { }
     public System.Threading.Tasks.ValueTask<ReactiveUI.Primitives.OccasionallyConnected.AttemptBarrierResult> TryBeginRemoteAttemptAsync(System.Guid leaseId, ReactiveUI.Primitives.OccasionallyConnected.OperationId operationId, int nextAttempt, System.Threading.CancellationToken cancellationToken) { }
 }
 [System.Diagnostics.DebuggerDisplay("WorkerCapacity = {WorkerCapacity}, WorkerCapacityBytes = {WorkerCapacityBytes}")]
 public record SqliteLocalStoreAdapterOptions : System.IEquatable<ReactiveUI.Primitives.OccasionallyConnected.Storage.Sqlite.SqliteLocalStoreAdapterOptions>
 {
+    public ReactiveUI.Primitives.OccasionallyConnected.ILocalStoreKeyProvider? KeyProvider { get; init; }
     public ReactiveUI.Primitives.OccasionallyConnected.RetentionOptions Retention { get; init; }
     public System.TimeProvider TimeProvider { get; init; }
     public int WorkerCapacity { get; init; }

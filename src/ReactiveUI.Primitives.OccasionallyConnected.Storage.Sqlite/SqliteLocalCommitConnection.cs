@@ -69,10 +69,17 @@ internal static class SqliteLocalCommitConnection
     /// <summary>Opens a SQLite connection with pooling disabled.</summary>
     /// <param name="databasePath">The SQLite database path.</param>
     /// <returns>The open connection.</returns>
-    internal static SqliteConnection OpenConnection(string databasePath)
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    internal static SqliteConnection OpenConnection(string databasePath) => OpenConnection(databasePath, cipher: null);
+
+    /// <summary>Opens a SQLite connection with pooling disabled that carries an optional record cipher.</summary>
+    /// <param name="databasePath">The SQLite database path.</param>
+    /// <param name="cipher">The record cipher, or null for a plaintext store.</param>
+    /// <returns>The open connection.</returns>
+    internal static SqliteConnection OpenConnection(string databasePath, SqliteRecordCipher? cipher)
     {
         var connectionString = new SqliteConnectionStringBuilder { DataSource = databasePath, Mode = SqliteOpenMode.ReadWriteCreate, Pooling = false }.ToString();
-        var connection = new SqliteConnection(connectionString);
+        var connection = cipher is null ? new SqliteConnection(connectionString) : new SqliteProtectedConnection(connectionString, cipher);
         try
         {
             connection.Open();

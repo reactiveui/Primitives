@@ -46,4 +46,16 @@ internal enum SqliteCommitCheckpoint
 
     /// <summary>The compaction transaction has committed.</summary>
     CompactionAfterCommit = 11,
+
+    /// <summary>The plaintext rows are encrypted and the protection marker is written but not committed.</summary>
+    EncryptionMigrationBeforeCommit = 12,
+
+    /// <summary>The plaintext-to-encrypted migration transaction has committed.</summary>
+    EncryptionMigrationAfterCommit = 13,
+
+    /// <summary>The values under older keys are re-encrypted but not committed.</summary>
+    KeyRotationBeforeCommit = 14,
+
+    /// <summary>The key rotation transaction has committed.</summary>
+    KeyRotationAfterCommit = 15,
 }

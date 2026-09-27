@@ -446,7 +446,7 @@ public sealed partial class SqliteLocalStoreAdapterTests
         await Assert.That(recovery.PendingOperations[0].OperationId).IsEqualTo(operation.OperationId);
     }
 
-    /// <summary>Verifies required authenticated encryption is rejected until SQLite encryption support exists.</summary>
+    /// <summary>Verifies required authenticated encryption is rejected when no key provider is configured.</summary>
     /// <returns>A task that represents the asynchronous test.</returns>
     [Test]
     public async Task WhenEncryptionAtRestIsRequired_ThenInitializeRejectsIt()

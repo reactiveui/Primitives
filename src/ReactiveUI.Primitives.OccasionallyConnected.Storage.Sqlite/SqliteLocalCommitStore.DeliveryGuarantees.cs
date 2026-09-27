@@ -85,7 +85,7 @@ internal sealed partial class SqliteLocalCommitStore
         SqliteLocalCommitValidation.ValidateOperationId(operationId, nameof(operationId));
         cancellationToken.ThrowIfCancellationRequested();
         var storeIdentity = GetInitializedStoreIdentityForOperation();
-        using var connection = SqliteLocalCommitConnection.OpenConnection(_databasePath);
+        using var connection = OpenStoreConnection(storeIdentity);
         SqliteLocalCommitConnection.ConfigureLockPolling(connection);
         SqliteConnectionSettings.ConfigureOperationalConnection(connection);
         using var transaction = SqliteLocalCommitConnection.BeginWriteTransaction(connection, cancellationToken);

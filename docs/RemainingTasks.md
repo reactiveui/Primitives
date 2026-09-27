@@ -67,6 +67,16 @@ This list is limited to requirements from [ReactiveUI.Primitives.OccasionallyCon
     - The in-memory store skips each durable case with a stated reason.
   - Remaining: migration crashes and disk-full, crashes across the transport, and the producer-by-buffer-strategy matrix.
 - [ ] Prove restartable migrations, ownership coordination, authenticated encryption at rest, quarantine/dead-letter recovery, compaction, and retention without losing data required to rebuild snapshots or resolve pending operations.
+  - Done: authenticated encryption at rest in `SqliteLocalStoreAdapter`, using AES-256-GCM with a random 96-bit nonce per value. The key comes from `ILocalStoreKeyProvider` via HKDF-SHA256.
+    - The associated data ties each value to its store, record kind, column, and row keys.
+    - Encrypted: payloads, hashes, base versions, fingerprints, metadata values, all cursors, quarantine data, and dead-letter reasons.
+    - A value that fails authentication is quarantined as `sqlite-record-authentication-failed` and raises a critical `Security` fault, and its stream fails closed.
+    - Opening a plaintext database with a key encrypts it in one restartable transaction. Opening an encrypted database without a key, or with the wrong key, fails closed.
+    - `RotateEncryptionKeyAsync` re-encrypts the store under the current key.
+    - .NET Framework has no `AesGcm`, so a key provider there throws `PlatformNotSupportedException`.
+    - Tests: `Storage.Sqlite.Tests` passes 542/542 on `net8.0`, `net10.0`, and `net11.0`.
+  - Remaining (encryption): operation-state columns (state, attempts, retry fields, and reason codes other than the dead-letter reason) are neither encrypted nor MAC-protected. Protect them with a keyed row MAC. An encrypted database also leaves the schema version unchanged, so an older library can open it without failing closed. Bump the store version or add a marker the older library already checks.
+  - Remaining: migrations still lack checksums, backups, and crash-during-migration tests. The store does not handle a full disk (`SQLITE_FULL`).
 - [x] Complete end-to-end at-most-once, at-least-once, and capability-gated exactly-once-effect behaviour, including retention expiry, explicit downgrade, ambiguous outcomes, and server idempotency. The current components validate capabilities but do not yet prove the complete application path.
   - Done: `OccasionallyConnectedBuilderTests.DeliveryGuarantees*.cs` runs end to end over Loopback and HTTP against a SQLite `ServerStreamHub`. A fault injector drops the push response after the server commits.
     - `AtMostOnce` ends `Ambiguous` with no resend and emits `OC.AtMostOnceAmbiguous`.

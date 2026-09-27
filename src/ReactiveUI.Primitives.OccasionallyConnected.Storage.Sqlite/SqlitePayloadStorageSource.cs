@@ -11,11 +11,13 @@ internal sealed class SqlitePayloadStorageSource
     /// <param name="rowIdIndex">The payload rowid column index.</param>
     /// <param name="tableName">The source table name.</param>
     /// <param name="payloadColumnName">The source payload column name.</param>
-    internal SqlitePayloadStorageSource(int rowIdIndex, string tableName, string payloadColumnName)
+    /// <param name="context">The record context that binds protected payload columns to their row.</param>
+    internal SqlitePayloadStorageSource(int rowIdIndex, string tableName, string payloadColumnName, SqliteRecordContext context)
     {
         RowIdIndex = rowIdIndex;
         TableName = tableName;
         PayloadColumnName = payloadColumnName;
+        Context = context;
     }
 
     /// <summary>Gets the payload rowid column index.</summary>
@@ -26,4 +28,7 @@ internal sealed class SqlitePayloadStorageSource
 
     /// <summary>Gets the source payload column name.</summary>
     internal string PayloadColumnName { get; }
+
+    /// <summary>Gets the record context that binds protected payload columns to their row.</summary>
+    internal SqliteRecordContext Context { get; }
 }

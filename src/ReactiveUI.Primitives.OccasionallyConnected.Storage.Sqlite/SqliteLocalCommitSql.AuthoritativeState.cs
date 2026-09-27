@@ -45,7 +45,10 @@ internal static partial class SqliteLocalCommitSql
                 payload_hash = excluded.payload_hash;
             """;
         AddStreamParameters(command, storeIdentity, snapshotMutation.StreamId);
-        AddPayloadParameters(command, snapshotMutation.AuthoritativeState);
+        AddPayloadParameters(
+            command,
+            snapshotMutation.AuthoritativeState,
+            SqliteRecordContext.SnapshotAuthoritativeState(snapshotMutation.StreamId));
         _ = command.ExecuteNonQuery();
     }
 
@@ -131,7 +134,11 @@ internal static partial class SqliteLocalCommitSql
                     contentTypeIndex: 2,
                     payloadIndex: 3,
                     hashIndex: 4,
-                    source: new(RowIdIndex, SqliteStoreSchema.OutboxAuthoritativeMutationsTableName, PayloadColumnName),
+                    source: new(
+                        RowIdIndex,
+                        SqliteStoreSchema.OutboxAuthoritativeMutationsTableName,
+                        PayloadColumnName,
+                        SqliteRecordContext.OutboxAuthoritativeMutation(operationId)),
                     evidenceStartIndex: EvidenceIndex),
                 maximumPayloadBytes)
             : null;
@@ -225,7 +232,11 @@ internal static partial class SqliteLocalCommitSql
                     contentTypeIndex: 2,
                     payloadIndex: 3,
                     hashIndex: 4,
-                    source: new(RowIdIndex, SqliteStoreSchema.SnapshotAuthoritativeStatesTableName, PayloadColumnName),
+                    source: new(
+                        RowIdIndex,
+                        SqliteStoreSchema.SnapshotAuthoritativeStatesTableName,
+                        PayloadColumnName,
+                        SqliteRecordContext.SnapshotAuthoritativeState(streamId)),
                     evidenceStartIndex: EvidenceIndex),
                 maximumPayloadBytes)
             : null;

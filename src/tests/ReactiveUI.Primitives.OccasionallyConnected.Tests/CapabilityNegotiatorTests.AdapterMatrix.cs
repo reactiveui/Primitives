@@ -92,6 +92,36 @@ public sealed partial class CapabilityNegotiatorTests
         await Assert.That(() => CapabilityNegotiator.Negotiate(encrypted)).ThrowsExactly<InvalidOperationException>();
     }
 
+    /// <summary>Verifies the SQLite store satisfies an encryption at rest requirement once it has a key provider.</summary>
+    /// <returns>A task representing the assertions.</returns>
+    [Test]
+    public async Task SqliteStoreWithKeyProviderSatisfiesEncryptionAtRestRequirement()
+    {
+        var databasePath = Path.Combine(SqliteTestDirectory.Create("oc-capability-encrypted-").FullName, "store.db");
+        LocalStoreCapabilities storeCapabilities;
+        await using (var sqlite = new SqliteLocalStoreAdapter(
+            databasePath,
+            new() { KeyProvider = new StaticLocalStoreKeyProvider(LocalStoreKey.CreateRandom("capability-key")) }))
+        {
+            storeCapabilities = sqlite.Capabilities;
+        }
+
+        var baseline = CreateRequest() with
+        {
+            Policy = OperationPolicy.Default with { DeliveryGuarantee = DeliveryGuarantee.AtMostOnce, Durability = OperationDurability.Volatile },
+            StoreCapabilities = storeCapabilities,
+            TransportCapabilities = HttpTransportFeatures,
+            PeerOffer = CreateRequest().PeerOffer with { ClientInboxRetentionRequired = null },
+        };
+        var encrypted = baseline with
+        {
+            Options = baseline.Options with { Security = baseline.Options.Security with { RequireAuthenticatedEncryptionAtRest = true } },
+        };
+
+        await Assert.That((storeCapabilities & LocalStoreCapabilities.AuthenticatedEncryptionAtRest) != 0).IsTrue();
+        await Assert.That(CapabilityNegotiator.Negotiate(encrypted)).IsNotNull();
+    }
+
     /// <summary>Reads the capabilities advertised by a shipped store instance.</summary>
     /// <param name="store">The shipped store.</param>
     /// <returns>The advertised capabilities.</returns>

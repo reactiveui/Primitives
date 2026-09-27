@@ -40,6 +40,9 @@ internal sealed partial class SqliteLocalCommitStore : IDisposable
     /// <summary>The checkpoint observer used by crash tests; the no-op singleton otherwise.</summary>
     private readonly ISqliteCommitFaultPoint _faultPoint;
 
+    /// <summary>The record protection, or null for a plaintext store.</summary>
+    private readonly SqliteRecordProtection? _protection;
+
     /// <summary>The initialized durable store identity partition.</summary>
     private string? _storeIdentity;
 
@@ -88,6 +91,23 @@ internal sealed partial class SqliteLocalCommitStore : IDisposable
         TimeProvider timeProvider,
         long maximumReadPayloadBytes,
         ISqliteCommitFaultPoint faultPoint)
+        : this(databasePath, timeProvider, maximumReadPayloadBytes, faultPoint, protection: null)
+    {
+    }
+
+    /// <summary>Initializes a new instance of the <see cref="SqliteLocalCommitStore"/> class.</summary>
+    /// <param name="databasePath">The SQLite database path.</param>
+    /// <param name="timeProvider">The clock used for commit timestamps.</param>
+    /// <param name="maximumReadPayloadBytes">The maximum payload bytes materialized by read paths.</param>
+    /// <param name="faultPoint">The write checkpoint observer.</param>
+    /// <param name="protection">The record protection, or null for a plaintext store.</param>
+    /// <exception cref="ArgumentOutOfRangeException"><paramref name="maximumReadPayloadBytes"/> is less than one.</exception>
+    internal SqliteLocalCommitStore(
+        string databasePath,
+        TimeProvider timeProvider,
+        long maximumReadPayloadBytes,
+        ISqliteCommitFaultPoint faultPoint,
+        SqliteRecordProtection? protection)
     {
         ArgumentExceptionHelper.ThrowIfNull(databasePath);
         ArgumentExceptionHelper.ThrowIfNull(timeProvider);
@@ -106,7 +126,11 @@ internal sealed partial class SqliteLocalCommitStore : IDisposable
         _timeProvider = timeProvider;
         _maximumReadPayloadBytes = maximumReadPayloadBytes;
         _faultPoint = faultPoint;
+        _protection = protection;
     }
+
+    /// <summary>Gets a value indicating whether this store encrypts and authenticates records at rest.</summary>
+    internal bool ProtectsRecords => _protection is not null;
 
     /// <inheritdoc/>
     public void Dispose()
@@ -133,7 +157,7 @@ internal sealed partial class SqliteLocalCommitStore : IDisposable
         SqliteLocalCommitValidation.ValidateInitialization(initialization);
         var clientId = SqliteClientIdentityBinding.ValidateClientId(initialization.ClientId, nameof(initialization));
         initialization.Outbox?.Validate();
-        if (initialization.RequireAuthenticatedEncryptionAtRest)
+        if (initialization.RequireAuthenticatedEncryptionAtRest && _protection is null)
         {
             throw new NotSupportedException("SQLite authenticated encryption at rest has not been configured for this store.");
         }
@@ -151,7 +175,7 @@ internal sealed partial class SqliteLocalCommitStore : IDisposable
 
             cancellationToken.ThrowIfCancellationRequested();
             _ = Directory.CreateDirectory(SqliteIdentityStoreData.GetDirectoryForCreate(_databasePath));
-            using var connection = SqliteLocalCommitConnection.OpenConnection(_databasePath);
+            using var connection = OpenStoreConnection(initialization.StoreIdentity);
             SqliteLocalCommitConnection.ConfigureLockPolling(connection);
             SqliteLocalCommitConnection.ValidateOwnershipBeforeDurability(connection);
             SqliteConnectionSettings.ConfigureDurability(connection);
@@ -162,7 +186,21 @@ internal sealed partial class SqliteLocalCommitStore : IDisposable
             cancellationToken.ThrowIfCancellationRequested();
             clientId = SqliteClientIdentityBinding.BindOrValidate(connection, transaction, initialization.StoreIdentity, clientId);
             cancellationToken.ThrowIfCancellationRequested();
-            transaction.Commit();
+            var migrated = SqliteRecordProtectionMaintenance.EnsureProtectionState(connection, transaction, _protection, cancellationToken);
+            cancellationToken.ThrowIfCancellationRequested();
+            if (migrated)
+            {
+                CommitAtCheckpoints(
+                    transaction,
+                    SqliteCommitCheckpoint.EncryptionMigrationBeforeCommit,
+                    SqliteCommitCheckpoint.EncryptionMigrationAfterCommit);
+                SqliteRecordProtectionMaintenance.TruncateWriteAheadLog(connection);
+            }
+            else
+            {
+                transaction.Commit();
+            }
+
             _storeIdentity = initialization.StoreIdentity;
             _clientId = clientId;
             _outboxOptions = initialization.Outbox;
@@ -188,7 +226,7 @@ internal sealed partial class SqliteLocalCommitStore : IDisposable
             ThrowIfDisposed();
             var storeIdentity = GetInitializedStoreIdentity();
             cancellationToken.ThrowIfCancellationRequested();
-            using var connection = SqliteLocalCommitConnection.OpenConnection(_databasePath);
+            using var connection = OpenStoreConnection(storeIdentity);
             SqliteLocalCommitConnection.ConfigureLockPolling(connection);
             SqliteConnectionSettings.ConfigureOperationalConnection(connection);
             using var transaction = SqliteLocalCommitConnection.BeginWriteTransaction(connection, cancellationToken);
@@ -228,7 +266,7 @@ internal sealed partial class SqliteLocalCommitStore : IDisposable
             ThrowIfDisposed();
             var storeIdentity = GetInitializedStoreIdentity();
             cancellationToken.ThrowIfCancellationRequested();
-            using var connection = SqliteLocalCommitConnection.OpenConnection(_databasePath);
+            using var connection = OpenStoreConnection(storeIdentity);
             SqliteLocalCommitConnection.ConfigureLockPolling(connection);
             SqliteConnectionSettings.ConfigureOperationalConnection(connection);
             using var transaction = SqliteLocalCommitConnection.BeginWriteTransaction(connection, cancellationToken);
@@ -296,7 +334,7 @@ internal sealed partial class SqliteLocalCommitStore : IDisposable
         {
             ThrowIfDisposed();
             var storeIdentity = GetInitializedStoreIdentity();
-            using var connection = SqliteLocalCommitConnection.OpenConnection(_databasePath);
+            using var connection = OpenStoreConnection(storeIdentity);
             SqliteLocalCommitConnection.ConfigureLockPolling(connection);
             SqliteConnectionSettings.ConfigureOperationalConnection(connection);
             using var transaction = connection.BeginTransaction(IsolationLevel.Serializable, deferred: true);
@@ -306,7 +344,8 @@ internal sealed partial class SqliteLocalCommitStore : IDisposable
                 throw new InvalidOperationException("The recovered subscription identity does not match the requested identity.");
             }
 
-            var hasStream = SqliteLocalCommitSql.TryReadStreamState(connection, transaction, storeIdentity, streamId, out var storedStream);
+            var target = new SqliteRecoveryTarget(storeIdentity, streamId, subscriptionId);
+            var hasStream = TryReadRecoveryStreamState(connection, transaction, in target, out var storedStream, cancellationToken);
             var stream = hasStream ? storedStream : new SqliteLocalStreamState(FirstClientSequence, null);
             var quarantine = SqliteLocalCommitSql.ReadPayloadQuarantine(connection, transaction, storeIdentity, streamId);
             if (quarantine is not null)
@@ -321,11 +360,7 @@ internal sealed partial class SqliteLocalCommitStore : IDisposable
             }
             catch (SqlitePayloadQuarantineException exception) when (hasStream)
             {
-                var request = CreateRecoveryQuarantineRequest(streamId, subscriptionId, exception, _timeProvider.GetUtcNow());
-                PersistPayloadQuarantine(connection, transaction, storeIdentity, request, exception.Evidence);
-                cancellationToken.ThrowIfCancellationRequested();
-                transaction.Commit();
-                throw new InvalidOperationException("Recovered SQLite payload data was quarantined.", exception);
+                throw QuarantineRecovery(connection, transaction, in target, exception, "Recovered SQLite payload data was quarantined.", cancellationToken);
             }
 
             if (!hasStream && payloadRows.HasRows)
@@ -374,7 +409,7 @@ internal sealed partial class SqliteLocalCommitStore : IDisposable
             ThrowIfDisposed();
             var storeIdentity = GetInitializedStoreIdentity();
             cancellationToken.ThrowIfCancellationRequested();
-            using var connection = SqliteLocalCommitConnection.OpenConnection(_databasePath);
+            using var connection = OpenStoreConnection(storeIdentity);
             SqliteLocalCommitConnection.ConfigureLockPolling(connection);
             SqliteConnectionSettings.ConfigureOperationalConnection(connection);
             using var transaction = SqliteLocalCommitConnection.BeginWriteTransaction(connection, cancellationToken);
@@ -400,12 +435,17 @@ internal sealed partial class SqliteLocalCommitStore : IDisposable
                     connection,
                     transaction,
                     storeIdentity,
-                    CreateOutboxQuarantineRequest(operation.StreamId, operationId, exception.Evidence, _timeProvider.GetUtcNow()),
+                    CreateOutboxQuarantineRequest(
+                        operation.StreamId,
+                        operationId,
+                        exception.Evidence,
+                        _timeProvider.GetUtcNow(),
+                        exception.IsAuthenticationFailure),
                     exception.Evidence);
                 SqliteLocalCommitSql.ReclaimSelectedLeaseRows(connection, transaction, storeIdentity, operations);
                 cancellationToken.ThrowIfCancellationRequested();
                 transaction.Commit();
-                throw new InvalidOperationException("Leased SQLite payload data was quarantined.", exception);
+                throw CreateQuarantinedException("Leased SQLite payload data was quarantined.", exception);
             }
 
             cancellationToken.ThrowIfCancellationRequested();
@@ -433,7 +473,7 @@ internal sealed partial class SqliteLocalCommitStore : IDisposable
             ThrowIfDisposed();
             var storeIdentity = GetInitializedStoreIdentity();
             cancellationToken.ThrowIfCancellationRequested();
-            using var connection = SqliteLocalCommitConnection.OpenConnection(_databasePath);
+            using var connection = OpenStoreConnection(storeIdentity);
             SqliteLocalCommitConnection.ConfigureLockPolling(connection);
             SqliteConnectionSettings.ConfigureOperationalConnection(connection);
             using var transaction = SqliteLocalCommitConnection.BeginWriteTransaction(connection, cancellationToken);
@@ -479,7 +519,7 @@ internal sealed partial class SqliteLocalCommitStore : IDisposable
             ThrowIfDisposed();
             var storeIdentity = GetInitializedStoreIdentity();
             cancellationToken.ThrowIfCancellationRequested();
-            using var connection = SqliteLocalCommitConnection.OpenConnection(_databasePath);
+            using var connection = OpenStoreConnection(storeIdentity);
             SqliteLocalCommitConnection.ConfigureLockPolling(connection);
             SqliteConnectionSettings.ConfigureOperationalConnection(connection);
             using var transaction = SqliteLocalCommitConnection.BeginWriteTransaction(connection, cancellationToken);
@@ -523,7 +563,7 @@ internal sealed partial class SqliteLocalCommitStore : IDisposable
             ThrowIfDisposed();
             var storeIdentity = GetInitializedStoreIdentity();
             cancellationToken.ThrowIfCancellationRequested();
-            using var connection = SqliteLocalCommitConnection.OpenConnection(_databasePath);
+            using var connection = OpenStoreConnection(storeIdentity);
             SqliteLocalCommitConnection.ConfigureLockPolling(connection);
             SqliteConnectionSettings.ConfigureOperationalConnection(connection);
             using var transaction = connection.BeginTransaction(IsolationLevel.Serializable, deferred: true);
@@ -569,7 +609,7 @@ internal sealed partial class SqliteLocalCommitStore : IDisposable
             ThrowIfDisposed();
             var storeIdentity = GetInitializedStoreIdentity();
             cancellationToken.ThrowIfCancellationRequested();
-            using var connection = SqliteLocalCommitConnection.OpenConnection(_databasePath);
+            using var connection = OpenStoreConnection(storeIdentity);
             SqliteLocalCommitConnection.ConfigureLockPolling(connection);
             SqliteConnectionSettings.ConfigureOperationalConnection(connection);
             using var transaction = SqliteLocalCommitConnection.BeginWriteTransaction(connection, cancellationToken);
@@ -606,7 +646,7 @@ internal sealed partial class SqliteLocalCommitStore : IDisposable
             ThrowIfDisposed();
             var storeIdentity = GetInitializedStoreIdentity();
             cancellationToken.ThrowIfCancellationRequested();
-            using var connection = SqliteLocalCommitConnection.OpenConnection(_databasePath);
+            using var connection = OpenStoreConnection(storeIdentity);
             SqliteLocalCommitConnection.ConfigureLockPolling(connection);
             SqliteConnectionSettings.ConfigureOperationalConnection(connection);
             using var transaction = SqliteLocalCommitConnection.BeginWriteTransaction(connection, cancellationToken);
@@ -639,7 +679,7 @@ internal sealed partial class SqliteLocalCommitStore : IDisposable
             ThrowIfDisposed();
             var storeIdentity = GetInitializedStoreIdentity();
             cancellationToken.ThrowIfCancellationRequested();
-            using var connection = SqliteLocalCommitConnection.OpenConnection(_databasePath);
+            using var connection = OpenStoreConnection(storeIdentity);
             SqliteLocalCommitConnection.ConfigureLockPolling(connection);
             SqliteConnectionSettings.ConfigureOperationalConnection(connection);
             using var transaction = connection.BeginTransaction(IsolationLevel.Serializable, deferred: true);
@@ -674,7 +714,7 @@ internal sealed partial class SqliteLocalCommitStore : IDisposable
             ThrowIfDisposed();
             var storeIdentity = GetInitializedStoreIdentity();
             cancellationToken.ThrowIfCancellationRequested();
-            using var connection = SqliteLocalCommitConnection.OpenConnection(_databasePath);
+            using var connection = OpenStoreConnection(storeIdentity);
             SqliteLocalCommitConnection.ConfigureLockPolling(connection);
             SqliteConnectionSettings.ConfigureOperationalConnection(connection);
             using var transaction = SqliteLocalCommitConnection.BeginWriteTransaction(connection, cancellationToken);
@@ -732,7 +772,7 @@ internal sealed partial class SqliteLocalCommitStore : IDisposable
             ThrowIfDisposed();
             var storeIdentity = GetInitializedStoreIdentity();
             cancellationToken.ThrowIfCancellationRequested();
-            using var connection = SqliteLocalCommitConnection.OpenConnection(_databasePath);
+            using var connection = OpenStoreConnection(storeIdentity);
             SqliteLocalCommitConnection.ConfigureLockPolling(connection);
             SqliteConnectionSettings.ConfigureOperationalConnection(connection);
             using var transaction = connection.BeginTransaction(IsolationLevel.Serializable, deferred: true);
@@ -756,7 +796,7 @@ internal sealed partial class SqliteLocalCommitStore : IDisposable
             ThrowIfDisposed();
             var storeIdentity = GetInitializedStoreIdentity();
             cancellationToken.ThrowIfCancellationRequested();
-            using var connection = SqliteLocalCommitConnection.OpenConnection(_databasePath);
+            using var connection = OpenStoreConnection(storeIdentity);
             SqliteLocalCommitConnection.ConfigureLockPolling(connection);
             SqliteConnectionSettings.ConfigureOperationalConnection(connection);
             using var transaction = connection.BeginTransaction(IsolationLevel.Serializable, deferred: true);
@@ -788,7 +828,7 @@ internal sealed partial class SqliteLocalCommitStore : IDisposable
         SqliteLocalCommitValidation.ValidateAttemptBarrierInput(leaseId, operationId, nextAttempt);
         cancellationToken.ThrowIfCancellationRequested();
         var storeIdentity = GetInitializedStoreIdentityForOperation();
-        using var connection = SqliteLocalCommitConnection.OpenConnection(_databasePath);
+        using var connection = OpenStoreConnection(storeIdentity);
         SqliteLocalCommitConnection.ConfigureLockPolling(connection);
         SqliteConnectionSettings.ConfigureOperationalConnection(connection);
         using var transaction = SqliteLocalCommitConnection.BeginWriteTransaction(connection, cancellationToken);
@@ -846,7 +886,7 @@ internal sealed partial class SqliteLocalCommitStore : IDisposable
             ThrowIfDisposed();
             var storeIdentity = GetInitializedStoreIdentity();
             cancellationToken.ThrowIfCancellationRequested();
-            using var connection = SqliteLocalCommitConnection.OpenConnection(_databasePath);
+            using var connection = OpenStoreConnection(storeIdentity);
             SqliteLocalCommitConnection.ConfigureLockPolling(connection);
             SqliteConnectionSettings.ConfigureOperationalConnection(connection);
             using var transaction = SqliteLocalCommitConnection.BeginWriteTransaction(connection, cancellationToken);
@@ -884,7 +924,7 @@ internal sealed partial class SqliteLocalCommitStore : IDisposable
         SqliteLocalCommitValidation.ValidateSyncResultInput(leaseId, result);
         cancellationToken.ThrowIfCancellationRequested();
         var storeIdentity = GetInitializedStoreIdentityForOperation();
-        using var connection = SqliteLocalCommitConnection.OpenConnection(_databasePath);
+        using var connection = OpenStoreConnection(storeIdentity);
         SqliteLocalCommitConnection.ConfigureLockPolling(connection);
         SqliteConnectionSettings.ConfigureOperationalConnection(connection);
         using var transaction = SqliteLocalCommitConnection.BeginWriteTransaction(connection, cancellationToken);
@@ -929,7 +969,7 @@ internal sealed partial class SqliteLocalCommitStore : IDisposable
         ArgumentExceptionHelper.ThrowIfNull(snapshotMutations);
         cancellationToken.ThrowIfCancellationRequested();
         var storeIdentity = GetInitializedStoreIdentityForOperation();
-        using var connection = SqliteLocalCommitConnection.OpenConnection(_databasePath);
+        using var connection = OpenStoreConnection(storeIdentity);
         SqliteLocalCommitConnection.ConfigureLockPolling(connection);
         SqliteConnectionSettings.ConfigureOperationalConnection(connection);
         using var transaction = SqliteLocalCommitConnection.BeginWriteTransaction(connection, cancellationToken);
@@ -996,7 +1036,7 @@ internal sealed partial class SqliteLocalCommitStore : IDisposable
         SqliteLocalCommitValidation.ValidateDeadLetterInput(leaseId, operationId, reasonCode, snapshotMutation);
         cancellationToken.ThrowIfCancellationRequested();
         var storeIdentity = GetInitializedStoreIdentityForOperation();
-        using var connection = SqliteLocalCommitConnection.OpenConnection(_databasePath);
+        using var connection = OpenStoreConnection(storeIdentity);
         SqliteLocalCommitConnection.ConfigureLockPolling(connection);
         SqliteConnectionSettings.ConfigureOperationalConnection(connection);
         using var transaction = SqliteLocalCommitConnection.BeginWriteTransaction(connection, cancellationToken);
@@ -1129,58 +1169,6 @@ internal sealed partial class SqliteLocalCommitStore : IDisposable
             SqliteLocalCommitSql.ReadPendingOperations(connection, transaction, storeIdentity, streamId, maximumPayloadBytes),
             SqliteLocalCommitSql.ReadReplayOperations(connection, transaction, storeIdentity, streamId, maximumPayloadBytes),
             SqliteLocalCommitSql.ReadDeadLetters(connection, transaction, storeIdentity, streamId, maximumPayloadBytes));
-
-    /// <summary>Creates a quarantine request for a recovered corrupt payload row.</summary>
-    /// <param name="streamId">The stream identifier.</param>
-    /// <param name="subscriptionId">The subscription identifier.</param>
-    /// <param name="exception">The payload corruption exception.</param>
-    /// <param name="observedAtUtc">The observation timestamp.</param>
-    /// <returns>The quarantine request.</returns>
-    private static LocalPayloadQuarantineRequest CreateRecoveryQuarantineRequest(
-        StreamId streamId,
-        SubscriptionId subscriptionId,
-        SqlitePayloadQuarantineException exception,
-        DateTimeOffset observedAtUtc) =>
-        CreateOutboxQuarantineRequest(streamId, exception.OperationId, exception.Evidence, observedAtUtc) with { SubscriptionId = subscriptionId };
-
-    /// <summary>Creates a quarantine request for a corrupt outbox payload row.</summary>
-    /// <param name="streamId">The stream identifier.</param>
-    /// <param name="operationId">The operation identifier.</param>
-    /// <param name="evidence">The bounded evidence.</param>
-    /// <param name="observedAtUtc">The observation timestamp.</param>
-    /// <returns>The quarantine request.</returns>
-    private static LocalPayloadQuarantineRequest CreateOutboxQuarantineRequest(
-        StreamId streamId,
-        OperationId? operationId,
-        LocalPayloadQuarantineEvidence evidence,
-        DateTimeOffset observedAtUtc) =>
-        new()
-        {
-            StreamId = streamId,
-            OperationId = operationId,
-            Source = operationId.HasValue ? LocalPayloadQuarantineSource.OutboxOperation : LocalPayloadQuarantineSource.Snapshot,
-            Reason = LocalPayloadQuarantineReason.PersistedRecordCorrupt,
-            ReasonCode = "sqlite-payload-row-corrupt",
-            Evidence = evidence,
-            ObservedAtUtc = observedAtUtc,
-        };
-
-    /// <summary>Persists a payload quarantine marker inside the caller's transaction.</summary>
-    /// <param name="connection">The connection.</param>
-    /// <param name="transaction">The active transaction.</param>
-    /// <param name="storeIdentity">The store identity.</param>
-    /// <param name="request">The quarantine request.</param>
-    /// <param name="evidence">The bounded payload evidence.</param>
-    private static void PersistPayloadQuarantine(
-        SqliteConnection connection,
-        SqliteTransaction transaction,
-        string storeIdentity,
-        LocalPayloadQuarantineRequest request,
-        LocalPayloadQuarantineEvidence evidence)
-    {
-        var normalized = SqliteLocalQuarantineRequestNormalizer.Normalize(request with { Evidence = evidence, Envelope = null });
-        _ = SqliteLocalCommitSql.InsertPayloadQuarantine(connection, transaction, storeIdentity, normalized, Guid.NewGuid());
-    }
 
     /// <summary>Creates, migrates, or validates the local commit schema.</summary>
     /// <param name="connection">The open connection.</param>

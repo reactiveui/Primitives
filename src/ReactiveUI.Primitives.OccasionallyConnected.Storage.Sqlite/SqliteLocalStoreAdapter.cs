@@ -83,6 +83,7 @@ public sealed partial class SqliteLocalStoreAdapter : ILocalStoreAdapter, ILocal
     /// <exception cref="ArgumentException">The database path is blank or not a real file path.</exception>
     /// <exception cref="ArgumentNullException">A required argument is null.</exception>
     /// <exception cref="ArgumentOutOfRangeException">A worker bound or retention interval is not positive.</exception>
+    /// <exception cref="PlatformNotSupportedException">A key provider is configured on a platform without AES-GCM.</exception>
     public SqliteLocalStoreAdapter(string databasePath, SqliteLocalStoreAdapterOptions options)
         : this(databasePath, options, NoOpSqliteCommitFaultPoint.Instance)
     {
@@ -95,6 +96,7 @@ public sealed partial class SqliteLocalStoreAdapter : ILocalStoreAdapter, ILocal
     /// <exception cref="ArgumentException">The database path is blank or not a real file path.</exception>
     /// <exception cref="ArgumentNullException">A required argument is null.</exception>
     /// <exception cref="ArgumentOutOfRangeException">A worker bound or retention interval is not positive.</exception>
+    /// <exception cref="PlatformNotSupportedException">A key provider is configured on a platform without AES-GCM.</exception>
     internal SqliteLocalStoreAdapter(string databasePath, SqliteLocalStoreAdapterOptions options, ISqliteCommitFaultPoint faultPoint)
     {
         ArgumentExceptionHelper.ThrowIfNull(options);
@@ -109,12 +111,29 @@ public sealed partial class SqliteLocalStoreAdapter : ILocalStoreAdapter, ILocal
         _databasePath = databasePath.StartsWith(@"\\", StringComparison.Ordinal) || databasePath.StartsWith("//", StringComparison.Ordinal)
             ? databasePath
             : Path.GetFullPath(databasePath);
-        _store = new(_databasePath, options.TimeProvider, options.WorkerCapacityBytes, faultPoint);
+        var protection = options.KeyProvider is null ? null : SqliteRecordProtection.Create(options.KeyProvider);
+        _store = new(_databasePath, options.TimeProvider, options.WorkerCapacityBytes, faultPoint, protection);
         _worker = new(options.WorkerCapacity, options.WorkerCapacityBytes);
     }
 
     /// <inheritdoc/>
-    public LocalStoreCapabilities Capabilities => SupportedCapabilities;
+    public LocalStoreCapabilities Capabilities =>
+        _store.ProtectsRecords ? SupportedCapabilities | LocalStoreCapabilities.AuthenticatedEncryptionAtRest : SupportedCapabilities;
+
+    /// <summary>Re-encrypts every protected record that is not under the key provider's current key.</summary>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>The number of column values re-encrypted.</returns>
+    /// <exception cref="InvalidOperationException">The adapter has no key provider, is not initialized, or the key check fails.</exception>
+    /// <remarks>
+    /// New and rewritten records always use the current key, so rotation also happens lazily. Call this method after you
+    /// change the current key and before you remove an older key from the provider. Values that fail authentication stay
+    /// unchanged and are quarantined when read.
+    /// </remarks>
+    public ValueTask<long> RotateEncryptionKeyAsync(CancellationToken cancellationToken) =>
+        new(ExecuteAsync(
+            _store.RotateEncryptionKey,
+            SqliteLocalStoreAdapterSizing.MinimumCommandBytes,
+            cancellationToken));
 
     /// <inheritdoc/>
     public ValueTask InitializeAsync(LocalStoreInitialization initialization, CancellationToken cancellationToken)

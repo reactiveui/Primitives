@@ -29,6 +29,16 @@ public sealed record SqliteLocalStoreAdapterOptions
     /// <summary>Gets the clock used for SQLite commit, lease, retry, and compaction timestamps.</summary>
     public TimeProvider TimeProvider { get; init; } = TimeProvider.System;
 
+    /// <summary>Gets the key provider that encrypts and authenticates records at rest, or null to store plaintext.</summary>
+    /// <remarks>
+    /// When set, the adapter advertises <see cref="LocalStoreCapabilities.AuthenticatedEncryptionAtRest"/> and protects
+    /// every payload, payload hash, cursor, base version, metadata value, commit fingerprint, quarantine evidence value,
+    /// and dead-letter reason with AES-256-GCM. Opening an existing plaintext database encrypts its rows in one
+    /// transaction. Opening a protected database without a key provider fails. Encryption requires .NET 8 or later; on
+    /// .NET Framework the adapter constructor throws <see cref="PlatformNotSupportedException"/>.
+    /// </remarks>
+    public ILocalStoreKeyProvider? KeyProvider { get; init; }
+
     /// <summary>Validates the configured adapter options.</summary>
     /// <exception cref="ArgumentNullException">A required option object is null.</exception>
     /// <exception cref="ArgumentOutOfRangeException">A capacity or retention interval is not positive.</exception>

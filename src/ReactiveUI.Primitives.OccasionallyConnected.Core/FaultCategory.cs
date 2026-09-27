@@ -39,4 +39,7 @@ public enum FaultCategory
 
     /// <summary>An internal consistency or ownership invariant failed.</summary>
     InternalInvariant = 10,
+
+    /// <summary>A security control failed, such as the authentication of a persisted local record.</summary>
+    Security = 11,
 }

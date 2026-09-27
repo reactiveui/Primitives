@@ -1213,7 +1213,11 @@ internal sealed partial class OccasionallyConnectedStream<TState, TInput> :
             StreamId,
             operationId,
             diagnostic)
-        { Category = FaultCategory.InternalInvariant, Severity = FaultSeverity.Error, IsTransient = false };
+        {
+            Category = LocalStoreRecordAuthenticationException.IsInChain(exception) ? FaultCategory.Security : FaultCategory.InternalInvariant,
+            Severity = LocalStoreRecordAuthenticationException.IsInChain(exception) ? FaultSeverity.Critical : FaultSeverity.Error,
+            IsTransient = false,
+        };
         _ = _faults.PublishEvent(fault, GetFaultNotificationSize(fault, diagnostic));
     }
 

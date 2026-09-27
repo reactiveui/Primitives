@@ -146,7 +146,7 @@ internal static partial class SqliteLocalCommitSql
             """;
         AddStreamParameters(command, storeIdentity, streamId);
         using var reader = command.ExecuteReader();
-        return reader.Read() ? ReadQuarantineRecord(reader) : null;
+        return reader.Read() ? ReadQuarantineRecord(connection, reader) : null;
     }
 
     /// <summary>Throws when a stream is quarantined.</summary>
@@ -307,15 +307,30 @@ internal static partial class SqliteLocalCommitSql
         AddNullableGuidParameter(command, "$eventId", request.Request.EventId);
         _ = command.Parameters.AddWithValue("$source", (int)request.Request.Source);
         _ = command.Parameters.AddWithValue("$reason", (int)request.Request.Reason);
-        _ = command.Parameters.AddWithValue("$reasonCode", (object?)request.Request.ReasonCode ?? DBNull.Value);
-        _ = command.Parameters.AddWithValue("$cursor", (object?)request.Request.Cursor ?? DBNull.Value);
-        _ = command.Parameters.AddWithValue("$evidenceContractId", (object?)request.Evidence.ContractId ?? DBNull.Value);
+        var context = SqliteRecordContext.Quarantine(request.Request.StreamId, quarantineId);
+        _ = command.Parameters.AddWithValue(
+            "$reasonCode",
+            ProtectNullableText(command, request.Request.ReasonCode, context, SqliteRecordContext.ReasonCodeColumn));
+        _ = command.Parameters.AddWithValue(
+            "$cursor",
+            ProtectNullableText(command, request.Request.Cursor, context, SqliteRecordContext.CursorColumn));
+        _ = command.Parameters.AddWithValue(
+            "$evidenceContractId",
+            ProtectNullableText(command, request.Evidence.ContractId, context, SqliteRecordContext.EvidenceContractColumn));
         AddNullableIntParameter(command, "$evidenceSchemaVersion", request.Evidence.SchemaVersion);
-        _ = command.Parameters.AddWithValue("$evidenceContentType", (object?)request.Evidence.ContentType ?? DBNull.Value);
+        _ = command.Parameters.AddWithValue(
+            "$evidenceContentType",
+            ProtectNullableText(command, request.Evidence.ContentType, context, SqliteRecordContext.EvidenceContentTypeColumn));
         _ = command.Parameters.AddWithValue("$evidencePayloadLength", request.Evidence.PayloadLength);
-        _ = command.Parameters.AddWithValue("$evidencePayloadHash", (object?)request.Evidence.PayloadHash ?? DBNull.Value);
+        _ = command.Parameters.AddWithValue(
+            "$evidencePayloadHash",
+            ProtectNullableText(command, request.Evidence.PayloadHash, context, SqliteRecordContext.EvidencePayloadHashColumn));
         _ = command.Parameters.Add("$evidencePayloadPrefix", SqliteType.Blob);
-        command.Parameters["$evidencePayloadPrefix"].Value = request.Evidence.PayloadPrefix.ToArray();
+        command.Parameters["$evidencePayloadPrefix"].Value = ProtectBytes(
+            command,
+            request.Evidence.PayloadPrefix.Span,
+            context,
+            SqliteRecordContext.EvidencePayloadPrefixColumn);
         _ = command.Parameters.AddWithValue("$observedAtUtc", FormatDateTimeOffset(request.Request.ObservedAtUtc));
     }
 
@@ -535,28 +550,48 @@ internal static partial class SqliteLocalCommitSql
         && string.Equals(reader.GetString(storageTypeIndex), expected, StringComparison.OrdinalIgnoreCase);
 
     /// <summary>Reads a quarantine record.</summary>
+    /// <param name="connection">The connection that carries the optional cipher.</param>
     /// <param name="reader">The reader.</param>
     /// <returns>The quarantine record.</returns>
-    /// <exception cref="InvalidOperationException">Stored SQLite data is invalid.</exception>
-    private static LocalPayloadQuarantineRecord ReadQuarantineRecord(SqliteDataReader reader)
+    /// <exception cref="InvalidOperationException">Stored SQLite data is invalid or fails authentication.</exception>
+    private static LocalPayloadQuarantineRecord ReadQuarantineRecord(SqliteConnection connection, SqliteDataReader reader)
     {
+        var quarantineId = ReadGuid(reader, QuarantineIdIndex, "The SQLite quarantine id is invalid.");
+        var streamId = new StreamId(ReadString(reader, QuarantineStreamIndex, "The SQLite quarantine stream is invalid."));
+        var context = SqliteRecordContext.Quarantine(streamId, quarantineId);
         var evidence = new LocalPayloadQuarantineEvidence(
-            ReadNullableString(reader, QuarantineEvidenceContractIndex),
+            UnprotectNullableText(
+                connection,
+                ReadNullableString(reader, QuarantineEvidenceContractIndex),
+                context,
+                SqliteRecordContext.EvidenceContractColumn),
             ReadNullableInt(reader, QuarantineEvidenceSchemaIndex),
-            ReadNullableString(reader, QuarantineEvidenceContentTypeIndex),
+            UnprotectNullableText(
+                connection,
+                ReadNullableString(reader, QuarantineEvidenceContentTypeIndex),
+                context,
+                SqliteRecordContext.EvidenceContentTypeColumn),
             ReadNonNegativeInt(reader, QuarantineEvidencePayloadLengthIndex, "The SQLite quarantine evidence length is invalid."),
-            ReadNullableString(reader, QuarantineEvidencePayloadHashIndex),
-            ReadBytes(reader, QuarantineEvidencePrefixIndex, "The SQLite quarantine evidence prefix is invalid."));
+            UnprotectNullableText(
+                connection,
+                ReadNullableString(reader, QuarantineEvidencePayloadHashIndex),
+                context,
+                SqliteRecordContext.EvidencePayloadHashColumn),
+            UnprotectBytes(
+                connection,
+                ReadBytes(reader, QuarantineEvidencePrefixIndex, "The SQLite quarantine evidence prefix is invalid."),
+                context,
+                SqliteRecordContext.EvidencePayloadPrefixColumn));
         return new(
-            ReadGuid(reader, QuarantineIdIndex, "The SQLite quarantine id is invalid."),
-            new(ReadString(reader, QuarantineStreamIndex, "The SQLite quarantine stream is invalid.")),
+            quarantineId,
+            streamId,
             ReadNullableSubscriptionId(reader, QuarantineSubscriptionIndex),
             ReadNullableOperationId(reader, QuarantineOperationIndex),
             ReadNullableGuid(reader, QuarantineEventIndex),
             (LocalPayloadQuarantineSource)ReadInt(reader, QuarantineSourceIndex, "The SQLite quarantine source is invalid."),
             (LocalPayloadQuarantineReason)ReadInt(reader, QuarantineReasonIndex, "The SQLite quarantine reason is invalid."),
-            ReadNullableString(reader, QuarantineReasonCodeIndex),
-            ReadNullableString(reader, QuarantineCursorIndex),
+            UnprotectNullableText(connection, ReadNullableString(reader, QuarantineReasonCodeIndex), context, SqliteRecordContext.ReasonCodeColumn),
+            UnprotectNullableText(connection, ReadNullableString(reader, QuarantineCursorIndex), context, SqliteRecordContext.CursorColumn),
             evidence,
             ReadDateTimeOffset(reader, QuarantineObservedAtIndex, "The SQLite quarantine timestamp is invalid."));
     }
