@@ -40,6 +40,12 @@ This list is limited to requirements from [ReactiveUI.Primitives.OccasionallyCon
     - A duplicate operation replays its original result after the hub reopens.
   - The server test suite passes 545/545 on `net8.0` and `net10.0`.
 - [ ] Finish shared store and transport conformance suites for every advertised capability. Include cursor gaps, duplicate and reordered delivery, dropped acknowledgements, partial results, streaming receive, and unsupported-capability startup failures.
+  - Done: `ReactiveUI.Primitives.OccasionallyConnected.Conformance.Tests` runs `IRemoteTransportAdapterTests` across Loopback and HTTP, each against in-memory and SQLite `ServerStreamHub`. A fault-injecting hub produces duplicate, reordered, dropped-ACK, and truncated-result cases.
+    - Each case is gated on an advertised capability. A table test checks that every advertised transport flag and store flag has a test.
+    - `ILocalStoreAdapterTests.DurableInbox.cs` covers deduplication across a restart.
+    - The suite passes 50 cases and skips 6 capability-gated ones on `net8.0` and `net10.0`.
+  - Remaining bug: the hub raises `ServerReceiveRetentionGapException`, but the engine only recovers from `RemoteSubscriptionRetentionGapException`. The adapters don't translate between them. Loopback passes the server type through, and HTTP returns a 500 that the client treats as transient. So a retention gap never reaches snapshot recovery, and over HTTP the engine retries forever.
+  - Remaining: the HTTP endpoint answers a canceled long-poll with a 500 instead of a cancellation.
 
 ## Durability and delivery guarantees
 
@@ -51,7 +57,6 @@ This list is limited to requirements from [ReactiveUI.Primitives.OccasionallyCon
 
 - [ ] Complete protocol-v1 golden fixtures and cross-version upcast/migration tests for wire envelopes, store schemas, snapshots, cursors, and operation results.
 - [ ] Complete application-level security tests for authenticated tenant/client binding, nonce and replay handling, authorization, stale credentials, tampering, path traversal, SQL metacharacters, oversized/deep payloads, decompression limits, and redacted diagnostics.
-  - Found by the `corruption-quarantine` scenario: the SQLite `PersistedRecordCorrupt` marker keeps a bounded prefix of the raw payload as evidence. The message and reason code are clean, but section 12.3 forbids payloads in diagnostics. Redact this evidence.
 - [ ] Add adapter-specific protocol fuzzing and verify that transport adapters do not introduce hidden unbounded retries.
 
 ## Examples and release gates

@@ -62,6 +62,7 @@
         <Project Path="tests/ReactiveUI.Primitives.ObservableEvents.Tests/ReactiveUI.Primitives.ObservableEvents.Tests.csproj" />
         <Project Path="tests/ReactiveUI.Primitives.OccasionallyConnected.Collaboration.Client.Tests/ReactiveUI.Primitives.OccasionallyConnected.Collaboration.Client.Tests.csproj" />
         <Project Path="tests/ReactiveUI.Primitives.OccasionallyConnected.Collaboration.Server.Tests/ReactiveUI.Primitives.OccasionallyConnected.Collaboration.Server.Tests.csproj" />
+        <Project Path="tests/ReactiveUI.Primitives.OccasionallyConnected.Conformance.Tests/ReactiveUI.Primitives.OccasionallyConnected.Conformance.Tests.csproj" />
         <Project Path="tests/ReactiveUI.Primitives.OccasionallyConnected.Core.Tests/ReactiveUI.Primitives.OccasionallyConnected.Core.Tests.csproj" />
         <Project Path="tests/ReactiveUI.Primitives.OccasionallyConnected.DependencyInjection.Tests/ReactiveUI.Primitives.OccasionallyConnected.DependencyInjection.Tests.csproj" />
         <Project Path="tests/ReactiveUI.Primitives.OccasionallyConnected.Examples.Tests/ReactiveUI.Primitives.OccasionallyConnected.Examples.Tests.csproj" />

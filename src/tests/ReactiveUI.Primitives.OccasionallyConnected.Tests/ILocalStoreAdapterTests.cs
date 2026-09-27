@@ -8,7 +8,7 @@ using ReactiveUI.Primitives.OccasionallyConnected.Storage.Sqlite;
 namespace ReactiveUI.Primitives.OccasionallyConnected.Tests;
 
 /// <summary>Tests for <see cref="ILocalStoreAdapter"/> implementations.</summary>
-public sealed class ILocalStoreAdapterTests
+public sealed partial class ILocalStoreAdapterTests
 {
     /// <summary>The current in-memory schema version.</summary>
     private const int InMemorySchemaVersion = 1;
