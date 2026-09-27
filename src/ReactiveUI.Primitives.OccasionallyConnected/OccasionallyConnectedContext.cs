@@ -286,6 +286,7 @@ public sealed class OccasionallyConnectedContext : IOccasionallyConnectedContext
             WorkCapacity = (int)Math.Min(typedInput.BufferCapacity, typedInput.BufferCapacityBytes / typedInput.MaximumRetainedInputBytes),
             LocalAdmissionRetainedBytes = typedInput.MaximumRetainedInputBytes,
             ClientId = _options.Client.ClientId,
+            BufferOverflowPolicy = _options.BufferOverflowPolicy,
             MinimumPriority = _options.Options.MinimumPriority,
             MaximumPriority = _options.Options.MaximumPriority,
         });

@@ -430,6 +430,10 @@ public sealed partial class OccasionallyConnectedStreamTests
         /// <inheritdoc />
         public void NotifyCapacityReleased(StreamId streamId) => _ = streamId;
 
+        /// <inheritdoc />
+        public void RecordQueueOverflow(StreamId streamId, QueueDiagnosticSnapshot? evictedQueueSnapshot, SyncOperationStatus? evictedStatus) =>
+            _ = (streamId, evictedQueueSnapshot, evictedStatus);
+
         /// <summary>Represents one inert test registration.</summary>
         private sealed class Registration : IDisposable
         {

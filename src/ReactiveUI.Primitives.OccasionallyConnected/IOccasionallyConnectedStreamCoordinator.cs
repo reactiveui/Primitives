@@ -92,4 +92,10 @@ internal interface IOccasionallyConnectedStreamCoordinator
     /// <summary>Notifies blocked local producers after durable capacity is released.</summary>
     /// <param name="streamId">The stream identity.</param>
     void NotifyCapacityReleased(StreamId streamId);
+
+    /// <summary>Records a bounded outbox overflow handled by a dropping or custom admission strategy.</summary>
+    /// <param name="streamId">The stream identity.</param>
+    /// <param name="evictedQueueSnapshot">The queue aggregate after an eviction, or null when nothing was evicted.</param>
+    /// <param name="evictedStatus">The durable status of the evicted operation, or null when nothing was evicted.</param>
+    void RecordQueueOverflow(StreamId streamId, QueueDiagnosticSnapshot? evictedQueueSnapshot, SyncOperationStatus? evictedStatus);
 }

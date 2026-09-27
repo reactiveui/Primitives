@@ -17,6 +17,42 @@ public record BatchingOptions : System.IEquatable<ReactiveUI.Primitives.Occasion
     public int MaximumOperations { get; init; }
     public void Validate() { }
 }
+[System.Diagnostics.DebuggerDisplay("{OperationId,nq} #{ClientSequence,nq}")]
+public record BufferOverflowCandidate : System.IEquatable<ReactiveUI.Primitives.OccasionallyConnected.BufferOverflowCandidate>
+{
+    public BufferOverflowCandidate(ReactiveUI.Primitives.OccasionallyConnected.OperationId OperationId, long ClientSequence, long PayloadBytes, int Priority, System.DateTimeOffset TimestampUtc) { }
+    public long ClientSequence { get; init; }
+    public ReactiveUI.Primitives.OccasionallyConnected.OperationId OperationId { get; init; }
+    public long PayloadBytes { get; init; }
+    public int Priority { get; init; }
+    public System.DateTimeOffset TimestampUtc { get; init; }
+}
+[System.Diagnostics.DebuggerDisplay("{StreamId,nq} Candidates={Candidates.Count,nq}")]
+public record BufferOverflowContext : System.IEquatable<ReactiveUI.Primitives.OccasionallyConnected.BufferOverflowContext>
+{
+    public BufferOverflowContext(ReactiveUI.Primitives.OccasionallyConnected.StreamId streamId, bool incomingDurable, int incomingPriority, long incomingRetainedBytes, System.Collections.Generic.IReadOnlyList<ReactiveUI.Primitives.OccasionallyConnected.BufferOverflowCandidate> candidates) { }
+    public System.Collections.Generic.IReadOnlyList<ReactiveUI.Primitives.OccasionallyConnected.BufferOverflowCandidate> Candidates { get; }
+    public bool IncomingDurable { get; }
+    public int IncomingPriority { get; }
+    public long IncomingRetainedBytes { get; }
+    public ReactiveUI.Primitives.OccasionallyConnected.StreamId StreamId { get; }
+}
+[System.Diagnostics.DebuggerDisplay("{Kind,nq} {EvictOperationId,nq}")]
+public sealed class BufferOverflowDecision
+{
+    public ReactiveUI.Primitives.OccasionallyConnected.OperationId? EvictOperationId { get; }
+    public ReactiveUI.Primitives.OccasionallyConnected.BufferOverflowDecisionKind Kind { get; }
+    public static ReactiveUI.Primitives.OccasionallyConnected.BufferOverflowDecision Block { get; }
+    public static ReactiveUI.Primitives.OccasionallyConnected.BufferOverflowDecision Reject { get; }
+    [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+    public static ReactiveUI.Primitives.OccasionallyConnected.BufferOverflowDecision Evict(ReactiveUI.Primitives.OccasionallyConnected.OperationId operationId) { }
+}
+public enum BufferOverflowDecisionKind
+{
+    Block = 0,
+    Reject = 1,
+    Evict = 2,
+}
 public enum BufferStrategy
 {
     DropOldest = 0,
@@ -144,6 +180,10 @@ public enum FaultSeverity
     Warning = 1,
     Error = 2,
     Critical = 3,
+}
+public interface IBufferOverflowPolicy
+{
+    ReactiveUI.Primitives.OccasionallyConnected.BufferOverflowDecision Decide(ReactiveUI.Primitives.OccasionallyConnected.BufferOverflowContext context) { }
 }
 public interface IConflictResolver
 {

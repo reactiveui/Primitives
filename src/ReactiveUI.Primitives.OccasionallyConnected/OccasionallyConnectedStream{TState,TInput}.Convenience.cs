@@ -26,7 +26,7 @@ internal sealed partial class OccasionallyConnectedStream<TState, TInput>
     /// <inheritdoc />
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void PublishInputFault(string code, string message, OperationId? operationId, Exception exception) =>
-        PublishFault(code, message, operationId, exception);
+        PublishInputFaultCore(code, message, operationId, exception);
 
     /// <summary>Publishes the state payload with its committed durable queue aggregate.</summary>
     /// <param name="payload">The owned state payload.</param>

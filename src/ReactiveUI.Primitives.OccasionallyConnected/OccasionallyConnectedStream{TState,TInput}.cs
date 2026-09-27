@@ -567,7 +567,13 @@ internal sealed partial class OccasionallyConnectedStream<TState, TInput> :
         ValidatePublishOptions(options);
         var committer = await EnsureInitializedCoreAsync(cancellationToken, allowDisposed: true).ConfigureAwait(false);
         var effectiveOptions = options ?? _options.Definition.Publish;
-        var result = await committer.CommitAsync(value, CreatePolicy(effectiveOptions), effectiveOptions?.BaseVersion, cancellationToken)
+        var policy = CreatePolicy(effectiveOptions);
+        var result = await CommitWithOverflowAsync(
+                committer,
+                token => committer.CommitAsync(value, policy, effectiveOptions?.BaseVersion, token),
+                effectiveOptions,
+                _options.LocalAdmissionRetainedBytes,
+                cancellationToken)
             .ConfigureAwait(false);
         NotifyCommitReady(result);
         var committedPayload = await PublishLocalAsync(result.State, result.Receipt.OperationId, CancellationToken.None).ConfigureAwait(false);
@@ -609,10 +615,12 @@ internal sealed partial class OccasionallyConnectedStream<TState, TInput> :
         ValidatePublishOptions(options);
         var committer = await EnsureInitializedCoreAsync(cancellationToken, allowDisposed: true).ConfigureAwait(false);
         var effectiveOptions = options ?? _options.Definition.Publish;
-        var result = await committer.CommitSerializedAsync(
-                payload,
-                CreatePolicy(effectiveOptions),
-                effectiveOptions?.BaseVersion,
+        var policy = CreatePolicy(effectiveOptions);
+        var result = await CommitWithOverflowAsync(
+                committer,
+                token => committer.CommitSerializedAsync(payload, policy, effectiveOptions?.BaseVersion, token),
+                effectiveOptions,
+                GetNotificationSize(payload),
                 cancellationToken)
             .ConfigureAwait(false);
         NotifyCommitReady(result);
@@ -706,6 +714,12 @@ internal sealed partial class OccasionallyConnectedStream<TState, TInput> :
                         .WaitForCapacityReleaseAsync(StreamId, generation, retainedBytes, cancellationToken)
                         .ConfigureAwait(false);
                 }
+                catch (BufferOverflowBlockedException)
+                {
+                    await _options.Coordinator
+                        .WaitForCapacityReleaseAsync(StreamId, generation, retainedBytes, cancellationToken)
+                        .ConfigureAwait(false);
+                }
             }
         }
         finally
@@ -772,6 +786,20 @@ internal sealed partial class OccasionallyConnectedStream<TState, TInput> :
         var committer = await EnsureInitializedCoreAsync(cancellationToken).ConfigureAwait(false);
         var state = await committer.DeadLetterOperationAsync(leaseId, operationId, reasonCode, cancellationToken).ConfigureAwait(false);
         var queueSnapshot = committer.RecoveredQueueSnapshot;
+        _ = await PublishDeadLetterTransitionAsync(state, queueSnapshot, operationId).ConfigureAwait(false);
+        return new(queueSnapshot);
+    }
+
+    /// <summary>Publishes the local state and operation status after a committed dead-letter transition.</summary>
+    /// <param name="state">The rebuilt committed state.</param>
+    /// <param name="queueSnapshot">The queue aggregate after the transition.</param>
+    /// <param name="operationId">The dead-lettered operation.</param>
+    /// <returns>The durable status published for the operation, or null when it was unavailable.</returns>
+    private async ValueTask<SyncOperationStatus?> PublishDeadLetterTransitionAsync(
+        LocalStreamCommitterState<TState> state,
+        QueueDiagnosticSnapshot queueSnapshot,
+        OperationId operationId)
+    {
         var committedPayload = await PublishLocalAsync(state, null, CancellationToken.None).ConfigureAwait(false);
         if (committedPayload is not null)
         {
@@ -784,15 +812,14 @@ internal sealed partial class OccasionallyConnectedStream<TState, TInput> :
             if (status is not null)
             {
                 _ = _operationStates.PublishEvent(status, GetOperationStatusNotificationSize(status));
+                return status;
             }
-            else
-            {
-                PublishFault(
-                    OperationStatusFaultCode,
-                    "The durable operation status was unavailable after a dead-letter commit.",
-                    operationId,
-                    new InvalidOperationException("The durable operation status was unavailable."));
-            }
+
+            PublishFault(
+                OperationStatusFaultCode,
+                "The durable operation status was unavailable after a dead-letter commit.",
+                operationId,
+                new InvalidOperationException("The durable operation status was unavailable."));
         }
         catch (Exception exception)
         {
@@ -803,7 +830,7 @@ internal sealed partial class OccasionallyConnectedStream<TState, TInput> :
                 exception);
         }
 
-        return new(queueSnapshot);
+        return null;
     }
 
     /// <summary>Ensures durable identity and recovery have completed.</summary>
@@ -948,7 +975,7 @@ internal sealed partial class OccasionallyConnectedStream<TState, TInput> :
             return;
         }
 
-        effective.Validate();
+        effective.Validate(SupportsCustomAdmission(effective));
         if (effective.StreamId == StreamId)
         {
             return;
@@ -1203,7 +1230,7 @@ internal sealed partial class OccasionallyConnectedStream<TState, TInput> :
                 Admission = admission,
                 Capture = capture,
                 PublishAsync = PublishSerializedAsync,
-                PublishFault = PublishFault,
+                PublishFault = PublishInputFault,
                 PublishOptions = definition.Publish,
             });
     }

@@ -63,6 +63,9 @@ public sealed class OccasionallyConnectedBuilder
     /// <summary>Stores the finite stream registry capacity.</summary>
     private int _registryCapacity = SyncEngineOptions.DefaultMaxRegisteredStreams;
 
+    /// <summary>Stores the optional custom publish admission policy.</summary>
+    private IBufferOverflowPolicy? _bufferOverflowPolicy;
+
     /// <summary>Stores the configured store ownership.</summary>
     private SyncEngineDependencyOwnership _storeOwnership;
 
@@ -256,6 +259,17 @@ public sealed class OccasionallyConnectedBuilder
         return this;
     }
 
+    /// <summary>Registers the deterministic policy used when a publication selects <see cref="BufferStrategy.Custom"/>.</summary>
+    /// <param name="policy">The buffer overflow policy.</param>
+    /// <returns>The current builder.</returns>
+    public OccasionallyConnectedBuilder UseBufferOverflowPolicy(IBufferOverflowPolicy policy)
+    {
+        EnsureMutable();
+        ArgumentExceptionHelper.ThrowIfNull(policy);
+        _bufferOverflowPolicy = policy;
+        return this;
+    }
+
     /// <summary>Configures the finite stream registry capacity.</summary>
     /// <param name="capacity">The maximum registered stream count.</param>
     /// <returns>The current builder.</returns>
@@ -316,6 +330,7 @@ public sealed class OccasionallyConnectedBuilder
             RegistryCapacity = _registryCapacity,
             AutoStart = _options.AutoStart,
             SchemaRegistry = _schemaRegistry,
+            BufferOverflowPolicy = _bufferOverflowPolicy,
         });
         _built = true;
         return context;

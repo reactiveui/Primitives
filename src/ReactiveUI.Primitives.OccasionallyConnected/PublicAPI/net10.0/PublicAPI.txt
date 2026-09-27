@@ -83,6 +83,7 @@ public sealed class OccasionallyConnectedBuilder
     public ReactiveUI.Primitives.OccasionallyConnected.OccasionallyConnectedBuilder ConfigureOptions(System.Func<ReactiveUI.Primitives.OccasionallyConnected.OccasionallyConnectedOptions, ReactiveUI.Primitives.OccasionallyConnected.OccasionallyConnectedOptions> configure) { }
     public ReactiveUI.Primitives.OccasionallyConnected.OccasionallyConnectedBuilder UseBorrowedStore(ReactiveUI.Primitives.OccasionallyConnected.ILocalStoreAdapter store) { }
     public ReactiveUI.Primitives.OccasionallyConnected.OccasionallyConnectedBuilder UseBorrowedTransport(ReactiveUI.Primitives.OccasionallyConnected.IRemoteTransportAdapter transport) { }
+    public ReactiveUI.Primitives.OccasionallyConnected.OccasionallyConnectedBuilder UseBufferOverflowPolicy(ReactiveUI.Primitives.OccasionallyConnected.IBufferOverflowPolicy policy) { }
     public ReactiveUI.Primitives.OccasionallyConnected.OccasionallyConnectedBuilder UseClient(ReactiveUI.Primitives.OccasionallyConnected.ClientIdentity client) { }
     [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
     public ReactiveUI.Primitives.OccasionallyConnected.OccasionallyConnectedBuilder UseJsonSerializer(ReactiveUI.Primitives.OccasionallyConnected.SchemaRegistry schemaRegistry) { }

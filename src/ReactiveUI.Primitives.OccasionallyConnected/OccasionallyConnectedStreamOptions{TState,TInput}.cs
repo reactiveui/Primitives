@@ -59,6 +59,9 @@ internal sealed record OccasionallyConnectedStreamOptions<TState, TInput>
     /// <summary>Gets the initialized client identity associated with local commits.</summary>
     public string? ClientId { get; init; }
 
+    /// <summary>Gets the optional policy invoked for <see cref="BufferStrategy.Custom"/> publish admission.</summary>
+    public IBufferOverflowPolicy? BufferOverflowPolicy { get; init; }
+
     /// <summary>Gets the inclusive minimum operation priority.</summary>
     public int MinimumPriority { get; init; } = OperationPolicy.MinimumPriority;
 

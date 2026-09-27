@@ -146,7 +146,16 @@ internal sealed partial class OccasionallyConnectedInputProducer<TInput> : IOcca
                 return;
             }
 
-            var reservation = TryReserve(declaredBytes, out var reservedTicket);
+            var reservation = TryReserve(declaredBytes, out var reservedTicket, out var evictedCount);
+            for (var i = 0; i < evictedCount; i++)
+            {
+                PublishFaultSafely(
+                    InputOverflowFaultCode,
+                    "The observer input producer evicted the oldest queued non-durable input because its retained buffer is full.",
+                    null,
+                    new InvalidOperationException("The observer input producer retained buffer is full."));
+            }
+
             if (reservation == ReservationResult.Closed)
             {
                 return;
@@ -234,9 +243,11 @@ internal sealed partial class OccasionallyConnectedInputProducer<TInput> : IOcca
     /// <summary>Attempts to reserve retained capacity before capture can copy caller-owned input.</summary>
     /// <param name="declaredBytes">The declared retained byte count.</param>
     /// <param name="ticket">The reserved FIFO ticket.</param>
+    /// <param name="evictedCount">The number of queued non-durable tickets evicted by DropOldest.</param>
     /// <returns>The reservation result.</returns>
-    private ReservationResult TryReserve(long declaredBytes, out InputTicket? ticket)
+    private ReservationResult TryReserve(long declaredBytes, out InputTicket? ticket, out int evictedCount)
     {
+        evictedCount = 0;
         lock (_gate)
         {
             if (_closed)
@@ -257,6 +268,8 @@ internal sealed partial class OccasionallyConnectedInputProducer<TInput> : IOcca
                 {
                     break;
                 }
+
+                evictedCount++;
             }
 
             if (!HasCapacityFor(declaredBytes))

@@ -97,6 +97,11 @@ public sealed partial class SyncEngineTests
         /// <inheritdoc/>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void NotifyCapacityReleased(StreamId streamId) => inner.NotifyCapacityReleased(streamId);
+
+        /// <inheritdoc/>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void RecordQueueOverflow(StreamId streamId, QueueDiagnosticSnapshot? evictedQueueSnapshot, SyncOperationStatus? evictedStatus) =>
+            inner.RecordQueueOverflow(streamId, evictedQueueSnapshot, evictedStatus);
     }
 
     /// <summary>Participant wrapper that pauses after the typed facade has durably applied an upload result.</summary>

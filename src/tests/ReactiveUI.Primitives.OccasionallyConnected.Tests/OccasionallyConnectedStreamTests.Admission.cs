@@ -285,6 +285,10 @@ public sealed partial class OccasionallyConnectedStreamTests
         /// <inheritdoc/>
         public void NotifyCapacityReleased(StreamId streamId) => _ = streamId;
 
+        /// <inheritdoc/>
+        public void RecordQueueOverflow(StreamId streamId, QueueDiagnosticSnapshot? evictedQueueSnapshot, SyncOperationStatus? evictedStatus) =>
+            _ = (streamId, evictedQueueSnapshot, evictedStatus);
+
         /// <summary>Participant registration handle.</summary>
         private sealed class Registration : IDisposable
         {

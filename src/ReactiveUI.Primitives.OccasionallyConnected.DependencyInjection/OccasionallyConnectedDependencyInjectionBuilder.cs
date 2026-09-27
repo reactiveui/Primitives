@@ -45,6 +45,12 @@ public sealed class OccasionallyConnectedDependencyInjectionBuilder
     /// <summary>Stores the effective remote transport descriptor captured during configuration.</summary>
     private ServiceDescriptor? _transportDescriptor;
 
+    /// <summary>Stores the optional custom buffer overflow policy service type.</summary>
+    private Type? _bufferOverflowPolicyType;
+
+    /// <summary>Stores the effective custom buffer overflow policy descriptor captured during configuration.</summary>
+    private ServiceDescriptor? _bufferOverflowPolicyDescriptor;
+
     /// <summary>Stores the optional explicit payload serializer selection.</summary>
     private ExplicitSerializerSelection? _explicitSerializerSelection;
 
@@ -203,6 +209,20 @@ public sealed class OccasionallyConnectedDependencyInjectionBuilder
         return this;
     }
 
+    /// <summary>Selects a singleton buffer overflow policy used by publications that select <see cref="BufferStrategy.Custom"/>.</summary>
+    /// <param name="policyType">The policy service type.</param>
+    /// <returns>The current builder.</returns>
+    /// <exception cref="ArgumentException">The type is not a buffer overflow policy.</exception>
+    /// <exception cref="InvalidOperationException">The selected service is missing or not singleton.</exception>
+    public OccasionallyConnectedDependencyInjectionBuilder UseBufferOverflowPolicy(Type policyType)
+    {
+        ValidateServiceType(policyType, typeof(IBufferOverflowPolicy), nameof(policyType));
+        var descriptor = ValidateSingletonService(policyType);
+        _bufferOverflowPolicyType = policyType;
+        _bufferOverflowPolicyDescriptor = descriptor;
+        return this;
+    }
+
     /// <summary>Configures JSON serialization from registered generated metadata.</summary>
     /// <returns>The current builder.</returns>
     public OccasionallyConnectedDependencyInjectionBuilder UseJsonSerializer()
@@ -292,6 +312,8 @@ public sealed class OccasionallyConnectedDependencyInjectionBuilder
             TransportType = _transportType,
             TransportDescriptor = _transportDescriptor,
             ExplicitSerializerSelection = _explicitSerializerSelection,
+            BufferOverflowPolicyType = _bufferOverflowPolicyType,
+            BufferOverflowPolicyDescriptor = _bufferOverflowPolicyDescriptor,
             MaximumPayloadBytes = _maximumPayloadBytes,
             Streams = [.. _streams],
             JsonContracts = [.. _jsonContracts],

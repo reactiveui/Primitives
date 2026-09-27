@@ -45,6 +45,12 @@ internal sealed record OccasionallyConnectedServiceConfiguration
     /// <summary>Gets the optional explicit payload serializer selection.</summary>
     internal ExplicitSerializerSelection? ExplicitSerializerSelection { get; init; }
 
+    /// <summary>Gets the optional custom buffer overflow policy service type.</summary>
+    internal Type? BufferOverflowPolicyType { get; init; }
+
+    /// <summary>Gets the optional custom buffer overflow policy descriptor.</summary>
+    internal ServiceDescriptor? BufferOverflowPolicyDescriptor { get; init; }
+
     /// <summary>Gets the optional maximum JSON payload size.</summary>
     internal int? MaximumPayloadBytes { get; init; }
 

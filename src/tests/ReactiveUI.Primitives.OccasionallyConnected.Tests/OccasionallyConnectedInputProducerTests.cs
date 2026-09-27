@@ -187,7 +187,7 @@ public sealed partial class OccasionallyConnectedInputProducerTests
         await producer.DisposeAsync();
     }
 
-    /// <summary>Verifies DropOldest evicts queued non-durable input behind the FIFO head.</summary>
+    /// <summary>Verifies DropOldest evicts queued non-durable input behind the FIFO head and reports the overflow.</summary>
     /// <returns>A task representing the assertions.</returns>
     [Test]
     public async Task DropOldestEvictsQueuedNonDurableInputBehindActiveCapture()
@@ -222,7 +222,8 @@ public sealed partial class OccasionallyConnectedInputProducerTests
 
         await Assert.That(publisher.PublishedValues[0]).IsEqualTo(FirstInputSequence);
         await Assert.That(publisher.PublishedValues[1]).IsEqualTo(ThirdInputSequence);
-        await Assert.That(faults.Faults.Count).IsEqualTo(0);
+        await Assert.That(faults.Faults.Count).IsEqualTo(SingleInputCapacity);
+        await Assert.That(faults.Faults[0].Code).IsEqualTo(InputOverflowFaultCode);
     }
 
     /// <summary>Verifies DropOldest rejects oversized input without evicting queued non-durable work.</summary>

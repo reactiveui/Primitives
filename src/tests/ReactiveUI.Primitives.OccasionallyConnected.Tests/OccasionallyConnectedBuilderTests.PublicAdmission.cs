@@ -31,14 +31,13 @@ public sealed partial class OccasionallyConnectedBuilderTests
         await AssertPendingValuesAsync(store, stream.SubscriptionId, 1);
     }
 
-    /// <summary>Verifies the outbox byte limit rejects non-blocking strategies without evicting committed work.</summary>
-    /// <param name="strategy">The non-blocking admission strategy.</param>
+    /// <summary>Verifies the outbox byte limit rejects Reject and DropNewest publications without evicting committed work.</summary>
+    /// <param name="strategy">The non-evicting, non-blocking admission strategy.</param>
     /// <param name="durable">Whether the publications are durable.</param>
     /// <returns>A task representing the assertions.</returns>
     [Test]
     [Arguments(BufferStrategy.Reject, true)]
     [Arguments(BufferStrategy.Reject, false)]
-    [Arguments(BufferStrategy.DropOldest, false)]
     [Arguments(BufferStrategy.DropNewest, false)]
     public async Task PublicPublishAsyncByteLimitRejectsWithoutEvictingCommittedWork(BufferStrategy strategy, bool durable)
     {
@@ -57,6 +56,25 @@ public sealed partial class OccasionallyConnectedBuilderTests
         await Assert.That(first.ClientSequence).IsEqualTo(1L);
         await Assert.That(small.ClientSequence).IsEqualTo(SecondClientSequence);
         await AssertPendingValuesAsync(store, stream.SubscriptionId, HalfOutboxPayloadDelta, 1);
+    }
+
+    /// <summary>Verifies the outbox byte limit makes DropOldest evict committed non-durable work to admit the new publication.</summary>
+    /// <returns>A task representing the assertions.</returns>
+    [Test]
+    public async Task PublicPublishAsyncByteLimitDropOldestEvictsCommittedNonDurableWork()
+    {
+        await using var store = CreatePublicAdmissionStore("oc-public-bytes-oldest-");
+        await using var transport = new RecordingTransportAdapter();
+        await using var context = CreatePublicAdmissionBuilder(store, transport, new PaddedCounterPayloadSerializer(), CreateByteBoundOutbox()).Build();
+        var stream = context.GetOrCreateStream(CreateDefinition());
+        var options = CreatePublicPublishOptions(BufferStrategy.DropOldest, durable: false);
+
+        var first = await stream.PublishAsync(new(HalfOutboxPayloadDelta), options, CancellationToken.None).AsTask().WaitAsync(GuardTimeout);
+        var second = await stream.PublishAsync(new(HalfOutboxPayloadDelta), options, CancellationToken.None).AsTask().WaitAsync(GuardTimeout);
+
+        await Assert.That(second.ClientSequence).IsEqualTo(SecondClientSequence);
+        await AssertPendingValuesAsync(store, stream.SubscriptionId, HalfOutboxPayloadDelta);
+        await AssertDeadLetteredAsync(store, first.OperationId, DroppedOldestReasonCode);
     }
 
     /// <summary>Verifies Block fails promptly when an operation cannot fit even an empty outbox.</summary>

@@ -66,9 +66,28 @@ public static class OccasionallyConnectedServiceCollectionExtensions
             .UseBorrowedTransport((IRemoteTransportAdapter)services.GetRequiredService(configuration.TransportType));
         ConfigureStoreInitialization(contextBuilder, configuration);
         ConfigureSerializer(contextBuilder, configuration, services);
+        ConfigureBufferOverflowPolicy(contextBuilder, configuration, services);
         var context = contextBuilder.Build();
         OccasionallyConnectedLoggerBridge.ObserveStartup(context, logger);
         return context;
+    }
+
+    /// <summary>Applies the optional custom buffer overflow policy to the context builder.</summary>
+    /// <param name="builder">The context builder.</param>
+    /// <param name="configuration">The immutable configuration snapshot.</param>
+    /// <param name="services">The service provider.</param>
+    private static void ConfigureBufferOverflowPolicy(
+        OccasionallyConnectedBuilder builder,
+        OccasionallyConnectedServiceConfiguration configuration,
+        IServiceProvider services)
+    {
+        if (configuration.BufferOverflowPolicyType is not { } policyType || configuration.BufferOverflowPolicyDescriptor is not { } descriptor)
+        {
+            return;
+        }
+
+        ValidateSelectedDescriptor(configuration, policyType, descriptor);
+        _ = builder.UseBufferOverflowPolicy((IBufferOverflowPolicy)services.GetRequiredService(policyType));
     }
 
     /// <summary>Creates the optional logger before the context is built.</summary>

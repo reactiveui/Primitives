@@ -87,6 +87,19 @@ internal sealed partial class SyncEngine
         }
     }
 
+    /// <summary>Records one bounded queue overflow.</summary>
+    private void RecordQueueOverflowMetric()
+    {
+        try
+        {
+            _metrics.RecordQueueOverflow();
+        }
+        catch (Exception exception)
+        {
+            _ = exception;
+        }
+    }
+
     /// <summary>Records queue diagnostics.</summary>
     /// <param name="pendingDelta">The pending operation delta.</param>
     /// <param name="byteDelta">The retained byte delta.</param>

@@ -19,7 +19,7 @@ public sealed class OccasionallyConnectedMetricsTests
     private const int DurationCount = 2;
 
     /// <summary>The required instrument count.</summary>
-    private const int InstrumentCount = 13;
+    private const int InstrumentCount = 14;
 
     /// <summary>The concurrent write count.</summary>
     private const int ConcurrentWrites = 256;
@@ -69,6 +69,7 @@ public sealed class OccasionallyConnectedMetricsTests
         recorder.RecordStoreCommitDuration(TimeSpan.FromMilliseconds(1));
         recorder.RecordConnectionStateChange();
         recorder.RecordDeadLetter();
+        recorder.RecordQueueOverflow();
 
         var instruments = capture.GetInstruments();
         var measurements = capture.GetMeasurements();
@@ -79,6 +80,7 @@ public sealed class OccasionallyConnectedMetricsTests
         await Assert.That(instruments.Exists(static item => item.Name == PendingName && item.Kind == "UpDownCounter" && item.Unit == OperationsUnit)).IsTrue();
         await Assert.That(instruments.Exists(static item => item.Name == "oc.sync.duration" && item.Kind == "Histogram" && item.Unit == "milliseconds")).IsTrue();
         await Assert.That(instruments.Exists(static item => item.Name == "oc.dead_letters" && item.Kind == CounterKind && item.Unit == OperationsUnit)).IsTrue();
+        await Assert.That(instruments.Exists(static item => item.Name == "oc.queue.overflow" && item.Kind == CounterKind && item.Unit == OperationsUnit)).IsTrue();
     }
 
     /// <summary>Verifies queue deltas and recorder lifetime behavior.</summary>
@@ -140,6 +142,7 @@ public sealed class OccasionallyConnectedMetricsTests
     [Arguments("oc.store.commit.duration", "Histogram", "milliseconds")]
     [Arguments("oc.connection.state_changes", "Counter", "transitions")]
     [Arguments("oc.dead_letters", "Counter", "operations")]
+    [Arguments("oc.queue.overflow", "Counter", "operations")]
     public async Task PublishesExpectedDefinitionAndValue(string name, string kind, string unit)
     {
         using var recorder = new OccasionallyConnectedMetrics(enabled: true);
@@ -228,6 +231,7 @@ public sealed class OccasionallyConnectedMetricsTests
         recorder.RecordStoreCommitDuration(TimeSpan.FromMilliseconds(value));
         recorder.RecordConnectionStateChange(value);
         recorder.RecordDeadLetter(value);
+        recorder.RecordQueueOverflow(value);
     }
 
     /// <summary>Creates an active listener for a recorder.</summary>

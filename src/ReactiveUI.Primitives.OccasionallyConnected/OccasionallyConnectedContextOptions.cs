@@ -37,6 +37,9 @@ internal sealed record OccasionallyConnectedContextOptions
     /// <summary>Gets a value indicating whether startup should be scheduled after construction.</summary>
     public bool AutoStart { get; init; }
 
+    /// <summary>Gets the optional policy invoked for <see cref="BufferStrategy.Custom"/> publish admission.</summary>
+    public IBufferOverflowPolicy? BufferOverflowPolicy { get; init; }
+
     /// <summary>Gets the optional schema registry snapshot used for descriptor validation.</summary>
     public SchemaRegistry? SchemaRegistry { get; init; }
 

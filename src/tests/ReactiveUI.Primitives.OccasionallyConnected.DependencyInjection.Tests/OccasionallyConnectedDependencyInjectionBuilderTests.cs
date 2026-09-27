@@ -595,6 +595,67 @@ public sealed class OccasionallyConnectedDependencyInjectionBuilderTests
         await Assert.That(store.LastSnapshotMutation).IsNull();
     }
 
+    /// <summary>Verifies a registered singleton buffer overflow policy handles custom admission on a full outbox.</summary>
+    /// <returns>A task representing the assertions.</returns>
+    [Test]
+    public async Task UseBufferOverflowPolicyInvokesRegisteredPolicyForCustomAdmission()
+    {
+        var services = CreateRequiredServices();
+        _ = services.AddSingleton<InMemoryLocalStoreAdapter>();
+        _ = services.AddSingleton<EvictOldestOverflowPolicy>();
+        _ = services.AddOccasionallyConnected(static builder => ConfigureRequired(builder)
+            .UseStore(typeof(InMemoryLocalStoreAdapter))
+            .UseOptions(OccasionallyConnectedOptions.Default with
+            {
+                Outbox = OccasionallyConnectedOptions.Default.Outbox with { MaxOperations = 1 },
+            })
+            .UseBufferOverflowPolicy(typeof(EvictOldestOverflowPolicy))
+            .AddStream(CounterName, DependencyInjectionTestDoubles.CreateDefinition));
+        await using var provider = services.BuildServiceProvider(validateScopes: true);
+        var policy = provider.GetRequiredService<EvictOldestOverflowPolicy>();
+        var stream = provider.GetRequiredService<IOccasionallyConnectedStreamRegistry>().GetRequiredStream(CreateCounterStreamKey());
+        var custom = new RemotePublishOptions { StreamId = stream.StreamId, Durable = false, AdmissionStrategy = BufferStrategy.Custom };
+
+        var first = await stream.PublishAsync(new(1), null, CancellationToken.None)
+            .AsTask()
+            .WaitAsync(DependencyInjectionTestDoubles.GuardTimeout);
+        var second = await stream.PublishAsync(new(PersistedCounterIncrement), custom, CancellationToken.None)
+            .AsTask()
+            .WaitAsync(DependencyInjectionTestDoubles.GuardTimeout);
+
+        await Assert.That(policy.Calls).IsEqualTo(1);
+        await Assert.That(second.ClientSequence).IsEqualTo(first.ClientSequence + 1);
+    }
+
+    /// <summary>Verifies custom admission stays unavailable when no buffer overflow policy is registered.</summary>
+    /// <returns>A task representing the assertions.</returns>
+    [Test]
+    public async Task CustomAdmissionWithoutBufferOverflowPolicyIsRejected()
+    {
+        await using var provider = CreateProvider(RegisterCounterStream);
+        var stream = provider.GetRequiredService<IOccasionallyConnectedStreamRegistry>().GetRequiredStream(CreateCounterStreamKey());
+        var custom = new RemotePublishOptions { StreamId = stream.StreamId, Durable = false, AdmissionStrategy = BufferStrategy.Custom };
+
+        await Assert.That(async () => await stream.PublishAsync(new(1), custom, CancellationToken.None))
+            .ThrowsExactly<InvalidOperationException>();
+    }
+
+    /// <summary>Verifies buffer overflow policy selections must implement the contract and be registered singletons.</summary>
+    /// <returns>A task representing the assertions.</returns>
+    [Test]
+    public async Task UseBufferOverflowPolicyRejectsInvalidSelections()
+    {
+        var services = CreateRequiredServices();
+        _ = services.AddTransient<EvictOldestOverflowPolicy>();
+
+        await Assert.That(() => services.AddOccasionallyConnected(static builder => ConfigureRequired(builder)
+            .UseBufferOverflowPolicy(typeof(DependencyInjectionTestDoubles.RecordingStoreAdapter))))
+            .ThrowsExactly<ArgumentException>();
+        await Assert.That(() => services.AddOccasionallyConnected(static builder => ConfigureRequired(builder)
+            .UseBufferOverflowPolicy(typeof(EvictOldestOverflowPolicy))))
+            .ThrowsExactly<InvalidOperationException>();
+    }
+
     /// <summary>Registers the counter stream used by the generated JSON metadata test.</summary>
     /// <param name="builder">The DI builder.</param>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -712,4 +773,22 @@ public sealed class OccasionallyConnectedDependencyInjectionBuilderTests
                 DependencyInjectionTestDoubles.StateContract,
                 1,
                 DependencyInjectionJsonContext.Default.CounterState);
+
+    /// <summary>Evicts the oldest listed candidate and counts its invocations.</summary>
+    private sealed class EvictOldestOverflowPolicy : IBufferOverflowPolicy
+    {
+        /// <summary>Stores the invocation count.</summary>
+        private int _calls;
+
+        /// <summary>Gets the invocation count.</summary>
+        public int Calls => Volatile.Read(ref _calls);
+
+        /// <inheritdoc />
+        public BufferOverflowDecision Decide(BufferOverflowContext context)
+        {
+            ArgumentNullException.ThrowIfNull(context);
+            _ = Interlocked.Increment(ref _calls);
+            return BufferOverflowDecision.Evict(context.Candidates[0].OperationId);
+        }
+    }
 }

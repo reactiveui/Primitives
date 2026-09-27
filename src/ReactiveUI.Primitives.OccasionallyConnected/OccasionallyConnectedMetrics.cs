@@ -42,6 +42,7 @@ internal sealed class OccasionallyConnectedMetrics : IDisposable
         StoreCommitDuration = Meter.CreateHistogram<double>("oc.store.commit.duration", unit: "milliseconds");
         ConnectionStateChanges = Meter.CreateCounter<long>("oc.connection.state_changes", unit: "transitions");
         DeadLetters = Meter.CreateCounter<long>("oc.dead_letters", unit: OperationsUnit);
+        QueueOverflows = Meter.CreateCounter<long>("oc.queue.overflow", unit: OperationsUnit);
     }
 
     /// <summary>Gets the meter owned by this recorder, if enabled.</summary>
@@ -85,6 +86,9 @@ internal sealed class OccasionallyConnectedMetrics : IDisposable
 
     /// <summary>Gets the dead letter counter.</summary>
     private Counter<long>? DeadLetters { get; }
+
+    /// <summary>Gets the queue overflow counter.</summary>
+    private Counter<long>? QueueOverflows { get; }
 
     /// <inheritdoc />
     public void Dispose()
@@ -161,6 +165,11 @@ internal sealed class OccasionallyConnectedMetrics : IDisposable
     /// <param name="count">The number of operations.</param>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal void RecordDeadLetter(long count = 1) => RecordMonotonic(DeadLetters, count);
+
+    /// <summary>Records bounded queue overflows handled by a dropping or custom admission strategy.</summary>
+    /// <param name="count">The number of overflows.</param>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    internal void RecordQueueOverflow(long count = 1) => RecordMonotonic(QueueOverflows, count);
 
     /// <summary>Records a positive value on a monotonic instrument.</summary>
     /// <param name="instrument">The instrument to record.</param>

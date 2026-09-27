@@ -30,6 +30,25 @@ internal sealed partial class SyncEngine
     }
 
     /// <inheritdoc/>
+    public void RecordQueueOverflow(StreamId streamId, QueueDiagnosticSnapshot? evictedQueueSnapshot, SyncOperationStatus? evictedStatus)
+    {
+        RecordQueueOverflowMetric();
+        if (evictedQueueSnapshot is not { } snapshot)
+        {
+            return;
+        }
+
+        RecordDeadLetter();
+        RecordRecoveredQueueAggregate(streamId, snapshot);
+        if (evictedStatus is not null)
+        {
+            _operationStates.Publish(evictedStatus);
+        }
+
+        NotifyCapacityReleased(streamId);
+    }
+
+    /// <inheritdoc/>
     public void RecordRecoveredQueueAggregate(StreamId streamId, QueueDiagnosticSnapshot snapshot)
     {
         ValidateQueueSnapshot(snapshot);
