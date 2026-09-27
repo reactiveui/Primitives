@@ -874,10 +874,13 @@ public sealed partial class HttpServerEndpointTests
         await Assert.That(hub.SubscribeClient).IsEqualTo(CreateAuthenticatedClient());
     }
 
-    /// <summary>Verifies caller cancellation after polling starts is reported as an ambiguous subscription outcome.</summary>
+    /// <summary>
+    /// Verifies caller cancellation after polling starts surfaces as cancellation instead of an ambiguous 500, so the
+    /// host aborts the response and no client sees a status it would retry.
+    /// </summary>
     /// <returns>The asynchronous test operation.</returns>
     [Test]
-    public async Task HandleAsyncSubscribeMapsPostEffectCallerCancellationToAmbiguousResponse()
+    public async Task HandleAsyncSubscribeSurfacesPostEffectCallerCancellation()
     {
         using var cancellation = new CancellationTokenSource();
         var hubEntered = CreateSignal();
@@ -887,8 +890,26 @@ public sealed partial class HttpServerEndpointTests
         var responseTask = endpoint.HandleAsync(request, CreateAuthenticatedClient(), cancellation.Token).AsTask();
         await hubEntered.Task.WaitAsync(TimeSpan.FromSeconds(AsyncWaitTimeoutSeconds)).ConfigureAwait(false);
         await cancellation.CancelAsync().ConfigureAwait(false);
-        using var response = await AwaitResultAsync(responseTask).ConfigureAwait(false);
-        await Assert.That(response.StatusCode).IsEqualTo(HttpStatusCode.InternalServerError);
+
+        await Assert.That(async () => await responseTask.WaitAsync(TimeSpan.FromSeconds(AsyncWaitTimeoutSeconds)))
+            .Throws<OperationCanceledException>();
+    }
+
+    /// <summary>Verifies a hub retention gap maps to a bodyless 410 that reveals nothing about retained history.</summary>
+    /// <returns>The asynchronous test operation.</returns>
+    [Test]
+    public async Task HandleAsyncSubscribeMapsRetentionGapToBodylessGone()
+    {
+        var hub = new RecordingHub { SubscribeHandler = static (request, _, cancellationToken) => ThrowRetentionGapAsync(request, cancellationToken) };
+        await using var endpoint = new HttpServerEndpoint(CreateOptions(hub));
+        using var request = await CreateSignedSubscribeRequestAsync(endpoint);
+
+        using var response = await endpoint.HandleAsync(request, CreateAuthenticatedClient(), CancellationToken.None);
+
+        await Assert.That(response.StatusCode).IsEqualTo(HttpStatusCode.Gone);
+        await Assert.That(response.Content is null || response.Content.Headers.ContentLength == 0).IsTrue();
+        await Assert.That(response.Headers.Any()).IsFalse();
+        await Assert.That(hub.SubscribeClient).IsEqualTo(CreateAuthenticatedClient());
     }
 
     /// <summary>Verifies method mismatches are rejected using the route-specific status.</summary>

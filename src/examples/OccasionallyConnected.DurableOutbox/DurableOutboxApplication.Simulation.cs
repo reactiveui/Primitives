@@ -25,12 +25,11 @@ internal sealed partial class DurableOutboxApplication
     {
         await using var session = await OpenSessionAsync(databasePath, cancellationToken).ConfigureAwait(false);
         var selection = await SelectOperationOrFailureAsync(session, operationId, cancellationToken).ConfigureAwait(false);
-        if (selection.TryGetFailure(out var failure))
+        if (!selection.TryGetValue(out var selected, out var failure))
         {
             return failure;
         }
 
-        var selected = ((SelectedOperationSelection)selection).Operation;
         var currentStatus = await session.Store.GetOperationStatusAsync(selected.OperationId, cancellationToken).ConfigureAwait(false);
         if (currentStatus is null)
         {
@@ -49,12 +48,11 @@ internal sealed partial class DurableOutboxApplication
         }
 
         var lease = await LeaseSelectedOperationAsync(session.Store, selected, cancellationToken).ConfigureAwait(false);
-        if (lease.TryGetFailure(out var leaseFailure))
+        if (!lease.TryGetValue(out var batch, out var leaseFailure))
         {
             return leaseFailure;
         }
 
-        var batch = ((SelectedLeaseSelection)lease).Batch;
         var barrier = await BeginAttemptAsync(session.Store, batch, selected, currentStatus, cancellationToken).ConfigureAwait(false);
         return barrier.Failure ?? outcome switch
         {
@@ -158,69 +156,53 @@ internal sealed partial class DurableOutboxApplication
         return state;
     }
 
-    /// <summary>Represents operation selection or failure.</summary>
-    private abstract record OperationSelection
+    /// <summary>Holds either a selected value or the command failure that prevented selection.</summary>
+    /// <typeparam name="T">The selected value type.</typeparam>
+    private sealed class Selection<T>
+        where T : class
     {
-        /// <summary>Tries to get a command failure for the selection.</summary>
+        /// <summary>The selected value, or <see langword="null"/> when selection failed.</summary>
+        private readonly T? _value;
+
+        /// <summary>The command failure, or <see langword="null"/> when selection succeeded.</summary>
+        private readonly OutboxCommandResult? _failure;
+
+        /// <summary>Initializes a new instance of the <see cref="Selection{T}"/> class.</summary>
+        /// <param name="value">The selected value.</param>
+        /// <param name="failure">The command failure.</param>
+        private Selection(T? value, OutboxCommandResult? failure)
+        {
+            _value = value;
+            _failure = failure;
+        }
+
+        /// <summary>Creates a successful selection.</summary>
+        /// <param name="value">The selected value.</param>
+        /// <returns>The selection.</returns>
+        public static Selection<T> Selected(T value) => new(value, null);
+
+        /// <summary>Creates a failed selection.</summary>
+        /// <param name="failure">The command failure.</param>
+        /// <returns>The selection.</returns>
+        public static Selection<T> Failed(OutboxCommandResult failure) => new(null, failure);
+
+        /// <summary>Tries to get the selected value.</summary>
+        /// <param name="value">The selected value when selection succeeded.</param>
         /// <param name="failure">The command failure when selection failed.</param>
-        /// <returns><see langword="true"/> when selection failed.</returns>
-        public abstract bool TryGetFailure([NotNullWhen(true)] out OutboxCommandResult? failure);
-    }
-
-    /// <summary>Represents a successful operation selection.</summary>
-    /// <param name="Operation">The selected operation.</param>
-    private sealed record SelectedOperationSelection(SyncOperation Operation) : OperationSelection
-    {
-        /// <inheritdoc/>
-        public override bool TryGetFailure([NotNullWhen(true)] out OutboxCommandResult? failure)
+        /// <returns><see langword="true"/> when selection succeeded.</returns>
+        /// <exception cref="InvalidOperationException">The selection holds neither a value nor a failure.</exception>
+        public bool TryGetValue([NotNullWhen(true)] out T? value, [NotNullWhen(false)] out OutboxCommandResult? failure)
         {
-            failure = null;
+            if (_value is { } selected)
+            {
+                value = selected;
+                failure = null;
+                return true;
+            }
+
+            value = null;
+            failure = _failure ?? throw new InvalidOperationException("The selection holds neither a value nor a failure.");
             return false;
-        }
-    }
-
-    /// <summary>Represents a failed operation selection.</summary>
-    /// <param name="Failure">The command failure.</param>
-    private sealed record FailedOperationSelection(OutboxCommandResult Failure) : OperationSelection
-    {
-        /// <inheritdoc/>
-        public override bool TryGetFailure([NotNullWhen(true)] out OutboxCommandResult? failure)
-        {
-            failure = Failure;
-            return true;
-        }
-    }
-
-    /// <summary>Represents lease selection or failure.</summary>
-    private abstract record LeaseSelection
-    {
-        /// <summary>Tries to get a command failure for the selection.</summary>
-        /// <param name="failure">The command failure when selection failed.</param>
-        /// <returns><see langword="true"/> when selection failed.</returns>
-        public abstract bool TryGetFailure([NotNullWhen(true)] out OutboxCommandResult? failure);
-    }
-
-    /// <summary>Represents a successful lease selection.</summary>
-    /// <param name="Batch">The selected lease batch.</param>
-    private sealed record SelectedLeaseSelection(LeasedOperationBatch Batch) : LeaseSelection
-    {
-        /// <inheritdoc/>
-        public override bool TryGetFailure([NotNullWhen(true)] out OutboxCommandResult? failure)
-        {
-            failure = null;
-            return false;
-        }
-    }
-
-    /// <summary>Represents a failed lease selection.</summary>
-    /// <param name="Failure">The command failure.</param>
-    private sealed record FailedLeaseSelection(OutboxCommandResult Failure) : LeaseSelection
-    {
-        /// <inheritdoc/>
-        public override bool TryGetFailure([NotNullWhen(true)] out OutboxCommandResult? failure)
-        {
-            failure = Failure;
-            return true;
         }
     }
 

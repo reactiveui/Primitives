@@ -22,11 +22,22 @@ internal static class ResilienceLabContext
     internal static OccasionallyConnectedContext Create(ResilienceLabContextSettings settings)
     {
         ArgumentNullException.ThrowIfNull(settings);
+        return Create(
+            settings,
+            new LoopbackTransportAdapter(ResilienceLabLoopback.CreateLoopbackOptions(
+                settings.Hub,
+                settings.ClientId,
+                CrdtLoopbackScenarioShape.VolatileLoopbackCapabilities)));
+    }
+
+    /// <summary>Creates a context that owns a new SQLite store and the supplied transport.</summary>
+    /// <param name="settings">The context settings.</param>
+    /// <param name="transport">The transport the context takes ownership of.</param>
+    /// <returns>The built context.</returns>
+    internal static OccasionallyConnectedContext Create(ResilienceLabContextSettings settings, IRemoteTransportAdapter transport)
+    {
+        ArgumentNullException.ThrowIfNull(settings);
         var store = new SqliteLocalStoreAdapter(Path.Combine(settings.DirectoryPath, DatabaseFileName));
-        var transport = new LoopbackTransportAdapter(ResilienceLabLoopback.CreateLoopbackOptions(
-            settings.Hub,
-            settings.ClientId,
-            CrdtLoopbackScenarioShape.VolatileLoopbackCapabilities));
         return new OccasionallyConnectedBuilder()
             .UseClient(new(settings.ClientId, ResilienceLabLoopback.TenantId))
             .UseStore(store)

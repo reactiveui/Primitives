@@ -79,6 +79,11 @@ internal static class HttpTransportStatus
             return HttpTransportFailureKind.SchemaIncompatible;
         }
 
+        if (statusCode == HttpStatusCode.Gone)
+        {
+            return HttpTransportFailureKind.RetentionGap;
+        }
+
         if (numeric == TooManyRequestsStatusCode || numeric >= ServerErrorStatusCodeStart)
         {
             return HttpTransportFailureKind.Transient;

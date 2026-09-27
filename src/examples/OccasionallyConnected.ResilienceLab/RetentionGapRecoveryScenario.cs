@@ -147,9 +147,9 @@ internal static class RetentionGapRecoveryScenario
             _ = await ReadPageAsync(hub, cursor, cancellationToken).ConfigureAwait(false);
             return Resumed;
         }
-        catch (ServerReceiveRetentionGapException exception)
+        catch (RemoteSubscriptionRetentionGapException exception)
         {
-            return exception.ReasonCode;
+            return exception.ReasonCode ?? string.Empty;
         }
     }
 

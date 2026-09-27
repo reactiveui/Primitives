@@ -13,6 +13,12 @@ namespace ReactiveUI.Primitives.OccasionallyConnected.Transport.Http;
 /// <summary>Represents an active bounded HTTP remote transport session.</summary>
 internal sealed partial class HttpRemoteTransportSession : IRemoteTransportSession, IRemoteTransportBatchPreparer, IRemoteSnapshotRecoverySession
 {
+    /// <summary>
+    /// The stable reason code for a <c>410 Gone</c> subscribe response. It matches the server hub's receive
+    /// retention-gap reason code, so a gap reads the same over HTTP and in process.
+    /// </summary>
+    private const string RetentionGapReasonCode = "server-receive-retention-gap";
+
     /// <summary>The adapter options.</summary>
     private readonly HttpRemoteTransportOptions _options;
 
@@ -305,11 +311,26 @@ internal sealed partial class HttpRemoteTransportSession : IRemoteTransportSessi
     /// <param name="cursor">The current receive cursor.</param>
     /// <param name="cancellationToken">The cancellation token.</param>
     /// <returns>The decoded event batches, or an empty array for an empty long-poll response.</returns>
+    /// <exception cref="RemoteSubscriptionRetentionGapException">The server answered <c>410 Gone</c> because the cursor is outside retained history.</exception>
     private async Task<RemoteEventBatch[]> ReceiveSubscribeResponseAsync(RemoteSubscribeRequest request, string? cursor, CancellationToken cancellationToken)
     {
         using var operation = BeginOperation();
         using var admission = await _requestGate.EnterAsync(cancellationToken).ConfigureAwait(false);
-        using var response = await SendAsync(HttpMethod.Get, CreateSubscribePath(request, cursor), body: null, cancellationToken).ConfigureAwait(false);
+        HttpResponseMessage sent;
+        try
+        {
+            sent = await SendAsync(HttpMethod.Get, CreateSubscribePath(request, cursor), body: null, cancellationToken).ConfigureAwait(false);
+        }
+        catch (HttpRemoteTransportException exception) when (exception.Kind == HttpTransportFailureKind.RetentionGap)
+        {
+            throw new RemoteSubscriptionRetentionGapException(
+                request.StreamId,
+                request.SubscriptionId,
+                string.IsNullOrEmpty(cursor) ? null : cursor,
+                RetentionGapReasonCode);
+        }
+
+        using var response = sent;
         if (response.StatusCode == System.Net.HttpStatusCode.NoContent)
         {
             return [];
@@ -334,11 +355,11 @@ internal sealed partial class HttpRemoteTransportSession : IRemoteTransportSessi
         {
             response = await _options.HttpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, cancellationToken).ConfigureAwait(false);
         }
-        catch (OperationCanceledException)
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
             throw;
         }
-        catch (Exception exception) when (exception is HttpRequestException or IOException)
+        catch (Exception exception) when (exception is HttpRequestException or IOException or OperationCanceledException)
         {
             throw new HttpRemoteTransportException(
                 HttpTransportFailureKind.AmbiguousTransportOutcome,

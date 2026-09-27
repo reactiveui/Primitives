@@ -205,16 +205,34 @@ public sealed partial class HttpProtocolCodecTests
         await Assert.That(reserialized).IsEqualTo(ProtocolGoldenFixtures.ReadText(fixture));
     }
 
-    /// <summary>Verifies the strict v1 codec fails closed on unknown members instead of guessing their meaning.</summary>
+    /// <summary>
+    /// Verifies the codec reads a message from a newer minor version. Spec 18.3 requires an older peer to skip optional
+    /// members it does not know, at the root and in every nested object.
+    /// </summary>
     /// <param name="fixture">The fixture name.</param>
     /// <returns>The asynchronous test operation.</returns>
     [Test]
     [MethodDataSource(nameof(GoldenJsonFixtures))]
-    public async Task GoldenFixtureWithUnknownMemberIsRejectedByCodec(string fixture)
+    public async Task GoldenFixtureWithUnknownMembersAtEveryLevelDecodesToRetainedMessage(string fixture)
     {
-        var bytes = Encoding.UTF8.GetBytes(InjectGoldenUnknownMember(ProtocolGoldenFixtures.ReadText(fixture)));
+        var json = InjectGoldenUnknownMemberIntoEveryObject(ProtocolGoldenFixtures.ReadText(fixture));
 
-        var exception = CaptureHttpException(() => _ = ReencodeGolden(fixture, bytes));
+        var reencoded = ProtocolGoldenFixtures.ToText(ReencodeGolden(fixture, Encoding.UTF8.GetBytes(json)));
+
+        await Assert.That(json).Contains(GoldenUnknownMember);
+        await Assert.That(reencoded).IsEqualTo(ProtocolGoldenFixtures.ReadText(fixture));
+    }
+
+    /// <summary>Verifies an unknown member that repeats in one object is still rejected instead of last-wins.</summary>
+    /// <param name="fixture">The fixture name.</param>
+    /// <returns>The asynchronous test operation.</returns>
+    [Test]
+    [MethodDataSource(nameof(GoldenJsonFixtures))]
+    public async Task GoldenFixtureWithDuplicateUnknownMemberIsRejected(string fixture)
+    {
+        var json = string.Concat("{".AsSpan(), GoldenUnknownMember.AsSpan(), GoldenUnknownMember.AsSpan(), ProtocolGoldenFixtures.ReadText(fixture).AsSpan(1));
+
+        var exception = CaptureHttpException(() => _ = ReencodeGolden(fixture, Encoding.UTF8.GetBytes(json)));
 
         await Assert.That(exception.Kind).IsEqualTo(HttpTransportFailureKind.ProtocolViolation);
     }
@@ -412,6 +430,47 @@ public sealed partial class HttpProtocolCodecTests
     {
         var value = JsonSerializer.Deserialize(json, typeInfo) ?? throw new InvalidOperationException("Expected a protocol DTO.");
         return JsonSerializer.Serialize(value, typeInfo);
+    }
+
+    /// <summary>
+    /// Injects an unknown member at the start of every JSON object except metadata maps, whose members are data rather
+    /// than protocol fields.
+    /// </summary>
+    /// <param name="json">The fixture JSON.</param>
+    /// <returns>The JSON with unknown members at every protocol level.</returns>
+    private static string InjectGoldenUnknownMemberIntoEveryObject(string json)
+    {
+        const string MetadataKey = "\"metadata\":";
+        var builder = new StringBuilder(json.Length);
+        var inString = false;
+        var escaped = false;
+        for (var index = 0; index < json.Length; index++)
+        {
+            var character = json[index];
+            _ = builder.Append(character);
+            if (inString)
+            {
+                inString = escaped || character != '"';
+                escaped = !escaped && character == '\\';
+                continue;
+            }
+
+            if (character == '"')
+            {
+                inString = true;
+                continue;
+            }
+
+            if (character != '{' || builder.ToString(0, builder.Length - 1).EndsWith(MetadataKey, StringComparison.Ordinal))
+            {
+                continue;
+            }
+
+            var member = json[index + 1] == '}' ? GoldenUnknownMember.AsSpan(0, GoldenUnknownMember.Length - 1) : GoldenUnknownMember.AsSpan();
+            _ = builder.Append(member);
+        }
+
+        return builder.ToString();
     }
 
     /// <summary>Injects an unknown member at the start of the root object and the first nested object.</summary>

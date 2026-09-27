@@ -330,4 +330,53 @@ public sealed partial class HttpRemoteTransportAdapterTests
         await session.DisposeAsync();
         await AssertCompletesAsync(firstMove);
     }
+
+    /// <summary>Verifies a bodyless 410 subscribe response surfaces the Core retention gap for the request.</summary>
+    /// <returns>The assertion task.</returns>
+    [Test]
+    public async Task SubscribeAsyncMapsGoneToRetentionGapForSnapshotRecovery()
+    {
+        var handler = new RecordingHttpHandler(static request => request.RequestUri?.AbsolutePath == ConnectRoute
+            ? CreateProtocolResponse(HttpStatusCode.OK, ConnectResponseJson)
+            : new HttpResponseMessage(HttpStatusCode.Gone));
+        using var httpClient = CreateHttpClient(handler);
+        await using var adapter = CreateAdapter(httpClient);
+        await using var session = await adapter.ConnectAsync(CreateConnectRequest(), CancellationToken.None);
+        var request = CreateSubscribeRequest(PriorCursor, StartPosition.Latest);
+        await using var enumerator = session.SubscribeAsync(request, CancellationToken.None).GetAsyncEnumerator();
+
+        var gap = await Assert.ThrowsExactlyAsync<RemoteSubscriptionRetentionGapException>(() => enumerator.MoveNextAsync().AsTask());
+
+        await Assert.That(gap!.StreamId).IsEqualTo(request.StreamId);
+        await Assert.That(gap.SubscriptionId).IsEqualTo(request.SubscriptionId);
+        await Assert.That(gap.ExpiredCursor).IsEqualTo(PriorCursor);
+        await Assert.That(gap.ReasonCode).IsEqualTo("server-receive-retention-gap");
+        await Assert.That(handler.Requests.Count(static record => record.RequestUri?.AbsolutePath == SubscribeRoute)).IsEqualTo(1);
+    }
+
+    /// <summary>
+    /// Verifies a server-side cancellation the caller did not request fails the subscription once as an ambiguous
+    /// outcome, so the engine applies its retry backoff instead of the adapter polling again at once.
+    /// </summary>
+    /// <returns>The assertion task.</returns>
+    [Test]
+    public async Task SubscribeAsyncReportsServerCancellationAsSingleAmbiguousFailure()
+    {
+        var handler = new RecordingHttpHandler(static (request, _) => request.RequestUri?.AbsolutePath == ConnectRoute
+            ? Task.FromResult(CreateProtocolResponse(HttpStatusCode.OK, ConnectResponseJson))
+            : Task.FromException<HttpResponseMessage>(new OperationCanceledException("The server canceled the request.")));
+        using var httpClient = CreateHttpClient(handler);
+        await using var adapter = CreateAdapter(httpClient);
+        await using var session = await adapter.ConnectAsync(CreateConnectRequest(), CancellationToken.None);
+        await using var enumerator = session
+            .SubscribeAsync(CreateSubscribeRequest(PriorCursor, StartPosition.Latest), CancellationToken.None)
+            .GetAsyncEnumerator();
+
+        var failure = await Assert.ThrowsExactlyAsync<HttpRemoteTransportException>(() => enumerator.MoveNextAsync().AsTask());
+
+        await Assert.That(failure!.Kind).IsEqualTo(HttpTransportFailureKind.AmbiguousTransportOutcome);
+        await Assert.That(failure.RetryFailure.Kind).IsEqualTo(RetryFailureKind.AmbiguousTransportOutcome);
+        await Assert.That(failure.InnerException).IsTypeOf<OperationCanceledException>();
+        await Assert.That(handler.Requests.Count(static record => record.RequestUri?.AbsolutePath == SubscribeRoute)).IsEqualTo(1);
+    }
 }

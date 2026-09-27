@@ -38,8 +38,7 @@ public sealed partial class CollaborationClientApplicationTests
     /// <returns>The assertion task.</returns>
     private static async Task AssertWatchActivityAndReleaseAsync(Uri boundUri, CollaborationClientDatabaseLease lease)
     {
-        var command = CreatePublishCommand(boundUri, lease.ClientAPath, TokenA, ClientA, OnlineStatus, OfflineTitle)
-            with { Kind = CollaborationClientCommandKind.Watch };
+        var command = new WatchCollaborationClientCommand { Options = CreateClientOptions(boundUri, lease.ClientAPath, TokenA, ClientA) };
         var output = new ActivitySignalWriter(OnlineStatus);
         var cancellation = new CancellationTokenSource(WaitTimeout);
         var watch = CollaborationClientApplication.RunAsync(command, output, cancellation.Token);

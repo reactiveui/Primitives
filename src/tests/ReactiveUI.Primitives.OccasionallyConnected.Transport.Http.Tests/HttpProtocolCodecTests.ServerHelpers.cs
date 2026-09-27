@@ -203,20 +203,20 @@ public sealed partial class HttpProtocolCodecTests
     /// <summary>Creates a deferred malformed HTTP exception case.</summary>
     /// <param name="name">The display name.</param>
     /// <param name="act">The codec action.</param>
-    /// <param name="expectedKind">The expected failure kind.</param>
+    /// <param name="expectedFailure">The expected failure kind.</param>
     /// <param name="createCodec">The optional codec factory.</param>
     /// <returns>The deferred test case.</returns>
     private static Func<ServerHttpExceptionCase> ProtocolCase(
         string name,
         Action<HttpProtocolCodec> act,
-        HttpTransportFailureKind expectedKind = HttpTransportFailureKind.ProtocolViolation,
+        HttpTransportFailureKind expectedFailure = HttpTransportFailureKind.ProtocolViolation,
         Func<HttpProtocolCodec>? createCodec = null)
     {
         var codecFactory = createCodec ?? CreateServerCodec;
         return () => new(
             name,
             () => CaptureHttpException(() => act(codecFactory())),
-            expectedKind);
+            expectedFailure);
     }
 
     /// <summary>Creates a push request JSON document.</summary>
@@ -296,12 +296,12 @@ public sealed partial class HttpProtocolCodecTests
         /// <summary>Initializes a new instance of the <see cref="ServerHttpExceptionCase"/> class.</summary>
         /// <param name="name">The display name.</param>
         /// <param name="act">The action that captures the thrown exception.</param>
-        /// <param name="expectedKind">The expected failure kind.</param>
-        public ServerHttpExceptionCase(string name, Func<HttpRemoteTransportException> act, HttpTransportFailureKind expectedKind)
+        /// <param name="expectedFailure">The expected failure kind.</param>
+        public ServerHttpExceptionCase(string name, Func<HttpRemoteTransportException> act, HttpTransportFailureKind expectedFailure)
         {
             Name = name;
             Act = act;
-            ExpectedKind = expectedKind;
+            ExpectedFailure = expectedFailure;
         }
 
         /// <summary>Gets the display name.</summary>
@@ -311,7 +311,7 @@ public sealed partial class HttpProtocolCodecTests
         public Func<HttpRemoteTransportException> Act { get; }
 
         /// <summary>Gets the expected failure kind.</summary>
-        public HttpTransportFailureKind ExpectedKind { get; }
+        public HttpTransportFailureKind ExpectedFailure { get; }
 
         /// <inheritdoc/>
         public override string ToString() => Name;

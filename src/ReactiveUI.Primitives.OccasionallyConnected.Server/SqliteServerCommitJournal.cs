@@ -334,6 +334,9 @@ internal sealed partial class SqliteServerCommitJournal : IServerCommitJournal, 
     /// <summary>The journal options.</summary>
     private readonly ServerCommitJournalOptions _options;
 
+    /// <summary>The checkpoint observer used by crash tests; the no-op singleton otherwise.</summary>
+    private readonly ISqliteServerCommitFaultPoint _faultPoint;
+
     /// <summary>Whether this instance has been disposed.</summary>
     private bool _disposed;
 
@@ -341,7 +344,18 @@ internal sealed partial class SqliteServerCommitJournal : IServerCommitJournal, 
     /// <param name="databasePath">The SQLite database path.</param>
     /// <param name="options">The finite journal bounds.</param>
     internal SqliteServerCommitJournal(string databasePath, ServerCommitJournalOptions? options = null)
+        : this(databasePath, options, NoOpSqliteServerCommitFaultPoint.Instance)
     {
+    }
+
+    /// <summary>Initializes a new instance of the <see cref="SqliteServerCommitJournal"/> class with a write checkpoint observer.</summary>
+    /// <param name="databasePath">The SQLite database path.</param>
+    /// <param name="options">The finite journal bounds.</param>
+    /// <param name="faultPoint">The write checkpoint observer used by crash tests.</param>
+    internal SqliteServerCommitJournal(string databasePath, ServerCommitJournalOptions? options, ISqliteServerCommitFaultPoint faultPoint)
+    {
+        ArgumentExceptionHelper.ThrowIfNull(faultPoint);
+        _faultPoint = faultPoint;
         ArgumentExceptionHelper.ThrowIfNull(databasePath);
         ThrowIfBlank(databasePath, nameof(databasePath));
         ThrowIfUnsupportedPath(databasePath);
@@ -446,7 +460,9 @@ internal sealed partial class SqliteServerCommitJournal : IServerCommitJournal, 
         WriteLatestUtc(connection, transaction, committedUtc);
         var committedStream = ReadStreamRecord(connection, transaction, commit.StreamKey);
         var committedSnapshot = ServerCommitJournalOperations.CreateSnapshot(commit.StreamKey, committedStream, commit.OperationKeys);
+        _faultPoint.Reached(SqliteServerCommitCheckpoint.TryCommitBeforeCommit);
         transaction.Commit();
+        _faultPoint.Reached(SqliteServerCommitCheckpoint.TryCommitAfterCommit);
         return new(ServerCommitStatus.Committed, committedSnapshot);
     }
 

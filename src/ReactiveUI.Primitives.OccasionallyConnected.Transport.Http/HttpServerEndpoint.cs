@@ -180,7 +180,14 @@ public sealed partial class HttpServerEndpoint : IAsyncDisposable
     /// <param name="cancellationToken">The request cancellation token.</param>
     /// <returns>The caller-owned HTTP response.</returns>
     /// <exception cref="ArgumentNullException"><paramref name="request"/> or <paramref name="authenticatedClient"/> is <see langword="null"/>.</exception>
-    /// <exception cref="OperationCanceledException"><paramref name="cancellationToken"/> is canceled before endpoint work starts.</exception>
+    /// <exception cref="OperationCanceledException">
+    /// <paramref name="cancellationToken"/> is canceled, for example because the client aborted the request. The endpoint
+    /// surfaces the cancellation instead of inventing a status code, so the host can abort the response.
+    /// </exception>
+    /// <remarks>
+    /// A subscribe request whose cursor is outside the hub's retained history returns a bodyless <c>410 Gone</c>.
+    /// The client maps it to <see cref="RemoteSubscriptionRetentionGapException"/> and the engine runs snapshot recovery.
+    /// </remarks>
     public ValueTask<HttpResponseMessage> HandleAsync(
         HttpRequestMessage request,
         ServerAuthenticatedClient authenticatedClient,

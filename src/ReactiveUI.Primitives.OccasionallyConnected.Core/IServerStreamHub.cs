@@ -37,6 +37,11 @@ public interface IServerStreamHub
     /// <param name="client">The authenticated server principal.</param>
     /// <param name="cancellationToken">The token used to cancel subscription enumeration.</param>
     /// <returns>The remote event batches.</returns>
+    /// <remarks>
+    /// When the request cursor can no longer be served from retained history, enumeration faults with
+    /// <see cref="RemoteSubscriptionRetentionGapException"/> for the request's stream and subscription. Transports pass
+    /// that exception to the client unchanged in meaning so the engine can run snapshot recovery.
+    /// </remarks>
     IAsyncEnumerable<RemoteEventBatch> SubscribeStreamAsync(
         RemoteSubscribeRequest request,
         ServerAuthenticatedClient client,

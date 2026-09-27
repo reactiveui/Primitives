@@ -22,6 +22,13 @@ public sealed record LoopbackTransportAdapterOptions
     /// <summary>Gets the peer capabilities authenticated by the trusted host.</summary>
     public required NegotiatedCapabilities PeerCapabilities { get; init; }
 
+    /// <summary>Gets the optional snapshot recovery hub supplied by the trusted host.</summary>
+    /// <remarks>
+    /// Set this hub when <see cref="PeerCapabilities"/> advertises <see cref="RemoteTransportCapabilities.SnapshotRecovery"/>.
+    /// The engine then recovers a receive retention gap through a snapshot from this hub.
+    /// </remarks>
+    public IServerSnapshotRecoveryHub? SnapshotRecoveryHub { get; init; }
+
     /// <summary>Gets the maximum number of concurrent push requests admitted per session.</summary>
     public int MaximumConcurrentRequests { get; init; } = 8;
 

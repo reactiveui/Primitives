@@ -75,6 +75,7 @@ public sealed partial class HttpTransportStatusTests
     [Arguments(HttpStatusCode.Forbidden, HttpTransportFailureKind.AuthorizationDenied)]
     [Arguments(HttpStatusCode.RequestEntityTooLarge, HttpTransportFailureKind.PayloadTooLarge)]
     [Arguments(HttpStatusCode.UnsupportedMediaType, HttpTransportFailureKind.SchemaIncompatible)]
+    [Arguments(HttpStatusCode.Gone, HttpTransportFailureKind.RetentionGap)]
     [Arguments(HttpStatusCode.TooManyRequests, HttpTransportFailureKind.Transient)]
     [Arguments(HttpStatusCode.InternalServerError, HttpTransportFailureKind.Transient)]
     [Arguments(HttpStatusCode.TemporaryRedirect, HttpTransportFailureKind.ProtocolViolation)]

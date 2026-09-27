@@ -68,6 +68,7 @@ public record LoopbackTransportAdapterOptions : System.IEquatable<ReactiveUI.Pri
     public int MaximumReceiveEvents { get; init; }
     public int MaximumStringBytes { get; init; }
     public required ReactiveUI.Primitives.OccasionallyConnected.NegotiatedCapabilities PeerCapabilities { get; init; }
+    public ReactiveUI.Primitives.OccasionallyConnected.IServerSnapshotRecoveryHub? SnapshotRecoveryHub { get; init; }
 }
 [System.Diagnostics.DebuggerDisplay("Client={_client,nq}; Store={_storeIdentity,nq}; Built={_built,nq}")]
 public sealed class OccasionallyConnectedBuilder

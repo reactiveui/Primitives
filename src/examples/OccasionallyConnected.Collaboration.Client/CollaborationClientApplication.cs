@@ -63,7 +63,6 @@ internal static class CollaborationClientApplication
     /// <param name="output">The output writer.</param>
     /// <param name="cancellationToken">The cancellation token.</param>
     /// <returns>The process exit code.</returns>
-    /// <exception cref="ArgumentOutOfRangeException">The command kind is unsupported.</exception>
     internal static async Task<int> RunAsync(
         CollaborationClientCommand command,
         TextWriter output,
@@ -71,19 +70,13 @@ internal static class CollaborationClientApplication
     {
         ArgumentNullException.ThrowIfNull(command);
         ArgumentNullException.ThrowIfNull(output);
-        if (command.Kind is not CollaborationClientCommandKind.Publish and not CollaborationClientCommandKind.Watch)
+        if (command is PublishCollaborationClientCommand publishCommand)
         {
-            throw new ArgumentOutOfRangeException(nameof(command), command.Kind, "Unsupported collaboration client command.");
+            await using var publishSession = await OpenAsync(publishCommand.SessionOptions).ConfigureAwait(false);
+            return await RunPublishAsync(publishSession, publishCommand, output, cancellationToken).ConfigureAwait(false);
         }
 
-        if (command.Kind == CollaborationClientCommandKind.Publish)
-        {
-            var publishCommand = command with { Options = command.Options with { AutoStart = false } };
-            await using var publishSession = await OpenAsync(publishCommand.Options).ConfigureAwait(false);
-            return await RunPublishAsync(publishSession, command, output, cancellationToken).ConfigureAwait(false);
-        }
-
-        await using var session = await OpenAsync(command.Options).ConfigureAwait(false);
+        await using var session = await OpenAsync(command.SessionOptions).ConfigureAwait(false);
         using var subscription = session.Activity.Local.Subscribe(new PrintingActivityObserver(output));
         await session.StartAsync(cancellationToken).ConfigureAwait(false);
         return await WaitForWatchCancellationAsync(cancellationToken).ConfigureAwait(false);
@@ -170,7 +163,7 @@ internal static class CollaborationClientApplication
     /// <returns>The process exit code.</returns>
     private static async Task<int> RunPublishAsync(
         CollaborationClientSession session,
-        CollaborationClientCommand command,
+        PublishCollaborationClientCommand command,
         TextWriter output,
         CancellationToken cancellationToken)
     {

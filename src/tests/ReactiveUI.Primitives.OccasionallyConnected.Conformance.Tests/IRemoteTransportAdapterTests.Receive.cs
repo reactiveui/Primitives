@@ -3,7 +3,6 @@
 // See the LICENSE file in the project root for full license information.
 
 using ReactiveUI.Primitives.OccasionallyConnected.Server;
-using ReactiveUI.Primitives.OccasionallyConnected.Transport.Http;
 
 namespace ReactiveUI.Primitives.OccasionallyConnected.Conformance.Tests;
 
@@ -56,9 +55,9 @@ public sealed partial class IRemoteTransportAdapterTests
     }
 
     /// <summary>
-    /// Verifies a cursor outside retained history fails the subscription without inventing progress. Spec 17.1 layer 7
-    /// expects a typed <see cref="RemoteSubscriptionRetentionGapException"/> so the engine can run snapshot recovery;
-    /// this case pins what each adapter surfaces today over a real <see cref="ServerStreamHub"/>.
+    /// Verifies a cursor outside retained history fails the subscription without inventing progress. Every adapter
+    /// surfaces the typed <see cref="RemoteSubscriptionRetentionGapException"/> for the request's stream, subscription
+    /// and cursor, so the engine runs snapshot recovery instead of retrying.
     /// </summary>
     /// <param name="transport">The transport selector.</param>
     /// <param name="hubKind">The hub journal selector.</param>
@@ -68,25 +67,23 @@ public sealed partial class IRemoteTransportAdapterTests
     [Arguments(LoopbackTransport, SqliteHub)]
     [Arguments(HttpTransport, InMemoryHub)]
     [Arguments(HttpTransport, SqliteHub)]
-    public async Task SubscribeAsyncFailsClosedOnServerRetentionGap(int transport, int hubKind)
+    public async Task SubscribeAsyncSurfacesServerRetentionGapForSnapshotRecovery(int transport, int hubKind)
     {
         await using var harness = TransportHarness.Create(transport, hubKind);
         await using var session = await harness.ConnectAsync();
         _ = await session.PushAsync(new(Guid.NewGuid(), [CreateOperation(FirstSequence)]), CancellationToken.None);
-        await using var receive = Subscribe(session, SubscriptionId.New(), UnknownCursor);
+        var subscriptionId = SubscriptionId.New();
+        await using var receive = Subscribe(session, subscriptionId, UnknownCursor);
 
-        var failure = await Assert.ThrowsAsync<Exception>(() => receive.MoveNextAsync().AsTask().WaitAsync(AwaitTimeout));
+        var failure = await Assert.ThrowsExactlyAsync<RemoteSubscriptionRetentionGapException>(
+            () => receive.MoveNextAsync().AsTask().WaitAsync(AwaitTimeout));
 
-        await Assert.That(failure).IsNotTypeOf<TimeoutException>();
         await Assert.That(harness.Peer.SubscribeCalls).IsEqualTo(1);
-        if (transport == LoopbackTransport)
-        {
-            await Assert.That(failure).IsTypeOf<ServerReceiveRetentionGapException>();
-            return;
-        }
-
-        await Assert.That(failure).IsTypeOf<HttpRemoteTransportException>();
-        await Assert.That(((HttpRemoteTransportException)failure!).IsTransient).IsTrue();
+        await Assert.That(failure!.StreamId).IsEqualTo(Stream);
+        await Assert.That(failure.SubscriptionId).IsEqualTo(subscriptionId);
+        await Assert.That(failure.ExpiredCursor).IsEqualTo(UnknownCursor);
+        await Assert.That(failure.ReasonCode).IsEqualTo(ServerReceiveRetentionGapException.ReceiveRetentionGapReasonCode);
+        await Assert.That(failure.InnerException).IsNull();
     }
 
     /// <summary>Verifies an exact duplicate batch cannot advance the cursor and delivery continues from the same cursor.</summary>

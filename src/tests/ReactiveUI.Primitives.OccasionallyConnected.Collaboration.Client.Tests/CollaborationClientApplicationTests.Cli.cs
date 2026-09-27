@@ -19,9 +19,6 @@ public sealed partial class CollaborationClientApplicationTests
     /// <summary>The redacted error prefix for invalid command arguments.</summary>
     private const string InvalidArgumentsOutput = "error: InvalidArguments";
 
-    /// <summary>An enum value that does not name a client command.</summary>
-    private const int UnknownCommandKind = 42;
-
     /// <summary>The exit code for a canceled command.</summary>
     private const int CanceledCommandExitCode = 2;
 
@@ -99,14 +96,14 @@ public sealed partial class CollaborationClientApplicationTests
         using var lease = new CollaborationClientDatabaseLease();
         await using var output = new StringWriter(CultureInfo.InvariantCulture);
         var serverUri = new Uri("http://127.0.0.1:0");
-        var command = CreatePublishCommand(serverUri, lease.ClientAPath, TokenA, ClientA, OfflineStatus, OfflineTitle)
-            with
+        var command = new PublishCollaborationClientCommand
+        {
+            Options = CreateClientOptions(serverUri, lease.ClientAPath, TokenA, ClientA) with
             {
-                Options = CreateClientOptions(serverUri, lease.ClientAPath, TokenA, ClientA) with
-                {
-                    AutoStart = false,
-                },
-            };
+                AutoStart = false,
+            },
+            Update = new() { Status = OfflineStatus, Title = OfflineTitle, TitleSpecified = true },
+        };
 
         var exitCode = await CollaborationClientApplication.RunAsync(command, output, CancellationToken.None)
             .ConfigureAwait(false);
@@ -314,26 +311,6 @@ public sealed partial class CollaborationClientApplicationTests
         await AssertNoInfrastructureLeakAsync(output.ToString(), lease).ConfigureAwait(false);
     }
 
-    /// <summary>Verifies an unsupported command is rejected before opening local resources.</summary>
-    /// <returns>The assertion task.</returns>
-    [Test]
-    public async Task RunAsyncRejectsUnsupportedCommandBeforeOpen()
-    {
-        using var lease = new CollaborationClientDatabaseLease();
-        await using var output = new StringWriter(CultureInfo.InvariantCulture);
-        var command = CreatePublishCommand(
-            new("http://127.0.0.1:5088"),
-            lease.ClientAPath,
-            TokenA,
-            ClientA,
-            OnlineStatus,
-            OfflineTitle) with { Kind = (CollaborationClientCommandKind)UnknownCommandKind };
-
-        _ = await Assert.ThrowsAsync<ArgumentOutOfRangeException>(() =>
-            CollaborationClientApplication.RunAsync(command, output, CancellationToken.None));
-        await Assert.That(File.Exists(lease.ClientAPath)).IsFalse();
-    }
-
     /// <summary>Verifies a watch already active ends with its exact cancellation token.</summary>
     /// <returns>The assertion task.</returns>
     [Test]
@@ -387,7 +364,7 @@ public sealed partial class CollaborationClientApplicationTests
     /// <summary>Creates command-line arguments for one publish command.</summary>
     /// <param name="command">The command.</param>
     /// <returns>The command-line arguments.</returns>
-    private static string[] CreatePublishArguments(CollaborationClientCommand command) =>
+    private static string[] CreatePublishArguments(PublishCollaborationClientCommand command) =>
         [
             PublishCommandName,
             ServerOptionName,

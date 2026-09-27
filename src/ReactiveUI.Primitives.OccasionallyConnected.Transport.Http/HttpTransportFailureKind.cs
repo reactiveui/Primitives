@@ -36,4 +36,11 @@ public enum HttpTransportFailureKind
 
     /// <summary>The remote replay session is stale and may be renewed by the synchronization engine.</summary>
     StaleReplaySession = 9,
+
+    /// <summary>
+    /// The subscribe cursor is outside the server's retained history. The server answers with a bodyless
+    /// <c>410 Gone</c>, and the client surfaces it as <see cref="RemoteSubscriptionRetentionGapException"/> so the
+    /// synchronization engine runs snapshot recovery.
+    /// </summary>
+    RetentionGap = 10,
 }

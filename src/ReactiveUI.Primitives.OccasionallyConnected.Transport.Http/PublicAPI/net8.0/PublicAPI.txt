@@ -72,6 +72,7 @@ public enum HttpTransportFailureKind
     AmbiguousTransportOutcome = 7,
     Configuration = 8,
     StaleReplaySession = 9,
+    RetentionGap = 10,
 }
 [System.Diagnostics.DebuggerDisplay("{Operation,nq} {Client.ClientId,nq}")]
 public record HttpReplayAuthorizationContext : System.IEquatable<ReactiveUI.Primitives.OccasionallyConnected.Transport.Http.HttpReplayAuthorizationContext>

@@ -193,7 +193,7 @@ public partial class SequencerTests
     /// <returns>A task representing the asynchronous test.</returns>
     [Test]
     public async Task SynchronizationContextSequencerRejectsMissingDelayScheduler() =>
-        await Assert.That(static () => new SynchronizationContextSequencer(new RecordingSynchronizationContext(), null!))
+        await Assert.That(static () => new SynchronizationContextSequencer(new RecordingSynchronizationContext(), (ISequencer)null!))
             .ThrowsExactly<ArgumentNullException>();
 
     /// <summary>Repeated disposal releases queued work once and keeps the sequencer closed.</summary>

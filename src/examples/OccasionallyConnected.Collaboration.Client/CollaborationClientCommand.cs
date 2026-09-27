@@ -5,14 +5,15 @@
 namespace ReactiveUI.Primitives.OccasionallyConnected.Collaboration.Client;
 
 /// <summary>Represents a parsed collaboration client command.</summary>
-internal sealed record CollaborationClientCommand
+#if NET11_0_OR_GREATER
+internal closed class CollaborationClientCommand
+#else
+internal abstract class CollaborationClientCommand
+#endif
 {
-    /// <summary>Gets the command kind.</summary>
-    public required CollaborationClientCommandKind Kind { get; init; }
-
     /// <summary>Gets the client options.</summary>
     public required CollaborationClientOptions Options { get; init; }
 
-    /// <summary>Gets the activity update used by publish commands.</summary>
-    public ActivityUpdate Update { get; init; } = new() { Status = "active" };
+    /// <summary>Gets the options used to open the client session for this command.</summary>
+    public abstract CollaborationClientOptions SessionOptions { get; }
 }

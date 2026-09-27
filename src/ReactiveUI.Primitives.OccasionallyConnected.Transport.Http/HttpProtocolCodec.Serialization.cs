@@ -123,7 +123,7 @@ internal sealed partial class HttpProtocolCodec
         }
     }
 
-    /// <summary>Checks JSON depth, closed schema, and collection bounds before DTO deserialization.</summary>
+    /// <summary>Checks JSON depth, known member shapes, and collection bounds before DTO deserialization.</summary>
     /// <param name="bytes">The encoded body bytes.</param>
     /// <param name="preflight">The schema-specific preflight action.</param>
     /// <exception cref="HttpRemoteTransportException">The JSON is malformed or violates the protocol schema.</exception>

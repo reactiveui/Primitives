@@ -35,7 +35,7 @@ internal static class ProgramRunner
         }
         catch (OperationCanceledException)
         {
-            await output.WriteLineAsync("The command timed out or was canceled.").ConfigureAwait(false);
+            await output.WriteLineAsync("The command timed out or was canceled.".AsMemory(), CancellationToken.None).ConfigureAwait(false);
             return CancellationExitCode;
         }
         catch (HttpRemoteTransportException exception)
@@ -87,10 +87,10 @@ internal static class ProgramRunner
 
         var reader = new ArgumentReader(args);
         var commandText = reader.ReadCommand();
-        var kind = commandText switch
+        var isPublish = commandText switch
         {
-            "publish" => CollaborationClientCommandKind.Publish,
-            "watch" => CollaborationClientCommandKind.Watch,
+            "publish" => true,
+            "watch" => false,
             _ => throw new ArgumentException("Unknown collaboration client command.", nameof(args)),
         };
         var server = reader.ReadUri("--server", DefaultServerUri);
@@ -102,12 +102,14 @@ internal static class ProgramRunner
         var title = reader.Read("--title", null);
         var details = reader.Read("--details", null);
         reader.ThrowIfUnused();
-        return new()
-        {
-            Kind = kind,
-            Options = new() { ServerUri = server, DatabasePath = database, Token = token, ClientId = client, AutoStart = autoStart },
-            Update = new() { Status = status, Title = title, TitleSpecified = title is not null, Details = details, DetailsSpecified = details is not null },
-        };
+        CollaborationClientOptions options = new() { ServerUri = server, DatabasePath = database, Token = token, ClientId = client, AutoStart = autoStart };
+        return isPublish
+            ? new PublishCollaborationClientCommand
+            {
+                Options = options,
+                Update = new() { Status = status, Title = title, TitleSpecified = title is not null, Details = details, DetailsSpecified = details is not null },
+            }
+            : new WatchCollaborationClientCommand { Options = options };
     }
 
     /// <summary>Determines whether an argument asks for help.</summary>

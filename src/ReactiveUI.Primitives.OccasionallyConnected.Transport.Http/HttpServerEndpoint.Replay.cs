@@ -252,10 +252,14 @@ public sealed partial class HttpServerEndpoint
 
             return await CompleteReplaySubscribeAsync(owner, batches).ConfigureAwait(false);
         }
-        catch (OperationCanceledException) when (!effectsPossible)
+        catch (Exception) when (!effectsPossible)
         {
             _replayCoordinator.Abandon(owner);
             throw;
+        }
+        catch (RemoteSubscriptionRetentionGapException)
+        {
+            return await CompleteReplayRetentionGapAsync(owner).ConfigureAwait(false);
         }
         catch (OperationCanceledException) when (Volatile.Read(ref _disposed) != 0)
         {
@@ -266,10 +270,6 @@ public sealed partial class HttpServerEndpoint
             return await CompleteReplayNoContentAsync(owner).ConfigureAwait(false);
         }
         catch (OperationCanceledException)
-        {
-            return AbandonReplayAmbiguous(owner);
-        }
-        catch (Exception) when (!effectsPossible)
         {
             _replayCoordinator.Abandon(owner);
             throw;
@@ -354,6 +354,19 @@ public sealed partial class HttpServerEndpoint
     {
         _ = await CompleteReplayOwnerAsync(owner, HttpStatusCode.NoContent, contentType: null, ReadOnlyMemory<byte>.Empty).ConfigureAwait(false);
         return new(CreateResponse(HttpStatusCode.NoContent));
+    }
+
+    /// <summary>Completes a replay owner with the bodyless retention-gap subscribe response.</summary>
+    /// <param name="owner">The replay owner.</param>
+    /// <returns>The route execution result.</returns>
+    /// <remarks>
+    /// Expired, foreign and ahead cursors produce the same <c>410 Gone</c> response with no body, so the response
+    /// reveals nothing about retained history. The client already knows the stream, subscription and cursor it sent.
+    /// </remarks>
+    private async ValueTask<ReplayRouteExecution> CompleteReplayRetentionGapAsync(HttpReplayOwner owner)
+    {
+        _ = await CompleteReplayOwnerAsync(owner, HttpStatusCode.Gone, contentType: null, ReadOnlyMemory<byte>.Empty).ConfigureAwait(false);
+        return new(CreateResponse(HttpStatusCode.Gone));
     }
 
     /// <summary>Abandons a replay owner and returns an explicit status response.</summary>

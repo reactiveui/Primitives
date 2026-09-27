@@ -84,8 +84,21 @@ public sealed partial class SqliteLocalStoreAdapter : ILocalStoreAdapter, ILocal
     /// <exception cref="ArgumentNullException">A required argument is null.</exception>
     /// <exception cref="ArgumentOutOfRangeException">A worker bound or retention interval is not positive.</exception>
     public SqliteLocalStoreAdapter(string databasePath, SqliteLocalStoreAdapterOptions options)
+        : this(databasePath, options, NoOpSqliteCommitFaultPoint.Instance)
+    {
+    }
+
+    /// <summary>Initializes a new instance of the <see cref="SqliteLocalStoreAdapter"/> class with a write checkpoint observer.</summary>
+    /// <param name="databasePath">The SQLite database path.</param>
+    /// <param name="options">The adapter options.</param>
+    /// <param name="faultPoint">The write checkpoint observer used by crash tests.</param>
+    /// <exception cref="ArgumentException">The database path is blank or not a real file path.</exception>
+    /// <exception cref="ArgumentNullException">A required argument is null.</exception>
+    /// <exception cref="ArgumentOutOfRangeException">A worker bound or retention interval is not positive.</exception>
+    internal SqliteLocalStoreAdapter(string databasePath, SqliteLocalStoreAdapterOptions options, ISqliteCommitFaultPoint faultPoint)
     {
         ArgumentExceptionHelper.ThrowIfNull(options);
+        ArgumentExceptionHelper.ThrowIfNull(faultPoint);
         options.Validate();
         _retention = options.Retention;
         _sizing = new(options.WorkerCapacityBytes);
@@ -96,7 +109,7 @@ public sealed partial class SqliteLocalStoreAdapter : ILocalStoreAdapter, ILocal
         _databasePath = databasePath.StartsWith(@"\\", StringComparison.Ordinal) || databasePath.StartsWith("//", StringComparison.Ordinal)
             ? databasePath
             : Path.GetFullPath(databasePath);
-        _store = new(_databasePath, options.TimeProvider, options.WorkerCapacityBytes);
+        _store = new(_databasePath, options.TimeProvider, options.WorkerCapacityBytes, faultPoint);
         _worker = new(options.WorkerCapacity, options.WorkerCapacityBytes);
     }
 

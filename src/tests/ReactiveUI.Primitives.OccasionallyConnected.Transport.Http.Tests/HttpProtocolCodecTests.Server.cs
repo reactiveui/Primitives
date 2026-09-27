@@ -386,7 +386,7 @@ public sealed partial class HttpProtocolCodecTests
     public async Task ServerCodecRejectsMalformedProtocolInputs(ServerHttpExceptionCase testCase)
     {
         var exception = testCase.Act();
-        await Assert.That(exception.Kind).IsEqualTo(testCase.ExpectedKind);
+        await Assert.That(exception.Kind).IsEqualTo(testCase.ExpectedFailure);
     }
 
     /// <summary>Verifies subscribe parsing returns exact decoded query field text for replay canonicalization.</summary>

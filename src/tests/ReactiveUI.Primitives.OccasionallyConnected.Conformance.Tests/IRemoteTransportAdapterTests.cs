@@ -44,6 +44,7 @@ public sealed partial class IRemoteTransportAdapterTests
         (RemoteTransportCapabilities.AtomicApplyAndAcknowledge, nameof(PushAsyncCommitsEffectEventAndLedgerTogether)),
         (RemoteTransportCapabilities.StreamingReceive, nameof(SubscribeAsyncStreamsCommittedEventsOnOneEnumeration)),
         (RemoteTransportCapabilities.SnapshotRecovery, nameof(GetSnapshotAsyncRecoversFrontierAfterCursorGap)),
+        (RemoteTransportCapabilities.SnapshotRecovery, nameof(SubscribeAsyncSurfacesServerRetentionGapForSnapshotRecovery)),
     ];
 
     /// <summary>Verifies a duplicate operation returns the original terminal result without a second effect.</summary>
@@ -200,7 +201,7 @@ public sealed partial class IRemoteTransportAdapterTests
         }
 
         await Assert.That(advertised & ~covered).IsEqualTo(RemoteTransportCapabilities.None);
-        await Assert.That(covered).IsEqualTo(LoopbackFeatures | HttpFeatures);
+        await Assert.That(covered).IsEqualTo(LoopbackFeatures);
     }
 
     /// <summary>Pushes a batch whose result the peer corrupts, then proves an idempotent retry completes it.</summary>

@@ -18,9 +18,6 @@ public sealed partial class ServerStreamHub : IServerStreamHub, IServerSnapshotR
     /// <summary>The stable active-subscription capacity diagnostic.</summary>
     private const string ActiveSubscriptionCapacityMessage = "The server stream hub is at active subscription capacity.";
 
-    /// <summary>The stable receive retention-gap diagnostic.</summary>
-    private const string RetentionGapMessage = "The requested receive cursor is outside retained server history.";
-
     /// <summary>The placeholder tenant used only to run structural stream identifier validation before authorization.</summary>
     private const string ValidationTenant = "tenant";
 

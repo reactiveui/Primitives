@@ -45,29 +45,40 @@ This list is limited to requirements from [ReactiveUI.Primitives.OccasionallyCon
     - A snapshot from a CRDT materializer resumes with no duplicates.
     - A duplicate operation replays its original result after the hub reopens.
   - The server test suite passes 545/545 on `net8.0` and `net10.0`.
-- [ ] Finish shared store and transport conformance suites for every advertised capability. Include cursor gaps, duplicate and reordered delivery, dropped acknowledgements, partial results, streaming receive, and unsupported-capability startup failures.
+- [x] Finish shared store and transport conformance suites for every advertised capability. Include cursor gaps, duplicate and reordered delivery, dropped acknowledgements, partial results, streaming receive, and unsupported-capability startup failures.
   - Done: `ReactiveUI.Primitives.OccasionallyConnected.Conformance.Tests` runs `IRemoteTransportAdapterTests` across Loopback and HTTP, each against in-memory and SQLite `ServerStreamHub`. A fault-injecting hub produces duplicate, reordered, dropped-ACK, and truncated-result cases.
     - Each case is gated on an advertised capability. A table test checks that every advertised transport flag and store flag has a test.
     - `ILocalStoreAdapterTests.DurableInbox.cs` covers deduplication across a restart.
     - The suite passes 50 cases and skips 6 capability-gated ones on `net8.0` and `net10.0`.
-  - Remaining bug: the hub raises `ServerReceiveRetentionGapException`, but the engine only recovers from `RemoteSubscriptionRetentionGapException`. The adapters don't translate between them. Loopback passes the server type through, and HTTP returns a 500 that the client treats as transient. So a retention gap never reaches snapshot recovery, and over HTTP the engine retries forever.
-  - Remaining: the HTTP endpoint answers a canceled long-poll with a 500 instead of a cancellation.
+  - Retention gaps reach snapshot recovery. The hub raises `RemoteSubscriptionRetentionGapException` with the request's stream, subscription and cursor and the reason code `server-receive-retention-gap`.
+    - Loopback passes the exception through. It also serves snapshot recovery when you set `SnapshotRecoveryHub`.
+    - HTTP answers a gap with a bodyless `410 Gone`. The client turns it back into the same exception.
+    - Expired, ahead and foreign cursors all get the same answer, so the answer reveals nothing about retained history.
+    - `RetentionGapRecoveryScenarioTests` proves that a context over HTTP or Loopback recovers on its own from a SQLite hub whose retention expired, then keeps receiving.
+  - The HTTP endpoint surfaces a canceled long-poll as `OperationCanceledException`. It no longer answers with a 500. A cancellation the client did not ask for becomes one ambiguous failure, and the engine retries it with backoff.
 
 ## Durability and delivery guarantees
 
 - [ ] Run the complete crash matrix from section 17.2 across SQLite and every supported store path: serialization, local commit, enqueue, upload, server apply/ACK, local ACK commit, remote apply, inbox notification, compaction, migration, disk-full, corruption, and process termination.
+  - Done: an internal crash-point seam (`ISqliteCommitFaultPoint`, `ISqliteServerCommitFaultPoint`) lets a child process block inside a SQLite transaction until the parent kills it. The public constructors use a no-op.
+    - `WhenWriterProcessDiesAtCommitCheckpoint_ThenReopenHonorsTransactionBoundary` kills the child before and after commit for local commit, attempt barrier, sync result, remote apply, dead-letter, and compaction, for each delivery guarantee.
+    - `WhenServerWriterDiesAtCommitCheckpoint_ThenResendAppliesExactlyOnce` kills the server journal's writer.
+    - `WhenProcessDiesAtStreamCrashPoint_ThenReopenedStreamHonorsDurableBoundary` covers serialization and inbox-before-notification.
+    - The in-memory store skips each durable case with a stated reason.
+  - Remaining: migration crashes and disk-full, crashes across the transport, and the producer-by-buffer-strategy matrix.
 - [ ] Prove restartable migrations, ownership coordination, authenticated encryption at rest, quarantine/dead-letter recovery, compaction, and retention without losing data required to rebuild snapshots or resolve pending operations.
 - [ ] Complete end-to-end at-most-once, at-least-once, and capability-gated exactly-once-effect behaviour, including retention expiry, explicit downgrade, ambiguous outcomes, and server idempotency. The current components validate capabilities but do not yet prove the complete application path.
 
 ## Protocol, security, and compatibility
 
-- [ ] Complete protocol-v1 golden fixtures and cross-version upcast/migration tests for wire envelopes, store schemas, snapshots, cursors, and operation results.
+- [x] Complete protocol-v1 golden fixtures and cross-version upcast/migration tests for wire envelopes, store schemas, snapshots, cursors, and operation results.
   - Done: canonical fixtures live in `GoldenFixtures/protocol-v1/` folders and are checked into source control.
     - HTTP wire messages: connect, push with every result kind, subscribe, acknowledge, and snapshot recovery. Also the cursor query forms and the status classification.
     - The SQLite schema DDL, plus a populated v1 database that current code must open and recover. An unknown `user_version` fails closed without changing the file.
     - A v1 to v2 to v3 payload upcast chain.
     - Tests: `HttpProtocolCodecTests.Golden*.cs`, `SqliteLocalStoreAdapterTests.GoldenSchema.cs`, and `JsonPayloadSerializerTests.Golden.cs`.
-  - Remaining: the strict HTTP codec rejects unknown fields with `ProtocolViolation`. Section 18.3 requires older peers to read newer optional fields. The protocol also has no error body (errors are status codes only) and no binary format.
+  - The HTTP codec skips unknown JSON members at every level, as section 18.3 requires. It still rejects duplicate members, bad JSON, missing required members and oversize bodies.
+  - By design: the protocol has no error body (errors are status codes only) and no binary format. The subscribe query string still rejects unknown keys, because the replay signature covers those keys.
 - [x] Complete application-level security tests for authenticated tenant/client binding, nonce and replay handling, authorization, stale credentials, tampering, path traversal, SQL metacharacters, oversized/deep payloads, decompression limits, and redacted diagnostics.
   - Evidence (public entry points only):
     - Forged tenant headers are ignored. Unauthorized streams are denied on push, subscribe, ACK, and snapshot, at both the HTTP endpoint and the hub.

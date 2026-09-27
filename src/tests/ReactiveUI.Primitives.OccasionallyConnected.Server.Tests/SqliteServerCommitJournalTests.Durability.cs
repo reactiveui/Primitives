@@ -699,15 +699,24 @@ public sealed partial class SqliteServerCommitJournalTests
         if (!child.HasExited)
         {
             child.Kill(entireProcessTree: true);
-            await child.WaitForExitAsync().WaitAsync(ChildExitTimeout);
         }
 
+#if NET11_0_OR_GREATER
+        var exitStatus = await child.WaitForExitStatusAsync(CancellationToken.None).WaitAsync(ChildExitTimeout);
+        return new(
+            true,
+            exitStatus.ExitCode,
+            await standardOutput.WaitAsync(ChildExitTimeout),
+            await standardError.WaitAsync(ChildExitTimeout));
+#else
+        await child.WaitForExitAsync().WaitAsync(ChildExitTimeout);
         var hasExited = child.HasExited;
         return new(
             hasExited,
             hasExited ? child.ExitCode : (int?)null,
             await standardOutput.WaitAsync(ChildExitTimeout),
             await standardError.WaitAsync(ChildExitTimeout));
+#endif
     }
 
     /// <summary>Creates a diagnostic timeout message from child process output.</summary>

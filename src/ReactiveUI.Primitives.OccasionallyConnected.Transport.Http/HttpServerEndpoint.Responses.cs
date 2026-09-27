@@ -87,6 +87,7 @@ public sealed partial class HttpServerEndpoint
         HttpTransportFailureKind.ProtocolViolation or HttpTransportFailureKind.ValidationRejected => HttpStatusCode.BadRequest,
         HttpTransportFailureKind.Transient => TooManyRequests,
         HttpTransportFailureKind.AmbiguousTransportOutcome => HttpStatusCode.InternalServerError,
+        HttpTransportFailureKind.RetentionGap => HttpStatusCode.Gone,
         _ => HttpStatusCode.BadRequest,
     };
 

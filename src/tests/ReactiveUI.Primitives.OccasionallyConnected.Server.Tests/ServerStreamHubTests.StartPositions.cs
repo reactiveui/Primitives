@@ -154,22 +154,32 @@ public sealed partial class ServerStreamHubTests
         await using var hub = ServerStreamHub.CreateInMemory(Options(new AllowPolicy(Tenant), new RecordingDomainHandler()));
         _ = await hub.ApplyOperationsAsync(Batch(Operation(1, PayloadA) with { BaseVersion = null }), new(Tenant, Client), CancellationToken.None);
 
-        var resumeException = await CaptureSubscribeFailureAsync(hub, new(Stream, SubscriptionId.New(), staleCursor, StartPosition.FromSequence(0)));
-        var startException = await CaptureSubscribeFailureAsync(hub, new(Stream, SubscriptionId.New(), null, StartPosition.FromCursor(staleCursor)));
+        RemoteSubscribeRequest resume = new(Stream, SubscriptionId.New(), staleCursor, StartPosition.FromSequence(0));
+        RemoteSubscribeRequest start = new(Stream, SubscriptionId.New(), null, StartPosition.FromCursor(staleCursor));
+        var resumeException = await CaptureSubscribeFailureAsync(hub, resume);
+        var startException = await CaptureSubscribeFailureAsync(hub, start);
 
-        await AssertSanitizedRetentionGapAsync(resumeException);
-        await AssertSanitizedRetentionGapAsync(startException);
+        await AssertSanitizedRetentionGapAsync(resumeException, resume);
+        await AssertSanitizedRetentionGapAsync(startException, start);
     }
 
-    /// <summary>Asserts a cursor rejection is the typed retention gap with only the fixed diagnostic.</summary>
+    /// <summary>
+    /// Asserts a cursor rejection is the Core retention gap that echoes only the caller's own request and the fixed
+    /// reason code, so expired, ahead and foreign cursors stay indistinguishable.
+    /// </summary>
     /// <param name="exception">The captured exception.</param>
+    /// <param name="request">The rejected request.</param>
     /// <returns>A task that represents the asynchronous assertion.</returns>
-    private static async Task AssertSanitizedRetentionGapAsync(Exception exception)
+    private static async Task AssertSanitizedRetentionGapAsync(Exception exception, RemoteSubscribeRequest request)
     {
-        await Assert.That(exception).IsTypeOf<ServerReceiveRetentionGapException>();
-        await Assert.That(((ServerReceiveRetentionGapException)exception).ReasonCode)
-            .IsEqualTo(ServerReceiveRetentionGapException.ReceiveRetentionGapReasonCode);
+        await Assert.That(exception).IsTypeOf<RemoteSubscriptionRetentionGapException>();
+        var gap = (RemoteSubscriptionRetentionGapException)exception;
+        await Assert.That(gap.ReasonCode).IsEqualTo(ServerReceiveRetentionGapException.ReceiveRetentionGapReasonCode);
+        await Assert.That(gap.StreamId).IsEqualTo(request.StreamId);
+        await Assert.That(gap.SubscriptionId).IsEqualTo(request.SubscriptionId);
+        await Assert.That(gap.ExpiredCursor).IsEqualTo(request.Cursor);
         await Assert.That(exception.Message).IsEqualTo(RetentionGapText);
+        await Assert.That(exception.InnerException).IsNull();
     }
 
     /// <summary>Asserts a foreign cursor is rejected both as a resume cursor and as an initial position.</summary>
@@ -178,11 +188,13 @@ public sealed partial class ServerStreamHubTests
     /// <returns>A task that represents the asynchronous assertion.</returns>
     private static async Task AssertForeignCursorRejectedAsync(ServerStreamHub hub, string foreignCursor)
     {
-        var resumeException = await CaptureSubscribeFailureAsync(hub, new(Stream, SubscriptionId.New(), foreignCursor, StartPosition.FromSequence(0)));
-        var startException = await CaptureSubscribeFailureAsync(hub, new(Stream, SubscriptionId.New(), null, StartPosition.FromCursor(foreignCursor)));
+        RemoteSubscribeRequest resume = new(Stream, SubscriptionId.New(), foreignCursor, StartPosition.FromSequence(0));
+        RemoteSubscribeRequest start = new(Stream, SubscriptionId.New(), null, StartPosition.FromCursor(foreignCursor));
+        var resumeException = await CaptureSubscribeFailureAsync(hub, resume);
+        var startException = await CaptureSubscribeFailureAsync(hub, start);
 
-        await AssertSanitizedRetentionGapAsync(resumeException);
-        await AssertSanitizedRetentionGapAsync(startException);
+        await AssertSanitizedRetentionGapAsync(resumeException, resume);
+        await AssertSanitizedRetentionGapAsync(startException, start);
     }
 
     /// <summary>Captures the failure raised by the first move of a subscription.</summary>

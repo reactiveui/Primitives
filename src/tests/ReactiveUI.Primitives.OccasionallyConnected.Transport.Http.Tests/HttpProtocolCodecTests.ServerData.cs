@@ -44,9 +44,6 @@ public sealed partial class HttpProtocolCodecTests
             "connect-duplicate-client",
             static codec => codec.DeserializeConnectRequest(Encode(ConnectRequestJson(extraJson: ",\"clientId\":\"again\""))));
         yield return ProtocolCase(
-            "connect-extra",
-            static codec => codec.DeserializeConnectRequest(Encode(ConnectRequestJson(extraJson: ",\"extra\":0"))));
-        yield return ProtocolCase(
             "connect-too-many-guarantees",
             static codec => codec.DeserializeConnectRequest(Encode(ConnectRequestJson(requiredGuarantees: "0,1"))),
             HttpTransportFailureKind.PayloadTooLarge,

@@ -18,7 +18,7 @@ The `slow-observers` scenario blocks one `Local` observer and one `SyncStates` o
 
 The `corruption-quarantine` scenario writes two streams to a SQLite store, then corrupts one stored snapshot row directly in the database file. Recovery of the corrupt stream fails closed and writes a quarantine marker with the stable reason code `sqlite-payload-row-corrupt`. The failure message and reason code do not contain the stored payload text. The healthy stream still recovers its snapshot and pending operation.
 
-The `retention-gap-recovery` scenario moves a manual server clock past the operation retention window. Resuming from the old cursor raises `ServerReceiveRetentionGapException`. The client then asks the hub for a snapshot, gets the latest server state and a new frontier cursor, and resumes receiving from that cursor.
+The `retention-gap-recovery` scenario moves a manual server clock past the operation retention window. Resuming from the old cursor raises `RemoteSubscriptionRetentionGapException`. The engine recovers from this exception on its own. The client then asks the hub for a snapshot, gets the latest server state and a new frontier cursor, and resumes receiving from that cursor.
 
 ## Project
 

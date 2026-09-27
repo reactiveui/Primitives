@@ -10,7 +10,7 @@ namespace ReactiveUI.Primitives.OccasionallyConnected.Transport.Http;
 /// <summary>Encodes and decodes the bounded HTTP protocol DTOs.</summary>
 internal sealed partial class HttpProtocolCodec
 {
-    /// <summary>Validates the closed JSON shape of a connect response body.</summary>
+    /// <summary>Validates the JSON shape of a connect response body.</summary>
     /// <param name="element">Connect response JSON object to inspect before DTO conversion.</param>
     /// <exception cref="HttpRemoteTransportException">The connect response shape is malformed or exceeds configured limits.</exception>
     /// <exception cref="System.Text.Json.JsonException">The connect response body is malformed JSON.</exception>
@@ -44,7 +44,7 @@ internal sealed partial class HttpProtocolCodec
                 }
             });
 
-    /// <summary>Validates the closed JSON shape of an acknowledgement request body.</summary>
+    /// <summary>Validates the JSON shape of an acknowledgement request body.</summary>
     /// <param name="element">Acknowledgement request JSON object to inspect before DTO conversion.</param>
     /// <exception cref="HttpRemoteTransportException">The acknowledgement request shape is malformed or exceeds configured limits.</exception>
     /// <exception cref="System.Text.Json.JsonException">The acknowledgement request body is malformed JSON.</exception>
@@ -56,7 +56,7 @@ internal sealed partial class HttpProtocolCodec
             [],
             static property => ValidateStringElement(property.Value));
 
-    /// <summary>Validates the closed JSON shape of an operation policy object.</summary>
+    /// <summary>Validates the JSON shape of an operation policy object.</summary>
     /// <param name="element">Operation policy JSON object to inspect before DTO conversion.</param>
     /// <exception cref="HttpRemoteTransportException">The operation policy shape is malformed or exceeds configured limits.</exception>
     /// <exception cref="System.Text.Json.JsonException">The operation policy body is malformed JSON.</exception>
@@ -68,7 +68,7 @@ internal sealed partial class HttpProtocolCodec
             [],
             static property => ValidateNumberElement(property.Value));
 
-    /// <summary>Validates the closed JSON shape of a payload envelope object.</summary>
+    /// <summary>Validates the JSON shape of a payload envelope object.</summary>
     /// <param name="element">Payload envelope JSON object to inspect before DTO conversion.</param>
     /// <exception cref="HttpRemoteTransportException">The payload envelope shape is malformed or exceeds configured limits.</exception>
     /// <exception cref="System.Text.Json.JsonException">The payload envelope body is malformed JSON.</exception>
@@ -89,7 +89,7 @@ internal sealed partial class HttpProtocolCodec
                 ValidateStringElement(property.Value);
             });
 
-    /// <summary>Validates the closed JSON shape of an operation result object.</summary>
+    /// <summary>Validates the JSON shape of an operation result object.</summary>
     /// <param name="element">Operation result JSON object to inspect before DTO conversion.</param>
     /// <exception cref="HttpRemoteTransportException">The operation result shape is malformed or exceeds configured limits.</exception>
     /// <exception cref="System.Text.Json.JsonException">The operation result body is malformed JSON.</exception>
@@ -123,7 +123,7 @@ internal sealed partial class HttpProtocolCodec
                 }
             });
 
-    /// <summary>Validates the closed JSON shape of a remote event origin object.</summary>
+    /// <summary>Validates the JSON shape of a remote event origin object.</summary>
     /// <param name="element">Remote event origin JSON object to inspect before DTO conversion.</param>
     /// <exception cref="HttpRemoteTransportException">The remote event origin shape is malformed or exceeds configured limits.</exception>
     /// <exception cref="System.Text.Json.JsonException">The remote event origin body is malformed JSON.</exception>
@@ -153,13 +153,17 @@ internal sealed partial class HttpProtocolCodec
         }
     }
 
-    /// <summary>Checks object kind, required properties, unknown names, and duplicate names.</summary>
-    /// <param name="element">JSON object whose property set must be closed.</param>
+    /// <summary>Checks object kind, required properties, and duplicate names while ignoring unknown names.</summary>
+    /// <param name="element">JSON object whose known properties are validated.</param>
     /// <param name="required">Property names that must appear exactly once.</param>
     /// <param name="optional">Property names accepted when present.</param>
-    /// <param name="validateProperty">Per-property value-kind validator.</param>
+    /// <param name="validateProperty">Per-property value-kind validator, called only for known names.</param>
     /// <exception cref="HttpRemoteTransportException">The JSON object is missing required fields, repeats fields, or exceeds configured limits.</exception>
     /// <exception cref="System.Text.Json.JsonException">The inspected value is not a JSON object.</exception>
+    /// <remarks>
+    /// A newer protocol minor version may add optional members. This reader skips them so an older peer can still read
+    /// the message. Unknown members still count toward the body byte limit, and a repeated unknown name is rejected.
+    /// </remarks>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static void ValidateObject(JsonElement element, string[] required, string[] optional, Action<JsonProperty> validateProperty)
     {
@@ -185,7 +189,7 @@ internal sealed partial class HttpProtocolCodec
 
             if (!Contains(required, propertyName) && !Contains(optional, propertyName))
             {
-                throw new JsonException("Unknown JSON property name.");
+                continue;
             }
 
             _ = remaining.Remove(propertyName);
@@ -346,7 +350,7 @@ internal sealed partial class HttpProtocolCodec
         return count;
     }
 
-    /// <summary>Validates the closed JSON shape of a connect request body.</summary>
+    /// <summary>Validates the JSON shape of a connect request body.</summary>
     /// <param name="element">Connect request JSON object to inspect before DTO conversion.</param>
     /// <exception cref="HttpRemoteTransportException">The connect request shape is malformed or exceeds configured limits.</exception>
     /// <exception cref="System.Text.Json.JsonException">The connect request body is malformed JSON.</exception>
@@ -380,7 +384,7 @@ internal sealed partial class HttpProtocolCodec
                 }
             });
 
-    /// <summary>Validates the closed JSON shape and operation count of a push request body.</summary>
+    /// <summary>Validates the JSON shape and operation count of a push request body.</summary>
     /// <param name="element">Push request JSON object to inspect before DTO conversion.</param>
     /// <exception cref="HttpRemoteTransportException">The push request shape is malformed or exceeds configured limits.</exception>
     /// <exception cref="System.Text.Json.JsonException">The push request body is malformed JSON.</exception>
@@ -408,7 +412,7 @@ internal sealed partial class HttpProtocolCodec
                 }
             });
 
-    /// <summary>Validates the closed JSON shape and result count of a push response body.</summary>
+    /// <summary>Validates the JSON shape and result count of a push response body.</summary>
     /// <param name="element">Push response JSON object to inspect before DTO conversion.</param>
     /// <exception cref="HttpRemoteTransportException">The push response shape is malformed or exceeds configured limits.</exception>
     /// <exception cref="System.Text.Json.JsonException">The push response body is malformed JSON.</exception>
@@ -442,7 +446,7 @@ internal sealed partial class HttpProtocolCodec
                 }
             });
 
-    /// <summary>Validates the closed JSON shape and batch count of a subscribe response body.</summary>
+    /// <summary>Validates the JSON shape and batch count of a subscribe response body.</summary>
     /// <param name="element">Subscribe response JSON object to inspect before DTO conversion.</param>
     /// <exception cref="HttpRemoteTransportException">The subscribe response shape is malformed or exceeds configured limits.</exception>
     /// <exception cref="System.Text.Json.JsonException">The subscribe response body is malformed JSON.</exception>
@@ -454,7 +458,7 @@ internal sealed partial class HttpProtocolCodec
             [],
             property => ValidateArray(property.Value, _limits.MaximumBatchOperations, ValidateRemoteEventBatchElement));
 
-    /// <summary>Validates the closed JSON shape of a pushed operation object.</summary>
+    /// <summary>Validates the JSON shape of a pushed operation object.</summary>
     /// <param name="element">Pushed operation JSON object to inspect before DTO conversion.</param>
     /// <exception cref="HttpRemoteTransportException">The pushed operation shape is malformed or exceeds configured limits.</exception>
     /// <exception cref="System.Text.Json.JsonException">The pushed operation body is malformed JSON.</exception>
@@ -466,7 +470,7 @@ internal sealed partial class HttpProtocolCodec
             ["baseVersion"],
             ValidateOperationProperty);
 
-    /// <summary>Validates the closed JSON shape and aggregate completion references of a receive batch.</summary>
+    /// <summary>Validates the JSON shape and aggregate completion references of a receive batch.</summary>
     /// <param name="element">Remote event batch JSON object to inspect before DTO conversion.</param>
     /// <exception cref="HttpRemoteTransportException">The remote event batch shape is malformed or exceeds configured limits.</exception>
     /// <exception cref="System.Text.Json.JsonException">The remote event batch body is malformed JSON.</exception>
@@ -518,7 +522,7 @@ internal sealed partial class HttpProtocolCodec
             });
     }
 
-    /// <summary>Validates the closed JSON shape of a received event object.</summary>
+    /// <summary>Validates the JSON shape of a received event object.</summary>
     /// <param name="element">Remote event JSON object to inspect before DTO conversion.</param>
     /// <exception cref="HttpRemoteTransportException">The remote event shape is malformed or exceeds configured limits.</exception>
     /// <exception cref="System.Text.Json.JsonException">The remote event body is malformed JSON.</exception>
@@ -530,7 +534,7 @@ internal sealed partial class HttpProtocolCodec
             ["causedByOperationId", OriginPropertyName],
             ValidateRemoteEventProperty);
 
-    /// <summary>Validates one closed-shape operation property using its protocol value kind.</summary>
+    /// <summary>Validates one known operation property using its protocol value kind.</summary>
     /// <param name="property">Pushed operation property to validate by protocol name.</param>
     /// <exception cref="HttpRemoteTransportException">The pushed operation property exceeds configured limits.</exception>
     /// <exception cref="System.Text.Json.JsonException">The pushed operation property has the wrong JSON value kind.</exception>
@@ -570,7 +574,7 @@ internal sealed partial class HttpProtocolCodec
         ValidateMetadataElement(property.Value);
     }
 
-    /// <summary>Validates one closed-shape remote event property using its protocol value kind.</summary>
+    /// <summary>Validates one known remote event property using its protocol value kind.</summary>
     /// <param name="property">Remote event property to validate by protocol name.</param>
     /// <exception cref="HttpRemoteTransportException">The remote event property exceeds configured limits.</exception>
     /// <exception cref="System.Text.Json.JsonException">The remote event property has the wrong JSON value kind.</exception>

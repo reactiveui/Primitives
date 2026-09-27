@@ -15,7 +15,7 @@ internal sealed partial class DurableOutboxApplication
     /// <param name="operationId">The requested operation id.</param>
     /// <param name="cancellationToken">The cancellation token.</param>
     /// <returns>The selected operation or failure.</returns>
-    private static async ValueTask<OperationSelection> SelectOperationOrFailureAsync(
+    private static async ValueTask<Selection<SyncOperation>> SelectOperationOrFailureAsync(
         StoreSession session,
         OperationId operationId,
         CancellationToken cancellationToken)
@@ -23,7 +23,7 @@ internal sealed partial class DurableOutboxApplication
         var selected = SelectOperation(session.Recovered, operationId);
         if (selected is not null)
         {
-            return new SelectedOperationSelection(selected);
+            return Selection<SyncOperation>.Selected(selected);
         }
 
         var status = operationId.Value == Guid.Empty
@@ -33,7 +33,7 @@ internal sealed partial class DurableOutboxApplication
             ? Error(AtMostOnceAmbiguousMessage, exitCode: 2) with { OperationId = operationId }
             : Error("No pending operation was available for the requested local simulation.", exitCode: 2)
                 with { OperationId = operationId };
-        return new FailedOperationSelection(failure);
+        return Selection<SyncOperation>.Failed(failure);
     }
 
     /// <summary>Rejects a retry of an ambiguous at-most-once operation.</summary>
@@ -54,7 +54,7 @@ internal sealed partial class DurableOutboxApplication
     /// <param name="operation">The selected operation.</param>
     /// <param name="cancellationToken">The cancellation token.</param>
     /// <returns>The lease batch or failure.</returns>
-    private static async ValueTask<LeaseSelection> LeaseSelectedOperationAsync(
+    private static async ValueTask<Selection<LeasedOperationBatch>> LeaseSelectedOperationAsync(
         ILocalStoreAdapter store,
         SyncOperation operation,
         CancellationToken cancellationToken)
@@ -62,20 +62,20 @@ internal sealed partial class DurableOutboxApplication
         var lease = await LeaseSingleAsync(store, cancellationToken).ConfigureAwait(false);
         if (lease is null)
         {
-            return new FailedLeaseSelection(
+            return Selection<LeasedOperationBatch>.Failed(
                 Error("No lease could be acquired for the pending operation.", exitCode: 2)
                     with { OperationId = operation.OperationId });
         }
 
         if (ContainsOperation(lease, operation.OperationId))
         {
-            return new SelectedLeaseSelection(lease);
+            return Selection<LeasedOperationBatch>.Selected(lease);
         }
 
         await store.ReleaseLeaseAsync(lease.LeaseId, cancellationToken).ConfigureAwait(false);
         var failure = Error("The requested operation is not the next leased operation; drain earlier work first.", exitCode: 2)
             with { OperationId = operation.OperationId };
-        return new FailedLeaseSelection(failure);
+        return Selection<LeasedOperationBatch>.Failed(failure);
     }
 
     /// <summary>Begins a durable remote attempt for a leased operation.</summary>

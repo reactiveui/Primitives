@@ -37,6 +37,9 @@ internal sealed partial class SqliteLocalCommitStore : IDisposable
     /// <summary>The per-instance gate.</summary>
     private readonly Lock _gate = new();
 
+    /// <summary>The checkpoint observer used by crash tests; the no-op singleton otherwise.</summary>
+    private readonly ISqliteCommitFaultPoint _faultPoint;
+
     /// <summary>The initialized durable store identity partition.</summary>
     private string? _storeIdentity;
 
@@ -70,9 +73,25 @@ internal sealed partial class SqliteLocalCommitStore : IDisposable
     /// <param name="maximumReadPayloadBytes">The maximum payload bytes materialized by read paths.</param>
     /// <exception cref="ArgumentOutOfRangeException"><paramref name="maximumReadPayloadBytes"/> is less than one.</exception>
     internal SqliteLocalCommitStore(string databasePath, TimeProvider timeProvider, long maximumReadPayloadBytes)
+        : this(databasePath, timeProvider, maximumReadPayloadBytes, NoOpSqliteCommitFaultPoint.Instance)
+    {
+    }
+
+    /// <summary>Initializes a new instance of the <see cref="SqliteLocalCommitStore"/> class.</summary>
+    /// <param name="databasePath">The SQLite database path.</param>
+    /// <param name="timeProvider">The clock used for commit timestamps.</param>
+    /// <param name="maximumReadPayloadBytes">The maximum payload bytes materialized by read paths.</param>
+    /// <param name="faultPoint">The write checkpoint observer.</param>
+    /// <exception cref="ArgumentOutOfRangeException"><paramref name="maximumReadPayloadBytes"/> is less than one.</exception>
+    internal SqliteLocalCommitStore(
+        string databasePath,
+        TimeProvider timeProvider,
+        long maximumReadPayloadBytes,
+        ISqliteCommitFaultPoint faultPoint)
     {
         ArgumentExceptionHelper.ThrowIfNull(databasePath);
         ArgumentExceptionHelper.ThrowIfNull(timeProvider);
+        ArgumentExceptionHelper.ThrowIfNull(faultPoint);
         SqliteLocalCommitValidation.ThrowIfBlank(databasePath, nameof(databasePath), "The SQLite database path cannot be empty.");
         SqliteLocalCommitValidation.ThrowIfUnsupportedPath(databasePath);
         if (maximumReadPayloadBytes <= 0)
@@ -86,6 +105,7 @@ internal sealed partial class SqliteLocalCommitStore : IDisposable
         _databasePath = Path.GetFullPath(databasePath);
         _timeProvider = timeProvider;
         _maximumReadPayloadBytes = maximumReadPayloadBytes;
+        _faultPoint = faultPoint;
     }
 
     /// <inheritdoc/>
@@ -253,7 +273,7 @@ internal sealed partial class SqliteLocalCommitStore : IDisposable
             SqliteLocalCommitSql.UpsertSnapshot(connection, transaction, storeIdentity, snapshotMutation, nextRevision, stream.ServerCursor, committedAtUtc);
             SqliteLocalCommitSql.UpdateNextClientSequence(connection, transaction, storeIdentity, operation.StreamId, operation.ClientSequence + 1);
             cancellationToken.ThrowIfCancellationRequested();
-            transaction.Commit();
+            CommitAtCheckpoints(transaction, SqliteCommitCheckpoint.LocalCommitBeforeCommit, SqliteCommitCheckpoint.LocalCommitAfterCommit);
             return new(operation.OperationId, operation.ClientSequence, nextRevision, committedAtUtc);
         }
     }
@@ -562,7 +582,7 @@ internal sealed partial class SqliteLocalCommitStore : IDisposable
                 nowUtc,
                 cancellationToken);
             cancellationToken.ThrowIfCancellationRequested();
-            transaction.Commit();
+            CommitAtCheckpoints(transaction, SqliteCommitCheckpoint.CompactionBeforeCommit, SqliteCommitCheckpoint.CompactionAfterCommit);
             return result;
         }
     }
@@ -694,7 +714,7 @@ internal sealed partial class SqliteLocalCommitStore : IDisposable
             SqliteLocalCommitSql.UpdateServerCursor(connection, transaction, storeIdentity, batch.StreamId, batch.PreviousCursor, batch.NextCursor);
             SqliteLocalCommitSql.MarkReceiveInclusions(connection, transaction, storeIdentity, _clientId, batch, snapshotMutation);
             cancellationToken.ThrowIfCancellationRequested();
-            transaction.Commit();
+            CommitAtCheckpoints(transaction, SqliteCommitCheckpoint.RemoteApplyBeforeCommit, SqliteCommitCheckpoint.RemoteApplyAfterCommit);
             return new(batch.NextCursor, appliedCount, duplicateCount, nextRevision);
         }
     }
@@ -790,7 +810,7 @@ internal sealed partial class SqliteLocalCommitStore : IDisposable
             nextAttempt,
             nowUtc);
         cancellationToken.ThrowIfCancellationRequested();
-        transaction.Commit();
+        CommitAtCheckpoints(transaction, SqliteCommitCheckpoint.AttemptBarrierBeforeCommit, SqliteCommitCheckpoint.AttemptBarrierAfterCommit);
         return decision;
     }
 
@@ -883,7 +903,7 @@ internal sealed partial class SqliteLocalCommitStore : IDisposable
         SqliteLocalCommitSql.ApplySyncResult(connection, transaction, storeIdentity, result, nowUtc);
         SqliteLocalCommitSql.ReleaseLease(connection, transaction, storeIdentity, leaseId);
         cancellationToken.ThrowIfCancellationRequested();
-        transaction.Commit();
+        CommitAtCheckpoints(transaction, SqliteCommitCheckpoint.SyncResultBeforeCommit, SqliteCommitCheckpoint.SyncResultAfterCommit);
     }
 
     /// <summary>Applies remote synchronization results and replacement snapshots to the currently leased batch.</summary>
@@ -948,7 +968,7 @@ internal sealed partial class SqliteLocalCommitStore : IDisposable
 
         var receipt = new ReadOnlyCollection<LocalSnapshot>(committedSnapshots);
         cancellationToken.ThrowIfCancellationRequested();
-        transaction.Commit();
+        CommitAtCheckpoints(transaction, SqliteCommitCheckpoint.SyncResultBeforeCommit, SqliteCommitCheckpoint.SyncResultAfterCommit);
         return receipt;
     }
 
@@ -1019,7 +1039,7 @@ internal sealed partial class SqliteLocalCommitStore : IDisposable
             committedSnapshot.SavedAtUtc);
         var receipt = committedSnapshot;
         cancellationToken.ThrowIfCancellationRequested();
-        transaction.Commit();
+        CommitAtCheckpoints(transaction, SqliteCommitCheckpoint.DeadLetterBeforeCommit, SqliteCommitCheckpoint.DeadLetterAfterCommit);
         return receipt;
     }
 
@@ -1358,4 +1378,16 @@ internal sealed partial class SqliteLocalCommitStore : IDisposable
     /// <exception cref="ObjectDisposedException">This instance has been disposed.</exception>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private void ThrowIfDisposed() => ObjectDisposedExceptionHelper.ThrowIf(_disposed, this);
+
+    /// <summary>Commits a write transaction and reports the checkpoints on either side of <c>COMMIT</c>.</summary>
+    /// <param name="transaction">The open write transaction.</param>
+    /// <param name="beforeCommit">The checkpoint reported inside the transaction.</param>
+    /// <param name="afterCommit">The checkpoint reported after the transaction commits.</param>
+    /// <exception cref="SqliteException">SQLite rejects the commit.</exception>
+    private void CommitAtCheckpoints(SqliteTransaction transaction, SqliteCommitCheckpoint beforeCommit, SqliteCommitCheckpoint afterCommit)
+    {
+        _faultPoint.Reached(beforeCommit);
+        transaction.Commit();
+        _faultPoint.Reached(afterCommit);
+    }
 }

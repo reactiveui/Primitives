@@ -39,7 +39,8 @@ internal static class LoopbackTransportValidator
         | RemoteTransportCapabilities.ReceiveAcknowledgements
         | RemoteTransportCapabilities.ServerIdempotency
         | RemoteTransportCapabilities.AtomicApplyAndAcknowledge
-        | RemoteTransportCapabilities.StreamingReceive;
+        | RemoteTransportCapabilities.StreamingReceive
+        | RemoteTransportCapabilities.SnapshotRecovery;
 
     /// <summary>Stores the ExactlyOnceFeatures value used by loopback validation.</summary>
     private const RemoteTransportCapabilities ExactlyOnceFeatures = RemoteTransportCapabilities.ReceiveAcknowledgements
@@ -68,6 +69,7 @@ internal static class LoopbackTransportValidator
         ValidatePositive(options.MaximumStringBytes, nameof(options.MaximumStringBytes));
         ValidateAuthenticatedClient(options.AuthenticatedClient, options.MaximumStringBytes);
         ValidateCapabilities(options.PeerCapabilities);
+        ValidateSnapshotRecovery(options);
     }
 
     /// <summary>Runs the ValidateConnectRequest loopback validation step.</summary>
@@ -290,6 +292,19 @@ internal static class LoopbackTransportValidator
         }
 
         throw new InvalidOperationException("The loopback peer does not support exactly-once delivery.");
+    }
+
+    /// <summary>Requires a snapshot recovery hub when the peer advertises snapshot recovery.</summary>
+    /// <param name="options">The loopback options.</param>
+    /// <exception cref="InvalidOperationException">Snapshot recovery is advertised without a snapshot recovery hub.</exception>
+    private static void ValidateSnapshotRecovery(LoopbackTransportAdapterOptions options)
+    {
+        if ((options.PeerCapabilities.Features & RemoteTransportCapabilities.SnapshotRecovery) == 0 || options.SnapshotRecoveryHub is not null)
+        {
+            return;
+        }
+
+        throw new InvalidOperationException("The loopback peer advertises snapshot recovery without a snapshot recovery hub.");
     }
 
     /// <summary>Runs the ValidateCapabilities loopback validation step.</summary>

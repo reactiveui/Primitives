@@ -587,7 +587,7 @@ internal sealed partial class HttpProtocolCodec
         return logicalBytes;
     }
 
-    /// <summary>Validates the closed JSON shape of a snapshot recovery request body.</summary>
+    /// <summary>Validates the JSON shape of a snapshot recovery request body.</summary>
     /// <param name="element">Snapshot recovery request JSON object.</param>
     private void ValidateSnapshotRecoveryRequestElement(JsonElement element)
     {
@@ -695,7 +695,7 @@ internal sealed partial class HttpProtocolCodec
         return SnapshotInt64LogicalBytes;
     }
 
-    /// <summary>Validates the closed JSON shape of a snapshot recovery response body.</summary>
+    /// <summary>Validates the JSON shape of a snapshot recovery response body.</summary>
     /// <param name="request">The request that bounds the response.</param>
     /// <param name="element">Snapshot recovery response JSON object.</param>
     /// <exception cref="HttpRemoteTransportException"><paramref name="element"/> is not bound to <paramref name="request"/>.</exception>

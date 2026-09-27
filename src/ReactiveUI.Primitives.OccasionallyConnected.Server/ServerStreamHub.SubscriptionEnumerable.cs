@@ -183,7 +183,7 @@ public sealed partial class ServerStreamHub
 
         /// <summary>Reads until a page is available, cancellation is observed or disposal completes the stream.</summary>
         /// <returns><see langword="true"/> when <see cref="Current"/> has been updated; otherwise <see langword="false"/>.</returns>
-        /// <exception cref="ServerReceiveRetentionGapException">The requested cursor is outside retained history.</exception>
+        /// <exception cref="RemoteSubscriptionRetentionGapException">The requested cursor is outside retained history.</exception>
         /// <exception cref="OperationCanceledException">Enumeration cancellation has been requested.</exception>
         private async ValueTask<bool> MoveNextCoreAsync()
         {
@@ -215,12 +215,20 @@ public sealed partial class ServerStreamHub
         /// <summary>Accepts a page result for the current move.</summary>
         /// <param name="page">The page result.</param>
         /// <returns><see langword="true"/> when a page was accepted.</returns>
-        /// <exception cref="ServerReceiveRetentionGapException">The requested cursor is outside retained history.</exception>
+        /// <exception cref="RemoteSubscriptionRetentionGapException">The requested cursor is outside retained history.</exception>
+        /// <remarks>
+        /// Expired, foreign and ahead cursors all raise the same gap. The gap carries only the stream, subscription and
+        /// cursor from the caller's own request plus a stable reason code, so it reveals nothing about retained history.
+        /// </remarks>
         private bool TryAcceptPage(ServerReceivePageResult page)
         {
             if (page.Status == ServerReceivePageStatus.RetentionGap)
             {
-                throw new ServerReceiveRetentionGapException(RetentionGapMessage);
+                throw new RemoteSubscriptionRetentionGapException(
+                    _request.StreamId,
+                    _request.SubscriptionId,
+                    string.IsNullOrEmpty(_cursor) ? null : _cursor,
+                    ServerReceiveRetentionGapException.ReceiveRetentionGapReasonCode);
             }
 
             if (page.Status != ServerReceivePageStatus.Page)

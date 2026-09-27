@@ -4,12 +4,9 @@
 
 namespace ReactiveUI.Primitives.OccasionallyConnected.Collaboration.Client;
 
-/// <summary>Defines collaboration client command kinds.</summary>
-internal enum CollaborationClientCommandKind
+/// <summary>Represents a command that watches activity view changes.</summary>
+internal sealed class WatchCollaborationClientCommand : CollaborationClientCommand
 {
-    /// <summary>Publishes one activity update.</summary>
-    Publish = 0,
-
-    /// <summary>Watches activity view changes.</summary>
-    Watch = 1,
+    /// <inheritdoc/>
+    public override CollaborationClientOptions SessionOptions => Options;
 }

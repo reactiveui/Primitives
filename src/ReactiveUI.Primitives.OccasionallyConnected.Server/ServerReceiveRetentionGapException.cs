@@ -5,6 +5,12 @@
 namespace ReactiveUI.Primitives.OccasionallyConnected.Server;
 
 /// <summary>Represents a receive cursor that can no longer be proven from retained server history.</summary>
+/// <remarks>
+/// <see cref="ServerStreamHub"/> no longer throws this type. A receive retention gap now surfaces as
+/// <see cref="RemoteSubscriptionRetentionGapException"/>, which the synchronization engine recovers through a snapshot.
+/// That exception's reason code equals <see cref="ReceiveRetentionGapReasonCode"/>. This type stays public for source
+/// compatibility and as the owner of the stable reason code.
+/// </remarks>
 [System.Diagnostics.DebuggerDisplay("{ReasonCode,nq}")]
 public sealed class ServerReceiveRetentionGapException : InvalidOperationException
 {

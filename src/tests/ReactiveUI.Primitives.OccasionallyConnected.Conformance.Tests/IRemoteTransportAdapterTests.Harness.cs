@@ -68,7 +68,8 @@ public sealed partial class IRemoteTransportAdapterTests
         | RemoteTransportCapabilities.ReceiveAcknowledgements
         | RemoteTransportCapabilities.ServerIdempotency
         | RemoteTransportCapabilities.AtomicApplyAndAcknowledge
-        | RemoteTransportCapabilities.StreamingReceive;
+        | RemoteTransportCapabilities.StreamingReceive
+        | RemoteTransportCapabilities.SnapshotRecovery;
 
     /// <summary>The features the HTTP endpoint declares.</summary>
     private const RemoteTransportCapabilities HttpFeatures = RemoteTransportCapabilities.BatchPush
@@ -193,6 +194,7 @@ public sealed partial class IRemoteTransportAdapterTests
                 var loopback = new LoopbackTransportAdapter(new()
                 {
                     Hub = server.Peer,
+                    SnapshotRecoveryHub = server.Peer,
                     AuthenticatedClient = new(Tenant, Client),
                     PeerCapabilities = CreateCapabilities(options.PeerFeatures ?? LoopbackFeatures),
                     MaximumReceiveEvents = options.AdapterMaximumReceiveEvents,

@@ -612,7 +612,7 @@ public sealed partial class CollaborationClientApplicationTests
     /// <param name="status">The status to publish.</param>
     /// <param name="title">The title to publish.</param>
     /// <returns>The publish command.</returns>
-    private static CollaborationClientCommand CreatePublishCommand(
+    private static PublishCollaborationClientCommand CreatePublishCommand(
         Uri serverUri,
         string databasePath,
         string token,
@@ -621,7 +621,7 @@ public sealed partial class CollaborationClientApplicationTests
         string title)
     {
         var update = new ActivityUpdate { Status = status, Title = title, TitleSpecified = true };
-        return new() { Kind = CollaborationClientCommandKind.Publish, Options = CreateClientOptions(serverUri, databasePath, token, clientId), Update = update };
+        return new() { Options = CreateClientOptions(serverUri, databasePath, token, clientId), Update = update };
     }
 
     /// <summary>Reads the queued operation id from CLI output.</summary>

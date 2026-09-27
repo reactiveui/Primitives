@@ -327,6 +327,24 @@ public sealed partial class HttpServerEndpointTests
         throw new InvalidOperationException("Subscription failed after possible effects.");
     }
 
+    /// <summary>Creates a subscription that fails with the Core retention gap for the request.</summary>
+    /// <param name="request">The subscribe request.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>The failing subscription.</returns>
+    /// <exception cref="RemoteSubscriptionRetentionGapException">Always, after the first yield point.</exception>
+    private static async IAsyncEnumerable<RemoteEventBatch> ThrowRetentionGapAsync(
+        RemoteSubscribeRequest request,
+        [EnumeratorCancellation] CancellationToken cancellationToken = default)
+    {
+        await Task.Yield();
+        if (cancellationToken.IsCancellationRequested)
+        {
+            yield break;
+        }
+
+        throw new RemoteSubscriptionRetentionGapException(request.StreamId, request.SubscriptionId, request.Cursor, "server-receive-retention-gap");
+    }
+
     /// <summary>Creates an apply operation that signals hub entry and completes only when endpoint shutdown cancels it.</summary>
     /// <param name="entered">The signal completed after apply starts.</param>
     /// <param name="batch">The decoded batch.</param>

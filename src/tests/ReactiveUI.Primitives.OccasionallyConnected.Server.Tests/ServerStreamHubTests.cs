@@ -41,7 +41,10 @@ public sealed partial class ServerStreamHubTests
     private const string MissingCursor = "missing-cursor";
 
     /// <summary>The sanitized retention gap diagnostic used by exception tests.</summary>
-    private const string RetentionGapText = "The requested receive cursor is outside retained server history.";
+    private const string RetentionGapText = "The remote subscription cursor is outside retained history and requires snapshot recovery.";
+
+    /// <summary>The legacy server retention-gap diagnostic used by constructor tests.</summary>
+    private const string LegacyRetentionGapText = "The requested receive cursor is outside retained server history.";
 
     /// <summary>The second operation seed.</summary>
     private const int SecondOperationSeed = 2;
@@ -195,20 +198,24 @@ public sealed partial class ServerStreamHubTests
         await Assert.That(result.Result.Operations[0].Kind).IsEqualTo(OperationResultKind.Accepted);
     }
 
-    /// <summary>Verifies that receive retention gaps raise a typed failure.</summary>
+    /// <summary>Verifies that receive retention gaps raise the Core gap the engine recovers from.</summary>
     /// <returns>A task that represents the asynchronous test.</returns>
     [Test]
     public async Task SubscribeStreamAsyncRaisesRetentionGapInsteadOfInventingProgress()
     {
         await using var hub = ServerStreamHub.CreateInMemory(Options(new AllowPolicy(Tenant), new RecordingDomainHandler()));
+        var subscriptionId = SubscriptionId.New();
         var enumerable = hub.SubscribeStreamAsync(
-            new(Stream, SubscriptionId.New(), "missing-cursor", StartPosition.FromSequence(0)),
+            new(Stream, subscriptionId, "missing-cursor", StartPosition.FromSequence(0)),
             new(Tenant, Client),
             CancellationToken.None);
         await using var enumerator = enumerable.GetAsyncEnumerator(CancellationToken.None);
 
-        var exception = await Assert.ThrowsExactlyAsync<ServerReceiveRetentionGapException>(() => enumerator.MoveNextAsync().AsTask());
+        var exception = await Assert.ThrowsExactlyAsync<RemoteSubscriptionRetentionGapException>(() => enumerator.MoveNextAsync().AsTask());
         await Assert.That(exception?.ReasonCode).IsEqualTo(ServerReceiveRetentionGapException.ReceiveRetentionGapReasonCode);
+        await Assert.That(exception?.StreamId).IsEqualTo(Stream);
+        await Assert.That(exception?.SubscriptionId).IsEqualTo(subscriptionId);
+        await Assert.That(exception?.ExpiredCursor).IsEqualTo("missing-cursor");
     }
 
     /// <summary>Verifies that mismatched authorized clients are rejected before effects.</summary>
@@ -696,7 +703,7 @@ public sealed partial class ServerStreamHubTests
     {
         var inner = new InvalidOperationException("inner");
         var defaultException = new ServerReceiveRetentionGapException();
-        var wrapped = new ServerReceiveRetentionGapException(RetentionGapText, inner);
+        var wrapped = new ServerReceiveRetentionGapException(LegacyRetentionGapText, inner);
 
         await Assert.That(defaultException.ReasonCode).IsEqualTo(ServerReceiveRetentionGapException.ReceiveRetentionGapReasonCode);
         await Assert.That(wrapped.InnerException).IsEqualTo(inner);
