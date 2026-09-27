@@ -561,12 +561,13 @@ internal static class LoopbackTransportValidator
     /// <exception cref="InvalidOperationException">Validation fails during CountOutgoingOperation.</exception>
     private static void CountOutgoingOperation(SyncOperation? operation, LoopbackTransportAdapterOptions options, ref long total)
     {
-        if (operation is null || operation.OperationId.Value == Guid.Empty || operation.StreamId.Value is null || operation.ClientSequence <= 0 || operation.Payload is not { } payload)
+        if (operation is null || operation.OperationId.Value == Guid.Empty || operation.StreamId.Value is null || operation.ClientSequence <= 0 || operation.Payload is not { } payload
+            || operation.Policy is not { } policy)
         {
             throw new InvalidOperationException("The synchronization batch contains a malformed operation.");
         }
 
-        operation.Policy.Validate();
+        policy.Validate();
         ValidateOperationType(operation.Type);
         total += GuidByteCount;
         total += CountRequiredString(operation.StreamId.Value, options.MaximumStringBytes, "The synchronization batch contains a malformed stream identifier.");

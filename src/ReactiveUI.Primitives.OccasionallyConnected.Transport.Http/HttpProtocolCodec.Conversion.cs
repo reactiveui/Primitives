@@ -191,12 +191,14 @@ internal sealed partial class HttpProtocolCodec
     /// <summary>Converts wire sync operations into domain operations.</summary>
     /// <param name="dtos">The wire DTOs.</param>
     /// <returns>The domain operations.</returns>
+    /// <exception cref="HttpRemoteTransportException">An operation's metadata violates the configured metadata limits.</exception>
     private SyncOperation[] ToOperations(HttpProtocolJsonContext.SyncOperationWire[] dtos)
     {
         var count = dtos.Length;
         var values = new SyncOperation[count];
         for (var index = 0; index < count; index++)
         {
+            ValidateMetadata(dtos[index].Metadata);
             values[index] = ToOperation(dtos[index]);
         }
 

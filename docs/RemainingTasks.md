@@ -97,7 +97,11 @@ This list is limited to requirements from [ReactiveUI.Primitives.OccasionallyCon
     - Sentinel secrets never appear in HTTP responses or engine faults.
   - Product fix: upload faults now report `Authentication` and `Authorization` failures as non-transient. They were all reported as transient `Transport` failures.
   - Limitation: the HTTP adapter has no token provider that can report a renewed credential version. Over HTTP, a 401 is always permanent. The renew-and-retry-once path works only with transports that supply a credential version.
-- [ ] Add adapter-specific protocol fuzzing and verify that transport adapters do not introduce hidden unbounded retries.
+- [x] Add adapter-specific protocol fuzzing and verify that transport adapters do not introduce hidden unbounded retries.
+  - Done: seeded fuzz tests run with fixed case counts: 13,500 mutated golden-fixture cases for the HTTP codec, 5,000 subscribe queries, 5,000 `HttpServerEndpoint` requests, and 7,000 `LoopbackTransportAdapter` inputs. Only documented exceptions or statuses may appear, every case must finish within 5 seconds, oversized bodies must be rejected while bounded, and any input that decodes must round-trip to identical bytes. Each failure message prints its seed.
+  - Fuzzing fixed three bugs: invalid UTF-8 and lone surrogates threw `InvalidOperationException`, the snapshot request decoder accepted metadata the encoder refused, and a null `Policy` caused a `NullReferenceException` in the loopback validator.
+  - Retry audit (`*Tests.SingleAttempt.cs`): each HTTP and Loopback operation makes exactly one attempt for every failure class. `Retry-After` reaches the engine; the adapter does not act on it.
+  - Note: after an empty response, the HTTP subscription polls again straight away. This is long polling, not retrying, and it stops at the first failure. The server's `EmptyPollDelay` paces it.
 
 ## Examples and release gates
 

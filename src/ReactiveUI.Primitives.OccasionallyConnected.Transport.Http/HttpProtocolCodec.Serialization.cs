@@ -139,5 +139,11 @@ internal sealed partial class HttpProtocolCodec
         {
             throw CreateProtocolViolation(exception);
         }
+        catch (InvalidOperationException exception)
+        {
+            // JsonDocument defers transcoding string values, so malformed UTF-8 or a lone escaped surrogate in a value
+            // surfaces as InvalidOperationException the first time a preflight reads that string.
+            throw CreateProtocolViolation(exception);
+        }
     }
 }
