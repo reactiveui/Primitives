@@ -68,7 +68,18 @@ This list is limited to requirements from [ReactiveUI.Primitives.OccasionallyCon
     - A v1 to v2 to v3 payload upcast chain.
     - Tests: `HttpProtocolCodecTests.Golden*.cs`, `SqliteLocalStoreAdapterTests.GoldenSchema.cs`, and `JsonPayloadSerializerTests.Golden.cs`.
   - Remaining: the strict HTTP codec rejects unknown fields with `ProtocolViolation`. Section 18.3 requires older peers to read newer optional fields. The protocol also has no error body (errors are status codes only) and no binary format.
-- [ ] Complete application-level security tests for authenticated tenant/client binding, nonce and replay handling, authorization, stale credentials, tampering, path traversal, SQL metacharacters, oversized/deep payloads, decompression limits, and redacted diagnostics.
+- [x] Complete application-level security tests for authenticated tenant/client binding, nonce and replay handling, authorization, stale credentials, tampering, path traversal, SQL metacharacters, oversized/deep payloads, decompression limits, and redacted diagnostics.
+  - Evidence (public entry points only):
+    - Forged tenant headers are ignored. Unauthorized streams are denied on push, subscribe, ACK, and snapshot, at both the HTTP endpoint and the hub.
+    - Message IDs and bodies changed after signing are rejected.
+    - The freshness window is enforced at exactly 5 minutes.
+    - After a stale credential, the engine renews the token and retries once. It then reports a permanent `Authentication` fault.
+    - The push, ACK, and subscribe routes reject path-traversal and control-character stream IDs, and the hub receives stream IDs in NFC form.
+    - SQL metacharacters round-trip safely through the local SQLite store and the SQLite server journal.
+    - The endpoint rejects deeply nested JSON and excess metadata. Compressed bodies are rejected before decoding, because the HTTP transport does not support compression.
+    - Sentinel secrets never appear in HTTP responses or engine faults.
+  - Product fix: upload faults now report `Authentication` and `Authorization` failures as non-transient. They were all reported as transient `Transport` failures.
+  - Limitation: the HTTP adapter has no token provider that can report a renewed credential version. Over HTTP, a 401 is always permanent. The renew-and-retry-once path works only with transports that supply a credential version.
 - [ ] Add adapter-specific protocol fuzzing and verify that transport adapters do not introduce hidden unbounded retries.
 
 ## Examples and release gates

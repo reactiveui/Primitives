@@ -206,19 +206,36 @@ internal sealed partial class SyncEngine
     private bool CompleteSchedulerAcquisitionLocked(FairStreamAcquisition acquisition) =>
         _scheduler.TryComplete(acquisition);
 
-    /// <summary>Publishes an upload attempt fault.</summary>
+    /// <summary>Publishes an upload attempt fault classified by the observed failure.</summary>
     /// <param name="streamId">The related stream.</param>
     /// <param name="exception">The observed exception.</param>
+    private void PublishUploadAttemptFault(StreamId streamId, Exception exception)
+    {
+        var category = ClassifyRetryFailure(exception).Kind switch
+        {
+            RetryFailureKind.Authentication => FaultCategory.Authentication,
+            RetryFailureKind.AuthorizationDenied => FaultCategory.Authorization,
+            _ => FaultCategory.Transport,
+        };
+        PublishFault(UploadAttemptFaultCode, UploadAttemptFaultMessage, streamId, exception, category);
+    }
+
+    /// <summary>Publishes a sanitized transient transport fault notification.</summary>
+    /// <param name="code">The stable fault code.</param>
+    /// <param name="message">The stable diagnostic message.</param>
+    /// <param name="streamId">The related stream, if any.</param>
+    /// <param name="exception">The observed exception.</param>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private void PublishUploadAttemptFault(StreamId streamId, Exception exception) =>
-        PublishFault(UploadAttemptFaultCode, UploadAttemptFaultMessage, streamId, exception);
+    private void PublishFault(string code, string message, StreamId? streamId, Exception exception) =>
+        PublishFault(code, message, streamId, exception, FaultCategory.Transport);
 
     /// <summary>Publishes a sanitized engine fault notification.</summary>
     /// <param name="code">The stable fault code.</param>
     /// <param name="message">The stable diagnostic message.</param>
     /// <param name="streamId">The related stream, if any.</param>
     /// <param name="exception">The observed exception.</param>
-    private void PublishFault(string code, string message, StreamId? streamId, Exception exception)
+    /// <param name="category">The fault category; credential and permission faults are not transient.</param>
+    private void PublishFault(string code, string message, StreamId? streamId, Exception exception, FaultCategory category)
     {
         const int maximumDiagnosticTypeNameLength = 256;
         var diagnosticType = exception.GetType().ToString();
@@ -233,7 +250,7 @@ internal sealed partial class SyncEngine
             _options.TimeProvider.GetUtcNow(),
             streamId,
             OperationId: null,
-            new InvalidOperationException(diagnosticType)) { Category = FaultCategory.Transport, Severity = FaultSeverity.Warning, IsTransient = true };
+            new InvalidOperationException(diagnosticType)) { Category = category, Severity = FaultSeverity.Warning, IsTransient = category == FaultCategory.Transport };
         _faults.Publish(fault);
     }
 
