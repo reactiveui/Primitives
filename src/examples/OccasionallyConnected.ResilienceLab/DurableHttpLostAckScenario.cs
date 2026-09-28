@@ -279,8 +279,7 @@ internal static partial class DurableHttpLostAckScenario
             new(WriterClientId, WriterStoreIdentity, WriterSubscription, FirstCredential, new FixedOperationIdSource(OriginalOperationId))).ConfigureAwait(false);
         await session.Context.StartAsync(cancellationToken).ConfigureAwait(false);
         var receipt = await session.ConnectedStream.PublishAsync(CreateCounterInput(), CreatePublishOptions(), cancellationToken).ConfigureAwait(false);
-        clock.Advance(CreateOptions().Batching.MaximumDwellTime);
-        await host.WaitForFirstPushCommittedAsync(cancellationToken).ConfigureAwait(false);
+        await WaitForFirstPushCommittedAsync(host, clock, cancellationToken).ConfigureAwait(false);
         var serverEffectCountBeforeAckLoss = ReadServerEffectCount(serverStorePath, receipt.OperationId);
         host.ReleaseFirstPushResponse();
         await host.WaitForFirstPushResponseAbortedAsync(cancellationToken).ConfigureAwait(false);
@@ -296,6 +295,27 @@ internal static partial class DurableHttpLostAckScenario
             receipt.OperationId,
             cancellationToken).ConfigureAwait(false);
         return new(receipt, session.ConnectedStream.SubscriptionId, beforeClose, pending, serverEffectCountBeforeAckLoss, session.Telemetry.TerminalFaultCount);
+    }
+
+    /// <summary>Advances manual time until the upload scheduler observes the first commit.</summary>
+    /// <param name="host">The durable HTTP host.</param>
+    /// <param name="clock">The manual clock.</param>
+    /// <param name="cancellationToken">The scenario cancellation token.</param>
+    /// <returns>A task that completes after the first push commits.</returns>
+    private static async Task WaitForFirstPushCommittedAsync(
+        DurableHttpLostAckHost host,
+        MutableTimeProvider clock,
+        CancellationToken cancellationToken)
+    {
+        var committed = host.WaitForFirstPushCommittedAsync(cancellationToken).AsTask();
+        var dwell = CreateOptions().Batching.MaximumDwellTime;
+        while (!committed.IsCompleted)
+        {
+            clock.Advance(dwell);
+            _ = await Task.WhenAny(committed, Task.Delay(ProofPollMilliseconds, cancellationToken)).ConfigureAwait(false);
+        }
+
+        await committed.ConfigureAwait(false);
     }
 
     /// <summary>Reopens the durable writer and lets the public retry loop resend persisted work.</summary>

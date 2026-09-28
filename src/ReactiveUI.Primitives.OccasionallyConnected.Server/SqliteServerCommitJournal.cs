@@ -19,6 +19,15 @@ internal sealed partial class SqliteServerCommitJournal : IServerCommitJournal, 
     /// <summary>The current durable schema version.</summary>
     private const int CurrentSchemaVersion = 1;
 
+    /// <summary>SQLite extended I/O code raised when a WAL file cannot yet be truncated after a process exits.</summary>
+    private const int SqliteIoErrorTruncate = 1546;
+
+    /// <summary>The number of brief retries allowed while reopening a crashed writer's WAL.</summary>
+    private const int RecoveryOpenRetries = 4;
+
+    /// <summary>The delay before retrying a transient WAL truncate failure.</summary>
+    private const int RecoveryOpenRetryMilliseconds = 25;
+
     /// <summary>The metadata key for the schema version.</summary>
     private const string SchemaVersionKey = "schema_version";
 
@@ -687,7 +696,7 @@ internal sealed partial class SqliteServerCommitJournal : IServerCommitJournal, 
     private void InitializeSchema()
     {
         _ = Directory.CreateDirectory(GetDirectoryForCreate(_databasePath));
-        using var connection = OpenConnection();
+        using var connection = OpenInitializationConnection();
         using var transaction = connection.BeginTransaction(IsolationLevel.Serializable, deferred: false);
         var userVersion = GetUserVersion(connection, transaction);
         if (userVersion == 0 && !HasUserTables(connection, transaction))
@@ -702,6 +711,12 @@ internal sealed partial class SqliteServerCommitJournal : IServerCommitJournal, 
         transaction.Commit();
         ConfigureDurability(connection);
     }
+
+    /// <summary>Opens a fresh startup connection while Windows releases a killed writer's WAL handle.</summary>
+    /// <returns>The configured connection.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private SqliteConnection OpenInitializationConnection() =>
+        RetryInitializationConnection(OpenConnection, static () => Thread.Sleep(RecoveryOpenRetryMilliseconds));
 
     /// <summary>Reads retained metrics from the database.</summary>
     /// <returns>The retained metrics.</returns>

@@ -12,6 +12,15 @@ namespace ReactiveUI.Primitives.OccasionallyConnected.Storage.Sqlite;
 /// <summary>Persists local commit and recovery state in SQLite.</summary>
 internal sealed partial class SqliteLocalCommitStore : IDisposable
 {
+    /// <summary>SQLite extended I/O code raised when a WAL file cannot yet be truncated after a process exits.</summary>
+    private const int SqliteIoErrorTruncate = 1546;
+
+    /// <summary>The number of brief retries allowed while reopening a crashed writer's WAL.</summary>
+    private const int RecoveryOpenRetries = 4;
+
+    /// <summary>The delay before retrying a transient WAL truncate failure.</summary>
+    private const int RecoveryOpenRetryMilliseconds = 25;
+
     /// <summary>The first valid client sequence.</summary>
     private const long FirstClientSequence = 1;
 
@@ -175,9 +184,15 @@ internal sealed partial class SqliteLocalCommitStore : IDisposable
 
             cancellationToken.ThrowIfCancellationRequested();
             _ = Directory.CreateDirectory(SqliteIdentityStoreData.GetDirectoryForCreate(_databasePath));
-            using var connection = OpenStoreConnection(initialization.StoreIdentity);
-            SqliteLocalCommitConnection.ConfigureLockPolling(connection);
-            SqliteLocalCommitConnection.ValidateOwnershipBeforeDurability(connection);
+            using var connection = RetryValidatedInitializationConnection(
+                () => OpenStoreConnection(initialization.StoreIdentity),
+                static connection =>
+                {
+                    SqliteLocalCommitConnection.ConfigureLockPolling(connection);
+                    SqliteLocalCommitConnection.ValidateOwnershipBeforeDurability(connection);
+                },
+                static () => Thread.Sleep(RecoveryOpenRetryMilliseconds),
+                cancellationToken);
             SqliteConnectionSettings.ConfigureDurability(connection);
             using var transaction = SqliteLocalCommitConnection.BeginWriteTransaction(connection, cancellationToken);
             var userVersion = SqliteLocalCommitConnection.GetUserVersion(connection, transaction);
