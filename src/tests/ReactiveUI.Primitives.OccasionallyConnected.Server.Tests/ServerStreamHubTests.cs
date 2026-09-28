@@ -815,7 +815,7 @@ public sealed partial class ServerStreamHubTests
         /// <summary>Initializes a new instance of the <see cref="SqliteLease"/> class.</summary>
         internal SqliteLease()
         {
-            _directory = System.IO.Path.Combine(System.IO.Path.GetTempPath(), $"rxui-server-hub-{Guid.NewGuid():N}");
+            _directory = System.IO.Path.Combine(PhysicalTempDirectory.GetRoot(), $"rxui-server-hub-{Guid.NewGuid():N}");
             _ = Directory.CreateDirectory(_directory);
             Path = System.IO.Path.Combine(_directory, "journal.db");
         }

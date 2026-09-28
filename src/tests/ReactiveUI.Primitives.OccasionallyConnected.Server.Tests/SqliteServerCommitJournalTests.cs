@@ -881,7 +881,7 @@ public sealed partial class SqliteServerCommitJournalTests
         /// <summary>Initializes a new instance of the <see cref="TemporaryDatabase"/> class.</summary>
         internal TemporaryDatabase()
         {
-            var directory = System.IO.Path.Combine(System.IO.Path.GetTempPath(), $"rxui-server-journal-{Guid.NewGuid():N}");
+            var directory = System.IO.Path.Combine(PhysicalTempDirectory.GetRoot(), $"rxui-server-journal-{Guid.NewGuid():N}");
             _ = Directory.CreateDirectory(directory);
             DirectoryPath = directory;
             Path = System.IO.Path.Combine(directory, "journal.db");

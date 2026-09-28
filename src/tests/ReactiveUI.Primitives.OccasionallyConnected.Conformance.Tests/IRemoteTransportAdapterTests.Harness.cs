@@ -264,7 +264,7 @@ public sealed partial class IRemoteTransportAdapterTests
                 return new(memoryHub, new(memoryHub), domain, null);
             }
 
-            var directory = Directory.CreateDirectory(Path.Combine(Path.GetTempPath(), $"rxui-oc-transport-{Guid.NewGuid():N}"));
+            var directory = PhysicalTempDirectory.Create("rxui-oc-transport-");
             var sqliteHub = ServerStreamHub.CreateSqlite(Path.Combine(directory.FullName, "journal.db"), hubOptions);
             return new(sqliteHub, new(sqliteHub), domain, directory);
         }

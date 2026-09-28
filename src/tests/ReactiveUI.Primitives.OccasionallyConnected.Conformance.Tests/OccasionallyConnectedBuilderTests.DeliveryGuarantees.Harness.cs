@@ -354,7 +354,7 @@ public sealed partial class OccasionallyConnectedBuilderTests
         private static StackParts CreateParts(int transport, TimeSpan serverRetention)
         {
             var clock = new FakeTimeProvider(StartUtc);
-            var directory = Directory.CreateDirectory(Path.Combine(Path.GetTempPath(), $"rxui-oc-delivery-{Guid.NewGuid():N}"));
+            var directory = PhysicalTempDirectory.Create("rxui-oc-delivery-");
             var domain = new EffectCountingDomainHandler();
             var hub = ServerStreamHub.CreateSqlite(Path.Combine(directory.FullName, "server.db"), CreateHubOptions(domain, clock));
             var peer = new AckDroppingServerStreamHub(hub);

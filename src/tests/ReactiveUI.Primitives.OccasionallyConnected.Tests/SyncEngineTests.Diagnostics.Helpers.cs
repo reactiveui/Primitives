@@ -36,7 +36,7 @@ public sealed partial class SyncEngineTests
     /// <returns>The initialized diagnostics store.</returns>
     private static async ValueTask<SqliteLocalStoreAdapter> CreateDiagnosticsSqliteStoreAsync()
     {
-        var path = Path.Combine(Directory.CreateTempSubdirectory("oc-engine-diagnostics-").FullName, "local.db");
+        var path = Path.Combine(SqliteTestDirectory.Create("oc-engine-diagnostics-").FullName, "local.db");
         var store = new SqliteLocalStoreAdapter(path);
         await store.InitializeAsync(
             new("sync-engine-tests", RequiredSchemaVersion: 1, RequireAuthenticatedEncryptionAtRest: false) { ClientId = EngineClientId },

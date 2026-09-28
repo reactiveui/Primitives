@@ -12,7 +12,7 @@ public sealed partial class SyncEngineTests
     [Test]
     public async Task DowngradedExactlyOnceOperationRetriesTransientFailureAfterServerWindow()
     {
-        var directory = Directory.CreateTempSubdirectory("oc-engine-upload-downgraded-retry-");
+        var directory = SqliteTestDirectory.Create("oc-engine-upload-downgraded-retry-");
         try
         {
             var databasePath = Path.Combine(directory.FullName, "local.db");
@@ -39,7 +39,7 @@ public sealed partial class SyncEngineTests
     [Test]
     public async Task DowngradedExactlyOnceOperationStopsAfterFullRetryAge()
     {
-        var directory = Directory.CreateTempSubdirectory("oc-engine-upload-downgraded-expired-");
+        var directory = SqliteTestDirectory.Create("oc-engine-upload-downgraded-expired-");
         try
         {
             var databasePath = Path.Combine(directory.FullName, "local.db");

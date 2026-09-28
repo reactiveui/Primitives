@@ -127,7 +127,7 @@ public sealed partial class ConflictResolvingServerOperationHandlerTests
         /// <summary>Initializes a new instance of the <see cref="SqliteLease"/> class.</summary>
         internal SqliteLease()
         {
-            _directory = Path.Combine(Path.GetTempPath(), $"rxui-conflict-handler-{Guid.NewGuid():N}");
+            _directory = Path.Combine(PhysicalTempDirectory.GetRoot(), $"rxui-conflict-handler-{Guid.NewGuid():N}");
             _ = Directory.CreateDirectory(_directory);
             _path = Path.Combine(_directory, "journal.db");
         }

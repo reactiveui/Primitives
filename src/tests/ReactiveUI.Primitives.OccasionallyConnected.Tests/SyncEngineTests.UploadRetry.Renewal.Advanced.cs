@@ -94,7 +94,7 @@ public sealed partial class SyncEngineTests
     [Test]
     public async Task OldGenerationExpiryJoinsNewerRenewalAfterDurableProgress()
     {
-        var directory = Directory.CreateTempSubdirectory("oc-engine-renewal-join-current-");
+        var directory = SqliteTestDirectory.Create("oc-engine-renewal-join-current-");
         try
         {
             await AssertOldGenerationExpiryJoinsNewerRenewalAsync(Path.Combine(directory.FullName, "local.db"));

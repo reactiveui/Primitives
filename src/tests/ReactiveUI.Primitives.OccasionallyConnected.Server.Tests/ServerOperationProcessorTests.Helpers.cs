@@ -60,7 +60,7 @@ public sealed partial class ServerOperationProcessorTests
             return new(new InMemoryServerCommitJournal(JournalOptions()), null);
         }
 
-        var directory = Path.Combine(Path.GetTempPath(), $"rxui-server-processor-{Guid.NewGuid():N}");
+        var directory = Path.Combine(PhysicalTempDirectory.GetRoot(), $"rxui-server-processor-{Guid.NewGuid():N}");
         _ = Directory.CreateDirectory(directory);
         return new(new SqliteServerCommitJournal(Path.Combine(directory, "journal.db"), JournalOptions()), directory);
     }

@@ -83,7 +83,7 @@ internal static class ResilienceLabContext
     /// <returns>The directory path.</returns>
     internal static string CreateTemporaryDirectory(string prefix)
     {
-        var path = Path.Combine(Path.GetTempPath(), $"{prefix}-{Guid.NewGuid():N}");
+        var path = Path.Combine(PhysicalTempDirectory.GetRoot(), $"{prefix}-{Guid.NewGuid():N}");
         _ = Directory.CreateDirectory(path);
         return path;
     }

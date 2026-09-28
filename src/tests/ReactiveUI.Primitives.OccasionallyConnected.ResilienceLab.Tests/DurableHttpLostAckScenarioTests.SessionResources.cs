@@ -199,7 +199,7 @@ public sealed partial class DurableHttpLostAckScenarioTests
     /// <returns>The temporary directory path.</returns>
     private static string CreateTemporarySessionDirectory()
     {
-        var root = Path.Combine(Path.GetTempPath(), $"oc-lost-ack-session-{Guid.NewGuid():N}");
+        var root = Path.Combine(PhysicalTempDirectory.GetRoot(), $"oc-lost-ack-session-{Guid.NewGuid():N}");
         _ = Directory.CreateDirectory(root);
         return root;
     }

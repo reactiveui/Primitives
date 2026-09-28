@@ -17,7 +17,7 @@ public sealed partial class DurableHttpLostAckScenarioTests
     [Test]
     public async Task RunCancellationAfterDirectoryAllocationCleansOwnedResources()
     {
-        var root = Path.Combine(Path.GetTempPath(), $"oc-lost-ack-run-{Guid.NewGuid():N}");
+        var root = Path.Combine(PhysicalTempDirectory.GetRoot(), $"oc-lost-ack-run-{Guid.NewGuid():N}");
         using var cancellation = new CancellationTokenSource();
         try
         {
@@ -50,7 +50,7 @@ public sealed partial class DurableHttpLostAckScenarioTests
             return;
         }
 
-        var root = Path.Combine(Path.GetTempPath(), $"oc-lost-ack-locked-{Guid.NewGuid():N}");
+        var root = Path.Combine(PhysicalTempDirectory.GetRoot(), $"oc-lost-ack-locked-{Guid.NewGuid():N}");
         FileStream? sentinel = null;
         try
         {

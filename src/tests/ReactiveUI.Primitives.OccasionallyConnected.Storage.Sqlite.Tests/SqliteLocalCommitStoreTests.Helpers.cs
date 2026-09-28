@@ -526,7 +526,7 @@ public sealed partial class SqliteLocalCommitStoreTests
         /// <returns>The temporary database helper.</returns>
         public static TempDatabase Create()
         {
-            var directory = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "rxui-oc-sqlite-local", Guid.NewGuid().ToString("N"));
+            var directory = System.IO.Path.Combine(PhysicalTempDirectory.GetRoot(), "rxui-oc-sqlite-local", Guid.NewGuid().ToString("N"));
             _ = System.IO.Directory.CreateDirectory(directory);
             return new(directory);
         }
@@ -535,7 +535,7 @@ public sealed partial class SqliteLocalCommitStoreTests
         /// <returns>The temporary database helper.</returns>
         public static TempDatabase CreateWithoutDirectory()
         {
-            var directory = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "rxui-oc-sqlite-local", Guid.NewGuid().ToString("N"));
+            var directory = System.IO.Path.Combine(PhysicalTempDirectory.GetRoot(), "rxui-oc-sqlite-local", Guid.NewGuid().ToString("N"));
             return new(directory);
         }
 

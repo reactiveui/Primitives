@@ -578,7 +578,7 @@ public sealed class CrdtServerStreamRegistrationTests
         private const string DatabaseName = "journal.db";
 
         /// <summary>The temporary directory.</summary>
-        private readonly string _directory = Path.Combine(Path.GetTempPath(), $"rxui-crdt-server-{Guid.NewGuid():N}");
+        private readonly string _directory = Path.Combine(PhysicalTempDirectory.GetRoot(), $"rxui-crdt-server-{Guid.NewGuid():N}");
 
         /// <summary>Initializes a new instance of the <see cref="SqliteLease"/> class.</summary>
         internal SqliteLease() => _ = Directory.CreateDirectory(_directory);

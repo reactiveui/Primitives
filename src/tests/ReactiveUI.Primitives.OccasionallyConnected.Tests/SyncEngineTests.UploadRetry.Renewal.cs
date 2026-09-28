@@ -322,7 +322,7 @@ public sealed partial class SyncEngineTests
     [Test]
     public async Task UploadAttemptPreservesAtMostOnceAmbiguityAcrossExpiredSessionRenewal()
     {
-        var directory = Directory.CreateTempSubdirectory("oc-engine-renewal-atmostonce-");
+        var directory = SqliteTestDirectory.Create("oc-engine-renewal-atmostonce-");
         try
         {
             await AssertAtMostOnceAmbiguityAcrossExpiredSessionRenewalAsync(Path.Combine(directory.FullName, "local.db"));
@@ -338,7 +338,7 @@ public sealed partial class SyncEngineTests
     [Test]
     public async Task OldGenerationReceiveProgressAfterRenewalDoesNotPermitAnotherExpiredSessionRenewal()
     {
-        var directory = Directory.CreateTempSubdirectory("oc-engine-renewal-old-generation-");
+        var directory = SqliteTestDirectory.Create("oc-engine-renewal-old-generation-");
         try
         {
             await AssertOldGenerationReceiveProgressAfterRenewalAsync(Path.Combine(directory.FullName, "local.db"));

@@ -28,7 +28,7 @@ public sealed partial class HttpRemoteTransportAdapterTests
     [Test]
     public async Task SessionRoundTripsThroughEndpointBackedBySqliteServerStreamHub()
     {
-        var directory = Path.Combine(Path.GetTempPath(), $"rxui-http-hub-{Guid.NewGuid():N}");
+        var directory = Path.Combine(PhysicalTempDirectory.GetRoot(), $"rxui-http-hub-{Guid.NewGuid():N}");
         _ = Directory.CreateDirectory(directory);
         try
         {

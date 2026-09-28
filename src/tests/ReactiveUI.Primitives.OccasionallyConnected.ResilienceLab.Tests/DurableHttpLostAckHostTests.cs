@@ -203,7 +203,7 @@ public sealed partial class DurableHttpLostAckHostTests
     /// <returns>The directory path.</returns>
     private static string CreateTemporaryHostDirectory()
     {
-        var root = Path.Combine(Path.GetTempPath(), $"oc-lost-ack-host-{Guid.NewGuid():N}");
+        var root = Path.Combine(PhysicalTempDirectory.GetRoot(), $"oc-lost-ack-host-{Guid.NewGuid():N}");
         _ = Directory.CreateDirectory(root);
         return root;
     }

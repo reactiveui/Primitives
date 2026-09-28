@@ -285,7 +285,7 @@ internal static partial class DurableHttpLostAckScenario
     /// <returns>The result.</returns>
     private static string CreateTemporaryRoot()
     {
-        var path = Path.Combine(Path.GetTempPath(), $"reactiveui-oc-lost-ack-{Guid.NewGuid():N}");
+        var path = Path.Combine(PhysicalTempDirectory.GetRoot(), $"reactiveui-oc-lost-ack-{Guid.NewGuid():N}");
         _ = Directory.CreateDirectory(path);
         return path;
     }

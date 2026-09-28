@@ -52,7 +52,7 @@ public sealed partial class HttpRemoteTransportAdapterTests
     [Arguments(AfterClientAckPoint)]
     public async Task WhenProcessDiesDuringHttpPush_ThenRestartedTransportPreservesServerEffect(string point)
     {
-        var directory = Path.Combine(Path.GetTempPath(), $"rxui-http-crash-{Guid.NewGuid():N}");
+        var directory = Path.Combine(PhysicalTempDirectory.GetRoot(), $"rxui-http-crash-{Guid.NewGuid():N}");
         _ = Directory.CreateDirectory(directory);
         try
         {

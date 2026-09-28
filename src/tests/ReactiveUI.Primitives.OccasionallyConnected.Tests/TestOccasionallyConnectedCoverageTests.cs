@@ -795,27 +795,24 @@ public sealed class TestOccasionallyConnectedCoverageTests
         }
 
         var startInfo = new ProcessStartInfo { FileName = "pwsh", RedirectStandardError = true, RedirectStandardOutput = true, UseShellExecute = false };
-        if (cultureName is not null || additionalReportPath is not null)
+        if (cultureName is not null)
         {
-            if (cultureName is not null)
-            {
-                startInfo.Environment["OC_CULTURE"] = cultureName;
-            }
+            startInfo.Environment["OC_CULTURE"] = cultureName;
+        }
 
-            startInfo.Environment["OC_SCRIPT"] = FindScriptPath();
-            startInfo.Environment["OC_REPORT"] = reportPath;
-            startInfo.Environment["OC_PACKAGE"] = PackageName;
-            if (additionalReportPath is not null)
-            {
-                startInfo.Environment["OC_REPORT2"] = additionalReportPath;
-            }
+        startInfo.Environment["OC_SCRIPT"] = FindScriptPath();
+        startInfo.Environment["OC_REPORT"] = reportPath;
+        startInfo.Environment["OC_PACKAGE"] = PackageName;
+        if (additionalReportPath is not null)
+        {
+            startInfo.Environment["OC_REPORT2"] = additionalReportPath;
         }
 
         startInfo.ArgumentList.Add("-NoLogo");
         startInfo.ArgumentList.Add("-NoProfile");
         startInfo.ArgumentList.Add("-ExecutionPolicy");
         startInfo.ArgumentList.Add("Bypass");
-        AddScriptArguments(startInfo, reportPath, cultureName, additionalReportPath);
+        AddScriptArguments(startInfo, cultureName, additionalReportPath);
 
         using var process = Process.Start(startInfo) ?? throw new InvalidOperationException("Could not start PowerShell.");
         using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(ScriptTimeoutSeconds));
@@ -890,29 +887,18 @@ public sealed class TestOccasionallyConnectedCoverageTests
 
     /// <summary>Adds PowerShell arguments for script invocation.</summary>
     /// <param name="startInfo">The process start information.</param>
-    /// <param name="reportPath">The report path.</param>
     /// <param name="cultureName">The optional culture name.</param>
     /// <param name="additionalReportPath">The optional second report path.</param>
-    private static void AddScriptArguments(ProcessStartInfo startInfo, string reportPath, string? cultureName, string? additionalReportPath)
+    private static void AddScriptArguments(ProcessStartInfo startInfo, string? cultureName, string? additionalReportPath)
     {
-        if (cultureName is null && additionalReportPath is null)
-        {
-            startInfo.ArgumentList.Add("-File");
-            startInfo.ArgumentList.Add(FindScriptPath());
-            startInfo.ArgumentList.Add("-ReportPath");
-            startInfo.ArgumentList.Add(reportPath);
-            startInfo.ArgumentList.Add("-PackageNames");
-            startInfo.ArgumentList.Add(PackageName);
-            return;
-        }
-
         startInfo.ArgumentList.Add("-Command");
         var cultureSetup = cultureName is null
             ? string.Empty
             : "[System.Threading.Thread]::CurrentThread.CurrentCulture = [System.Globalization.CultureInfo]::GetCultureInfo($env:OC_CULTURE); "
               + "[System.Threading.Thread]::CurrentThread.CurrentUICulture = [System.Globalization.CultureInfo]::GetCultureInfo($env:OC_CULTURE); ";
         var reportArgument = additionalReportPath is null ? "$env:OC_REPORT" : "@($env:OC_REPORT, $env:OC_REPORT2)";
-        startInfo.ArgumentList.Add($"{cultureSetup}& $env:OC_SCRIPT -ReportPath {reportArgument} -PackageNames $env:OC_PACKAGE");
+        startInfo.ArgumentList.Add(
+            $"{cultureSetup}try {{ & $env:OC_SCRIPT -ReportPath {reportArgument} -PackageNames $env:OC_PACKAGE }} catch {{ [Console]::Error.WriteLine($_.Exception.Message); exit 1 }}");
     }
 
     /// <summary>Finds the coverage gate script from the test output directory.</summary>

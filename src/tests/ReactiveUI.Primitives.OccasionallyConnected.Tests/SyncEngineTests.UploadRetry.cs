@@ -324,7 +324,7 @@ public sealed partial class SyncEngineTests
     [Test]
     public async Task UploadAttemptDoesNotResetExactlyOnceRetryAnchorAcrossSqliteRestart()
     {
-        var directory = Directory.CreateTempSubdirectory("oc-engine-upload-restart-");
+        var directory = SqliteTestDirectory.Create("oc-engine-upload-restart-");
         try
         {
             await AssertExactlyOnceSqliteRestartPreservesRetryAnchorAsync(Path.Combine(directory.FullName, "local.db"));
@@ -340,7 +340,7 @@ public sealed partial class SyncEngineTests
     [Test]
     public async Task ExpiredExactlyOnceRetryDowngradesBeforeSendingWhenConfigured()
     {
-        var directory = Directory.CreateTempSubdirectory("oc-engine-upload-fallback-");
+        var directory = SqliteTestDirectory.Create("oc-engine-upload-fallback-");
         try
         {
             var databasePath = Path.Combine(directory.FullName, "local.db");
