@@ -63,12 +63,14 @@ function Invoke-Dotnet([string] $WorkingDirectory, [string] $LogName, [string[]]
 
 Write-Host "NativeAOT packed-consumer gate: version $Version"
 Write-Host "Artifacts: $ArtifactsPath"
+# The AOT consumer targets net10.0; platform workloads are unrelated to its local package feed.
+$packProperties = @('-p:AndroidPrimitivesTargetFrameworks=', '-p:ApplePrimitivesTargetFrameworks=')
 foreach ($project in $dependencyProjects + $ocProjects) {
     Write-Host "Packing $project"
-    $null = Invoke-Dotnet $src "pack-$project" @(
+    $null = Invoke-Dotnet $src "pack-$project" (@(
         'pack', "$project/$project.csproj", '-c', 'Release', '-nologo', '-o', $feed,
         "-p:MinVerVersionOverride=$Version", '-p:ContinuousIntegrationBuild=true',
-        '--disable-build-servers', '-m:1')
+        '--disable-build-servers', '-m:1') + $packProperties)
 }
 
 $sampleSource = Join-Path $repoRoot 'samples/OccasionallyConnected.PackedSample'

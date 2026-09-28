@@ -91,9 +91,11 @@ foreach ($name in $ProjectNames) {
     $projectFile = Join-Path (Join-Path $src $name) "$name.csproj"
     if (-not (Test-Path -LiteralPath $projectFile)) { throw "Missing project: $projectFile" }
     Write-Host "Packing $name"
+    # Audit the feature packages without restoring unrelated mobile targets from a referenced core project.
     Invoke-Dotnet -Arguments @('pack', $projectFile, '-c', 'Release', '-o', $drop,
         "-p:MinVerVersionOverride=$Version", '-p:ContinuousIntegrationBuild=true',
-        '--disable-build-servers', '-m:1')
+        '--disable-build-servers', '-m:1', '-p:AndroidPrimitivesTargetFrameworks=',
+        '-p:ApplePrimitivesTargetFrameworks=')
     $packageFile = Join-Path $drop "$name.$Version.nupkg"
     if (-not (Test-Path -LiteralPath $packageFile)) { throw "Expected package not found: $packageFile" }
 
@@ -115,19 +117,23 @@ foreach ($name in $ProjectNames) {
         }
         if (-not $nuspec) { throw "NuGet metadata missing for $key" }
         [xml] $metadata = Get-Content -LiteralPath $nuspec -Raw
-        $license = $metadata.package.metadata.license
-        if (-not $license -or [string]::IsNullOrWhiteSpace($license.'#text')) {
+        $license = $metadata.SelectSingleNode('/*[local-name()="package"]/*[local-name()="metadata"]/*[local-name()="license"]')
+        if ($null -eq $license -or [string]::IsNullOrWhiteSpace($license.InnerText)) {
             throw "License metadata missing for $key ($nuspec)"
         }
-        if ($license.type -eq 'file') {
-            $licenseFile = Join-Path (Split-Path -Parent $nuspec) $license.'#text'
+        if ($null -eq $license.Attributes['type']) {
+            throw "License type metadata missing for $key ($nuspec)"
+        }
+        $licenseType = $license.Attributes['type'].Value
+        if ($licenseType -eq 'file') {
+            $licenseFile = Join-Path (Split-Path -Parent $nuspec) $license.InnerText
             if (-not (Test-Path -LiteralPath $licenseFile)) { throw "License file missing for $key" }
         }
         $licenses[$key] = [pscustomobject]@{
             Package = $id
             Version = $packageVersion
-            LicenseType = $license.type
-            License = $license.'#text'
+            LicenseType = $licenseType
+            License = $license.InnerText
         }
     }
     Read-Audit $name $projectFile 'vulnerable'

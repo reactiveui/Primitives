@@ -26,9 +26,10 @@ jobs:
           persist-credentials: false
       - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6
         with:
-          dotnet-version: |
-            10.0.x
-            11.0.x
+          dotnet-version: 10.0.x
+      - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6
+        with:
+          dotnet-version: 11.0.x
           dotnet-quality: preview
       - name: Soak durable queue
         working-directory: src
@@ -37,6 +38,8 @@ jobs:
           tests/ReactiveUI.Primitives.OccasionallyConnected.Storage.Sqlite.Tests/ReactiveUI.Primitives.OccasionallyConnected.Storage.Sqlite.Tests.csproj
           --configuration Release
           --framework net10.0
+          -p:AndroidPrimitivesTargetFrameworks=
+          -p:ApplePrimitivesTargetFrameworks=
           --
           --treenode-filter "/*/*/*/OfflineOutboxSoakRecoversDrainsAndCompacts"
       - name: Soak slow observers and reconnect
@@ -46,6 +49,8 @@ jobs:
           tests/ReactiveUI.Primitives.OccasionallyConnected.Tests/ReactiveUI.Primitives.OccasionallyConnected.Tests.csproj
           --configuration Release
           --framework net10.0
+          -p:AndroidPrimitivesTargetFrameworks=
+          -p:ApplePrimitivesTargetFrameworks=
           --
           --treenode-filter "/*/*/*/SlowObserverStormDisconnectsAndResubscribeRecovers"
 
@@ -62,9 +67,10 @@ jobs:
           persist-credentials: false
       - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6
         with:
-          dotnet-version: |
-            10.0.x
-            11.0.x
+          dotnet-version: 10.0.x
+      - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6
+        with:
+          dotnet-version: 11.0.x
           dotnet-quality: preview
       - name: Check durable queue performance budgets
         working-directory: src
@@ -73,5 +79,7 @@ jobs:
           tests/ReactiveUI.Primitives.OccasionallyConnected.Storage.Sqlite.Tests/ReactiveUI.Primitives.OccasionallyConnected.Storage.Sqlite.Tests.csproj
           --configuration Release
           --framework net10.0
+          -p:AndroidPrimitivesTargetFrameworks=
+          -p:ApplePrimitivesTargetFrameworks=
           --
           --treenode-filter "/*/*/*/DurableOutboxPerformanceStaysWithinReleaseBudgets"

@@ -39,6 +39,9 @@ jobs:
             8.0.x
             9.0.x
             10.0.x
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: |
             11.0.x
           dotnet-quality: preview
       - name: Build and verify complete feature coverage
@@ -70,7 +73,7 @@ jobs:
           $reportPaths = [System.Collections.Generic.List[string]]::new()
           foreach ($testProject in $testProjects) {
             $projectFile = Join-Path $testProject.FullName "$($testProject.Name).csproj"
-            dotnet build $projectFile -c Release -f $env:OC_TEST_FRAMEWORK --disable-build-servers -m:1
+            dotnet build $projectFile -c Release -f $env:OC_TEST_FRAMEWORK --disable-build-servers -m:1 -p:AndroidPrimitivesTargetFrameworks= -p:ApplePrimitivesTargetFrameworks=
             if ($LASTEXITCODE -ne 0) { throw "Build failed: $($testProject.Name)" }
             $testAssembly = Join-Path $testProject.FullName "bin/Release/$env:OC_TEST_FRAMEWORK/$($testProject.Name).dll"
             $results = Join-Path $coverageRoot "$($testProject.Name)/$env:OC_TEST_FRAMEWORK"

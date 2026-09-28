@@ -104,7 +104,9 @@ function Show-Tail($Run, [int] $Lines = 25) {
 }
 
 $commit = (& git -C $repoRoot rev-parse HEAD).Trim()
-$packProperties = @('-c', 'Release', '-nologo', "-p:MinVerVersionOverride=$Version", '-p:ContinuousIntegrationBuild=true')
+# The clean consumer exercises desktop targets; platform workloads are not needed to pack its local feed.
+$packProperties = @('-c', 'Release', '-nologo', "-p:MinVerVersionOverride=$Version", '-p:ContinuousIntegrationBuild=true',
+    '-p:AndroidPrimitivesTargetFrameworks=', '-p:ApplePrimitivesTargetFrameworks=')
 Write-Host "Version $Version, commit $commit, SDK $(& dotnet --version)"
 Write-Host "Artifacts: $ArtifactsPath"
 

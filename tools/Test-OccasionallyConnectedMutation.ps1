@@ -119,11 +119,11 @@ foreach ($mutation in $mutations) {
     $mutantBuildLog = Join-Path $reportDirectory "$($mutation.Name)-mutant-build.log"
     $mutantTestLog = Join-Path $reportDirectory "$($mutation.Name)-mutant-test.log"
 
-    $buildArguments = @('build', $projectFile, '-c', 'Release', '-f', 'net10.0', '--disable-build-servers', '-m:1', '-p:MinVerSkip=true', '-p:Version=0.1.0')
+    $buildArguments = @('build', $projectFile, '-c', 'Release', '-f', 'net10.0', '--disable-build-servers', '-m:1', '-p:MinVerSkip=true', '-p:Version=0.1.0', '-p:AndroidPrimitivesTargetFrameworks=', '-p:ApplePrimitivesTargetFrameworks=')
     $buildCode = Invoke-LoggedCommand $workspace $baselineBuildLog $buildArguments 900
     if ($buildCode -ne 0) { throw "$($mutation.Name): baseline build failed; see $baselineBuildLog." }
     $testCode = Invoke-LoggedCommand $workspace $baselineTestLog @($assembly, '--treenode-filter', $filter, '--progress', 'off') 300
-    $baselineOutput = Get-Content -LiteralPath $baselineTestLog -Raw
+    $baselineOutput = (Get-Content -LiteralPath $baselineTestLog -Raw) -replace '\x1B\[[0-9;]*m', ''
     if ($testCode -ne 0 -or $baselineOutput -notmatch '(?im)^\s*total:\s*[1-9]\d*\s*$' -or $baselineOutput -notmatch '(?im)^\s*failed:\s*0\s*$') {
         throw "$($mutation.Name): baseline TUnit tests failed or no tests ran; see $baselineTestLog."
     }
@@ -134,7 +134,7 @@ foreach ($mutation in $mutations) {
         $buildCode = Invoke-LoggedCommand $workspace $mutantBuildLog $buildArguments 900
         if ($buildCode -ne 0) { throw "$($mutation.Name): mutant did not compile; see $mutantBuildLog." }
         $testCode = Invoke-LoggedCommand $workspace $mutantTestLog @($assembly, '--treenode-filter', $filter, '--progress', 'off') 300
-        $mutantOutput = Get-Content -LiteralPath $mutantTestLog -Raw
+        $mutantOutput = (Get-Content -LiteralPath $mutantTestLog -Raw) -replace '\x1B\[[0-9;]*m', ''
         if ($testCode -eq 0 -or $mutantOutput -notmatch '(?im)^\s*failed:\s*[1-9]\d*\s*$') {
             throw "$($mutation.Name): mutant was not killed by a TUnit assertion; see $mutantTestLog."
         }
