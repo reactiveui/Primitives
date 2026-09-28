@@ -41,10 +41,7 @@ jobs:
             8.0.x
             9.0.x
             10.0.x
-      - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6
-        with:
-          dotnet-version: 11.0.x
-          dotnet-quality: preview
+            11.0.x
       - name: Pack, publish, and run clean NativeAOT consumer
         shell: pwsh
         run: ./tools/Test-OccasionallyConnectedAot.ps1 -Version "0.1.0-ocaot.${{ github.run_id }}.${{ github.run_attempt }}"

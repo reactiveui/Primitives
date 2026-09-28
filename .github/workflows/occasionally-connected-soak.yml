@@ -26,11 +26,11 @@ jobs:
           persist-credentials: false
       - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6
         with:
-          dotnet-version: 10.0.x
-      - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6
-        with:
-          dotnet-version: 11.0.x
-          dotnet-quality: preview
+          dotnet-version: |
+            8.0.x
+            9.0.x
+            10.0.x
+            11.0.x
       - name: Soak durable queue
         working-directory: src
         run: >-
@@ -67,11 +67,11 @@ jobs:
           persist-credentials: false
       - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6
         with:
-          dotnet-version: 10.0.x
-      - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6
-        with:
-          dotnet-version: 11.0.x
-          dotnet-quality: preview
+          dotnet-version: |
+            8.0.x
+            9.0.x
+            10.0.x
+            11.0.x
       - name: Check durable queue performance budgets
         working-directory: src
         run: >-
