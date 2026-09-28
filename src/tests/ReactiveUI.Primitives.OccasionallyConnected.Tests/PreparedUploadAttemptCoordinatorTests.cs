@@ -335,7 +335,7 @@ public sealed partial class PreparedUploadAttemptCoordinatorTests
     [Test]
     public async Task ExecuteAsyncLongReconciliationRenewsTowardBoundedHorizon()
     {
-        var clock = new FakeTimeProvider(TimestampUtc);
+        var clock = new ObservableRenewalTimeProvider(TimestampUtc);
         var lease = CreateLease(clock.GetUtcNow().AddSeconds(SecondSequence), CreateOperation(FirstSequence));
         var store = CreateStore(lease);
         var preparer = new RecordingPreparer();
@@ -363,6 +363,7 @@ public sealed partial class PreparedUploadAttemptCoordinatorTests
         await entered.Task.WaitAsync(GateTimeout, CancellationToken.None).ConfigureAwait(false);
         for (var expectedRenewals = FirstSequence; expectedRenewals <= AttemptAfterPrior; expectedRenewals++)
         {
+            await clock.WaitForScheduleCountAsync(expectedRenewals).WaitAsync(GateTimeout, CancellationToken.None).ConfigureAwait(false);
             var advanceSeconds = expectedRenewals == FirstSequence ? RenewalIntervalSeconds : RenewalDurationSeconds - RenewalIntervalSeconds;
             clock.Advance(TimeSpan.FromSeconds(advanceSeconds));
             await store.WaitForRenewCountAsync(expectedRenewals).WaitAsync(GateTimeout, CancellationToken.None).ConfigureAwait(false);

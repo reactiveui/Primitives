@@ -92,6 +92,11 @@ public sealed partial class OccasionallyConnectedBuilderTests
             stack.Clock,
             async () => (await stack.GetStatusAsync(receipt.OperationId))?.State == SyncOperationState.GuaranteeExpired,
             $"{TransportName(transport)} guarantee expiry");
+        await PumpUntilAsync(
+            stack.Clock,
+            () => new(stack.States.Values.Any(value =>
+                value.OperationId == receipt.OperationId && value.ReasonCode == SyncReasonCodes.GuaranteeExpired)),
+            $"{TransportName(transport)} guarantee-expired state event");
         stack.DropPushResponses(false);
         var pushesAtExpiry = stack.Peer.Pushed.Count;
         await PumpStepsAsync(stack.Clock, SettleSteps);
@@ -129,9 +134,9 @@ public sealed partial class OccasionallyConnectedBuilderTests
 
         var receipt = await stack.ClientStream.PublishAsync(new(1), CreatePublishOptions(DeliveryGuarantee.ExactlyOnce), CancellationToken.None);
         await WaitForFirstLostAcknowledgementAsync(stack, transport);
+        var pushesBeforeExpiry = stack.Peer.Pushed.Count;
         stack.Clock.Advance(PastShortRetention);
         await PumpUntilAsync(stack.Clock, () => new(stack.HasFault(SyncReasonCodes.GuaranteeDowngraded)), $"{TransportName(transport)} downgrade fault");
-        var pushesAtDowngrade = stack.Peer.Pushed.Count;
         stack.DropPushResponses(false);
         await PumpUntilAsync(
             stack.Clock,
@@ -143,7 +148,8 @@ public sealed partial class OccasionallyConnectedBuilderTests
         await Assert.That(fault.OperationId).IsEqualTo(receipt.OperationId);
         await Assert.That(fault.Severity).IsEqualTo(FaultSeverity.Warning);
         await Assert.That(stack.HasFault(SyncReasonCodes.GuaranteeExpired)).IsFalse();
-        await Assert.That(stack.Peer.Pushed.Count).IsGreaterThan(pushesAtDowngrade);
+        await Assert.That(pushesBeforeExpiry).IsEqualTo(1);
+        await Assert.That(stack.Peer.Pushed.Count).IsGreaterThan(pushesBeforeExpiry);
         await Assert.That(stack.Peer.Pushed.All(value => value == receipt.OperationId)).IsTrue();
         await Assert.That(stack.Domain.EffectsFor(receipt.OperationId)).IsEqualTo(1);
         await Assert.That(stack.States.Values.Any(value => value.OperationId == receipt.OperationId && value.ReasonCode == SyncReasonCodes.GuaranteeDowngraded)).IsTrue();

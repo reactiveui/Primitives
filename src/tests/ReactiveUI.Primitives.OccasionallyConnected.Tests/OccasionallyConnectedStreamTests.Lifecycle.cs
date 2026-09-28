@@ -10,6 +10,9 @@ namespace ReactiveUI.Primitives.OccasionallyConnected.Tests;
 /// <content>Lifecycle and admission tests.</content>
 public sealed partial class OccasionallyConnectedStreamTests
 {
+    /// <summary>The fault code for an observer callback failure.</summary>
+    private const string ObserverFaultCode = "OC.Stream.Observer";
+
     /// <summary>The original diagnostic message length used to test trimming.</summary>
     private const int OriginalDiagnosticMessageLength = 1024;
 
@@ -278,7 +281,7 @@ public sealed partial class OccasionallyConnectedStreamTests
 
         await Assert.That(locals.Values).IsEmpty();
         await Assert.That(faults.Values).Count().IsEqualTo(1);
-        await Assert.That(faults.Values[0].Code).IsEqualTo("OC.Stream.Observer");
+        await Assert.That(faults.Values[0].Code).IsEqualTo(ObserverFaultCode);
     }
 
     /// <summary>Verifies observer callback failures are routed to the stream fault dispatcher.</summary>
@@ -297,7 +300,34 @@ public sealed partial class OccasionallyConnectedStreamTests
         scheduler.RunAll();
 
         await Assert.That(faults.Values).Count().IsEqualTo(1);
-        await Assert.That(faults.Values[0].Code).IsEqualTo("OC.Stream.Observer");
+        await Assert.That(faults.Values[0].Code).IsEqualTo(ObserverFaultCode);
+    }
+
+    /// <summary>Verifies observer storage failures retain their fault category and severity.</summary>
+    /// <param name="authenticationFailure">Whether the observer reports a record authentication failure.</param>
+    /// <returns>A task that completes when the test finishes.</returns>
+    [Test]
+    [Arguments(false)]
+    [Arguments(true)]
+    public async Task LocalObserverStorageFailureReportsSpecificFault(bool authenticationFailure)
+    {
+        await using var store = await CreateInitializedStoreAsync();
+        var scheduler = new ControlledObserverScheduler();
+        await using var stream = CreateStream(store, scheduler: scheduler);
+        await stream.StartAsync(CancellationToken.None);
+        var faults = new RecordingObserver<OccasionallyConnectedFault>();
+        using var faultSubscription = stream.Faults.Subscribe(faults);
+        Exception failure = authenticationFailure
+            ? new LocalStoreRecordAuthenticationException("The local record failed authentication.")
+            : new DurableStorageException("The storage medium failed.");
+        using var localSubscription = stream.Local.Subscribe(new CapturingThrowingObserver<CounterState>(failure));
+
+        scheduler.RunAll();
+
+        await Assert.That(faults.Values).Count().IsEqualTo(1);
+        await Assert.That(faults.Values[0].Code).IsEqualTo(ObserverFaultCode);
+        await Assert.That(faults.Values[0].Category).IsEqualTo(authenticationFailure ? FaultCategory.Security : FaultCategory.Storage);
+        await Assert.That(faults.Values[0].Severity).IsEqualTo(authenticationFailure ? FaultSeverity.Critical : FaultSeverity.Error);
     }
 
     /// <summary>Verifies fault notifications retain a bounded diagnostic instead of the original exception graph.</summary>

@@ -153,25 +153,39 @@ public sealed partial class OccasionallyConnectedBuilderTests
         }
     }
 
-    /// <summary>Releases the first batching dwell, then waits for a lost response with the fake clock held steady.</summary>
+    /// <summary>Triggers the first push and waits for its committed response to be lost without advancing fake time.</summary>
     /// <param name="stack">The client and server stack.</param>
     /// <param name="transport">The transport selector.</param>
     /// <returns>The wait task.</returns>
     /// <exception cref="TimeoutException">No push response was lost before the real-time guard expired.</exception>
     private static async Task WaitForFirstLostAcknowledgementAsync(DeliveryStack stack, int transport)
     {
-        // PublishAsync schedules the upload before returning. An overdue head runs even if the pump starts waiting later.
-        stack.Clock.Advance(RetryDelay);
-        var started = Stopwatch.GetTimestamp();
-        using var pause = new PeriodicTimer(TimeSpan.FromMilliseconds(PumpPauseMilliseconds));
-        while (stack.DroppedResponses == 0)
+        using var triggerCancellation = new CancellationTokenSource();
+        var trigger = stack.Context.SyncEngine.TriggerSyncAsync(triggerCancellation.Token).AsTask();
+        try
         {
-            if (Stopwatch.GetElapsedTime(started) > GuardTimeout)
+            var started = Stopwatch.GetTimestamp();
+            using var pause = new PeriodicTimer(TimeSpan.FromMilliseconds(PumpPauseMilliseconds));
+            while (stack.DroppedResponses == 0)
             {
-                throw new TimeoutException($"Timed out waiting for {TransportName(transport)} first lost acknowledgement.");
-            }
+                if (Stopwatch.GetElapsedTime(started) > GuardTimeout)
+                {
+                    throw new TimeoutException($"Timed out waiting for {TransportName(transport)} first lost acknowledgement.");
+                }
 
-            _ = await pause.WaitForNextTickAsync();
+                _ = await pause.WaitForNextTickAsync();
+            }
+        }
+        finally
+        {
+            await triggerCancellation.CancelAsync();
+            try
+            {
+                await trigger;
+            }
+            catch (OperationCanceledException) when (triggerCancellation.IsCancellationRequested)
+            {
+            }
         }
     }
 
