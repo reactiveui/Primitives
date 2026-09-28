@@ -86,7 +86,7 @@ public sealed partial class OccasionallyConnectedBuilderTests
         stack.DropPushResponses(true);
 
         var receipt = await stack.ClientStream.PublishAsync(new(1), CreatePublishOptions(DeliveryGuarantee.ExactlyOnce), CancellationToken.None);
-        await PumpUntilAsync(stack.Clock, () => new(stack.DroppedResponses > 0), $"{TransportName(transport)} first lost acknowledgement");
+        await WaitForFirstLostAcknowledgementAsync(stack, transport);
         stack.Clock.Advance(PastShortRetention);
         await PumpUntilAsync(
             stack.Clock,
@@ -128,7 +128,7 @@ public sealed partial class OccasionallyConnectedBuilderTests
         stack.DropPushResponses(true);
 
         var receipt = await stack.ClientStream.PublishAsync(new(1), CreatePublishOptions(DeliveryGuarantee.ExactlyOnce), CancellationToken.None);
-        await PumpUntilAsync(stack.Clock, () => new(stack.DroppedResponses > 0), $"{TransportName(transport)} first lost acknowledgement");
+        await WaitForFirstLostAcknowledgementAsync(stack, transport);
         stack.Clock.Advance(PastShortRetention);
         await PumpUntilAsync(stack.Clock, () => new(stack.HasFault(SyncReasonCodes.GuaranteeDowngraded)), $"{TransportName(transport)} downgrade fault");
         var pushesAtDowngrade = stack.Peer.Pushed.Count;
@@ -161,7 +161,7 @@ public sealed partial class OccasionallyConnectedBuilderTests
         await using var first = await DeliveryStack.StartAsync(transport, options, ShortRetention);
         first.DropPushResponses(true);
         var receipt = await first.ClientStream.PublishAsync(new(1), CreatePublishOptions(DeliveryGuarantee.ExactlyOnce), CancellationToken.None);
-        await PumpUntilAsync(first.Clock, () => new(first.DroppedResponses > 0), $"{TransportName(transport)} first lost acknowledgement");
+        await WaitForFirstLostAcknowledgementAsync(first, transport);
         first.Clock.Advance(PastShortRetention);
         await PumpUntilAsync(first.Clock, () => new(first.HasFault(SyncReasonCodes.GuaranteeDowngraded)), $"{TransportName(transport)} downgrade fault");
 

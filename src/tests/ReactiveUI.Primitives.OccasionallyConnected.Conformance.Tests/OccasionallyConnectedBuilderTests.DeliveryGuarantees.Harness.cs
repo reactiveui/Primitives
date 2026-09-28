@@ -153,6 +153,28 @@ public sealed partial class OccasionallyConnectedBuilderTests
         }
     }
 
+    /// <summary>Releases the first batching dwell, then waits for a lost response with the fake clock held steady.</summary>
+    /// <param name="stack">The client and server stack.</param>
+    /// <param name="transport">The transport selector.</param>
+    /// <returns>The wait task.</returns>
+    /// <exception cref="TimeoutException">No push response was lost before the real-time guard expired.</exception>
+    private static async Task WaitForFirstLostAcknowledgementAsync(DeliveryStack stack, int transport)
+    {
+        // PublishAsync schedules the upload before returning. An overdue head runs even if the pump starts waiting later.
+        stack.Clock.Advance(RetryDelay);
+        var started = Stopwatch.GetTimestamp();
+        using var pause = new PeriodicTimer(TimeSpan.FromMilliseconds(PumpPauseMilliseconds));
+        while (stack.DroppedResponses == 0)
+        {
+            if (Stopwatch.GetElapsedTime(started) > GuardTimeout)
+            {
+                throw new TimeoutException($"Timed out waiting for {TransportName(transport)} first lost acknowledgement.");
+            }
+
+            _ = await pause.WaitForNextTickAsync();
+        }
+    }
+
     /// <summary>Advances fake time for a fixed number of pump steps so any pending retry would run.</summary>
     /// <param name="clock">The fake clock.</param>
     /// <param name="steps">The number of steps.</param>

@@ -145,9 +145,11 @@ public sealed class ResilienceLabRunnerTests
     public Task RunAsyncBackpressureRejectsThenBlocksUntilCapacityFrees() =>
         AssertScenarioPassesAsync(
             "backpressure",
+            "backpressure.first-publish-admitted: expected=SavedLocally; actual=SavedLocally; passed=True",
             "backpressure.reject-when-full: expected=QueueCapacityExceededException; actual=QueueCapacityExceededException; passed=True",
             "backpressure.block-waits-while-full: expected=waiting; actual=waiting; passed=True",
-            "backpressure.block-completes-after-sync: expected=completed; actual=completed; passed=True");
+            "backpressure.block-completes-after-sync: expected=completed; actual=completed; passed=True",
+            "backpressure.server-counter: expected=3; actual=3; passed=True");
 
     /// <summary>Verifies blocked observers do not hold up publication and later receive the latest state.</summary>
     /// <returns>The assertion task.</returns>

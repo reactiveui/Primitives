@@ -74,6 +74,34 @@ public sealed partial class CollaborationClientApplicationTests
     /// <summary>The finite wait for live HTTP and SQLite convergence.</summary>
     private static readonly TimeSpan WaitTimeout = TimeSpan.FromSeconds(15);
 
+    /// <summary>Verifies temporary-directory aliases are resolved before SQLite ownership checks.</summary>
+    /// <returns>The assertion task.</returns>
+    [Test]
+    public async Task DatabaseLeaseResolvesTemporaryDirectoryAlias()
+    {
+        const string nestedDirectoryName = "nested";
+        var root = Path.Combine(Path.GetTempPath(), $"rxui-oc-client-alias-{Guid.NewGuid():N}");
+        var physicalDirectory = Path.Combine(root, "physical");
+        var aliasDirectory = Path.Combine(root, "alias");
+        _ = Directory.CreateDirectory(physicalDirectory);
+        try
+        {
+            _ = Directory.CreateSymbolicLink(aliasDirectory, physicalDirectory);
+            _ = Directory.CreateDirectory(Path.Combine(physicalDirectory, nestedDirectoryName));
+            using var lease = new CollaborationClientDatabaseLease(Path.Combine(aliasDirectory, nestedDirectoryName));
+
+            await Assert.That(Path.GetDirectoryName(lease.ServerPath)).IsNotEqualTo(Path.Combine(aliasDirectory, nestedDirectoryName));
+            await Assert.That(lease.ServerPath.Contains(
+                $"{Path.DirectorySeparatorChar}physical{Path.DirectorySeparatorChar}{nestedDirectoryName}{Path.DirectorySeparatorChar}",
+                StringComparison.Ordinal)).IsTrue();
+            await Assert.That(Directory.Exists(Path.GetDirectoryName(lease.ServerPath))).IsTrue();
+        }
+        finally
+        {
+            Directory.Delete(root, recursive: true);
+        }
+    }
+
     /// <summary>Verifies two SQLite clients converge through the real ASP.NET HTTP collaboration server.</summary>
     /// <returns>The assertion task.</returns>
     [Test]
@@ -824,8 +852,15 @@ public sealed partial class CollaborationClientApplicationTests
 
         /// <summary>Initializes a new instance of the <see cref="CollaborationClientDatabaseLease"/> class.</summary>
         internal CollaborationClientDatabaseLease()
+            : this(Path.GetTempPath())
         {
-            _directory = Path.Combine(Path.GetTempPath(), $"rxui-oc-client-example-{Guid.NewGuid():N}");
+        }
+
+        /// <summary>Initializes a new instance of the <see cref="CollaborationClientDatabaseLease"/> class with a requested temporary directory.</summary>
+        /// <param name="temporaryDirectory">The requested temporary directory.</param>
+        internal CollaborationClientDatabaseLease(string temporaryDirectory)
+        {
+            _directory = Path.Combine(ResolveDirectory(new(temporaryDirectory)), $"rxui-oc-client-example-{Guid.NewGuid():N}");
             _ = Directory.CreateDirectory(_directory);
             ServerPath = Path.Combine(_directory, "server.db");
             ClientAPath = Path.Combine(_directory, "client-a.db");
@@ -844,5 +879,19 @@ public sealed partial class CollaborationClientApplicationTests
         /// <inheritdoc />
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Dispose() => Directory.Delete(_directory, recursive: true);
+
+        /// <summary>Resolves existing parent aliases before creating SQLite database paths.</summary>
+        /// <param name="directory">The directory to resolve.</param>
+        /// <returns>The physical directory path.</returns>
+        private static string ResolveDirectory(DirectoryInfo directory)
+        {
+            if (directory.Parent is not { } parent)
+            {
+                return directory.FullName;
+            }
+
+            var resolved = new DirectoryInfo(Path.Combine(ResolveDirectory(parent), directory.Name));
+            return resolved.ResolveLinkTarget(returnFinalTarget: true)?.FullName ?? resolved.FullName;
+        }
     }
 }

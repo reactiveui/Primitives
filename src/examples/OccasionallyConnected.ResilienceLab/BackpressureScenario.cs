@@ -76,6 +76,8 @@ internal static class BackpressureScenario
         var rejectOptions = new RemotePublishOptions { StreamId = Stream, AdmissionStrategy = BufferStrategy.Reject };
         var blockOptions = rejectOptions with { AdmissionStrategy = BufferStrategy.Block };
 
+        await stream.StartAsync(cancellationToken).ConfigureAwait(false);
+
         var first = await stream.PublishAsync(
             ResilienceLabContext.CreateCounterInput(ClientId, FirstValue),
             rejectOptions,
