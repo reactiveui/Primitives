@@ -2,7 +2,7 @@ name: OccasionallyConnected package release gates
 
 on:
   pull_request:
-    branches: [main, OccasionallyConnected]
+    branches: [main]
     paths:
       - 'src/ReactiveUI.Primitives.OccasionallyConnected*/**'
       - 'src/ReactiveUI.Primitives*/**'

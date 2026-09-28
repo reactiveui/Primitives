@@ -2,7 +2,7 @@ name: OccasionallyConnected crash matrix
 
 on:
   pull_request:
-    branches: [main, OccasionallyConnected]
+    branches: [main]
     paths:
       - 'src/ReactiveUI.Primitives.OccasionallyConnected*/**'
       - 'src/tests/ReactiveUI.Primitives.OccasionallyConnected*/**'

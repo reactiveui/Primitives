@@ -2,9 +2,9 @@ name: Build
 
 on:
     push:
-        branches: [ main, OccasionallyConnected ]
+        branches: [ main ]
     pull_request:
-        branches: [ main, OccasionallyConnected ]
+        branches: [ main ]
 
 env:
     productNamespacePrefix: "ReactiveUI.Primitives"

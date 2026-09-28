@@ -106,6 +106,10 @@ foreach ($name in $ProjectNames) {
     foreach ($library in $assets.libraries.PSObject.Properties) {
         if ($library.Value.type -ne 'package') { continue }
         $id, $packageVersion = $library.Name -split '/', 2
+        # SDK-provided .NET Framework reference assemblies are private build inputs, not shipped dependencies.
+        if ($id.StartsWith('Microsoft.NETFramework.ReferenceAssemblies', [StringComparison]::OrdinalIgnoreCase)) {
+            continue
+        }
         $key = "$id/$packageVersion"
         if ($licenses.ContainsKey($key)) { continue }
         $nuspec = $null

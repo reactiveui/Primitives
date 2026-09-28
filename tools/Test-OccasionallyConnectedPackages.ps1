@@ -48,6 +48,7 @@ $repoRoot = Split-Path -Parent $PSScriptRoot
 $src = Join-Path $repoRoot 'src'
 if (-not $ArtifactsPath) { $ArtifactsPath = Join-Path $repoRoot 'artifacts/oc-packages' }
 if (-not $Version) { $Version = "0.1.0-octest.$([DateTime]::UtcNow.ToString('yyyyMMddHHmmss'))" }
+$ArtifactsPath = [IO.Path]::GetFullPath($ArtifactsPath)
 
 $dependencyProjects = @('ReactiveUI.Disposables', 'ReactiveUI.Primitives.Core', 'ReactiveUI.Primitives')
 $ocProjects = @(
