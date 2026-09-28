@@ -22,6 +22,46 @@ public sealed class ControlSequencerTests
     public async Task ConstructorRejectsNullControl() =>
         await Assert.That(static () => new ControlSequencer(null!)).ThrowsExactly<ArgumentNullException>();
 
+    /// <summary>The calling thread owns the sequencer unless the control's handle belongs to another thread.</summary>
+    /// <returns>The test operation.</returns>
+    [Test]
+    public async Task CheckAccessFollowsTheControlHandle()
+    {
+        using var local = CreateControl();
+        var remote = await RunOnStaThread(static () =>
+        {
+            var control = CreateControl();
+            _ = control.Handle;
+            return control;
+        });
+
+        await Assert.That(new ControlSequencer(local).CheckAccess()).IsTrue();
+        await Assert.That(new ControlSequencer(remote).CheckAccess()).IsFalse();
+    }
+
+    /// <summary>The per-control lookup rejects a missing control.</summary>
+    /// <returns>The test operation.</returns>
+    [Test]
+    public async Task ForRejectsNullControl() =>
+        await Assert.That(static () => ControlSequencer.For(null!)).ThrowsExactly<ArgumentNullException>();
+
+    /// <summary>The lookup returns the bound main sequencer for its control and one cached sequencer for any other.</summary>
+    /// <returns>The test operation.</returns>
+    [Test]
+    public async Task ForCachesOneSequencerPerControl()
+    {
+        using var mainControl = CreateControl();
+        using var other = CreateControl();
+        ControlSequencer main = new(mainControl);
+
+        var cached = ControlSequencer.For(other, main);
+
+        await Assert.That(ControlSequencer.For(mainControl, main)).IsSameReferenceAs(main);
+        await Assert.That(cached.Control).IsSameReferenceAs(other);
+        await Assert.That(ControlSequencer.For(other, null)).IsSameReferenceAs(cached);
+        await Assert.That(ControlSequencer.For(other)).IsSameReferenceAs(cached);
+    }
+
     /// <summary>The public constructor retains the control and exposes its clock without creating a handle.</summary>
     /// <returns>A task representing the asynchronous test.</returns>
     [Test]

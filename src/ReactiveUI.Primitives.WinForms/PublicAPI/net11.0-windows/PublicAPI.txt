@@ -3,15 +3,19 @@
 namespace ReactiveUI.Primitives.Concurrency;
 
 [System.Diagnostics.DebuggerDisplay("{DebuggerDisplay,nq}")]
-public sealed class ControlSequencer : ReactiveUI.Primitives.Concurrency.ISequencer
+public sealed class ControlSequencer : ReactiveUI.Primitives.Concurrency.ISequencer, ReactiveUI.Primitives.Concurrency.IThreadAffineSequencer
 {
     public ControlSequencer(System.Windows.Forms.Control control) { }
     public System.Windows.Forms.Control Control { get; }
-    public static ReactiveUI.Primitives.Concurrency.ControlSequencer Main { get; }
     public System.DateTimeOffset Now { get; }
     public long Timestamp { get; }
+    public static ReactiveUI.Primitives.Concurrency.ControlSequencer Main { get; }
+    [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+    public bool CheckAccess() { }
     [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
     public void Schedule(ReactiveUI.Primitives.Concurrency.IWorkItem item) { }
     [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
     public void Schedule(ReactiveUI.Primitives.Concurrency.IWorkItem item, long dueTimestamp) { }
+    [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+    public static ReactiveUI.Primitives.Concurrency.ControlSequencer For(System.Windows.Forms.Control control) { }
 }

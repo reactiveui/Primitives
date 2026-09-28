@@ -6,6 +6,7 @@ using System.Reactive.Concurrency;
 using System.Reactive.Disposables;
 using System.Runtime.CompilerServices;
 using System.Windows.Threading;
+using ReactiveUI.Primitives.Concurrency;
 
 namespace ReactiveUI.Primitives.Reactive.Concurrency;
 
@@ -13,8 +14,11 @@ namespace ReactiveUI.Primitives.Reactive.Concurrency;
 /// <remarks>Callbacks run on the dispatcher thread at Priority; cancellation stops pending timers and suppresses unstarted actions.</remarks>
 /// <seealso cref="System.Reactive.Concurrency.IScheduler" />
 [System.Diagnostics.DebuggerDisplay("DispatcherSequencer: Dispatcher = {Dispatcher}, Priority = {Priority}")]
-public sealed class DispatcherSequencer : LocalScheduler
+public sealed class DispatcherSequencer : LocalScheduler, IThreadAffineSequencer
 {
+    /// <summary>The scheduler created for each dispatcher other than <see cref="Main"/>'s, kept while its dispatcher lives.</summary>
+    private static readonly ConditionalWeakTable<Dispatcher, DispatcherSequencer> ByDispatcher = new();
+
     /// <summary>The shared main-thread scheduler, set once the application's dispatcher is available.</summary>
     private static DispatcherSequencer? _main;
 
@@ -90,6 +94,21 @@ public sealed class DispatcherSequencer : LocalScheduler
     /// <summary>Gets the dispatcher priority used for posted drains.</summary>
     public DispatcherPriority Priority { get; }
 
+    /// <summary>Returns the scheduler for <paramref name="dispatcher"/>, created once per dispatcher.</summary>
+    /// <param name="dispatcher">The dispatcher whose thread runs the scheduled work.</param>
+    /// <returns>
+    /// <see cref="Main"/> once it is bound to <paramref name="dispatcher"/>; otherwise one scheduler per dispatcher at
+    /// <see cref="DispatcherPriority.Normal"/>, kept while the dispatcher lives.
+    /// </returns>
+    /// <exception cref="ArgumentNullException"><paramref name="dispatcher"/> is <see langword="null"/>.</exception>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static DispatcherSequencer For(Dispatcher dispatcher) => For(dispatcher, Volatile.Read(ref _main));
+
+    /// <summary>Returns whether the calling thread owns <see cref="Dispatcher"/>.</summary>
+    /// <returns><see langword="true"/> when the calling thread may run work for this scheduler inline.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public bool CheckAccess() => Dispatcher.CheckAccess();
+
     /// <inheritdoc/>
     /// <exception cref="ArgumentNullException"><paramref name="action"/> is <see langword="null"/>.</exception>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -101,6 +120,20 @@ public sealed class DispatcherSequencer : LocalScheduler
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public override IDisposable Schedule<TState>(TState state, TimeSpan dueTime, Func<IScheduler, TState, IDisposable> action) =>
         _dispatch.Schedule(new DispatchHost(this), this, state, dueTime, action);
+
+    /// <summary>Returns <paramref name="main"/> when it runs on <paramref name="dispatcher"/>, and otherwise the cached scheduler for it.</summary>
+    /// <param name="dispatcher">The dispatcher whose thread runs the scheduled work.</param>
+    /// <param name="main">The shared main-thread scheduler, or <see langword="null"/> while it is unbound.</param>
+    /// <returns>The scheduler for <paramref name="dispatcher"/>.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="dispatcher"/> is <see langword="null"/>.</exception>
+    internal static DispatcherSequencer For(Dispatcher dispatcher, DispatcherSequencer? main)
+    {
+        ArgumentExceptionHelper.ThrowIfNull(dispatcher);
+
+        return main is not null && ReferenceEquals(main.Dispatcher, dispatcher)
+            ? main
+            : ByDispatcher.GetValue(dispatcher, static owner => new(owner));
+    }
 
     /// <summary>Caches the shared main-thread scheduler for the application's dispatcher, keeping the first one bound.</summary>
     /// <param name="slot">The field that holds the shared scheduler.</param>

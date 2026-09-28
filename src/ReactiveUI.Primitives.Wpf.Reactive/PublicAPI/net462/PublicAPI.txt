@@ -2,16 +2,20 @@
 namespace ReactiveUI.Primitives.Reactive.Concurrency;
 
 [System.Diagnostics.DebuggerDisplay("DispatcherSequencer: Dispatcher = {Dispatcher}, Priority = {Priority}")]
-public sealed class DispatcherSequencer : System.Reactive.Concurrency.LocalScheduler
+public sealed class DispatcherSequencer : System.Reactive.Concurrency.LocalScheduler, ReactiveUI.Primitives.Concurrency.IThreadAffineSequencer
 {
     public DispatcherSequencer(System.Windows.Threading.Dispatcher dispatcher) { }
     public DispatcherSequencer(System.Windows.Threading.Dispatcher dispatcher, System.Windows.Threading.DispatcherPriority priority) { }
     public System.Windows.Threading.Dispatcher Dispatcher { get; }
+    public System.Windows.Threading.DispatcherPriority Priority { get; }
     public static ReactiveUI.Primitives.Reactive.Concurrency.DispatcherSequencer Current { get; }
     public static ReactiveUI.Primitives.Reactive.Concurrency.DispatcherSequencer Main { get; }
-    public System.Windows.Threading.DispatcherPriority Priority { get; }
+    [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+    public bool CheckAccess() { }
     [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
     public override System.IDisposable Schedule<TState>(TState state, System.Func<System.Reactive.Concurrency.IScheduler, TState, System.IDisposable> action) { }
     [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
     public override System.IDisposable Schedule<TState>(TState state, System.TimeSpan dueTime, System.Func<System.Reactive.Concurrency.IScheduler, TState, System.IDisposable> action) { }
+    [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+    public static ReactiveUI.Primitives.Reactive.Concurrency.DispatcherSequencer For(System.Windows.Threading.Dispatcher dispatcher) { }
 }

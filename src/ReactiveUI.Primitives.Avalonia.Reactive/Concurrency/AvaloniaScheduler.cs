@@ -6,6 +6,7 @@ using System.Reactive.Concurrency;
 using System.Reactive.Disposables;
 using System.Runtime.CompilerServices;
 using Avalonia.Threading;
+using ReactiveUI.Primitives.Concurrency;
 
 namespace ReactiveUI.Primitives.Reactive.Concurrency;
 
@@ -13,11 +14,14 @@ namespace ReactiveUI.Primitives.Reactive.Concurrency;
 /// <remarks>Callbacks run on the dispatcher thread at Priority; cancellation stops pending timers and suppresses unstarted actions.</remarks>
 /// <seealso cref="System.Reactive.Concurrency.IScheduler" />
 [System.Diagnostics.DebuggerDisplay("AvaloniaScheduler: Dispatcher = {Dispatcher}, Priority = {Priority}")]
-public sealed class AvaloniaScheduler : LocalScheduler
+public sealed class AvaloniaScheduler : LocalScheduler, IThreadAffineSequencer
 {
     /// <summary>Gets the shared scheduler for <see cref="Dispatcher.UIThread"/>.</summary>
     public static readonly AvaloniaScheduler Instance =
         new(Dispatcher.UIThread, DispatcherPriority.Background);
+
+    /// <summary>The scheduler created for each dispatcher other than <see cref="Instance"/>'s, kept while its dispatcher lives.</summary>
+    private static readonly ConditionalWeakTable<Dispatcher, AvaloniaScheduler> ByDispatcher = new();
 
     /// <summary>Posts immediate work.</summary>
     private readonly Action<Action> _post;
@@ -69,6 +73,27 @@ public sealed class AvaloniaScheduler : LocalScheduler
 
     /// <summary>Gets the dispatcher priority used for posted drains and delayed work.</summary>
     public DispatcherPriority Priority { get; }
+
+    /// <summary>Returns the scheduler for <paramref name="dispatcher"/>, created once per dispatcher.</summary>
+    /// <param name="dispatcher">The dispatcher whose thread runs the scheduled work.</param>
+    /// <returns>
+    /// <see cref="Instance"/> for its own dispatcher; otherwise one scheduler per dispatcher at
+    /// <see cref="DispatcherPriority.Background"/>, kept while the dispatcher lives.
+    /// </returns>
+    /// <exception cref="ArgumentNullException"><paramref name="dispatcher"/> is <see langword="null"/>.</exception>
+    public static AvaloniaScheduler For(Dispatcher dispatcher)
+    {
+        ArgumentExceptionHelper.ThrowIfNull(dispatcher);
+
+        return ReferenceEquals(dispatcher, Instance.Dispatcher)
+            ? Instance
+            : ByDispatcher.GetValue(dispatcher, static owner => new(owner));
+    }
+
+    /// <summary>Returns whether the calling thread owns <see cref="Dispatcher"/>.</summary>
+    /// <returns><see langword="true"/> when the calling thread may run work for this scheduler inline.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public bool CheckAccess() => Dispatcher.CheckAccess();
 
     /// <inheritdoc/>
     /// <exception cref="ArgumentNullException"><paramref name="action"/> is <see langword="null"/>.</exception>

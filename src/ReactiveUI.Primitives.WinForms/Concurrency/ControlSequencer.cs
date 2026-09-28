@@ -13,8 +13,11 @@ namespace ReactiveUI.Primitives.Concurrency;
 /// </remarks>
 /// <seealso cref="ISequencer" />
 [System.Diagnostics.DebuggerDisplay("{DebuggerDisplay,nq}")]
-public sealed class ControlSequencer : ISequencer
+public sealed class ControlSequencer : ISequencer, IThreadAffineSequencer
 {
+    /// <summary>The sequencer created for each control other than <see cref="Main"/>'s, kept while its control lives.</summary>
+    private static readonly ConditionalWeakTable<Control, ControlSequencer> ByControl = new();
+
     /// <summary>The shared main-thread sequencer, set once a UI thread first reads it.</summary>
     private static ControlSequencer? _main;
 
@@ -69,6 +72,21 @@ public sealed class ControlSequencer : ISequencer
     [System.Diagnostics.DebuggerBrowsable(System.Diagnostics.DebuggerBrowsableState.Never)]
     private string DebuggerDisplay => ToString() ?? string.Empty;
 
+    /// <summary>Returns the sequencer for <paramref name="control"/>, created once per control.</summary>
+    /// <param name="control">The control whose UI thread runs the scheduled work.</param>
+    /// <returns>
+    /// <see cref="Main"/> once it is bound to <paramref name="control"/>; otherwise one sequencer per control, kept while the
+    /// control lives.
+    /// </returns>
+    /// <exception cref="ArgumentNullException"><paramref name="control"/> is <see langword="null"/>.</exception>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static ControlSequencer For(Control control) => For(control, Volatile.Read(ref _main));
+
+    /// <summary>Returns whether the calling thread owns <see cref="Control"/>'s handle.</summary>
+    /// <returns><see langword="true"/> when the calling thread may run work for this sequencer inline.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public bool CheckAccess() => !Control.InvokeRequired;
+
     /// <inheritdoc/>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void Schedule(IWorkItem item) => _state.Schedule(item);
@@ -76,6 +94,20 @@ public sealed class ControlSequencer : ISequencer
     /// <inheritdoc/>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void Schedule(IWorkItem item, long dueTimestamp) => _state.Schedule(item, dueTimestamp);
+
+    /// <summary>Returns <paramref name="main"/> when it runs through <paramref name="control"/>, and otherwise the cached sequencer for it.</summary>
+    /// <param name="control">The control whose UI thread runs the scheduled work.</param>
+    /// <param name="main">The shared main-thread sequencer, or <see langword="null"/> while it is unbound.</param>
+    /// <returns>The sequencer for <paramref name="control"/>.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="control"/> is <see langword="null"/>.</exception>
+    internal static ControlSequencer For(Control control, ControlSequencer? main)
+    {
+        ArgumentExceptionHelper.ThrowIfNull(control);
+
+        return main is not null && ReferenceEquals(main.Control, control)
+            ? main
+            : ByControl.GetValue(control, static owner => new(owner));
+    }
 
     /// <summary>Caches the shared main-thread sequencer for a hidden control on the calling thread, keeping the first one bound.</summary>
     /// <param name="slot">The field that holds the shared sequencer.</param>
