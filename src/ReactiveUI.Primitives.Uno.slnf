@@ -1,0 +1,9 @@
+{
+  "solution": {
+    "path": "ReactiveUI.Primitives.slnx",
+    "projects": [
+      "ReactiveUI.Primitives.Uno\\ReactiveUI.Primitives.Uno.csproj",
+      "ReactiveUI.Primitives.Uno.Reactive\\ReactiveUI.Primitives.Uno.Reactive.csproj"
+    ]
+  }
+}

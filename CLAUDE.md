@@ -11,7 +11,7 @@ If there is any conflict between other agent instruction files and this file, fo
 
 - **Repository root:** `.`
 - **Primary working directory for build/test:** `./src`
-- **Main solution:** `src/ReactiveUI.Primitives.slnx`
+- **Main solution:** `src/ReactiveUI.Primitives.slnx`, built through `src/ReactiveUI.Primitives.slnf` and `src/ReactiveUI.Primitives.Uno.slnf`
 - **Benchmarks project:** `src/benchmarks/ReactiveUI.Primitives.Benchmarks/ReactiveUI.Primitives.Benchmarks.csproj`
 - **Tests:** `src/tests/`
 
@@ -21,8 +21,13 @@ If there is any conflict between other agent instruction files and this file, fo
 
 This repository uses **SLNX** (XML-based solution format) instead of legacy `.sln`.
 
-- Main file: `src/ReactiveUI.Primitives.slnx`
-- Use `dotnet build` / `dotnet test` against the `.slnx` file the same way as a `.sln`
+- Main file: `src/ReactiveUI.Primitives.slnx`. It holds every project, for the IDE.
+- Build and test with the solution filters, not the `.slnx`:
+  - `src/ReactiveUI.Primitives.slnf` holds every project except the Uno ones. `dotnet` builds it on any OS.
+  - `src/ReactiveUI.Primitives.Uno.slnf` holds the Uno.Sdk projects. Their Windows head needs MSBuild, so CI builds
+    this filter in its own Windows job with MSBuild (`msbuildSolutionFile` in the shared workflows). On Linux and macOS,
+    `dotnet build` builds the other Uno heads.
+- A new project goes in the `.slnx` and in one of the two filters.
 
 ---
 
@@ -41,23 +46,26 @@ Running `dotnet test` from the repository root can trigger Microsoft Testing Pla
 ```bash
 cd src
 
-dotnet restore "ReactiveUI.Primitives.slnx"
-dotnet build "ReactiveUI.Primitives.slnx"
-dotnet build "ReactiveUI.Primitives.slnx" -c Release
-dotnet clean "ReactiveUI.Primitives.slnx"
+dotnet restore "ReactiveUI.Primitives.slnf"
+dotnet build "ReactiveUI.Primitives.slnf"
+dotnet build "ReactiveUI.Primitives.slnf" -c Release
+dotnet clean "ReactiveUI.Primitives.slnf"
+
+# The Uno projects
+dotnet build "ReactiveUI.Primitives.Uno.slnf" -c Release
 ```
 
 ### Full Solution Test Command
 
 ```bash
 cd src
-dotnet test "ReactiveUI.Primitives.slnx"
+dotnet test --solution "ReactiveUI.Primitives.slnf"
 ```
 
 Equivalent explicit invocation:
 
 ```bash
-dotnet test "ReactiveUI.Primitives.slnx"
+dotnet test --solution "ReactiveUI.Primitives.slnf"
 ```
 
 with `workdir` set to:
@@ -88,13 +96,13 @@ This repository uses **Microsoft Testing Platform (MTP)** with **TUnit**. This d
 cd src
 
 # Run all tests
-dotnet test "ReactiveUI.Primitives.slnx"
+dotnet test --solution "ReactiveUI.Primitives.slnf"
 
 # Run a specific project
 dotnet test "tests/ReactiveUI.Primitives.Tests/ReactiveUI.Primitives.Tests.csproj"
 
 # Detailed output (argument goes after --)
-dotnet test "ReactiveUI.Primitives.slnx" -- --output Detailed
+dotnet test --solution "ReactiveUI.Primitives.slnf" -- --output Detailed
 
 # List tests for a project
 dotnet test "tests/ReactiveUI.Primitives.Tests/ReactiveUI.Primitives.Tests.csproj" -- --list-tests
