@@ -2,18 +2,22 @@
 namespace ReactiveUI.Primitives.Concurrency;
 
 [System.Diagnostics.DebuggerDisplay("{DebuggerDisplay,nq}")]
-public sealed class DispatcherSequencer : ReactiveUI.Primitives.Concurrency.ISequencer
+public sealed class DispatcherSequencer : ReactiveUI.Primitives.Concurrency.ISequencer, ReactiveUI.Primitives.Concurrency.IThreadAffineSequencer
 {
     public DispatcherSequencer(System.Windows.Threading.Dispatcher dispatcher) { }
     public DispatcherSequencer(System.Windows.Threading.Dispatcher dispatcher, System.Windows.Threading.DispatcherPriority priority) { }
     public System.Windows.Threading.Dispatcher Dispatcher { get; }
-    public static ReactiveUI.Primitives.Concurrency.DispatcherSequencer Current { get; }
-    public static ReactiveUI.Primitives.Concurrency.DispatcherSequencer Main { get; }
     public System.DateTimeOffset Now { get; }
     public System.Windows.Threading.DispatcherPriority Priority { get; }
     public long Timestamp { get; }
+    public static ReactiveUI.Primitives.Concurrency.DispatcherSequencer Current { get; }
+    public static ReactiveUI.Primitives.Concurrency.DispatcherSequencer Main { get; }
+    [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+    public bool CheckAccess() { }
     [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
     public void Schedule(ReactiveUI.Primitives.Concurrency.IWorkItem item) { }
     [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
     public void Schedule(ReactiveUI.Primitives.Concurrency.IWorkItem item, long dueTimestamp) { }
+    [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+    public static ReactiveUI.Primitives.Concurrency.DispatcherSequencer For(System.Windows.Threading.Dispatcher dispatcher) { }
 }

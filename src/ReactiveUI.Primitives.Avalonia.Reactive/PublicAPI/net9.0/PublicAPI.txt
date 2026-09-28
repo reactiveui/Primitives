@@ -2,7 +2,7 @@
 namespace ReactiveUI.Primitives.Reactive.Concurrency;
 
 [System.Diagnostics.DebuggerDisplay("AvaloniaScheduler: Dispatcher = {Dispatcher}, Priority = {Priority}")]
-public sealed class AvaloniaScheduler : System.Reactive.Concurrency.LocalScheduler
+public sealed class AvaloniaScheduler : System.Reactive.Concurrency.LocalScheduler, ReactiveUI.Primitives.Concurrency.IThreadAffineSequencer
 {
     public AvaloniaScheduler(Avalonia.Threading.Dispatcher dispatcher) { }
     public AvaloniaScheduler(Avalonia.Threading.Dispatcher dispatcher, Avalonia.Threading.DispatcherPriority priority) { }
@@ -10,7 +10,10 @@ public sealed class AvaloniaScheduler : System.Reactive.Concurrency.LocalSchedul
     public Avalonia.Threading.Dispatcher Dispatcher { get; }
     public Avalonia.Threading.DispatcherPriority Priority { get; }
     [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+    public bool CheckAccess() { }
+    [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
     public override System.IDisposable Schedule<TState>(TState state, System.Func<System.Reactive.Concurrency.IScheduler, TState, System.IDisposable> action) { }
     [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
     public override System.IDisposable Schedule<TState>(TState state, System.TimeSpan dueTime, System.Func<System.Reactive.Concurrency.IScheduler, TState, System.IDisposable> action) { }
+    public static ReactiveUI.Primitives.Reactive.Concurrency.AvaloniaScheduler For(Avalonia.Threading.Dispatcher dispatcher) { }
 }

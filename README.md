@@ -227,6 +227,8 @@ Each package covers one integration point. Take the ones you need.
 | [ReactiveUI.Primitives.WinForms.Reactive][WinFormsRx] | [![WinFormsRxB]][WinFormsRx] | You want a Windows Forms control as a System.Reactive scheduler. |
 | [ReactiveUI.Primitives.WinUI][WinUI] | [![WinUIB]][WinUI] | You want the WinUI dispatcher queue as a sequencer. |
 | [ReactiveUI.Primitives.WinUI.Reactive][WinUIRx] | [![WinUIRxB]][WinUIRx] | You want the WinUI dispatcher queue as a System.Reactive scheduler. |
+| [ReactiveUI.Primitives.Uno][Uno] | [![UnoB]][Uno] | You want an Uno Platform dispatcher queue as a sequencer. |
+| [ReactiveUI.Primitives.Uno.Reactive][UnoRx] | [![UnoRxB]][UnoRx] | You want an Uno Platform dispatcher queue as a System.Reactive scheduler. |
 | [ReactiveUI.Primitives.Blazor][Blazor] | [![BlazorB]][Blazor] | You want the Blazor renderer as a sequencer. |
 | [ReactiveUI.Primitives.Blazor.Reactive][BlazorRx] | [![BlazorRxB]][BlazorRx] | You want the Blazor renderer as a System.Reactive scheduler. |
 | [ReactiveUI.Primitives.Avalonia][Avalonia] | [![AvaloniaB]][Avalonia] | You want the Avalonia UI thread as a sequencer. |
@@ -304,6 +306,14 @@ R3Async types.
 [WinUIRx]: https://www.nuget.org/packages/ReactiveUI.Primitives.WinUI.Reactive/
 
 [WinUIRxB]: https://img.shields.io/nuget/v/ReactiveUI.Primitives.WinUI.Reactive.svg
+
+[Uno]: https://www.nuget.org/packages/ReactiveUI.Primitives.Uno/
+
+[UnoB]: https://img.shields.io/nuget/v/ReactiveUI.Primitives.Uno.svg
+
+[UnoRx]: https://www.nuget.org/packages/ReactiveUI.Primitives.Uno.Reactive/
+
+[UnoRxB]: https://img.shields.io/nuget/v/ReactiveUI.Primitives.Uno.Reactive.svg
 
 [Blazor]: https://www.nuget.org/packages/ReactiveUI.Primitives.Blazor/
 

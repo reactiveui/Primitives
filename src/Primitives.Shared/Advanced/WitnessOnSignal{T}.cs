@@ -23,6 +23,19 @@ public sealed class WitnessOnSignal<T>(IObservable<T> source, ISequencer schedul
     /// <summary>The sequencer that dispatches the notifications.</summary>
     private readonly ISequencer _scheduler = scheduler;
 
+    /// <summary>Reports whether the calling thread owns <see cref="_scheduler"/>, or <see langword="null"/> to always dispatch.</summary>
+    private readonly IThreadAffineSequencer? _owner;
+
+    /// <summary>Initializes a new instance of the <see cref="WitnessOnSignal{T}"/> class that delivers inline on the owning thread.</summary>
+    /// <param name="source">The source observable.</param>
+    /// <param name="scheduler">The sequencer that dispatches notifications raised off the owning thread.</param>
+    /// <param name="owner">
+    /// Reports whether the calling thread owns <paramref name="scheduler"/>. A notification raised on that thread while
+    /// nothing is waiting is delivered inline; once any notification waits, later ones queue behind it.
+    /// </param>
+    public WitnessOnSignal(IObservable<T> source, ISequencer scheduler, IThreadAffineSequencer owner)
+        : this(source, scheduler) => _owner = owner;
+
     /// <summary>Reports that subscription is dispatched through the current-thread sequencer.</summary>
     /// <returns>Always <see langword="true"/>.</returns>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -176,6 +189,14 @@ public sealed class WitnessOnSignal<T>(IObservable<T> source, ISequencer schedul
                 }
 
                 _isScheduled = true;
+            }
+
+            // Nothing was waiting, so this notification is first in line and may run here when this thread owns the
+            // sequencer. Notifications raised meanwhile queue behind it and this drain delivers them in order.
+            if (_parent._owner?.CheckAccess() == true)
+            {
+                Execute();
+                return;
             }
 
             _parent._scheduler.Schedule(this);

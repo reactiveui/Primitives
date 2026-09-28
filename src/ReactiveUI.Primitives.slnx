@@ -35,6 +35,7 @@
         <Project Path="ReactiveUI.Primitives.Maui/ReactiveUI.Primitives.Maui.csproj" />
         <Project Path="ReactiveUI.Primitives.WinForms/ReactiveUI.Primitives.WinForms.csproj" />
         <Project Path="ReactiveUI.Primitives.WinUI/ReactiveUI.Primitives.WinUI.csproj" />
+        <Project Path="ReactiveUI.Primitives.Uno/ReactiveUI.Primitives.Uno.csproj" />
         <Project Path="ReactiveUI.Primitives.Wpf/ReactiveUI.Primitives.Wpf.csproj" />
         <Project Path="ReactiveUI.Primitives/ReactiveUI.Primitives.csproj" />
     </Folder>
@@ -55,6 +56,7 @@
         <Project Path="ReactiveUI.Primitives.Reactive/ReactiveUI.Primitives.Reactive.csproj" />
         <Project Path="ReactiveUI.Primitives.WinForms.Reactive/ReactiveUI.Primitives.WinForms.Reactive.csproj" />
         <Project Path="ReactiveUI.Primitives.WinUI.Reactive/ReactiveUI.Primitives.WinUI.Reactive.csproj" />
+        <Project Path="ReactiveUI.Primitives.Uno.Reactive/ReactiveUI.Primitives.Uno.Reactive.csproj" />
         <Project Path="ReactiveUI.Primitives.Wpf.Reactive/ReactiveUI.Primitives.Wpf.Reactive.csproj" />
     </Folder>
     <Folder Name="/tests/">

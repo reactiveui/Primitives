@@ -4,6 +4,7 @@
 
 using System.Reactive.Concurrency;
 using System.Runtime.CompilerServices;
+using ReactiveUI.Primitives.Concurrency;
 
 namespace ReactiveUI.Primitives.Reactive.Concurrency;
 
@@ -11,8 +12,11 @@ namespace ReactiveUI.Primitives.Reactive.Concurrency;
 /// <remarks>Callbacks run on the control thread; work queued before handle creation waits for the handle.</remarks>
 /// <seealso cref="System.Reactive.Concurrency.IScheduler" />
 [System.Diagnostics.DebuggerDisplay("ControlSequencer: Control = {Control}")]
-public sealed class ControlSequencer : LocalScheduler
+public sealed class ControlSequencer : LocalScheduler, IThreadAffineSequencer
 {
+    /// <summary>The scheduler created for each control other than <see cref="Main"/>'s, kept while its control lives.</summary>
+    private static readonly ConditionalWeakTable<Control, ControlSequencer> ByControl = new();
+
     /// <summary>The shared main-thread scheduler, set once a UI thread first reads it.</summary>
     private static ControlSequencer? _main;
 
@@ -57,6 +61,21 @@ public sealed class ControlSequencer : LocalScheduler
     /// <summary>Gets the control used to marshal work to the UI thread.</summary>
     public Control Control { get; }
 
+    /// <summary>Returns the scheduler for <paramref name="control"/>, created once per control.</summary>
+    /// <param name="control">The control whose UI thread runs the scheduled work.</param>
+    /// <returns>
+    /// <see cref="Main"/> once it is bound to <paramref name="control"/>; otherwise one scheduler per control, kept while the
+    /// control lives.
+    /// </returns>
+    /// <exception cref="ArgumentNullException"><paramref name="control"/> is <see langword="null"/>.</exception>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static ControlSequencer For(Control control) => For(control, Volatile.Read(ref _main));
+
+    /// <summary>Returns whether the calling thread owns <see cref="Control"/>'s handle.</summary>
+    /// <returns><see langword="true"/> when the calling thread may run work for this scheduler inline.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public bool CheckAccess() => !Control.InvokeRequired;
+
     /// <inheritdoc/>
     /// <exception cref="ArgumentNullException"><paramref name="action"/> is <see langword="null"/>.</exception>
     /// <exception cref="ObjectDisposedException">The control has been disposed.</exception>
@@ -70,6 +89,20 @@ public sealed class ControlSequencer : LocalScheduler
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public override IDisposable Schedule<TState>(TState state, TimeSpan dueTime, Func<IScheduler, TState, IDisposable> action) =>
         _dispatch.Schedule(new DispatchHost(this), this, state, dueTime, action);
+
+    /// <summary>Returns <paramref name="main"/> when it runs through <paramref name="control"/>, and otherwise the cached scheduler for it.</summary>
+    /// <param name="control">The control whose UI thread runs the scheduled work.</param>
+    /// <param name="main">The shared main-thread scheduler, or <see langword="null"/> while it is unbound.</param>
+    /// <returns>The scheduler for <paramref name="control"/>.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="control"/> is <see langword="null"/>.</exception>
+    internal static ControlSequencer For(Control control, ControlSequencer? main)
+    {
+        ArgumentExceptionHelper.ThrowIfNull(control);
+
+        return main is not null && ReferenceEquals(main.Control, control)
+            ? main
+            : ByControl.GetValue(control, static owner => new(owner));
+    }
 
     /// <summary>Caches the shared main-thread scheduler for a hidden control on the calling thread, keeping the first one bound.</summary>
     /// <param name="slot">The field that holds the shared scheduler.</param>

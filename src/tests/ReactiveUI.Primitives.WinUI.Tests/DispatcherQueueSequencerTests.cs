@@ -235,6 +235,58 @@ public sealed class DispatcherQueueSequencerTests
         }
     }
 
+    /// <summary>The calling thread owns the sequencer exactly when it runs the dispatcher queue.</summary>
+    /// <returns>The test operation.</returns>
+    [Test]
+    public async Task CheckAccessFollowsTheDispatcherQueue()
+    {
+        var controller = DispatcherQueueController.CreateOnDedicatedThread();
+        try
+        {
+            DispatcherQueueSequencer sequencer = new(controller.DispatcherQueue);
+
+            await Assert.That(sequencer.CheckAccess()).IsFalse();
+            await Assert.That(await RunOnQueue(controller.DispatcherQueue, sequencer.CheckAccess)).IsTrue();
+        }
+        finally
+        {
+            await controller.ShutdownQueueAsync();
+        }
+    }
+
+    /// <summary>The per-queue lookup rejects a missing dispatcher queue.</summary>
+    /// <returns>The test operation.</returns>
+    [Test]
+    public async Task ForRejectsNullDispatcherQueue() =>
+        await Assert.That(static () => DispatcherQueueSequencer.For(null!)).ThrowsExactly<ArgumentNullException>();
+
+    /// <summary>The lookup returns the bound main sequencer for its queue and one cached sequencer for any other.</summary>
+    /// <returns>The test operation.</returns>
+    [Test]
+    public async Task ForCachesOneSequencerPerDispatcherQueue()
+    {
+        var mainController = DispatcherQueueController.CreateOnDedicatedThread();
+        var otherController = DispatcherQueueController.CreateOnDedicatedThread();
+        try
+        {
+            var other = otherController.DispatcherQueue;
+            DispatcherQueueSequencer main = new(mainController.DispatcherQueue);
+
+            var cached = DispatcherQueueSequencer.For(other, main);
+
+            await Assert.That(DispatcherQueueSequencer.For(mainController.DispatcherQueue, main)).IsSameReferenceAs(main);
+            await Assert.That(cached.DispatcherQueue).IsSameReferenceAs(other);
+            await Assert.That(cached.Priority).IsEqualTo(DispatcherQueuePriority.Normal);
+            await Assert.That(DispatcherQueueSequencer.For(other, null)).IsSameReferenceAs(cached);
+            await Assert.That(DispatcherQueueSequencer.For(other)).IsSameReferenceAs(cached);
+        }
+        finally
+        {
+            await mainController.ShutdownQueueAsync();
+            await otherController.ShutdownQueueAsync();
+        }
+    }
+
     /// <summary>Reads <see cref="DispatcherQueueSequencer.Current"/> twice on the calling thread.</summary>
     /// <returns>Both reads.</returns>
     private static (DispatcherQueueSequencer Sequencer, DispatcherQueueSequencer Repeat) CaptureCurrent() =>

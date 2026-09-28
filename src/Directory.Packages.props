@@ -17,7 +17,7 @@
     <PackageVersion Include="PerformanceSharp.Analyzers" Version="$(RoslynCommonAnalyzersVersion)"/>
     <PackageVersion Include="SecuritySharp.Analyzers" Version="$(RoslynCommonAnalyzersVersion)"/>
     <PackageVersion Include="Microsoft.CodeAnalysis.BannedApiAnalyzers" Version="5.6.0"/>
-    <PackageVersion Include="PublicApiSharp.Analyzers" Version="2.0.1"/>
+    <PackageVersion Include="PublicApiSharp.Analyzers" Version="2.1.0"/>
   </ItemGroup>
   <!-- OccasionallyConnected SQLite storage -->
   <ItemGroup>
@@ -59,9 +59,11 @@
     <PackageVersion Include="Microsoft.Extensions.Logging.Abstractions" Version="11.0.0-rc.1.26425.128" Condition="$([MSBuild]::IsTargetFrameworkCompatible('$(TargetFramework)', 'net11.0'))"/>
     <PackageVersion Include="Microsoft.Extensions.Options" Version="10.0.12" Condition="!$([MSBuild]::IsTargetFrameworkCompatible('$(TargetFramework)', 'net11.0'))"/>
     <PackageVersion Include="Microsoft.Extensions.Options" Version="11.0.0-rc.1.26425.128" Condition="$([MSBuild]::IsTargetFrameworkCompatible('$(TargetFramework)', 'net11.0'))"/>
-    <PackageVersion Include="Microsoft.Maui.Core" Version="10.0.101" Condition="$([MSBuild]::IsTargetFrameworkCompatible('$(TargetFramework)', 'net10.0')) AND !$([MSBuild]::IsTargetFrameworkCompatible('$(TargetFramework)', 'net11.0'))"/>
+    <PackageVersion Include="Microsoft.Maui.Core" Version="10.0.110" Condition="$([MSBuild]::IsTargetFrameworkCompatible('$(TargetFramework)', 'net10.0')) AND !$([MSBuild]::IsTargetFrameworkCompatible('$(TargetFramework)', 'net11.0'))"/>
     <PackageVersion Include="Microsoft.Maui.Core" Version="11.0.0-rc.1.26451.6" Condition="$([MSBuild]::IsTargetFrameworkCompatible('$(TargetFramework)', 'net11.0'))"/>
     <PackageVersion Include="Microsoft.WindowsAppSDK" Version="2.5.1"/>
+    <!-- The Uno.WinUI release Uno.Sdk in global.json pins; the Uno projects reference it explicitly. -->
+    <PackageVersion Include="Uno.WinUI" Version="6.7.135"/>
   </ItemGroup>
   <!-- .NET Framework legs -->
   <ItemGroup Condition="$(TargetFramework.StartsWith('net4'))">
@@ -81,7 +83,7 @@
     <!-- BenchmarkDotNet needs Roslyn 5.3+; this also reaches the job projects it generates under the benchmark bin folders. -->
     <PackageVersion Include="Microsoft.CodeAnalysis.CSharp" Version="5.9.0" Condition="$(MSBuildProjectDirectory.Replace('\', '/').Contains('/benchmarks/'))"/>
     <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="18.10.1"/>
-    <PackageVersion Include="TUnit" Version="1.69.0"/>
+    <PackageVersion Include="TUnit" Version="1.70.1"/>
     <PackageVersion Include="Microsoft.Testing.Extensions.CodeCoverage" Version="18.11.2"/>
   </ItemGroup>
   <!-- OccasionallyConnected storage and serialization dependencies. -->

@@ -12,11 +12,14 @@ namespace ReactiveUI.Primitives.Concurrency;
 /// <remarks>Callbacks run at Priority in posted dispatcher batches without inline reentrancy; cancellation suppresses unstarted work.</remarks>
 /// <seealso cref="ISequencer" />
 [System.Diagnostics.DebuggerDisplay("{DebuggerDisplay,nq}")]
-public sealed class AvaloniaScheduler : ISequencer
+public sealed class AvaloniaScheduler : ISequencer, IThreadAffineSequencer
 {
     /// <summary>Gets the shared scheduler for <see cref="Dispatcher.UIThread"/>.</summary>
     public static readonly AvaloniaScheduler Instance =
         new(Dispatcher.UIThread, DispatcherPriority.Background);
+
+    /// <summary>The scheduler created for each dispatcher other than <see cref="Instance"/>'s, kept while its dispatcher lives.</summary>
+    private static readonly ConditionalWeakTable<Dispatcher, AvaloniaScheduler> ByDispatcher = new();
 
     /// <summary>Coalescing dispatch engine.</summary>
     private DispatchSequencerState _state;
@@ -71,6 +74,27 @@ public sealed class AvaloniaScheduler : ISequencer
     [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
     [System.Diagnostics.DebuggerBrowsable(System.Diagnostics.DebuggerBrowsableState.Never)]
     private string DebuggerDisplay => ToString() ?? string.Empty;
+
+    /// <summary>Returns the scheduler for <paramref name="dispatcher"/>, created once per dispatcher.</summary>
+    /// <param name="dispatcher">The dispatcher whose thread runs the scheduled work.</param>
+    /// <returns>
+    /// <see cref="Instance"/> for its own dispatcher; otherwise one scheduler per dispatcher at
+    /// <see cref="DispatcherPriority.Background"/>, kept while the dispatcher lives.
+    /// </returns>
+    /// <exception cref="ArgumentNullException"><paramref name="dispatcher"/> is <see langword="null"/>.</exception>
+    public static AvaloniaScheduler For(Dispatcher dispatcher)
+    {
+        ArgumentExceptionHelper.ThrowIfNull(dispatcher);
+
+        return ReferenceEquals(dispatcher, Instance.Dispatcher)
+            ? Instance
+            : ByDispatcher.GetValue(dispatcher, static owner => new(owner));
+    }
+
+    /// <summary>Returns whether the calling thread owns <see cref="Dispatcher"/>.</summary>
+    /// <returns><see langword="true"/> when the calling thread may run work for this scheduler inline.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public bool CheckAccess() => Dispatcher.CheckAccess();
 
     /// <inheritdoc/>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]

@@ -51,6 +51,11 @@
     <MauiTargetFrameworks>net10.0;net11.0</MauiTargetFrameworks>
     <MauiTestTargetFrameworks>net10.0;net11.0</MauiTestTargetFrameworks>
     <WinUITargetFrameworks>net8.0-windows10.0.19041.0;net9.0-windows10.0.19041.0;net10.0-windows10.0.19041.0;net11.0-windows10.0.19041.0</WinUITargetFrameworks>
+    <!-- Uno.Sdk heads. The Windows head builds only on Windows, with MSBuild, and the Apple head on Windows or
+         macOS; the Uno projects sit in ReactiveUI.Primitives.Uno.slnf so the dotnet build never loads them. -->
+    <UnoTargetFrameworks>net10.0;net10.0-desktop;net10.0-browserwasm;net11.0;net11.0-desktop;net11.0-browserwasm;net10.0-android;net11.0-android</UnoTargetFrameworks>
+    <UnoTargetFrameworks Condition="$([MSBuild]::IsOsPlatform('Windows'))">$(UnoTargetFrameworks);net10.0-windows10.0.19041.0;net11.0-windows10.0.19041.0</UnoTargetFrameworks>
+    <UnoTargetFrameworks Condition="$([MSBuild]::IsOsPlatform('Windows')) or $([MSBuild]::IsOsPlatform('OSX'))">$(UnoTargetFrameworks);net10.0-ios;net11.0-ios</UnoTargetFrameworks>
     <TestTargetFrameworks>$(NetTargetFrameworks)</TestTargetFrameworks>
     <!-- OS-platform sequencers that live in the core package: the platform SDK comes from the TFM itself
          (unlike WPF/WinUI/MAUI which are frameworks layered on a TFM and ship as their own packages).
