@@ -11,7 +11,7 @@ namespace ReactiveUI.Primitives.OccasionallyConnected.Storage.Sqlite;
 /// <summary>Records and verifies a hash of the schema definitions of a local store.</summary>
 /// <remarks>
 /// The checksum covers every table, index, trigger and view in <c>sqlite_master</c> except SQLite's own objects. The
-/// store records it after it creates or migrates the schema, and verifies it before it changes the file. A mismatch
+/// store records it when it creates the schema, and verifies it before it changes an existing file. A mismatch
 /// means something outside the store changed the schema, so opening fails closed. The hash is not keyed: it detects
 /// drift and corruption, not a deliberate edit that also rewrites the recorded value.
 /// </remarks>
@@ -76,15 +76,14 @@ internal static class SqliteSchemaChecksum
         return AlgorithmPrefix + ToHex(Hash(Encoding.UTF8.GetBytes(builder.ToString())));
     }
 
-    /// <summary>Verifies the recorded checksum when one exists.</summary>
+    /// <summary>Verifies the required recorded checksum.</summary>
     /// <param name="connection">The open connection.</param>
     /// <param name="transaction">The current transaction.</param>
     /// <exception cref="InvalidOperationException">The schema does not match its recorded checksum.</exception>
-    /// <remarks>A store written before checksums existed has no recorded value; the store records one when it next opens it.</remarks>
     internal static void Verify(SqliteConnection connection, SqliteTransaction transaction)
     {
         var recorded = TrySelect(connection, transaction);
-        if (recorded is null || FixedTimeEquals(recorded, Compute(connection, transaction)))
+        if (recorded is not null && FixedTimeEquals(recorded, Compute(connection, transaction)))
         {
             return;
         }

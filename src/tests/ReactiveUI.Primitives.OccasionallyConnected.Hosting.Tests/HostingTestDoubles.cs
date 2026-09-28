@@ -16,9 +16,10 @@ internal static class HostingTestDoubles
     /// <param name="status">The lifecycle status.</param>
     /// <param name="pendingOperations">The pending operation count.</param>
     /// <param name="reasonCode">The reason code.</param>
+    /// <param name="retryAfter">The optional retry delay.</param>
     /// <returns>The state.</returns>
-    internal static SyncState CreateState(SyncLifecycleStatus status, int pendingOperations, string? reasonCode) =>
-        new(status, NetworkAvailable: false, pendingOperations, pendingOperations * BytesPerOperation, DateTimeOffset.UnixEpoch, null, null, reasonCode);
+    internal static SyncState CreateState(SyncLifecycleStatus status, int pendingOperations, string? reasonCode, TimeSpan? retryAfter = null) =>
+        new(status, NetworkAvailable: false, pendingOperations, pendingOperations * BytesPerOperation, DateTimeOffset.UnixEpoch, null, retryAfter, reasonCode);
 
     /// <summary>A context that records lifecycle calls and publishes states on demand.</summary>
     internal sealed class RecordingContext : IOccasionallyConnectedContext, IObservable<SyncState>

@@ -2,7 +2,6 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
-using System.Data;
 using Microsoft.Data.Sqlite;
 using ReactiveUI.Primitives.OccasionallyConnected;
 
@@ -42,7 +41,7 @@ internal sealed partial class SqliteLocalCommitStore
         using var connection = OpenStoreConnection(storeIdentity);
         SqliteLocalCommitConnection.ConfigureLockPolling(connection);
         SqliteConnectionSettings.ConfigureOperationalConnection(connection);
-        using var transaction = connection.BeginTransaction(IsolationLevel.Serializable, deferred: true);
+        using var transaction = BeginVerifiedReadTransaction(connection);
         var stream = SqliteLocalCommitSql.PreflightSnapshotRecoveryCapture(
             connection,
             transaction,
@@ -74,7 +73,7 @@ internal sealed partial class SqliteLocalCommitStore
             ReplayOperations = recoveredStream.ReplayOperations,
         };
         cancellationToken.ThrowIfCancellationRequested();
-        transaction.Commit();
+        CommitWithOperationStateIntegrity(transaction);
         return capture;
     }
 }

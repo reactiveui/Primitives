@@ -97,6 +97,40 @@ public sealed partial class SqliteLocalStoreAdapterTests
         await Assert.That(action).ThrowsExactly<InvalidOperationException>();
     }
 
+    /// <summary>Verifies a missing protection marker cannot turn encrypted V1 rows into plaintext.</summary>
+    /// <param name="withKey">Whether the reopening adapter has the original key.</param>
+    /// <returns>A task that represents the asynchronous test.</returns>
+    [Test]
+    [Arguments(true)]
+    [Arguments(false)]
+    public async Task WhenProtectedVersionOneMarkerIsDeleted_ThenReopenFailsWithoutRewrite(bool withKey)
+    {
+        using var database = TempDatabase.Create();
+        _ = await SeedEncryptedDatabaseAsync(database.Path);
+        var originalKeyId = ReadPendingPayloadKeyId(database.Path);
+        await using (var connection = OpenRawConnection(database.Path))
+        await using (var command = connection.CreateCommand())
+        {
+            command.CommandText = "DELETE FROM oc_metadata WHERE key = 'rxui.localstore.record_protection';";
+            await Assert.That(await command.ExecuteNonQueryAsync()).IsEqualTo(1);
+        }
+
+        var metadataBefore = ReadProtectedMetadata(database.Path);
+        await Assert.That(metadataBefore.Contains("rxui.localstore.record_protection_check", StringComparison.Ordinal)).IsTrue();
+        await Assert.That(metadataBefore.Contains("rxui.localstore.operation_state_manifest", StringComparison.Ordinal)).IsTrue();
+
+        await using var reopened = withKey
+            ? CreateEncryptedAdapter(database.Path, CreateFirstKeyProvider())
+            : CreateAdapter(database.Path);
+        Func<Task> initialize = () => reopened.InitializeAsync(
+            withKey ? CreateEncryptedInitialization() : CreatePlainInitialization(),
+            CancellationToken.None).AsTask();
+        await Assert.That(initialize).ThrowsExactly<InvalidOperationException>();
+        await Assert.That(ReadProtectionMarkerCount(database.Path)).IsEqualTo(0L);
+        await Assert.That(ReadProtectedMetadata(database.Path)).IsEqualTo(metadataBefore);
+        await Assert.That(ReadPendingPayloadKeyId(database.Path)).IsEqualTo(originalKeyId);
+    }
+
     /// <summary>Verifies rotation needs a protected store.</summary>
     /// <returns>A task that represents the asynchronous test.</returns>
     [Test]
@@ -109,5 +143,19 @@ public sealed partial class SqliteLocalStoreAdapterTests
         Func<Task> action = () => adapter.RotateEncryptionKeyAsync(CancellationToken.None).AsTask();
 
         await Assert.That(action).ThrowsExactly<InvalidOperationException>();
+    }
+
+    /// <summary>Reads protected metadata in key order for the no-rewrite assertion.</summary>
+    /// <param name="path">The SQLite database path.</param>
+    /// <returns>The metadata rows.</returns>
+    private static string ReadProtectedMetadata(string path)
+    {
+        using var connection = OpenRawConnection(path);
+        using var command = connection.CreateCommand();
+        command.CommandText = """
+            SELECT group_concat(key || '=' || quote(value), ';')
+            FROM (SELECT key, value FROM oc_metadata WHERE key LIKE 'rxui.localstore.%' ORDER BY key);
+            """;
+        return command.ExecuteScalar() as string ?? string.Empty;
     }
 }

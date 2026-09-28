@@ -23,4 +23,7 @@
     <PackageReference Include="System.ValueTuple" />
   </ItemGroup>
 
+  <ItemGroup>
+    <None Include="README.md" Pack="true" PackagePath="README.md" />
+  </ItemGroup>
 </Project>

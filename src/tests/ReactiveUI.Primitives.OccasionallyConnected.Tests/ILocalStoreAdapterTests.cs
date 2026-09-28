@@ -14,7 +14,7 @@ public sealed partial class ILocalStoreAdapterTests
     private const int InMemorySchemaVersion = 1;
 
     /// <summary>The current SQLite local store schema version.</summary>
-    private const int SqliteSchemaVersion = 8;
+    private const int SqliteSchemaVersion = 1;
 
     /// <summary>The in-memory adapter selector used by parameterized tests.</summary>
     private const int InMemoryAdapterKind = 0;

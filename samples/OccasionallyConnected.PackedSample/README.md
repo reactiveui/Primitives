@@ -1,72 +1,54 @@
-# OccasionallyConnected packed sample
+# OccasionallyConnected Packed Sample
 
-This sample runs the spec section 16 walkthrough against the packed NuGet packages. It does not use project
-references. It is not part of `src/ReactiveUI.Primitives.slnx`.
+This console app exercises the first v1 OccasionallyConnected packages from a clean consumer project. It uses NuGet package references instead of project references and is not part of `src/ReactiveUI.Primitives.slnx`.
 
-## What the sample checks
+OccasionallyConnected has no earlier released version, so end users do not need a migration when adopting v1.
 
-The sample hosts a sync server in the same process. The server is a SQLite `ServerStreamHub` behind an
-`HttpServerEndpoint`. Each client is an `OccasionallyConnectedContext` with a `SqliteLocalStoreAdapter` and an
-`HttpRemoteTransportAdapter`. The HTTP client hands each request straight to the endpoint, so no port is opened.
+## What the sample demonstrates
 
-The sample runs these steps in order:
+The sample hosts an HTTP endpoint and server stream hub in the same process. Each client uses an `OccasionallyConnectedContext`, a SQLite local store, and the HTTP transport. The HTTP client sends requests directly to the endpoint, so the sample does not open a network port.
 
-1. **Offline startup.** The sample checks two kinds of "down":
-   - The connection is refused. `StartAsync` must still return.
-   - A gateway answers `503 Service Unavailable`. `StartAsync` returns and the context reports `Offline`.
-     The later steps use this client.
-2. **Optimistic write.** `PublishAsync` returns a receipt. The local state shows the new value right away.
-3. **Observer input.** `stream.Input.OnNext` writes a value without a receipt.
-4. **Restart recovery.** The sample disposes client A and reopens its database. The local state and the
-   pending operations come back.
-5. **Reconnect.** The server starts. `TriggerSyncAsync` sends the pending operations.
-6. **Operation synchronization.** `AwaitSynchronizedAsync` completes for a receipt issued before the restart.
-7. **Conflict reconciliation.** Clients A and B wrote to the same G-counter while offline. Both end with the
-   merged value.
+The run checks that:
 
-Each step prints `PASS` or `FAIL` with the expected and actual values. The process exits with 0 only when every
-check passes. It exits with 2 if the run faults or takes longer than 5 minutes.
+1. Startup returns when the connection is refused or a gateway returns `503 Service Unavailable`.
+2. `PublishAsync` returns a receipt and updates local state immediately.
+3. `stream.Input.OnNext` updates local state without returning a receipt.
+4. A client recovers local state, pending work, and a receipt after it reopens its database.
+5. `TriggerSyncAsync` sends pending operations after the server starts.
+6. `AwaitSynchronizedAsync` completes for a receipt created before the restart.
+7. Two offline G-counter updates reconcile to the merged value on both clients.
+8. An online write synchronizes and reaches the other client.
 
-## How to run it
+The app prints `PASS` or `FAIL` for each check. It exits with code 0 when all checks pass, code 1 when a check fails, and code 2 when the run faults or exceeds five minutes.
 
-Run the gate script from any folder with PowerShell 7:
+## Run the package gate
+
+Run from the repository root with PowerShell 7:
 
 ```powershell
 pwsh tools/Test-OccasionallyConnectedPackages.ps1
 ```
 
-The script does the following:
-
-1. Packs the OccasionallyConnected packages and their ReactiveUI dependencies into `artifacts/oc-packages/feed`.
-   Every package gets the same unique prerelease version.
-2. Rebuilds the OccasionallyConnected projects and packs them again. It compares both packs file by file.
-3. Checks each package for the `lib/<tfm>` folders, a `.snupkg` with matching portable PDBs, and Source Link.
-4. Copies this sample to `artifacts/oc-packages/clean-sample`. The copy gets an empty `Directory.Build.props`, an
-   empty `Directory.Packages.props` and a `nuget.config` that takes `ReactiveUI.Primitives*` packages only from
-   the local feed. It restores into a private packages folder, then builds and runs the sample for each framework.
-5. Publishes the sample for `net10.0` as a trimmed app and as a NativeAOT app, then runs both. A trim or AOT
-   warning from a `ReactiveUI.*` assembly fails the gate.
-
-The script prints a table of gates and exits with 1 when any gate fails. Logs go to `artifacts/oc-packages/logs`.
+The script packs the feature packages and their ReactiveUI dependencies into a local feed with one temporary prerelease version. It repeats the pack and compares the resulting files, checks package frameworks, symbols, and Source Link, then copies this sample into a clean consumer directory. That copy restores only from the local feed and builds and runs for each selected target framework. The script also publishes the sample for `net10.0` as trimmed and NativeAOT apps where the required platform linker is available. It exits with code 1 if a gate fails and writes logs under `artifacts/oc-packages/logs`.
 
 ### Options
 
 | Option | Effect |
 | --- | --- |
-| `-Version <v>` | Uses this package version instead of `0.1.0-octest.<timestamp>`. |
-| `-SampleTargetFrameworks net8.0,net48` | Runs the sample only for these frameworks. |
-| `-SkipDeterminism` | Skips the second build and the package comparison. |
-| `-SkipSample` | Skips the clean install, the sample runs and the publish tests. |
-| `-SkipAot` | Skips the trimmed and NativeAOT publish tests. |
+| `-Version <value>` | Sets the package version. By default, the script uses a unique `0.1.0-octest` prerelease version for local verification. |
+| `-SampleTargetFrameworks net8.0,net48` | Runs the sample only for the listed target frameworks. |
+| `-SkipDeterminism` | Skips the second pack and file comparison. |
+| `-SkipSample` | Skips the clean install, sample runs, and publish checks. |
+| `-SkipAot` | Skips the trimmed and NativeAOT publish checks. |
 
-NativeAOT needs the platform linker. On Windows that is the "Desktop development with C++" workload. When the
-linker is missing, the script reports the AOT gate as `SKIP` and names the missing tool.
+NativeAOT requires a platform linker. On Windows, install the Visual C++ build tools workload. If the linker is unavailable, the script reports that gate as skipped and names the missing tool.
 
-## Run the sample by hand
+## Run the clean sample by hand
 
-After the script has packed a version, you can build the clean copy yourself:
+After the package gate completes, use the version it printed for the local feed:
 
 ```powershell
-cd artifacts/oc-packages/clean-sample
-dotnet run -f net10.0 -p:OccasionallyConnectedPackageVersion=<version>
+Set-Location artifacts/oc-packages/clean-sample
+$version = Read-Host "Package version from the gate output"
+dotnet run --framework net10.0 -p:OccasionallyConnectedPackageVersion=$version
 ```

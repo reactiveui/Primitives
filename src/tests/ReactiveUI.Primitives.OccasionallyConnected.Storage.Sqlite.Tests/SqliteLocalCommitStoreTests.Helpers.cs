@@ -155,58 +155,6 @@ public sealed partial class SqliteLocalCommitStoreTests
         _ = command.ExecuteNonQuery();
     }
 
-    /// <summary>Inserts schema version two local commit rows for migration tests.</summary>
-    /// <param name="connection">The connection.</param>
-    /// <param name="transaction">The transaction.</param>
-    /// <param name="subscriptionId">The subscription identifier.</param>
-    /// <param name="operation">The committed operation.</param>
-    /// <param name="snapshot">The committed snapshot mutation.</param>
-    private static void InsertLegacyLocalCommitRows(
-        SqliteConnection connection,
-        SqliteTransaction transaction,
-        SubscriptionId subscriptionId,
-        SyncOperation operation,
-        SnapshotMutation snapshot)
-    {
-        SqliteSubscriptionIdentitySql.InsertSubscriptionIdentityIfMissing(connection, transaction, StoreIdentity, Stream, subscriptionId);
-        SqliteLocalCommitSql.EnsureStreamRow(connection, transaction, StoreIdentity, Stream, subscriptionId);
-        SqliteLocalCommitSql.InsertOutboxOperation(
-            connection,
-            transaction,
-            StoreIdentity,
-            operation,
-            snapshot.ExpectedRevision + 1,
-            SqliteCommitFingerprint.Compute(operation, snapshot),
-            operation.TimestampUtc);
-        SqliteLocalCommitSql.InsertOperationMetadata(connection, transaction, StoreIdentity, operation);
-        SqliteLocalCommitSql.UpsertSnapshot(connection, transaction, StoreIdentity, snapshot, snapshot.ExpectedRevision + 1, null, operation.TimestampUtc);
-        SqliteLocalCommitSql.UpdateNextClientSequence(connection, transaction, StoreIdentity, Stream, operation.ClientSequence + 1);
-    }
-
-    /// <summary>Sets the persisted lifecycle state for a historical fixture operation.</summary>
-    /// <param name="connection">The connection.</param>
-    /// <param name="transaction">The transaction.</param>
-    /// <param name="operationId">The operation identifier.</param>
-    /// <param name="state">The lifecycle state.</param>
-    private static void SetOperationState(
-        SqliteConnection connection,
-        SqliteTransaction transaction,
-        OperationId operationId,
-        SyncOperationState state)
-    {
-        using var command = connection.CreateCommand();
-        command.Transaction = transaction;
-        command.CommandText = """
-            UPDATE oc_outbox_operation_states
-            SET operation_state = $operationState
-            WHERE store_identity = $storeIdentity AND operation_id = $operationId;
-            """;
-        _ = command.Parameters.AddWithValue("$operationState", (int)state);
-        _ = command.Parameters.AddWithValue(StoreIdentityParameter, StoreIdentity);
-        _ = command.Parameters.AddWithValue("$operationId", operationId.Value.ToString("D"));
-        _ = command.ExecuteNonQuery();
-    }
-
     /// <summary>Creates a trigger that aborts commits after outbox insertion.</summary>
     /// <param name="path">The database path.</param>
     private static void CreateRollbackTrigger(string path)
@@ -298,28 +246,6 @@ public sealed partial class SqliteLocalCommitStoreTests
         using var command = connection.CreateCommand();
         command.CommandText = "DROP TRIGGER oc_outbox_commit_abort;";
         _ = command.ExecuteNonQuery();
-    }
-
-    /// <summary>Creates a trigger that aborts schema migration after schema two tables are created.</summary>
-    /// <param name="path">The database path.</param>
-    /// <returns>The connection used to create the trigger.</returns>
-    private static SqliteConnection CreateMigrationRollbackTrigger(string path)
-    {
-        var connection = OpenRawConnection(path);
-        using var command = connection.CreateCommand();
-        command.CommandText = """
-            CREATE TRIGGER oc_metadata_migration_abort
-            BEFORE UPDATE OF value ON oc_metadata
-            WHEN OLD.key = 'schema_version'
-            BEGIN
-                SELECT RAISE(ABORT, 'rollback schema migration');
-            END;
-            """;
-        _ = command.ExecuteNonQuery();
-        using var transaction = connection.BeginTransaction();
-        _ = SqliteSchemaChecksum.Record(connection, transaction);
-        transaction.Commit();
-        return connection;
     }
 
     /// <summary>Deletes local stream rows to simulate an interrupted schema backfill.</summary>
@@ -555,68 +481,13 @@ public sealed partial class SqliteLocalCommitStoreTests
         _ = command.ExecuteNonQuery();
     }
 
-    /// <summary>Creates one supported historical local commit schema.</summary>
-    /// <param name="path">The database path.</param>
-    /// <param name="schemaVersion">The schema version.</param>
-    /// <exception cref="ArgumentOutOfRangeException">The schema version is not a supported historical version.</exception>
-    private static void CreateHistoricalLocalCommitSchema(string path, int schemaVersion)
-    {
-        using var connection = OpenRawConnection(path);
-        using var transaction = connection.BeginTransaction();
-        switch (schemaVersion)
-        {
-            case SqliteStoreSchema.IdentitySchemaVersion:
-            {
-                SqliteStoreSchema.CreateIdentitySchema(connection, transaction);
-                break;
-            }
-
-            case SqliteStoreSchema.LegacyLocalCommitSchemaVersion:
-            {
-                SqliteStoreSchemaTests.CreateLegacyLocalCommitSchema(connection, transaction);
-                break;
-            }
-
-            case SqliteStoreSchema.RemoteApplySchemaVersion:
-            {
-                SqliteStoreSchemaTests.CreateRemoteApplySchema(connection, transaction);
-                break;
-            }
-
-            case SqliteStoreSchema.LeaseSchemaVersion:
-            {
-                SqliteStoreSchemaTests.CreateLeaseSchema(connection, transaction);
-                break;
-            }
-
-            case SqliteStoreSchema.PreAuthoritativeLocalCommitSchemaVersion:
-            {
-                CreatePreAuthoritativeLocalCommitSchema(connection, transaction);
-                break;
-            }
-
-            case SqliteStoreSchema.AuthoritativeLocalCommitSchemaVersion:
-            {
-                SchemaSixFixture.Create(connection, transaction);
-                break;
-            }
-
-            default:
-            {
-                throw new ArgumentOutOfRangeException(nameof(schemaVersion), schemaVersion, "The schema version is not supported by this fixture.");
-            }
-        }
-
-        transaction.Commit();
-    }
-
     /// <summary>Sets the user version to a newer unsupported schema value.</summary>
     /// <param name="path">The database path.</param>
     private static void SetUserVersionToNewer(string path)
     {
         using var connection = OpenRawConnection(path);
         using var command = connection.CreateCommand();
-        command.CommandText = "PRAGMA user_version = 9;";
+        command.CommandText = "PRAGMA user_version = 10;";
         _ = command.ExecuteNonQuery();
     }
 

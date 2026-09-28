@@ -13,9 +13,6 @@ public sealed partial class SqliteServerCommitJournalTests
     /// <summary>The elapsed ticks used to expire one-tick subscription retention fixtures.</summary>
     private const int ExpiredSubscriptionTicks = 2;
 
-    /// <summary>The schema version before durable snapshot offer fields were added.</summary>
-    private const int SnapshotOfferSchemaFourVersion = 4;
-
     /// <summary>The durable subscription generation high-water metadata key.</summary>
     private const string SubscriptionGenerationHighWaterMetadataKey = "subscription_generation_high_water";
 
@@ -178,28 +175,6 @@ public sealed partial class SqliteServerCommitJournalTests
         await Assert.That(oldView.SubscriptionState).IsNotNull();
         await Assert.That(recreated.Generation).IsGreaterThan(oldView.SubscriptionState?.Generation ?? 0);
         await Assert.That(result.Status).IsEqualTo(ServerSnapshotOfferStatus.ConcurrentChange);
-    }
-
-    /// <summary>Verifies schema-four migration seeds the durable subscription generation allocator from retained rows.</summary>
-    /// <returns>The asynchronous test operation.</returns>
-    [Test]
-    public async Task SnapshotGenerationMigrationSeedsDurableAllocator()
-    {
-        using var database = new TemporaryDatabase();
-        var first = SnapshotSubscription();
-        var second = SnapshotSubscription(SecondSnapshotSubscriptionText);
-        using (var journal = CreateJournal(database.Path))
-        {
-            _ = journal.RegisterSubscription(first);
-        }
-
-        RewriteSubscriptionsAsSchemaFour(database.Path);
-        using var migrated = CreateJournal(database.Path);
-        var retained = migrated.RegisterSubscription(first);
-        var created = migrated.RegisterSubscription(second);
-
-        await Assert.That(ReadSubscriptionGenerationHighWater(database.Path)).IsEqualTo(created.Generation);
-        await Assert.That(created.Generation).IsGreaterThan(retained.Generation);
     }
 
     /// <summary>Verifies generation overflow fails before registering a partial subscription row.</summary>
@@ -767,39 +742,5 @@ public sealed partial class SqliteServerCommitJournalTests
         await Assert.That(() => journal.TryOfferSnapshot(offer)).ThrowsExactly<InvalidOperationException>();
         DropDeleteSubscriptionBeforeRevisionUpdateTrigger(database.Path);
         await Assert.That(journal.RegisterSubscription(identity).OfferCount).IsEqualTo(0);
-    }
-
-    /// <summary>Verifies schema-four migration rejects unsupported snapshot-offer metadata.</summary>
-    /// <returns>The asynchronous test operation.</returns>
-    [Test]
-    public async Task SnapshotOfferSchemaFourMigrationRejectsUnsupportedMetadata()
-    {
-        using var database = new TemporaryDatabase();
-        using (var journal = CreateJournal(database.Path))
-        {
-            _ = journal.RegisterSubscription(SnapshotSubscription());
-        }
-
-        RewriteSubscriptionsAsSchemaFour(database.Path);
-        WriteSchemaVersionMetadata(database.Path, "9");
-
-        await Assert.That(() => CreateJournal(database.Path).Dispose()).ThrowsExactly<InvalidOperationException>();
-    }
-
-    /// <summary>Verifies schema-four migration rejects malformed snapshot-offer metadata storage.</summary>
-    /// <returns>The asynchronous test operation.</returns>
-    [Test]
-    public async Task SnapshotOfferSchemaFourMigrationRejectsMalformedMetadata()
-    {
-        using var database = new TemporaryDatabase();
-        using (var journal = CreateJournal(database.Path))
-        {
-            _ = journal.RegisterSubscription(SnapshotSubscription());
-        }
-
-        RewriteSubscriptionsAsSchemaFour(database.Path);
-        CorruptSchemaFourMetadataTable(database.Path);
-
-        await Assert.That(() => CreateJournal(database.Path).Dispose()).ThrowsExactly<InvalidOperationException>();
     }
 }

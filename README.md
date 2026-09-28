@@ -42,6 +42,7 @@ covers the whole surface in brief; the site carries the detailed guides, per-ope
 - [Moving from R3Async](#moving-from-r3async)
 - [Moving from ReactiveUI.Extensions](#moving-from-reactiveuiextensions)
 - [Benchmarks](#benchmarks)
+- [OccasionallyConnected](#occasionallyconnected)
 - [Repository layout](#repository-layout)
 - [For advanced users](#for-advanced-users)
 - [Contribute](#contribute)
@@ -2995,6 +2996,31 @@ Some scenarios measure too fast to time. BenchmarkDotNet reports a `ZeroMeasurem
 `Return`, `CompletedSpark`, `Never`-style subscriptions, and `SubscribeAndComplete`. That warning means the measured
 duration matches the overhead of an empty method. Compare the `Allocated` column for those scenarios instead of the
 mean.
+
+## OccasionallyConnected
+
+OccasionallyConnected lets an application accept durable local writes while its remote service is unavailable. Build an
+`OccasionallyConnectedContext`, get a stream, and call `PublishAsync` to apply an input to local state and queue it for
+synchronization. The client runtime retries delivery when connectivity returns; use `Context.SyncEngine.TriggerSyncAsync`
+to request a sync and `AwaitSynchronizedAsync` when a caller needs to wait for a particular operation's result.
+
+Start with the [client runtime package guide](src/ReactiveUI.Primitives.OccasionallyConnected/README.md). Choose the
+packages that provide the contracts and adapters your application needs:
+
+| Package | Use it for |
+|---|---|
+| [ReactiveUI.Primitives.OccasionallyConnected.Core](src/ReactiveUI.Primitives.OccasionallyConnected.Core/README.md) | Contracts, options, state and synchronization value types. |
+| [ReactiveUI.Primitives.OccasionallyConnected](src/ReactiveUI.Primitives.OccasionallyConnected/README.md) | Client context, streams, local writes and synchronization orchestration. |
+| [ReactiveUI.Primitives.OccasionallyConnected.Storage.Sqlite](src/ReactiveUI.Primitives.OccasionallyConnected.Storage.Sqlite/README.md) | Durable SQLite storage for client state and queued operations. |
+| [ReactiveUI.Primitives.OccasionallyConnected.Transport.Http](src/ReactiveUI.Primitives.OccasionallyConnected.Transport.Http/README.md) | HTTP transport between clients and a server endpoint. |
+| [ReactiveUI.Primitives.OccasionallyConnected.Server](src/ReactiveUI.Primitives.OccasionallyConnected.Server/README.md) | Server-side streams, durable server state and synchronization. |
+| [ReactiveUI.Primitives.OccasionallyConnected.Hosting](src/ReactiveUI.Primitives.OccasionallyConnected.Hosting/README.md) | Hosting and health integration for a client context. |
+| [ReactiveUI.Primitives.OccasionallyConnected.DependencyInjection](src/ReactiveUI.Primitives.OccasionallyConnected.DependencyInjection/README.md) | Dependency-injection registration for client and server services. |
+
+For complete workflows, read the [collaboration client](src/examples/OccasionallyConnected.Collaboration.Client/README.md),
+[collaboration server](src/examples/OccasionallyConnected.Collaboration.Server/README.md), [durable outbox](src/examples/OccasionallyConnected.DurableOutbox/README.md),
+and [ResilienceLab](src/examples/OccasionallyConnected.ResilienceLab/README.md) examples. To verify the feature using the
+packed NuGet packages without project references, start with the [packed sample](samples/OccasionallyConnected.PackedSample/README.md).
 
 ## Repository layout
 

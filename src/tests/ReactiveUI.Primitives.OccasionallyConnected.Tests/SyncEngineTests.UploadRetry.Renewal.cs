@@ -96,6 +96,45 @@ public sealed partial class SyncEngineTests
         await Assert.That(expiredSession.DisposeCalls).IsEqualTo(ExpectedSingleOperation);
     }
 
+    /// <summary>Verifies renewal keeps the server idempotency window promised by the current session.</summary>
+    /// <returns>The assertion task.</returns>
+    [Test]
+    public async Task UploadAttemptRejectsRenewalWithShorterServerIdempotencyRetention()
+    {
+        var clock = new ManualTimerTimeProvider(DateTimeOffset.UnixEpoch);
+        var operation = CreateOperation();
+        var store = CreateUploadStore([operation], timeProvider: clock);
+        store.RequeueReleasedLeases = true;
+        var expired = CreateExpiredUploadSession();
+        var shorterRetention = new PreparedSession(ExpectedSingleOperation, PreparedUploadBytes)
+        {
+            NegotiatedCapabilities = expired.NegotiatedCapabilities with
+            {
+                ServerIdempotencyRetention = TimeSpan.FromMinutes(DefaultServerIdempotencyRetentionMinutes - 1),
+            },
+        };
+        var transport = CreateRenewalTransport(expired, shorterRetention);
+        var faults = new RecordingObserver<OccasionallyConnectedFault>();
+        await using var engine = CreateEngine(
+            store,
+            transport,
+            CreateDiagnosticsBatchOptions(ExpectedSingleOperation, PreparedUploadBytes),
+            timeProvider: clock);
+        using var registration = engine.RegisterParticipant(CreateUploadParticipant(store));
+        using var faultSubscription = engine.Faults.Subscribe(faults);
+
+        await engine.StartAsync(CancellationToken.None);
+        engine.NotifyLocalCommitReady(Stream, operation);
+        await DriveUploadDwellWithTraceAsync(clock, store, expired, faults, operationStates: null);
+        await WaitForConditionAsync(() => faults.Values.Exists(static fault => fault.Code == UploadAttemptFaultCode));
+
+        await Assert.That(transport.ConnectCalls).IsEqualTo(ExpectedCapacityCommitAttempts);
+        await Assert.That(shorterRetention.DisposeCalls).IsEqualTo(ExpectedSingleOperation);
+        await Assert.That(shorterRetention.SentBatches.Count).IsEqualTo(0);
+        await Assert.That(store.Statuses[operation.OperationId].State).IsEqualTo(SyncOperationState.QueuedForUpload);
+        await engine.StopAsync(CancellationToken.None);
+    }
+
     /// <summary>Verifies lower or absent renewed peer inbox requirements are accepted.</summary>
     /// <param name="absentRenewedRequirement">Whether the renewed session omits the peer requirement.</param>
     /// <returns>The assertion task.</returns>

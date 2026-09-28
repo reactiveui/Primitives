@@ -78,9 +78,9 @@ public sealed partial class SqliteLocalStoreAdapterTests
             await Assert.That(initialize).ThrowsExactly<InvalidOperationException>();
         }
 
-        await using var legacy = CreateAdapter(database.Path);
-        await legacy.InitializeAsync(new(StoreIdentity, SchemaVersion, false), CancellationToken.None);
-        var recovery = await legacy.RecoverStreamAsync(Stream, subscriptionId, CancellationToken.None);
+        await using var unbound = CreateAdapter(database.Path);
+        await unbound.InitializeAsync(new(StoreIdentity, SchemaVersion, false), CancellationToken.None);
+        var recovery = await unbound.RecoverStreamAsync(Stream, subscriptionId, CancellationToken.None);
         await Assert.That(recovery.PendingOperations.Count).IsEqualTo(1);
         await Assert.That(recovery.PendingOperations[0].OperationId).IsEqualTo(operation.OperationId);
     }
@@ -92,10 +92,10 @@ public sealed partial class SqliteLocalStoreAdapterTests
     {
         using var database = TempDatabase.Create();
         SubscriptionId subscriptionId;
-        await using (var legacy = CreateAdapter(database.Path))
+        await using (var unbound = CreateAdapter(database.Path))
         {
-            await legacy.InitializeAsync(new(StoreIdentity, SchemaVersion, false), CancellationToken.None);
-            subscriptionId = await legacy.GetOrCreateSubscriptionIdAsync(Stream, null, CancellationToken.None);
+            await unbound.InitializeAsync(new(StoreIdentity, SchemaVersion, false), CancellationToken.None);
+            subscriptionId = await unbound.GetOrCreateSubscriptionIdAsync(Stream, null, CancellationToken.None);
         }
 
         await using var bound = CreateAdapter(database.Path);
@@ -167,9 +167,9 @@ public sealed partial class SqliteLocalStoreAdapterTests
     public async Task CanceledClientIdentityInitializationDoesNotBindPartition()
     {
         using var database = TempDatabase.Create();
-        await using (var legacy = CreateAdapter(database.Path))
+        await using (var unbound = CreateAdapter(database.Path))
         {
-            await legacy.InitializeAsync(new(StoreIdentity, SchemaVersion, false), CancellationToken.None);
+            await unbound.InitializeAsync(new(StoreIdentity, SchemaVersion, false), CancellationToken.None);
         }
 
         using var cancellation = new CancellationTokenSource();

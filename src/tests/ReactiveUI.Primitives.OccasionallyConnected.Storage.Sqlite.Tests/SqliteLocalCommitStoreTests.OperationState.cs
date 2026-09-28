@@ -207,32 +207,6 @@ public sealed partial class SqliteLocalCommitStoreTests
         await Assert.That(CountLeaseRows(database.Path, lease.LeaseId)).IsEqualTo(0);
     }
 
-    /// <summary>Verifies frozen schema version four databases backfill lifecycle rows during migration.</summary>
-    /// <returns>The asynchronous test.</returns>
-    [Test]
-    public async Task WhenSchemaFourMigratesToCurrent_ThenOperationStateIsBackfilled()
-    {
-        using var database = TempDatabase.Create();
-        var subscriptionId = SubscriptionId.New();
-        var operation = CreateOperation(clientSequence: 1);
-        await using (var connection = OpenRawConnection(database.Path))
-        {
-            await using var transaction = (SqliteTransaction)await connection.BeginTransactionAsync();
-            SqliteStoreSchemaTests.CreateLeaseSchema(connection, transaction);
-            InsertLegacyLocalCommitRows(connection, transaction, subscriptionId, operation, CreateSnapshotMutation(expectedRevision: 0));
-            await transaction.CommitAsync();
-        }
-
-        using var store = CreateInitializedStore(database.Path);
-        var status = store.GetOperationStatus(operation.OperationId, CancellationToken.None);
-        var batch = RequireBatch(await LeaseSingleBatch(store, new(Stream, 1, DefaultLeaseBytes, TimeSpan.FromMinutes(1))));
-
-        await Assert.That(ReadUserVersion(database.Path)).IsEqualTo(SchemaVersion);
-        await Assert.That(status?.State).IsEqualTo(SyncOperationState.QueuedForUpload);
-        await Assert.That(status?.ChangedAtUtc).IsEqualTo(operation.TimestampUtc);
-        await Assert.That(batch.Operations[0].OperationId).IsEqualTo(operation.OperationId);
-    }
-
     /// <summary>Verifies missing operations have no persisted status or retry state.</summary>
     /// <returns>The asynchronous test.</returns>
     [Test]
@@ -719,21 +693,6 @@ public sealed partial class SqliteLocalCommitStoreTests
             .ThrowsExactly<InvalidOperationException>();
     }
 
-    /// <summary>Verifies lease schema validation detects a mismatched metadata schema version.</summary>
-    /// <returns>The asynchronous test.</returns>
-    [Test]
-    public async Task WhenLeaseSchemaMetadataVersionDiffers_ThenValidationFailsClosed()
-    {
-        using var database = TempDatabase.Create();
-        await using var connection = OpenRawConnection(database.Path);
-        await using var transaction = (SqliteTransaction)await connection.BeginTransactionAsync();
-        SqliteStoreSchemaTests.CreateLeaseSchema(connection, transaction);
-        SetSchemaMetadataVersion(connection, transaction, SchemaVersion);
-
-        await Assert.That(() => SqliteStoreSchema.ValidateLeaseSchema(connection, transaction))
-            .ThrowsExactly<InvalidOperationException>();
-    }
-
     /// <summary>Creates a synchronization result for operation state tests.</summary>
     /// <param name="batchId">The synchronization batch identifier.</param>
     /// <param name="results">The operation results.</param>
@@ -938,23 +897,6 @@ public sealed partial class SqliteLocalCommitStoreTests
                 WHERE store_identity = OLD.store_identity AND operation_id = OLD.operation_id;
             END;
             """;
-        _ = command.ExecuteNonQuery();
-    }
-
-    /// <summary>Sets the metadata schema version for an open transaction.</summary>
-    /// <param name="connection">The connection.</param>
-    /// <param name="transaction">The transaction.</param>
-    /// <param name="version">The schema version.</param>
-    private static void SetSchemaMetadataVersion(SqliteConnection connection, SqliteTransaction transaction, int version)
-    {
-        using var command = connection.CreateCommand();
-        command.Transaction = transaction;
-        command.CommandText = """
-            UPDATE oc_metadata
-            SET value = $version
-            WHERE key = 'schema_version';
-            """;
-        _ = command.Parameters.AddWithValue("$version", version.ToString(System.Globalization.CultureInfo.InvariantCulture));
         _ = command.ExecuteNonQuery();
     }
 

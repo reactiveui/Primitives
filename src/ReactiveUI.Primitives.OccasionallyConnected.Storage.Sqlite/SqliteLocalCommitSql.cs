@@ -680,7 +680,7 @@ internal static partial class SqliteLocalCommitSql
                 query.Operation.OperationId,
                 query.SnapshotMutation.AuthoritativeState,
                 query.MaximumPayloadBytes)
-                && HasSameCommitFingerprint(storedFingerprint, query.Fingerprint, query.Operation, query.SnapshotMutation))
+                && HasSameCommitFingerprint(storedFingerprint, query.Fingerprint))
             {
                 return true;
             }

@@ -8,7 +8,7 @@ using ReactiveUI.Primitives.OccasionallyConnected.Storage.Sqlite;
 namespace ReactiveUI.Primitives.OccasionallyConnected.Storage.Sqlite.Tests;
 
 /// <summary>Tests for <see cref="SqliteLocalStoreAdapter"/>.</summary>
-/// <content>Encryption at rest key rotation and plaintext migration tests.</content>
+/// <content>Encryption at rest, key rotation, and plaintext transition tests.</content>
 public sealed partial class SqliteLocalStoreAdapterTests
 {
     /// <summary>Verifies new writes use the current key, old keys still decrypt, and rotation re-encrypts every record.</summary>
@@ -42,7 +42,7 @@ public sealed partial class SqliteLocalStoreAdapterTests
     /// <summary>Verifies an existing plaintext database is encrypted in place when a key provider is configured.</summary>
     /// <returns>A task that represents the asynchronous test.</returns>
     [Test]
-    public async Task WhenPlaintextStoreIsOpenedWithKeyProvider_ThenMigrationEncryptsEveryRecord()
+    public async Task WhenPlaintextStoreIsOpenedWithKeyProvider_ThenTransitionEncryptsEveryRecord()
     {
         using var database = TempDatabase.Create();
         var seed = await SeedPlaintextDatabaseAsync(database.Path);
@@ -61,17 +61,17 @@ public sealed partial class SqliteLocalStoreAdapterTests
         await AssertEncryptedSeedAsync(reopened, seed);
     }
 
-    /// <summary>Verifies a crash before the migration commits leaves the plaintext database intact and the next open migrates it.</summary>
+    /// <summary>Verifies a crash before encryption commits leaves the plaintext database intact for a later retry.</summary>
     /// <returns>A task that represents the asynchronous test.</returns>
     [Test]
-    public async Task WhenMigrationCrashesBeforeCommit_ThenNextOpenRestartsIt()
+    public async Task WhenEncryptionTransitionCrashesBeforeCommit_ThenNextOpenRestartsIt()
     {
         using var database = TempDatabase.Create();
         var seed = await SeedPlaintextDatabaseAsync(database.Path);
         await using (var crashing = CreateEncryptedAdapter(
             database.Path,
             CreateFirstKeyProvider(),
-            new ThrowingCommitFaultPoint(SqliteCommitCheckpoint.EncryptionMigrationBeforeCommit)))
+            new ThrowingCommitFaultPoint(SqliteCommitCheckpoint.EncryptionTransitionBeforeCommit)))
         {
             Func<Task> action = () => crashing.InitializeAsync(CreateEncryptedInitialization(), CancellationToken.None).AsTask();
             await Assert.That(action).ThrowsExactly<IOException>();
@@ -90,17 +90,17 @@ public sealed partial class SqliteLocalStoreAdapterTests
         await Assert.That(ReadProtectionMarkerCount(database.Path)).IsEqualTo(1L);
     }
 
-    /// <summary>Verifies a crash right after the migration commits leaves a fully encrypted database.</summary>
+    /// <summary>Verifies a crash right after encryption commits leaves a fully encrypted database.</summary>
     /// <returns>A task that represents the asynchronous test.</returns>
     [Test]
-    public async Task WhenMigrationCrashesAfterCommit_ThenDatabaseIsFullyEncrypted()
+    public async Task WhenEncryptionTransitionCrashesAfterCommit_ThenDatabaseIsFullyEncrypted()
     {
         using var database = TempDatabase.Create();
         var seed = await SeedPlaintextDatabaseAsync(database.Path);
         await using (var crashing = CreateEncryptedAdapter(
             database.Path,
             CreateFirstKeyProvider(),
-            new ThrowingCommitFaultPoint(SqliteCommitCheckpoint.EncryptionMigrationAfterCommit)))
+            new ThrowingCommitFaultPoint(SqliteCommitCheckpoint.EncryptionTransitionAfterCommit)))
         {
             Func<Task> action = () => crashing.InitializeAsync(CreateEncryptedInitialization(), CancellationToken.None).AsTask();
             await Assert.That(action).ThrowsExactly<IOException>();

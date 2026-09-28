@@ -3,6 +3,7 @@
 // See the LICENSE file in the project root for full license information.
 
 using System.Diagnostics.Metrics;
+using System.Runtime.CompilerServices;
 
 namespace ReactiveUI.Primitives.OccasionallyConnected.Tests;
 
@@ -116,6 +117,29 @@ public sealed partial class SyncEngineTests
         var pendingCounts = observer.PendingCounts.ToArray();
         await Assert.That(pendingCounts[0]).IsEqualTo(ExpectedSingleOperation);
         await Assert.That(pendingCounts[^1]).IsEqualTo(ExpectedTwoOperations);
+    }
+
+    /// <summary>Verifies a newer queue state wins when its diagnostic publication reenters an older snapshot capture.</summary>
+    /// <returns>The assertion task.</returns>
+    [Test]
+    public async Task ReentrantQueueSnapshotDiscardsOlderGlobalState()
+    {
+        var clock = new ReentrantQueueDiagnosticTimeProvider();
+        await using var engine = CreateEngine(options: CreateDiagnosticsOptions(enabled: true), timeProvider: clock);
+        using var registration = engine.RegisterParticipant(new RecordingParticipant());
+        var observer = new RecordingObserver<SyncState>();
+        using var subscription = engine.SyncStates.Subscribe(observer);
+
+        clock.ReenterOnce(() => engine.RecordRecoveredQueueAggregate(
+            Stream,
+            new(ExpectedTwoOperations, DiagnosticsStoreBytes, ExpectedTwoOperations)));
+        engine.RecordRecoveredQueueAggregate(
+            Stream,
+            new(ExpectedSingleOperation, PreparedUploadBytes, DiagnosticsRecoveredRevision));
+
+        await observer.WaitForCountAsync(ExpectedSingleOperation, GuardTimeout);
+        await Assert.That(observer.Values).Count().IsEqualTo(ExpectedSingleOperation);
+        await Assert.That(observer.Values[0].PendingOperations).IsEqualTo(ExpectedTwoOperations);
     }
 
     /// <summary>Verifies an observer-triggered queue update follows the state that caused it.</summary>
@@ -288,5 +312,24 @@ public sealed partial class SyncEngineTests
         await Assert.That(session.PrepareCalls).IsEqualTo(0);
         await Assert.That(session.SentBatches).IsEmpty();
         await Assert.That(faults.Values).IsEmpty();
+    }
+
+    /// <summary>Runs one queue update while the engine captures an older diagnostic snapshot.</summary>
+    private sealed class ReentrantQueueDiagnosticTimeProvider : TimeProvider
+    {
+        /// <summary>The pending action for the next clock read.</summary>
+        private Action? _onUtcNow;
+
+        /// <summary>Arms one nested queue update.</summary>
+        /// <param name="callback">The update to run during the next clock read.</param>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void ReenterOnce(Action callback) => Volatile.Write(ref _onUtcNow, callback);
+
+        /// <inheritdoc />
+        public override DateTimeOffset GetUtcNow()
+        {
+            Interlocked.Exchange(ref _onUtcNow, null)?.Invoke();
+            return DateTimeOffset.UnixEpoch;
+        }
     }
 }

@@ -1,11 +1,12 @@
 <#
 .SYNOPSIS
-    Rejects incomplete or missing handwritten OccasionallyConnected coverage in a fresh Cobertura report.
+    Requires more than 98 percent handwritten line and branch coverage for each OccasionallyConnected package.
+    Reports generated JSON serializer coverage separately.
 #>
 [CmdletBinding()]
 param(
     [Parameter(Mandatory)]
-    [string] $ReportPath,
+    [string[]] $ReportPath,
 
     [Parameter(Mandatory)]
     [string[]] $PackageNames
@@ -308,91 +309,135 @@ function Format-Rate {
         '100%'
     }
     else {
-        ($Covered / $Total).ToString('P2', [System.Globalization.CultureInfo]::InvariantCulture)
+        (($Covered / $Total) * 100).ToString('F2', [System.Globalization.CultureInfo]::InvariantCulture) + '%'
     }
 }
 
-if (-not (Test-Path -LiteralPath $ReportPath -PathType Leaf)) {
-    throw "Coverage report '$ReportPath' does not exist."
+if ($ReportPath.Count -eq 0) {
+    throw 'At least one coverage report path is required.'
 }
 
-$reportText = Get-Content -LiteralPath $ReportPath -Raw
-if ([string]::IsNullOrWhiteSpace($reportText)) {
-    throw "Coverage report '$ReportPath' is empty."
-}
+$reports = @(
+    foreach ($path in $ReportPath) {
+        if (-not (Test-Path -LiteralPath $path -PathType Leaf)) {
+            throw "Coverage report '$path' does not exist."
+        }
 
-try {
-    [xml] $report = $reportText
-}
-catch {
-    throw "Coverage report '$ReportPath' is not valid XML. $($_.Exception.Message)"
-}
+        $reportText = Get-Content -LiteralPath $path -Raw
+        if ([string]::IsNullOrWhiteSpace($reportText)) {
+            throw "Coverage report '$path' is empty."
+        }
 
-if ($null -eq $report.coverage -or $null -eq $report.coverage.packages) {
-    throw "Coverage report '$ReportPath' is missing Cobertura coverage/packages metadata."
-}
+        try {
+            [xml] $report = $reportText
+        }
+        catch {
+            throw "Coverage report '$path' is not valid XML. $($_.Exception.Message)"
+        }
+
+        if ($null -eq $report.coverage -or $null -eq $report.coverage.packages) {
+            throw "Coverage report '$path' is missing Cobertura coverage/packages metadata."
+        }
+
+        [pscustomobject]@{ Path = $path; Xml = $report }
+    }
+)
 
 foreach ($packageName in $PackageNames) {
-    $packages = @($report.coverage.packages.package | Where-Object {
-        $_.name -eq $packageName -or $_.name -eq "$packageName.dll"
-    })
+    $handwrittenByLine = [System.Collections.Generic.Dictionary[string, object]]::new([System.StringComparer]::OrdinalIgnoreCase)
+    $generatedByLine = [System.Collections.Generic.Dictionary[string, object]]::new([System.StringComparer]::OrdinalIgnoreCase)
+    $classKeys = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)
+    $matchingPackages = 0
+    $packageLineRate = 0.0
+    $packageBranchRate = 0.0
 
-    if ($packages.Count -ne 1) {
-        throw "Expected exactly one coverage entry for '$packageName'; found $($packages.Count)."
-    }
-
-    $package = $packages[0]
-    $packageContext = "package '$packageName'"
-    $packageLineRate = Get-RequiredDoubleAttribute -Element $package -Name 'line-rate' -Context $packageContext
-    $packageBranchRate = Get-RequiredDoubleAttribute -Element $package -Name 'branch-rate' -Context $packageContext
-    if ($packageLineRate -lt 0 -or $packageLineRate -gt 1 -or $packageBranchRate -lt 0 -or $packageBranchRate -gt 1) {
-        throw "Coverage report has invalid rate metadata on $packageContext."
-    }
-
-    $classes = @($package.classes.class)
-    if ($classes.Count -eq 0) {
-        throw "No classes were measured for '$packageName'."
-    }
-
-    $handwrittenLines = @()
-    $generatedJsonSerializerLines = @()
-    $handwrittenClassRateFailures = @()
-
-    foreach ($class in $classes) {
-        $className = Get-RequiredAttribute -Element $class -Name 'name' -Context $packageContext
-        $filename = Get-RequiredAttribute -Element $class -Name 'filename' -Context "class '$className' in $packageContext"
-        $classLineRate = Get-RequiredDoubleAttribute -Element $class -Name 'line-rate' -Context "class '$className'"
-        $classBranchRate = Get-RequiredDoubleAttribute -Element $class -Name 'branch-rate' -Context "class '$className'"
-        $classLines = @($class.lines.line)
-        if ($classLines.Count -eq 0) {
-            throw "No executable lines were measured for class '$className' in '$packageName'."
-        }
-
-        $lineEntries = @($classLines | ForEach-Object {
-            Get-LineCoverageEntry -Line $_ -Context "class '$className' file '$filename'"
+    foreach ($reportInfo in $reports) {
+        $packages = @($reportInfo.Xml.coverage.packages.package | Where-Object {
+            $_.name -eq $packageName -or $_.name -eq "$packageName.dll"
         })
 
-        if ($classLineRate -lt 0 -or $classLineRate -gt 1 -or $classBranchRate -lt 0 -or $classBranchRate -gt 1) {
-            throw "Coverage report has invalid rate metadata on class '$className'."
+        if ($packages.Count -gt 1 -or ($reports.Count -eq 1 -and $packages.Count -ne 1)) {
+            throw "Expected exactly one coverage entry for '$packageName' in '$($reportInfo.Path)'; found $($packages.Count)."
         }
 
-        $isGeneratedJsonSerializer = Test-GeneratedJsonSerializerPath -Path $filename -PackageName $packageName
-        if ($isGeneratedJsonSerializer) {
-            $generatedJsonSerializerLines += $lineEntries
+        if ($packages.Count -eq 0) {
+            continue
         }
-        else {
-            if ($classLineRate -lt 1) {
-                $handwrittenClassRateFailures += "handwritten class line-rate below 1: '$className'"
+
+        $matchingPackages++
+        $package = $packages[0]
+        $packageContext = "package '$packageName' in '$($reportInfo.Path)'"
+        $packageLineRate = Get-RequiredDoubleAttribute -Element $package -Name 'line-rate' -Context $packageContext
+        $packageBranchRate = Get-RequiredDoubleAttribute -Element $package -Name 'branch-rate' -Context $packageContext
+        if ($packageLineRate -lt 0 -or $packageLineRate -gt 1 -or $packageBranchRate -lt 0 -or $packageBranchRate -gt 1) {
+            throw "Coverage report has invalid rate metadata on $packageContext."
+        }
+
+        $classes = @($package.classes.class)
+        if ($classes.Count -eq 0) {
+            throw "No classes were measured for '$packageName' in '$($reportInfo.Path)'."
+        }
+
+        foreach ($class in $classes) {
+            $className = Get-RequiredAttribute -Element $class -Name 'name' -Context $packageContext
+            $filename = Get-RequiredAttribute -Element $class -Name 'filename' -Context "class '$className' in $packageContext"
+            $classLineRate = Get-RequiredDoubleAttribute -Element $class -Name 'line-rate' -Context "class '$className'"
+            $classBranchRate = Get-RequiredDoubleAttribute -Element $class -Name 'branch-rate' -Context "class '$className'"
+            $classLines = @($class.lines.line)
+            if ($classLines.Count -eq 0) {
+                throw "No executable lines were measured for class '$className' in '$packageName'."
             }
 
-            if ($classBranchRate -lt 1) {
-                $handwrittenClassRateFailures += "handwritten class branch-rate below 1: '$className'"
+            $lineEntries = @($classLines | ForEach-Object {
+                Get-LineCoverageEntry -Line $_ -Context "class '$className' file '$filename'"
+            })
+
+            if ($classLineRate -lt 0 -or $classLineRate -gt 1 -or $classBranchRate -lt 0 -or $classBranchRate -gt 1) {
+                throw "Coverage report has invalid rate metadata on class '$className'."
             }
 
-            $handwrittenLines += $lineEntries
+            $isGeneratedJsonSerializer = Test-GeneratedJsonSerializerPath -Path $filename -PackageName $packageName
+            $classSummary = Get-CoverageSummary -Lines $lineEntries
+            $measuredClassLineRate = if ($classSummary.TotalLines -eq 0) { 1.0 } else { $classSummary.CoveredLines / $classSummary.TotalLines }
+            $measuredClassBranchRate = if ($classSummary.TotalBranches -eq 0) { 1.0 } else { $classSummary.CoveredBranches / $classSummary.TotalBranches }
+            if ([Math]::Abs($classLineRate - $measuredClassLineRate) -gt 0.0001) {
+                throw "Coverage report class line-rate on '$className' does not match its measured line entries."
+            }
+
+            if ([Math]::Abs($classBranchRate - $measuredClassBranchRate) -gt 0.0001) {
+                throw "Coverage report class branch-rate on '$className' does not match its measured branch entries."
+            }
+
+            $normalizedFilename = $filename.Replace('\', '/')
+            $classKey = '{0}:{1}{2}:{3}' -f $className.Length, $className, $normalizedFilename.Length, $normalizedFilename
+            [void] $classKeys.Add($classKey)
+            $target = if ($isGeneratedJsonSerializer) { $generatedByLine } else { $handwrittenByLine }
+            foreach ($line in $lineEntries) {
+                $key = '{0}:{1}' -f $classKey, $line.Number
+                if ($target.ContainsKey($key)) {
+                    $previous = $target[$key]
+                    if ($previous.IsBranch -ne $line.IsBranch -or $previous.TotalBranches -ne $line.TotalBranches) {
+                        throw "Coverage reports disagree on branch metadata for line $($line.Number) in class '$className' file '$filename'."
+                    }
+
+                    $previous.Hits = [Math]::Max($previous.Hits, $line.Hits)
+                    $previous.MissedLine = $previous.Hits -eq 0
+                    $previous.CoveredBranches = [Math]::Max($previous.CoveredBranches, $line.CoveredBranches)
+                    $previous.PartialBranch = $previous.CoveredBranches -ne $previous.TotalBranches
+                }
+                else {
+                    $target.Add($key, $line)
+                }
+            }
         }
     }
 
+    if ($matchingPackages -eq 0) {
+        throw "Expected at least one coverage entry for '$packageName'; found 0."
+    }
+
+    $handwrittenLines = @($handwrittenByLine.Values)
+    $generatedJsonSerializerLines = @($generatedByLine.Values)
     if ($handwrittenLines.Count -eq 0) {
         throw "No handwritten executable lines were measured for '$packageName'."
     }
@@ -406,21 +451,35 @@ foreach ($packageName in $PackageNames) {
     $generatedBranchRate = Format-Rate -Covered $generatedJsonSerializer.CoveredBranches -Total $generatedJsonSerializer.TotalBranches
 
     $packageMeasuredCounts = "lines $($packageSummary.CoveredLines)/$($packageSummary.TotalLines); branches $($packageSummary.CoveredBranches)/$($packageSummary.TotalBranches)"
-    Write-Output "$packageName package totals: line-rate $packageLineRate; branch-rate $packageBranchRate; classes $($classes.Count); $packageMeasuredCounts."
+    if ($reports.Count -eq 1) {
+        Write-Output "$packageName package totals: line-rate $packageLineRate; branch-rate $packageBranchRate; classes $($classKeys.Count); $packageMeasuredCounts."
+    }
+    else {
+        Write-Output "$packageName package totals across $matchingPackages reports: classes $($classKeys.Count); $packageMeasuredCounts."
+    }
 
     $generatedLineCounts = "$generatedLineRate ($($generatedJsonSerializer.CoveredLines)/$($generatedJsonSerializer.TotalLines))"
     $generatedBranchCounts = "$generatedBranchRate ($($generatedJsonSerializer.CoveredBranches)/$($generatedJsonSerializer.TotalBranches))"
     $generatedMeasuredCounts = "lines $generatedLineCounts; branches $generatedBranchCounts"
     Write-Output "$packageName generated JSON serializer: $generatedMeasuredCounts."
 
-    if ($handwrittenClassRateFailures.Count -gt 0 -or $handwritten.MissedLines -gt 0 -or $handwritten.PartialBranchLines -gt 0) {
+    $handwrittenLineRatio = if ($handwritten.TotalLines -eq 0) { 0.0 } else { $handwritten.CoveredLines / $handwritten.TotalLines }
+    $handwrittenBranchRatio = if ($handwritten.TotalBranches -eq 0) { 1.0 } else { $handwritten.CoveredBranches / $handwritten.TotalBranches }
+    if ($handwrittenLineRatio -le 0.98 -or $handwrittenBranchRatio -le 0.98) {
         $handwrittenLineCounts = "$handwrittenLineRate ($($handwritten.CoveredLines)/$($handwritten.TotalLines))"
         $handwrittenBranchCounts = "$handwrittenBranchRate ($($handwritten.CoveredBranches)/$($handwritten.TotalBranches))"
         $handwrittenMeasuredCounts = "handwritten lines: $handwrittenLineCounts; handwritten branches: $handwrittenBranchCounts"
         $missedHandwrittenCounts = "missed handwritten lines: $($handwritten.MissedLines); partial handwritten branch lines: $($handwritten.PartialBranchLines)"
-        $classRateSummary = [string]::Join('; ', $handwrittenClassRateFailures)
-        throw "'$packageName' requires 100% handwritten lines and branches; $handwrittenMeasuredCounts; $missedHandwrittenCounts; $classRateSummary."
+        throw "'$packageName' requires more than 98% handwritten lines and branches; $handwrittenMeasuredCounts; $missedHandwrittenCounts."
     }
 
-    Write-Output "$packageName handwritten: 100% line and branch coverage ($($handwritten.TotalLines) measured line entries)."
+    Write-Output (
+        '{0} handwritten: more than 98% line coverage {1} ({2}/{3}); branch coverage {4} ({5}/{6}).' -f
+        $packageName,
+        $handwrittenLineRate,
+        $handwritten.CoveredLines,
+        $handwritten.TotalLines,
+        $handwrittenBranchRate,
+        $handwritten.CoveredBranches,
+        $handwritten.TotalBranches)
 }

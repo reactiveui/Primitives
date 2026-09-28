@@ -52,26 +52,15 @@ internal static partial class SqliteLocalCommitSql
         _ = command.ExecuteNonQuery();
     }
 
-    /// <summary>Determines whether a stored fingerprint matches the current or compatible legacy canonical intent.</summary>
+    /// <summary>Determines whether a stored fingerprint matches the requested canonical intent.</summary>
     /// <param name="storedFingerprint">The stored fingerprint.</param>
     /// <param name="fingerprint">The current requested fingerprint.</param>
-    /// <param name="operation">The operation.</param>
-    /// <param name="snapshotMutation">The snapshot mutation.</param>
     /// <returns>Whether the fingerprints match.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static bool HasSameCommitFingerprint(
         byte[] storedFingerprint,
-        byte[] fingerprint,
-        SyncOperation operation,
-        SnapshotMutation snapshotMutation)
-    {
-        if (SqliteCommitFingerprint.Matches(storedFingerprint, fingerprint))
-        {
-            return true;
-        }
-
-        return snapshotMutation.AuthoritativeState is null
-            && SqliteCommitFingerprint.Matches(storedFingerprint, SqliteCommitFingerprint.ComputeLegacy(operation, snapshotMutation));
-    }
+        byte[] fingerprint) =>
+        SqliteCommitFingerprint.Matches(storedFingerprint, fingerprint);
 
     /// <summary>Determines whether the repeated operation carries the same original authoritative mutation.</summary>
     /// <param name="connection">The connection.</param>

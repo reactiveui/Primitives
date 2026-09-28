@@ -25,6 +25,17 @@ internal sealed partial class SyncEngine
     /// <summary>Gets finite structural limits for one snapshot recovery transaction.</summary>
     private static SnapshotRecoveryLimits DefaultSnapshotRecoveryLimits { get; } = new();
 
+    /// <summary>Reports whether a stream has entered snapshot recovery coordination.</summary>
+    /// <param name="streamId">The stream identity.</param>
+    /// <returns>Whether recovery currently owns the stream.</returns>
+    internal bool IsSnapshotRecoveryActive(StreamId streamId)
+    {
+        lock (_gate)
+        {
+            return _snapshotRecoveryStreams.Contains(streamId);
+        }
+    }
+
     /// <summary>Checks whether a retained-history gap belongs to the active subscription.</summary>
     /// <param name="exception">The retained-history gap.</param>
     /// <param name="subscription">The active subscription.</param>

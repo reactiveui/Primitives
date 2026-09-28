@@ -17,25 +17,7 @@ namespace ReactiveUI.Primitives.OccasionallyConnected.Server;
 internal sealed partial class SqliteServerCommitJournal : IServerCommitJournal, IServerReceiveJournal, IServerSubscriptionAcknowledgementJournal, IServerSnapshotRecoveryJournal, IDisposable
 {
     /// <summary>The current durable schema version.</summary>
-    private const int CurrentSchemaVersion = 5;
-
-    /// <summary>The previous durable schema version.</summary>
-    private const int SchemaVersionFour = 4;
-
-    /// <summary>The previous durable schema version.</summary>
-    private const int SchemaVersionThree = 3;
-
-    /// <summary>The previous durable schema version.</summary>
-    private const int SchemaVersionTwo = 2;
-
-    /// <summary>The original durable schema version.</summary>
-    private const int SchemaVersionOne = 1;
-
-    /// <summary>The SQL statement that stamps schema version three during migration.</summary>
-    private const string SetSchemaVersionThreeSql = "PRAGMA user_version = 3;";
-
-    /// <summary>The SQL statement that stamps schema version two during migration.</summary>
-    private const string SetSchemaVersionTwoSql = "PRAGMA user_version = 2;";
+    private const int CurrentSchemaVersion = 1;
 
     /// <summary>The metadata key for the schema version.</summary>
     private const string SchemaVersionKey = "schema_version";
@@ -245,47 +227,6 @@ internal sealed partial class SqliteServerCommitJournal : IServerCommitJournal, 
             revision INTEGER NOT NULL DEFAULT 0);
         """;
 
-    /// <summary>The SQL definition for the schema-four subscription acknowledgement table.</summary>
-    private const string SchemaFourSubscriptionsTableSql = """
-        CREATE TABLE oc_server_journal_subscriptions (
-            subscription_id TEXT NOT NULL PRIMARY KEY,
-            tenant_id TEXT NOT NULL,
-            stream_id TEXT NOT NULL,
-            client_id TEXT NOT NULL,
-            initial_position_kind INTEGER NOT NULL,
-            initial_sequence INTEGER NULL,
-            initial_timestamp_utc TEXT NULL,
-            initial_cursor TEXT NULL,
-            initial_anchor_cursor TEXT NULL,
-            initial_anchor_group_sequence INTEGER NOT NULL,
-            initial_anchor_resolved INTEGER NOT NULL,
-            acknowledged_cursor TEXT NULL,
-            acknowledged_group_sequence INTEGER NOT NULL,
-            latest_offered_cursor TEXT NULL,
-            latest_offered_group_sequence INTEGER NOT NULL,
-            acknowledged_at_utc TEXT NULL,
-            updated_at_utc TEXT NOT NULL,
-            last_touched_utc TEXT NOT NULL,
-            logical_bytes INTEGER NOT NULL);
-        """;
-
-    /// <summary>The SQL definition for the schema-three subscription acknowledgement table.</summary>
-    private const string SchemaThreeSubscriptionsTableSql = """
-        CREATE TABLE oc_server_journal_subscriptions (
-            subscription_id TEXT NOT NULL PRIMARY KEY,
-            tenant_id TEXT NOT NULL,
-            stream_id TEXT NOT NULL,
-            client_id TEXT NOT NULL,
-            acknowledged_cursor TEXT NULL,
-            acknowledged_group_sequence INTEGER NOT NULL,
-            latest_offered_cursor TEXT NULL,
-            latest_offered_group_sequence INTEGER NOT NULL,
-            acknowledged_at_utc TEXT NULL,
-            updated_at_utc TEXT NOT NULL,
-            last_touched_utc TEXT NOT NULL,
-            logical_bytes INTEGER NOT NULL);
-        """;
-
     /// <summary>The SQL definition for the subscription offer table.</summary>
     private const string SubscriptionOffersTableSql = """
         CREATE TABLE oc_server_journal_subscription_offers (
@@ -305,20 +246,6 @@ internal sealed partial class SqliteServerCommitJournal : IServerCommitJournal, 
             snapshot_client_state_payload_content_type TEXT NULL,
             snapshot_client_state_payload BLOB NULL,
             snapshot_client_state_payload_hash TEXT NULL,
-            PRIMARY KEY (subscription_id, cursor),
-            FOREIGN KEY (subscription_id)
-                REFERENCES oc_server_journal_subscriptions (subscription_id)
-                ON DELETE CASCADE);
-        """;
-
-    /// <summary>The SQL definition for the schema-four subscription offer table.</summary>
-    private const string SchemaFourSubscriptionOffersTableSql = """
-        CREATE TABLE oc_server_journal_subscription_offers (
-            subscription_id TEXT NOT NULL,
-            cursor TEXT NOT NULL,
-            group_sequence INTEGER NOT NULL,
-            offered_at_utc TEXT NOT NULL,
-            logical_bytes INTEGER NOT NULL,
             PRIMARY KEY (subscription_id, cursor),
             FOREIGN KEY (subscription_id)
                 REFERENCES oc_server_journal_subscriptions (subscription_id)
@@ -766,28 +693,6 @@ internal sealed partial class SqliteServerCommitJournal : IServerCommitJournal, 
         if (userVersion == 0 && !HasUserTables(connection, transaction))
         {
             CreateSchema(connection, transaction);
-        }
-        else if (userVersion == SchemaVersionOne)
-        {
-            MigrateSchemaOneToTwo(connection, transaction);
-            MigrateSchemaTwoToThree(connection, transaction);
-            MigrateSchemaThreeToFour(connection, transaction);
-            MigrateSchemaFourToFive(connection, transaction);
-        }
-        else if (userVersion == SchemaVersionTwo)
-        {
-            MigrateSchemaTwoToThree(connection, transaction);
-            MigrateSchemaThreeToFour(connection, transaction);
-            MigrateSchemaFourToFive(connection, transaction);
-        }
-        else if (userVersion == SchemaVersionThree)
-        {
-            MigrateSchemaThreeToFour(connection, transaction);
-            MigrateSchemaFourToFive(connection, transaction);
-        }
-        else if (userVersion == SchemaVersionFour)
-        {
-            MigrateSchemaFourToFive(connection, transaction);
         }
         else
         {

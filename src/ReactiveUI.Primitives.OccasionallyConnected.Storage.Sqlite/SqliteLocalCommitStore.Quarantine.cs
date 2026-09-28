@@ -138,7 +138,7 @@ internal sealed partial class SqliteLocalCommitStore
         var request = CreateRecoveryQuarantineRequest(target.StreamId, target.SubscriptionId, exception, _timeProvider.GetUtcNow());
         PersistPayloadQuarantine(connection, transaction, target.StoreIdentity, request, exception.Evidence);
         cancellationToken.ThrowIfCancellationRequested();
-        transaction.Commit();
+        CommitWithOperationStateIntegrity(transaction);
         return CreateQuarantinedException(message, exception);
     }
 }

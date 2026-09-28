@@ -1,42 +1,41 @@
-# OccasionallyConnected.Collaboration.Server
+# OccasionallyConnected Collaboration Server
 
-This example is a small ASP.NET Core host for the occasionally-connected HTTP protocol. It binds to loopback by default, stores the server journal in SQLite, and maps caller-supplied development tokens to explicit tenant/client identities before the portable `HttpServerEndpoint` sees a request.
+This example hosts the OccasionallyConnected HTTP protocol in ASP.NET Core. It binds to loopback by default and stores its journal in SQLite. The host maps local development tokens to tenant and client identities before passing requests to the portable `HttpServerEndpoint`.
 
-The token header is `X-OC-Demo-Token`. The server does not use a request `TenantHint` as identity; the trusted `ServerAuthenticatedClient` comes only from `OC_DEMO_CREDENTIALS`.
+The token header is `X-OC-Demo-Token`. A request's `TenantHint` does not establish identity. The server creates the trusted `ServerAuthenticatedClient` from the configured development credentials.
 
-## Run
+These examples accompany the first v1 release of OccasionallyConnected. The feature has no earlier released version, so end users do not need a migration.
 
-From `src`:
+## Run the server
+
+Run these commands from `src` with the .NET 8 SDK or later:
 
 ```powershell
-$env:OC_DEMO_CREDENTIALS = "local-client-a-token:tenant-dev:client-a;local-client-b-token:tenant-dev:client-b"
+$env:OC_DEMO_CREDENTIALS = "token-a:tenant-a:client-a;token-b:tenant-a:client-b"
 $env:OC_SERVER_DATABASE = "$PWD\.local\oc-server\journal.db"
 dotnet run --project examples/OccasionallyConnected.Collaboration.Server/OccasionallyConnected.Collaboration.Server.csproj --framework net8.0
 ```
 
-The default address is `http://127.0.0.1:5088`. Override it with `OC_SERVER_URL` or `--url`, keeping it on loopback for this development host. Supported command-line switches are `--url`, `--database`, `--credentials`, and `--path-base`; unknown switches and switches without values are rejected.
+The server listens at `http://127.0.0.1:5088`. The parent directory for the database is created as needed. The database is persistent and the application does not delete it. The host also accepts `--url`, `--database`, `--credentials`, and `--path-base`; each switch takes a value. The URL must remain a loopback HTTP address for this development host.
 
-The runnable host declares batch push, cursor resume, receive acknowledgements, server idempotency, and atomic apply-and-acknowledge for clients that negotiate exactly-once delivery.
+The host declares batch push, cursor resume, receive acknowledgements, server idempotency, and atomic apply-and-acknowledge for clients that negotiate exactly-once delivery.
 
-## Served Streams
+## Served streams
 
-- `collaboration/activity`: custom activity stream implemented by the example. It accepts bounded JSON payloads with `status`, optional `title`, and optional `details`, then writes canonical JSON with server-owned acceptance metadata.
-- `collaboration/crdt/g-counter`: built-in grow-only counter CRDT.
-- `collaboration/crdt/pn-counter`: built-in positive-negative counter CRDT.
-- `collaboration/crdt/or-set`: built-in observed-remove set CRDT.
-- `collaboration/crdt/lww-register`: built-in last-writer-wins register CRDT.
+- `collaboration/activity` accepts bounded JSON updates with `status` and optional `title` and `details`. The server stores canonical JSON with server-owned acceptance metadata.
+- `collaboration/crdt/g-counter` is a grow-only counter.
+- `collaboration/crdt/pn-counter` is a positive-negative counter.
+- `collaboration/crdt/or-set` is an observed-remove set.
+- `collaboration/crdt/lww-register` is a last-writer-wins register.
 
-## Safety Defaults
+## Development safety
 
-The example sets finite request, payload, receive, concurrency, journal and retention bounds. Size limits are converted from KiB with checked arithmetic. The SQLite journal is persistent and is never silently deleted by the application.
+The host sets finite request, payload, receive, concurrency, journal, and retention limits. Its token mapping is for local development only. A production host should terminate TLS, authenticate callers through its identity system, and construct `ServerAuthenticatedClient` from that trusted identity before dispatching requests.
 
-The built-in token mapping is deliberately scoped to local development: it listens on loopback by default and accepts `X-OC-Demo-Token` values from `OC_DEMO_CREDENTIALS` or `--credentials`. Production hosts should terminate TLS, authenticate the caller with the service's normal identity system, and create the trusted `ServerAuthenticatedClient` from that authenticated identity before dispatching to the portable endpoint.
+## Test the server example
 
-## Verification Commands
-
-Run these from `src`:
+Run from `src`:
 
 ```powershell
-dotnet build tests/ReactiveUI.Primitives.OccasionallyConnected.Collaboration.Server.Tests/ReactiveUI.Primitives.OccasionallyConnected.Collaboration.Server.Tests.csproj -c Release -f net8.0 -m:1 --disable-build-servers
-dotnet tests/ReactiveUI.Primitives.OccasionallyConnected.Collaboration.Server.Tests/bin/Release/net8.0/ReactiveUI.Primitives.OccasionallyConnected.Collaboration.Server.Tests.dll --progress off
+dotnet test tests/ReactiveUI.Primitives.OccasionallyConnected.Collaboration.Server.Tests/ReactiveUI.Primitives.OccasionallyConnected.Collaboration.Server.Tests.csproj -c Release -f net8.0
 ```

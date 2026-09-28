@@ -1,0 +1,43 @@
+name: OccasionallyConnected mutation
+
+on:
+  pull_request:
+    branches: [main, OccasionallyConnected]
+    paths:
+      - 'src/ReactiveUI.Primitives.OccasionallyConnected*/**'
+      - 'src/tests/ReactiveUI.Primitives.OccasionallyConnected*/**'
+      - 'src/Directory.*'
+      - 'tools/Test-OccasionallyConnectedMutation.ps1'
+      - '.github/workflows/occasionally-connected-mutation.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  mutation:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        campaign: [Durability, Ordering, Idempotency, Retry]
+    steps:
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+      - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6
+        with:
+          dotnet-version: |
+            8.0.x
+            9.0.x
+            10.0.x
+            11.0.x
+          dotnet-quality: preview
+      - name: Run ${{ matrix.campaign }} mutation against TUnit
+        shell: pwsh
+        run: ./tools/Test-OccasionallyConnectedMutation.ps1 -Campaign ${{ matrix.campaign }}
+      - name: Retain mutation evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: occasionally-connected-mutation-${{ matrix.campaign }}
+          path: artifacts/oc-mutation/*/reports

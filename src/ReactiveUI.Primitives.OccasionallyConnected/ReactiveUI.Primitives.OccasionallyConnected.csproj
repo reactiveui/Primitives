@@ -22,4 +22,7 @@
     <PackageReference Include="Microsoft.Bcl.TimeProvider" />
     <PackageReference Include="System.Diagnostics.DiagnosticSource" />
   </ItemGroup>
+  <ItemGroup>
+    <None Include="README.md" Pack="true" PackagePath="README.md" />
+  </ItemGroup>
 </Project>

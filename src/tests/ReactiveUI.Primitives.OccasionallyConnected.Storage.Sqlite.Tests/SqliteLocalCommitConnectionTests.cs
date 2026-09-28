@@ -8,7 +8,7 @@ using ReactiveUI.Primitives.OccasionallyConnected.Storage.Sqlite;
 namespace ReactiveUI.Primitives.OccasionallyConnected.Storage.Sqlite.Tests;
 
 /// <summary>Tests for <see cref="SqliteLocalCommitConnection"/>.</summary>
-public sealed class SqliteLocalCommitConnectionTests
+public sealed partial class SqliteLocalCommitConnectionTests
 {
     /// <summary>The SQLite busy error code.</summary>
     private const int SqliteBusy = 5;

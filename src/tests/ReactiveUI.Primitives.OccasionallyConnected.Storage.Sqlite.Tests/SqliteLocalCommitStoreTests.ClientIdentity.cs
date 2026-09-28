@@ -47,10 +47,10 @@ public sealed partial class SqliteLocalCommitStoreTests
         await Assert.That(conflict).ThrowsExactly<InvalidOperationException>();
     }
 
-    /// <summary>Verifies a malformed durable binding cannot be interpreted as a legacy unbound partition.</summary>
+    /// <summary>Verifies a malformed durable binding cannot be interpreted as an unbound partition.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
-    public async Task CorruptClientBindingRejectsLegacyInitialization()
+    public async Task CorruptClientBindingRejectsUnboundInitialization()
     {
         using var database = TempDatabase.Create();
         using (var bound = new SqliteLocalCommitStore(database.Path))
@@ -65,8 +65,8 @@ public sealed partial class SqliteLocalCommitStoreTests
             await Assert.That(command.ExecuteNonQueryAsync()).IsEqualTo(1);
         }
 
-        using var legacy = new SqliteLocalCommitStore(database.Path);
-        Action initialize = () => legacy.Initialize(new(StoreIdentity, SchemaVersion, false), CancellationToken.None);
+        using var unbound = new SqliteLocalCommitStore(database.Path);
+        Action initialize = () => unbound.Initialize(new(StoreIdentity, SchemaVersion, false), CancellationToken.None);
         await Assert.That(initialize).ThrowsExactly<InvalidOperationException>();
     }
 

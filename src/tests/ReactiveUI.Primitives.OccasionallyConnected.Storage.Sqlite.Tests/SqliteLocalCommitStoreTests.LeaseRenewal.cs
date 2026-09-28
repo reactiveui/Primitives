@@ -107,27 +107,6 @@ public sealed partial class SqliteLocalCommitStoreTests
         await Assert.That(CountLeaseRows(database.Path, batch.LeaseId)).IsEqualTo(1);
     }
 
-    /// <summary>Verifies inconsistent historical metadata aborts migration before adding lease tables.</summary>
-    /// <returns>The asynchronous test.</returns>
-    [Test]
-    public async Task WhenHistoricalRemoteSchemaMetadataIsInvalid_ThenMigrationLeavesItUnchanged()
-    {
-        using var database = TempDatabase.Create();
-        await using (var connection = OpenRawConnection(database.Path))
-        {
-            await using var transaction = (Microsoft.Data.Sqlite.SqliteTransaction)await connection.BeginTransactionAsync();
-            SqliteStoreSchemaTests.CreateRemoteApplySchema(connection, transaction);
-            await using var command = connection.CreateCommand();
-            command.Transaction = transaction;
-            command.CommandText = "UPDATE oc_metadata SET value = 'invalid' WHERE key = 'schema_version';";
-            _ = await command.ExecuteNonQueryAsync();
-            await transaction.CommitAsync();
-        }
-
-        await Assert.That(() => CreateInitializedStore(database.Path)).ThrowsExactly<InvalidOperationException>();
-        await Assert.That(ReadUserVersion(database.Path)).IsEqualTo(SqliteStoreSchema.RemoteApplySchemaVersion);
-    }
-
     /// <summary>Verifies renewal at the expiry boundary cannot revive stale ownership.</summary>
     /// <returns>The asynchronous test.</returns>
     [Test]

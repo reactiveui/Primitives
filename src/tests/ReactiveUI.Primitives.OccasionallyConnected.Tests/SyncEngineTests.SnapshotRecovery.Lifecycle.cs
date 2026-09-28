@@ -40,6 +40,9 @@ public sealed partial class SyncEngineTests
             await session.SubscriptionGapReady.Task.WaitAsync(GuardTimeout);
             releaseGap.SetResult();
             await session.SubscribeCompleted.Task.WaitAsync(GuardTimeout);
+
+            // Subscription disposal precedes the receive pump's recovery admission.
+            await WaitForConditionAsync(() => engine.IsSnapshotRecoveryActive(Stream));
             await Assert.That(explicitFlush is null || !explicitFlush.IsCompleted).IsTrue();
             session.ReleasePausedSendAttempt();
             await uploadSync.WaitAsync(GuardTimeout);

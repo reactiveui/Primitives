@@ -61,6 +61,36 @@ public sealed partial class SqliteStoreSchemaTests
         await Assert.That(action).ThrowsExactly<InvalidOperationException>();
     }
 
+    /// <summary>Verifies a complete V1 database without its checksum is rejected without repair.</summary>
+    /// <returns>A task that represents the asynchronous test.</returns>
+    [Test]
+    public async Task WhenExistingVersionOneSchemaHasNoChecksum_ThenReopenFailsWithoutWriting()
+    {
+        using var database = TempDatabase.Create();
+        LocalStoreInitialization initialization = new(ChecksumStoreIdentity, SqliteStoreSchema.LocalCommitSchemaVersion, false);
+        using (var store = new SqliteLocalCommitStore(database.Path))
+        {
+            store.Initialize(initialization, CancellationToken.None);
+        }
+
+        await using (var connection = OpenRawConnection(database.Path))
+        await using (var command = connection.CreateCommand())
+        {
+            command.CommandText = "DELETE FROM oc_metadata WHERE key = 'schema_checksum';";
+            await Assert.That(await command.ExecuteNonQueryAsync()).IsEqualTo(1);
+        }
+
+        using var reopened = new SqliteLocalCommitStore(database.Path);
+        Action initialize = () => reopened.Initialize(initialization, CancellationToken.None);
+        await Assert.That(initialize).ThrowsExactly<InvalidOperationException>();
+
+        await using var inspection = OpenRawConnection(database.Path);
+        await using var transaction = (SqliteTransaction)await inspection.BeginTransactionAsync();
+        await Assert.That(SelectUserVersion(inspection, transaction)).IsEqualTo(SqliteStoreSchema.LocalCommitSchemaVersion);
+        await Assert.That(SqliteSchemaChecksum.TrySelect(inspection, transaction)).IsNull();
+        SqliteStoreSchema.ValidateLocalCommitSchema(inspection, transaction);
+    }
+
     /// <summary>Verifies recording an unchanged schema keeps the original checksum.</summary>
     /// <returns>A task that represents the asynchronous test.</returns>
     [Test]
@@ -69,7 +99,7 @@ public sealed partial class SqliteStoreSchemaTests
         using var database = TempDatabase.Create();
         await using var connection = OpenRawConnection(database.Path);
         await using var transaction = (SqliteTransaction)await connection.BeginTransactionAsync();
-        SqliteStoreSchema.CreateIdentitySchema(connection, transaction);
+        SqliteStoreSchema.CreateLocalCommitSchema(connection, transaction);
 
         await Assert.That(SqliteSchemaChecksum.Record(connection, transaction)).IsTrue();
         await Assert.That(SqliteSchemaChecksum.Record(connection, transaction)).IsFalse();
@@ -84,7 +114,7 @@ public sealed partial class SqliteStoreSchemaTests
         using var database = TempDatabase.Create();
         await using var connection = OpenRawConnection(database.Path);
         await using var transaction = (SqliteTransaction)await connection.BeginTransactionAsync();
-        SqliteStoreSchema.CreateIdentitySchema(connection, transaction);
+        SqliteStoreSchema.CreateLocalCommitSchema(connection, transaction);
         _ = SqliteSchemaChecksum.Record(connection, transaction);
         await using (var command = connection.CreateCommand())
         {

@@ -12,10 +12,7 @@ namespace ReactiveUI.Primitives.OccasionallyConnected.Storage.Sqlite.Tests;
 public sealed partial class SqliteLocalCommitStoreTests
 {
     /// <summary>The current local commit schema version.</summary>
-    private const int SchemaVersion = 8;
-
-    /// <summary>The identity-only schema version.</summary>
-    private const int IdentitySchemaVersion = 1;
+    private const int SchemaVersion = 1;
 
     /// <summary>The second client sequence value.</summary>
     private const int SecondClientSequence = 2;
@@ -74,7 +71,7 @@ public sealed partial class SqliteLocalCommitStoreTests
     /// <summary>A representative reopened stream identity.</summary>
     private static readonly StreamId ReopenedStream = new("sensor/reopened");
 
-    /// <summary>Verifies schema version two is created explicitly and keeps committed stream state after reopen.</summary>
+    /// <summary>Verifies V1 creates the full store and keeps committed stream state after reopen.</summary>
     /// <returns>A task that represents the asynchronous test.</returns>
     [Test]
     public async Task WhenLocalOperationIsCommittedAndStoreReopens_ThenSnapshotSequenceAndOutboxRecover()
@@ -98,43 +95,6 @@ public sealed partial class SqliteLocalCommitStoreTests
         await Assert.That(recovery.PendingOperations[0].Metadata[MetadataOriginKey]).IsEqualTo(UnitTestOrigin);
         await Assert.That(recovery.Snapshot?.Revision).IsEqualTo(1);
         await Assert.That(recovery.Snapshot?.State.Payload.ToArray().SequenceEqual(snapshot.State.Payload.ToArray())).IsTrue();
-    }
-
-    /// <summary>Verifies schema version one identity databases migrate without losing identities.</summary>
-    /// <returns>A task that represents the asynchronous test.</returns>
-    [Test]
-    public async Task WhenIdentitySchemaMigratesToLocalCommitSchema_ThenExistingIdentityIsPreserved()
-    {
-        using var database = TempDatabase.Create();
-        var subscriptionId = SubscriptionId.New();
-        using (var identityStore = new SqliteSubscriptionIdentityStore(database.Path))
-        {
-            identityStore.Initialize(new(StoreIdentity, IdentitySchemaVersion, false), CancellationToken.None);
-            _ = identityStore.GetOrCreateSubscriptionId(Stream, subscriptionId, CancellationToken.None);
-        }
-
-        using var store = CreateInitializedStore(database.Path);
-
-        await Assert.That(store.GetOrCreateSubscriptionId(Stream, null, CancellationToken.None)).IsEqualTo(subscriptionId);
-        await Assert.That(ReadUserVersion(database.Path)).IsEqualTo(SchemaVersion);
-    }
-
-    /// <summary>Verifies reopening schema version two through the identity facade keeps schema version two valid.</summary>
-    /// <returns>A task that represents the asynchronous test.</returns>
-    [Test]
-    public async Task WhenIdentityFacadeOpensLocalCommitSchema_ThenSchemaVersionTwoRemainsValid()
-    {
-        using var database = TempDatabase.Create();
-        using (var store = CreateInitializedStore(database.Path))
-        {
-            _ = store.GetOrCreateSubscriptionId(Stream, SubscriptionId.New(), CancellationToken.None);
-        }
-
-        using var identityStore = new SqliteSubscriptionIdentityStore(database.Path);
-        identityStore.Initialize(new(StoreIdentity, IdentitySchemaVersion, false), CancellationToken.None);
-
-        await Assert.That(identityStore.GetOrCreateSubscriptionId(Stream, null, CancellationToken.None).Value).IsNotEqualTo(Guid.Empty);
-        await Assert.That(ReadUserVersion(database.Path)).IsEqualTo(SchemaVersion);
     }
 
     /// <summary>Verifies duplicate operation ids return the first durable result without changing state.</summary>
@@ -394,31 +354,6 @@ public sealed partial class SqliteLocalCommitStoreTests
         await Assert.That(action).ThrowsExactly<InvalidOperationException>();
     }
 
-    /// <summary>Verifies schema migration is transactional when a real trigger aborts table backfill.</summary>
-    /// <returns>A task that represents the asynchronous test.</returns>
-    [Test]
-    public async Task WhenSchemaMigrationFails_ThenIdentitySchemaRemainsUsable()
-    {
-        using var database = TempDatabase.Create();
-        var subscriptionId = SubscriptionId.New();
-        using (var identityStore = new SqliteSubscriptionIdentityStore(database.Path))
-        {
-            identityStore.Initialize(new(StoreIdentity, IdentitySchemaVersion, false), CancellationToken.None);
-            _ = identityStore.GetOrCreateSubscriptionId(Stream, subscriptionId, CancellationToken.None);
-        }
-
-        var triggerConnection = CreateMigrationRollbackTrigger(database.Path);
-        using var store = new SqliteLocalCommitStore(database.Path);
-        Action action = () => store.Initialize(new(StoreIdentity, SchemaVersion, false), CancellationToken.None);
-
-        await Assert.That(action).ThrowsExactly<SqliteException>();
-        triggerConnection.Dispose();
-        await Assert.That(ReadUserVersion(database.Path)).IsEqualTo(IdentitySchemaVersion);
-        using var identityReopen = new SqliteSubscriptionIdentityStore(database.Path);
-        identityReopen.Initialize(new(StoreIdentity, IdentitySchemaVersion, false), CancellationToken.None);
-        await Assert.That(identityReopen.GetOrCreateSubscriptionId(Stream, null, CancellationToken.None)).IsEqualTo(subscriptionId);
-    }
-
     /// <summary>Verifies identity and commit connections use foreign-key enforcement and FULL synchronous writes after reopen.</summary>
     /// <returns>A task that represents the asynchronous test.</returns>
     [Test]
@@ -467,7 +402,7 @@ public sealed partial class SqliteLocalCommitStoreTests
         using var store = new SqliteLocalCommitStore(database.Path);
         Action<LocalStoreInitialization> initialize = value => store.Initialize(value, CancellationToken.None);
         Action missing = () => initialize.DynamicInvoke([null]);
-        Action unsupported = () => store.Initialize(new(StoreIdentity, IdentitySchemaVersion, false), CancellationToken.None);
+        Action unsupported = () => store.Initialize(new(StoreIdentity, SchemaVersion + 1, false), CancellationToken.None);
         Action blank = () => store.Initialize(new(" ", SchemaVersion, false), CancellationToken.None);
 
         var missingException = Assert.ThrowsExactly<System.Reflection.TargetInvocationException>(missing);
@@ -672,16 +607,15 @@ public sealed partial class SqliteLocalCommitStoreTests
         await Assert.That(wrongSubscription).ThrowsExactly<InvalidOperationException>();
     }
 
-    /// <summary>Verifies migrated identities recover with initial sequence when a stream row is missing.</summary>
+    /// <summary>Verifies identities recover with initial sequence when a stream row is missing.</summary>
     /// <returns>A task that represents the asynchronous test.</returns>
     [Test]
     public async Task WhenIdentityExistsWithoutStream_ThenRecoveryUsesInitialSequence()
     {
         using var database = TempDatabase.Create();
         var subscriptionId = SubscriptionId.New();
-        using (var identityStore = new SqliteSubscriptionIdentityStore(database.Path))
+        using (var identityStore = CreateInitializedStore(database.Path))
         {
-            identityStore.Initialize(new(StoreIdentity, IdentitySchemaVersion, false), CancellationToken.None);
             _ = identityStore.GetOrCreateSubscriptionId(Stream, subscriptionId, CancellationToken.None);
         }
 
@@ -902,26 +836,6 @@ public sealed partial class SqliteLocalCommitStoreTests
         await Assert.That(recovery.NextClientSequence).IsEqualTo(1);
         await Assert.That(recovery.PendingOperations.Count).IsEqualTo(0);
         await Assert.That(recovery.Snapshot).IsNull();
-    }
-
-    /// <summary>Verifies historical schema dispatch migrates every supported local commit version.</summary>
-    /// <param name="schemaVersion">The historical schema version.</param>
-    /// <returns>A task that represents the asynchronous test.</returns>
-    [Test]
-    [Arguments(SqliteStoreSchema.IdentitySchemaVersion)]
-    [Arguments(SqliteStoreSchema.LegacyLocalCommitSchemaVersion)]
-    [Arguments(SqliteStoreSchema.RemoteApplySchemaVersion)]
-    [Arguments(SqliteStoreSchema.LeaseSchemaVersion)]
-    [Arguments(SqliteStoreSchema.PreAuthoritativeLocalCommitSchemaVersion)]
-    [Arguments(SqliteStoreSchema.AuthoritativeLocalCommitSchemaVersion)]
-    public async Task WhenHistoricalSchemaVersionInitializes_ThenStoreMigratesToCurrent(int schemaVersion)
-    {
-        using var database = TempDatabase.Create();
-        CreateHistoricalLocalCommitSchema(database.Path, schemaVersion);
-
-        using var store = CreateInitializedStore(database.Path);
-
-        await Assert.That(ReadUserVersion(database.Path)).IsEqualTo(SchemaVersion);
     }
 
     /// <summary>Verifies user tables without a schema version are not treated as a new empty database.</summary>

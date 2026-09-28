@@ -13,9 +13,6 @@ public sealed partial class SqliteServerCommitJournalTests
     /// <summary>The logical byte limit used by subscription cursor tests.</summary>
     private const long SubscriptionCursorTestMaximumLogicalBytes = 12_288;
 
-    /// <summary>The migrated schema version expected after opening a schema-two database.</summary>
-    private const long MigratedSchemaVersion = 5;
-
     /// <summary>The first deterministic subscription.</summary>
     private static readonly SubscriptionId FirstSubscription = new(new Guid("20000000-0000-0000-0000-000000000001"));
 
@@ -271,30 +268,6 @@ public sealed partial class SqliteServerCommitJournalTests
         await Assert.That(journal.SubscriptionOfferCount).IsEqualTo(0);
     }
 
-    /// <summary>Verifies schema-two data migrates to schema three without losing existing replay or receive order.</summary>
-    /// <returns>The asynchronous test operation.</returns>
-    [Test]
-    public async Task SubscriptionSchemaThreeMigrationPreservesSchemaTwoReplayAndReceivePages()
-    {
-        using var database = new TemporaryDatabase();
-        var key = OperationKey(FirstOperationSeed);
-        using (var seeded = CreateSubscriptionJournal(database.Path))
-        {
-            _ = seeded.TryCommit(Plan(0, State(FirstVersion), Stamp(key), Entry(key, OperationResultKind.Accepted, FirstOperationSeed)));
-        }
-
-        DowngradeSchemaThreeToTwo(database.Path);
-        using var migrated = CreateSubscriptionJournal(database.Path);
-        var replay = migrated.Read(StreamKey(), [key]);
-        var page = migrated.ReadReceivePage(new(StreamKey(), null, SingleEntryCount, DefaultMaximumEvents, DefaultMaximumLogicalBytes));
-
-        await Assert.That(ReadUserVersion(database.Path)).IsEqualTo(MigratedSchemaVersion);
-        await Assert.That(replay.Entries).Count().IsEqualTo(SingleEntryCount);
-        await Assert.That(replay.LastCursor).IsEqualTo(FirstCursor);
-        await Assert.That(page.Status).IsEqualTo(ServerReceivePageStatus.Page);
-        await Assert.That(migrated.SubscriptionCount).IsEqualTo(0);
-    }
-
     /// <summary>Verifies SQLite subscription guards reject malformed, foreign and missing bindings.</summary>
     /// <returns>The asynchronous test operation.</returns>
     [Test]
@@ -429,25 +402,6 @@ public sealed partial class SqliteServerCommitJournalTests
             .ThrowsExactly<InvalidOperationException>();
     }
 
-    /// <summary>Verifies schema-two metadata mismatches and malformed metadata fail before migration.</summary>
-    /// <returns>The asynchronous test operation.</returns>
-    [Test]
-    public async Task SubscriptionSchemaTwoMigrationRejectsUnsupportedAndMalformedMetadata()
-    {
-        using var unsupportedDatabase = new TemporaryDatabase();
-        using (var seeded = CreateSubscriptionJournal(unsupportedDatabase.Path))
-        {
-            SeedCommittedEvent(seeded);
-        }
-
-        DowngradeSchemaThreeToTwoWithMetadata(unsupportedDatabase.Path, "9");
-        await Assert.That(() => CreateSubscriptionJournal(unsupportedDatabase.Path)).ThrowsExactly<InvalidOperationException>();
-
-        using var malformedDatabase = new TemporaryDatabase();
-        CreateMalformedSchemaTwoMetadata(malformedDatabase.Path);
-        await Assert.That(() => CreateSubscriptionJournal(malformedDatabase.Path)).ThrowsExactly<InvalidOperationException>();
-    }
-
     /// <summary>Verifies SQLite subscription expiry clamps when the monotonic clock is at its minimum.</summary>
     /// <returns>The asynchronous test operation.</returns>
     [Test]
@@ -565,10 +519,10 @@ public sealed partial class SqliteServerCommitJournalTests
         await Assert.That(() => CreateSubscriptionJournal(database.Path)).ThrowsExactly<InvalidOperationException>();
     }
 
-    /// <summary>Verifies schema-three subscription table corruption fails validation.</summary>
+    /// <summary>Verifies subscription table corruption fails schema validation.</summary>
     /// <returns>The asynchronous test operation.</returns>
     [Test]
-    public async Task SubscriptionSchemaThreeTableDefinitionCorruptionFailsValidation()
+    public async Task SubscriptionTableDefinitionCorruptionFailsValidation()
     {
         using var database = new TemporaryDatabase();
         var initialized = CreateSubscriptionJournal(database.Path);
@@ -676,48 +630,7 @@ public sealed partial class SqliteServerCommitJournalTests
         _ = command.ExecuteNonQuery();
     }
 
-    /// <summary>Removes schema-three subscription tables after seeding schema-two compatible data.</summary>
-    /// <param name="path">The database path.</param>
-    [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
-    private static void DowngradeSchemaThreeToTwo(string path) => DowngradeSchemaThreeToTwoWithMetadata(path, "2");
-
-    /// <summary>Removes schema-three subscription tables and writes a schema-two metadata value.</summary>
-    /// <param name="path">The database path.</param>
-    /// <param name="metadataVersion">The metadata schema version.</param>
-    private static void DowngradeSchemaThreeToTwoWithMetadata(string path, string metadataVersion)
-    {
-        using var connection = OpenRawConnection(path);
-        using var command = connection.CreateCommand();
-        command.CommandText = """
-            DROP TABLE oc_server_journal_subscription_offers;
-            DROP TABLE oc_server_journal_subscriptions;
-            DELETE FROM oc_server_journal_metadata WHERE key = 'subscription_generation_high_water';
-            UPDATE oc_server_journal_metadata SET value = $metadataVersion WHERE key = 'schema_version';
-            PRAGMA user_version = 2;
-            """;
-        _ = command.Parameters.AddWithValue("$metadataVersion", metadataVersion);
-        _ = command.ExecuteNonQuery();
-    }
-
-    /// <summary>Creates schema-two table names with malformed metadata storage.</summary>
-    /// <param name="path">The database path.</param>
-    private static void CreateMalformedSchemaTwoMetadata(string path)
-    {
-        using var connection = OpenRawConnection(path);
-        using var command = connection.CreateCommand();
-        command.CommandText = """
-            PRAGMA user_version = 2;
-            CREATE TABLE oc_server_journal_conflicts (id INTEGER NOT NULL);
-            CREATE TABLE oc_server_journal_event_metadata (id INTEGER NOT NULL);
-            CREATE TABLE oc_server_journal_events (id INTEGER NOT NULL);
-            CREATE TABLE oc_server_journal_ledger (id INTEGER NOT NULL);
-            CREATE TABLE oc_server_journal_metadata (id INTEGER NOT NULL);
-            CREATE TABLE oc_server_journal_streams (id INTEGER NOT NULL);
-            """;
-        _ = command.ExecuteNonQuery();
-    }
-
-    /// <summary>Replaces schema-three subscription tables with invalid definitions.</summary>
+    /// <summary>Replaces subscription tables with invalid definitions.</summary>
     /// <param name="path">The database path.</param>
     private static void CorruptSubscriptionTables(string path)
     {

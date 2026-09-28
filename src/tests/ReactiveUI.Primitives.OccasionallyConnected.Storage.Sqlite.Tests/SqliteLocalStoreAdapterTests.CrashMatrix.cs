@@ -348,6 +348,11 @@ public sealed partial class SqliteLocalStoreAdapterTests
     private sealed class BlockingCommitFaultPoint(SqliteCommitCheckpoint target, string signalPath) : ISqliteCommitFaultPoint
     {
         /// <inheritdoc/>
+        public void BeforeLocalCommitTransaction(Microsoft.Data.Sqlite.SqliteConnection connection)
+        {
+        }
+
+        /// <inheritdoc/>
         public void Reached(SqliteCommitCheckpoint checkpoint)
         {
             if (checkpoint != target)

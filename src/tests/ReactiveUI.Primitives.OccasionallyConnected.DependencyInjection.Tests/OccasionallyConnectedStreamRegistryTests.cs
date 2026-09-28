@@ -19,9 +19,6 @@ public sealed class OccasionallyConnectedStreamRegistryTests
     /// <summary>The main counter stream name used by registry tests.</summary>
     private const string CounterName = "counter";
 
-    /// <summary>The number of forced finalizer passes used by the UTE regression.</summary>
-    private const int FinalizerPasses = 2;
-
     /// <summary>The input delta used after provider disposal.</summary>
     private const int DisposedPublishDelta = 1;
 
@@ -264,37 +261,6 @@ public sealed class OccasionallyConnectedStreamRegistryTests
         }
     }
 
-    /// <summary>Verifies a failed owner-only factory does not publish an unobserved task fault.</summary>
-    /// <returns>A task representing the assertions.</returns>
-    [Test]
-    public async Task FailedFactoryWithoutJoinerDoesNotPublishUnobservedTaskException()
-    {
-        var failure = new InvalidOperationException("factory failed");
-        var unobserved = new TaskCompletionSource<AggregateException>(
-            TaskCreationOptions.RunContinuationsAsynchronously);
-        void Handler(object? _, UnobservedTaskExceptionEventArgs args)
-        {
-            if (ContainsOriginalFailure(args.Exception, failure))
-            {
-                _ = unobserved.TrySetResult(args.Exception);
-            }
-        }
-
-        TaskScheduler.UnobservedTaskException += Handler;
-        try
-        {
-            var exception = await ResolveOwnerOnlyFailureAsync(failure);
-
-            await Assert.That(exception).IsSameReferenceAs(failure);
-            ForceFinalizers();
-            await AssertNoUnobservedExceptionAsync(unobserved.Task);
-        }
-        finally
-        {
-            TaskScheduler.UnobservedTaskException -= Handler;
-        }
-    }
-
     /// <summary>Verifies missing names are rejected deterministically.</summary>
     /// <returns>A task representing the assertions.</returns>
     [Test]
@@ -338,54 +304,6 @@ public sealed class OccasionallyConnectedStreamRegistryTests
         return services.BuildServiceProvider(validateScopes: true);
     }
 
-    /// <summary>Runs a failed owner-only resolution behind a non-inlined helper boundary.</summary>
-    /// <param name="failure">The factory failure to throw.</param>
-    /// <returns>The exception returned by the registry.</returns>
-    [MethodImpl(MethodImplOptions.NoInlining | MethodImplOptions.NoOptimization)]
-    private static async Task<InvalidOperationException> ResolveOwnerOnlyFailureAsync(Exception failure)
-    {
-        await using var provider = CreateProvider(builder => builder.AddStream<
-            DependencyInjectionTestDoubles.CounterState,
-            DependencyInjectionTestDoubles.CounterInput>(
-                CounterName,
-                _ => throw failure));
-        var streams = provider.GetRequiredService<IOccasionallyConnectedStreamRegistry>();
-        var exception = Assert.ThrowsExactly<InvalidOperationException>(() =>
-            streams.GetRequiredStream(CounterKey(CounterName)));
-        return exception;
-    }
-
-    /// <summary>Forces finalizers so unobserved task faults are published deterministically.</summary>
-    [MethodImpl(MethodImplOptions.NoInlining | MethodImplOptions.NoOptimization)]
-    [System.Diagnostics.CodeAnalysis.SuppressMessage("Allocations", "PSH1021:Do not force garbage collection", Justification = "Test helper to force finalizers.")]
-    private static void ForceFinalizers()
-    {
-        for (var pass = 0; pass < FinalizerPasses; pass++)
-        {
-            GC.Collect();
-            GC.WaitForPendingFinalizers();
-            GC.Collect();
-        }
-    }
-
-    /// <summary>Checks whether an aggregate contains the expected factory failure instance.</summary>
-    /// <param name="exception">The aggregate exception.</param>
-    /// <param name="failure">The original factory failure.</param>
-    /// <returns>A value indicating whether the original failure was observed.</returns>
-    private static bool ContainsOriginalFailure(AggregateException exception, Exception failure)
-    {
-        var exceptions = exception.Flatten().InnerExceptions;
-        for (var i = 0; i < exceptions.Count; i++)
-        {
-            if (ReferenceEquals(exceptions[i], failure))
-            {
-                return true;
-            }
-        }
-
-        return false;
-    }
-
     /// <summary>Creates a null reference for a non-nullable malformed-input fixture.</summary>
     /// <typeparam name="T">The non-nullable reference type.</typeparam>
     /// <returns>A null reference typed as <typeparamref name="T" />.</returns>
@@ -403,15 +321,6 @@ public sealed class OccasionallyConnectedStreamRegistryTests
     private static OccasionallyConnectedStreamKey<
         DependencyInjectionTestDoubles.CounterState,
         DependencyInjectionTestDoubles.CounterInput> CounterKey(string name) => new(name);
-
-    /// <summary>Asserts no unobserved task exception is reported after finalization.</summary>
-    /// <param name="unobservedTask">The unobserved exception signal.</param>
-    /// <returns>A task representing the assertion.</returns>
-    private static async Task AssertNoUnobservedExceptionAsync(Task<AggregateException> unobservedTask)
-    {
-        await Task.Yield();
-        await Assert.That(unobservedTask.IsCompleted).IsFalse();
-    }
 
     /// <summary>Starts stream resolution on a separate thread.</summary>
     /// <param name="registry">The registry under test.</param>

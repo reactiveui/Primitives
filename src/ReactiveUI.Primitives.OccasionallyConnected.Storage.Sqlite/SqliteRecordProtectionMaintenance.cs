@@ -8,10 +8,10 @@ using ReactiveUI.Primitives.OccasionallyConnected;
 
 namespace ReactiveUI.Primitives.OccasionallyConnected.Storage.Sqlite;
 
-/// <summary>Tracks whether a SQLite database encrypts records at rest, migrates plaintext rows, and rotates keys.</summary>
+/// <summary>Tracks record encryption, the plaintext configuration transition, and key rotation.</summary>
 /// <remarks>
 /// A database is either fully plaintext or fully protected. The protection marker and the encrypted key check value live in
-/// <c>oc_metadata</c>. The plaintext-to-encrypted migration and key rotation each run inside one write transaction, so a
+/// <c>oc_metadata</c>. The plaintext-to-encrypted transition and key rotation each run inside one write transaction, so a
 /// crash leaves the database in its previous consistent state and the next initialization runs the step again.
 /// </remarks>
 internal static partial class SqliteRecordProtectionMaintenance
@@ -34,6 +34,13 @@ internal static partial class SqliteRecordProtectionMaintenance
     /// <summary>The store identity used for database-wide values.</summary>
     private const string DatabaseScope = "";
 
+    /// <summary>Reports whether the database already carries the encrypted record marker.</summary>
+    /// <param name="connection">The connection.</param>
+    /// <param name="transaction">The transaction.</param>
+    /// <returns>Whether the database is protected.</returns>
+    internal static bool IsProtected(SqliteConnection connection, SqliteTransaction transaction) =>
+        TrySelectMetadata(connection, transaction, ProtectionMetadataKey) is not null;
+
     /// <summary>Validates or establishes the record protection state of a database inside the initialization transaction.</summary>
     /// <param name="connection">The connection.</param>
     /// <param name="transaction">The initialization transaction.</param>
@@ -49,6 +56,16 @@ internal static partial class SqliteRecordProtectionMaintenance
         CancellationToken cancellationToken)
     {
         var marker = TrySelectMetadata(connection, transaction, ProtectionMetadataKey);
+        if (marker is null)
+        {
+            var keyCheck = TrySelectMetadata(connection, transaction, KeyCheckMetadataKey);
+            var manifest = TrySelectMetadata(connection, transaction, SqliteOperationStateIntegrity.ManifestKey);
+            if (keyCheck is not null || manifest is not null)
+            {
+                throw new InvalidOperationException("The SQLite local store record protection metadata is inconsistent.");
+            }
+        }
+
         if (protection is null)
         {
             if (marker is null)

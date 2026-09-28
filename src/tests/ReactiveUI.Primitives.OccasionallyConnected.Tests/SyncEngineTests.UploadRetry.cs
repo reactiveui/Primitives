@@ -335,6 +335,50 @@ public sealed partial class SyncEngineTests
         }
     }
 
+    /// <summary>Verifies an expired exactly-once retry records the configured downgrade before sending.</summary>
+    /// <returns>The assertion task.</returns>
+    [Test]
+    public async Task ExpiredExactlyOnceRetryDowngradesBeforeSendingWhenConfigured()
+    {
+        var directory = Directory.CreateTempSubdirectory("oc-engine-upload-fallback-");
+        try
+        {
+            var databasePath = Path.Combine(directory.FullName, "local.db");
+            var clock = new ManualTimerTimeProvider(DateTimeOffset.UnixEpoch);
+            var serverRetention = TimeSpan.FromSeconds(UploadShortRetentionSeconds);
+            var operation = CreateOperation() with
+            {
+                Policy = OperationPolicy.Default with { DeliveryGuarantee = DeliveryGuarantee.ExactlyOnce },
+            };
+            await RunFirstExactlyOnceSqliteUploadAttemptAsync(databasePath, clock, operation, serverRetention);
+            clock.Advance(TimeSpan.FromSeconds(UploadExpiredRetentionAdvanceSeconds));
+
+            await using var store = await CreateEngineSqliteStoreAsync(databasePath, clock);
+            var session = new PreparedSession(ExpectedSingleOperation, PreparedUploadBytes) { NegotiatedCapabilities = CreateExactlyOnceCapabilities(serverRetention) };
+            var options = CreateDiagnosticsBatchOptions(ExpectedSingleOperation, PreparedUploadBytes) with
+            {
+                ExactlyOnceExpiryBehavior = ExactlyOnceExpiryBehavior.FallbackToAtLeastOnce,
+            };
+            await using var engine = CreateBorrowedStoreEngine(store, new RecordingTransport { SessionOverride = session }, options, clock);
+            using var registration = engine.RegisterParticipant(new RecordingParticipant());
+            var operationStates = new RecordingObserver<SyncOperationStatus>();
+            using var statusSubscription = engine.OperationStates.Subscribe(operationStates);
+
+            await engine.StartAsync(CancellationToken.None);
+            await TriggerAndDrainUploadWithTraceAsync(engine, clock, session, faults: null, operationStates);
+            await WaitForConditionAsync(() => operationStates.Values.Exists(status =>
+                status.OperationId == operation.OperationId && status.ReasonCode == SyncReasonCodes.GuaranteeDowngraded));
+
+            await Assert.That(session.SentBatches.Count).IsEqualTo(ExpectedSingleOperation);
+            await Assert.That(session.SentBatches[0].Operations[0].OperationId).IsEqualTo(operation.OperationId);
+            await engine.StopAsync(CancellationToken.None);
+        }
+        finally
+        {
+            directory.Delete(recursive: true);
+        }
+    }
+
     /// <summary>Verifies recovered upload-only work is not attempted when the session lacks its delivery guarantee.</summary>
     /// <returns>The assertion task.</returns>
     /// <exception cref="TimeoutException">Upload retry progress is not observed before the guard timeout.</exception>

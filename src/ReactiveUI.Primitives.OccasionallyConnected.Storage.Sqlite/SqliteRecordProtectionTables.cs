@@ -8,7 +8,7 @@ using ReactiveUI.Primitives.OccasionallyConnected;
 
 namespace ReactiveUI.Primitives.OccasionallyConnected.Storage.Sqlite;
 
-/// <summary>Lists every protected column of the SQLite local store for migration and key rotation.</summary>
+/// <summary>Lists every protected column for the encryption transition and key rotation.</summary>
 /// <remarks>
 /// Protected columns: outbox payload, payload hash, base version and commit fingerprint; original authoritative mutation
 /// payload and hash; outbox metadata values; snapshot payload, hash and cursor; current authoritative snapshot payload and

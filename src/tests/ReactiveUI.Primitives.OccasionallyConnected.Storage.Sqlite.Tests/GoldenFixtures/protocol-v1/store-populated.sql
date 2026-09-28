@@ -1,4 +1,4 @@
--- Store written by the frozen release. Replay it into an empty database file.
+-- First release V1 store. Replay it into an empty database file.
 -- table oc_inbox
 CREATE TABLE oc_inbox (
     store_identity TEXT NOT NULL,
@@ -12,6 +12,15 @@ CREATE TABLE oc_inbox (
         ON DELETE CASCADE);
 -- table oc_metadata
 CREATE TABLE oc_metadata (key TEXT NOT NULL PRIMARY KEY, value TEXT NOT NULL);
+-- table oc_operation_state_proofs
+CREATE TABLE oc_operation_state_proofs (
+    store_identity TEXT NOT NULL,
+    operation_id TEXT NOT NULL,
+    proof BLOB NOT NULL,
+    PRIMARY KEY (store_identity, operation_id),
+    FOREIGN KEY (store_identity, operation_id)
+        REFERENCES oc_outbox_operation_states (store_identity, operation_id)
+        ON DELETE CASCADE);
 -- table oc_outbox
 CREATE TABLE oc_outbox (
     store_identity TEXT NOT NULL,
@@ -176,7 +185,8 @@ CREATE TABLE oc_subscription_identities (
     subscription_id TEXT NOT NULL,
     PRIMARY KEY (store_identity, stream_id));
 INSERT INTO oc_inbox VALUES ('golden-client', 'sensor/temperature', '00000000-0000-0000-0000-000000000201', 'cursor-1', '2026-09-13T00:00:10.0000000+00:00');
-INSERT INTO oc_metadata VALUES ('schema_version', '8');
+INSERT INTO oc_metadata VALUES ('schema_version', '1');
+INSERT INTO oc_metadata VALUES ('schema_checksum', 'sha256:a1dbde37c8fb2fc7d74750206b7013901893c5358771d484049e2cd4efffb836');
 INSERT INTO oc_outbox VALUES ('golden-client', '00000000-0000-0000-0000-000000000001', 'sensor/temperature', 1, '2026-09-13T00:00:10.0000000+00:00', 'cursor-1', 0, 'temperature-reading', 1, 'application/json', X'7B2276616C7565223A32322E312C22756E6974223A2243227D', 'sha256-AHrmRLT/fVIWmAB/ynZthFtmjIjyxB262Fj0y6tmYUY=', 1, 0, 0, 1, 2, '2026-09-13T00:00:10.0000000+00:00', X'9B467AC2A82967B5CCBC9EFAFE50D91EE752CFFE79A62982F9668CDE26BE5151');
 INSERT INTO oc_outbox VALUES ('golden-client', '00000000-0000-0000-0000-000000000002', 'sensor/temperature', 2, '2026-09-13T00:00:10.0000000+00:00', 'cursor-1', 0, 'temperature-reading', 1, 'application/json', X'7B2276616C7565223A32322E312C22756E6974223A2243227D', 'sha256-AHrmRLT/fVIWmAB/ynZthFtmjIjyxB262Fj0y6tmYUY=', 1, 0, 0, 1, 3, '2026-09-13T00:00:10.0000000+00:00', X'D4036A1308F54A7D872DA8E1F02C6880EABC95A70A70196E6867A73C88AD07A2');
 INSERT INTO oc_outbox_metadata VALUES ('golden-client', '00000000-0000-0000-0000-000000000001', 'origin', 'unit-test');
@@ -186,4 +196,4 @@ INSERT INTO oc_outbox_operation_states VALUES ('golden-client', '00000000-0000-0
 INSERT INTO oc_snapshots VALUES ('golden-client', 'sensor/temperature', 1, 'cursor-1', 'temperature-state', 1, 'application/json', X'7B2272656164696E6773223A332C226C617374223A32322E317D', 'sha256-P5xyzqNgFYRDlrUn+Ckvesp71hydfu3VHQUAmFfkaco=', 3, '2026-09-13T00:00:10.0000000+00:00');
 INSERT INTO oc_streams VALUES ('golden-client', 'sensor/temperature', '00000000-0000-0000-0000-000000000301', 3, 'cursor-1');
 INSERT INTO oc_subscription_identities VALUES ('golden-client', 'sensor/temperature', '00000000-0000-0000-0000-000000000301');
-PRAGMA user_version = 8;
+PRAGMA user_version = 1;

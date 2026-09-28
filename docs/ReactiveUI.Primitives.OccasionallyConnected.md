@@ -549,6 +549,24 @@ The default SQLite store does not advertise `MultiProcessCoordination`. During `
 
 SQLite ownership is based on the database path captured by `SqliteLocalStoreAdapter` construction after normal `Path.GetFullPath` lexical resolution. It coordinates adapters that use the same resolved local path string and does not lock byte ranges in the SQLite database file. Known unsafe path forms are rejected before acquisition: UNC paths, Windows network drives reported by the runtime, and existing reparse-point database files, ownership sidecars, or parent directories. Hard links, 8.3 short-name aliases, bind mounts, network-drive remappings that are not visible to the runtime, and filesystem clients that do not enforce the same exclusive sharing semantics remain unsupported SQLite storage deployments while the database is open. The default SQLite adapter keeps `MultiProcessCoordination` absent and enforces second-writer rejection for supported local database paths that resolve to the same sidecar path.
 
+#### Upgrading a SQLite store from schema 8 to 9
+
+Schema 9 adds authenticated integrity proofs for durable operation state. Plaintext schema 8 stores upgrade during initialization. An encrypted schema 8 store with local operations stops by default because schema 8 left operation state unauthenticated. The application must independently trust the database before it opts in to that one upgrade:
+
+```csharp
+var options = new SqliteLocalStoreAdapterOptions
+{
+    KeyProvider = keyProvider,
+    TrustEncryptedVersion8OperationStatesForUpgrade = true
+};
+```
+
+Use this option only while initializing the trusted schema 8 file. Remove it from normal startup configuration after the upgrade. Keep the same key provider available to read an encrypted backup.
+
+Before changing a schema 8 database, the adapter creates and checks a backup beside the database at `<database>.pre-v9-backups/schema-v8-<id>.db`. It checks that the copy is still schema 8 and passes SQLite's integrity check. The backup contains committed database state, including rows still in the write-ahead log. If the adapter cannot create and validate this backup, initialization fails and the migration does not proceed. On Unix, the adapter restricts the backup directory and file to the current user. On Windows, it copies the database file's access rules. Choose a database location with enough space and appropriate access controls before upgrading. The adapter keeps completed backups; set and follow an operator retention policy for them.
+
+To recover or roll back, stop every process that can write to the database and close its connections. Preserve the current database and its SQLite sidecar files for investigation. Restore a verified schema 8 backup as the database file, and make sure sidecar files from the schema 9 database do not remain beside it. Start the older package only after the restore. The backup is a point-in-time copy from before the upgrade, so this restore loses writes made after that copy. Keep the key needed by an encrypted backup. Older packages reject schema 9 as a newer unsupported version and leave it unchanged; they cannot open it directly.
+
 ### 7.8 Transport contract
 
 ```csharp

@@ -282,51 +282,6 @@ public sealed partial class SqliteServerCommitJournalTests
             .ThrowsExactly<InvalidOperationException>();
     }
 
-    /// <summary>Verifies schema-three databases migrate through the direct schema-three branch.</summary>
-    /// <returns>The asynchronous test operation.</returns>
-    [Test]
-    public async Task SubscriptionSchemaThreeDirectMigrationAddsStartPositionColumns()
-    {
-        using var database = new TemporaryDatabase();
-        using (var created = CreateSubscriptionJournal(database.Path))
-        {
-            await Assert.That(created.SubscriptionCount).IsEqualTo(0);
-        }
-
-        RewriteSubscriptionTablesAsSchemaThree(database.Path);
-        using var migrated = CreateSubscriptionJournal(database.Path);
-
-        await Assert.That(ReadUserVersion(database.Path)).IsEqualTo(MigratedSchemaVersion);
-        await Assert.That(migrated.SubscriptionCount).IsEqualTo(0);
-    }
-
-    /// <summary>Verifies schema-three migration rejects unsupported metadata before mutation.</summary>
-    /// <returns>The asynchronous test operation.</returns>
-    [Test]
-    public async Task SubscriptionSchemaThreeMigrationRejectsUnsupportedMetadataVersion()
-    {
-        using var database = new TemporaryDatabase();
-        using (var created = CreateSubscriptionJournal(database.Path))
-        {
-            await Assert.That(created.SubscriptionCount).IsEqualTo(0);
-        }
-
-        WriteSchemaThreeUnsupportedMetadataVersion(database.Path);
-
-        await Assert.That(() => CreateSubscriptionJournal(database.Path)).ThrowsExactly<InvalidOperationException>();
-    }
-
-    /// <summary>Verifies schema-three migration wraps malformed metadata storage.</summary>
-    /// <returns>The asynchronous test operation.</returns>
-    [Test]
-    public async Task SubscriptionSchemaThreeMigrationRejectsMalformedMetadataTable()
-    {
-        using var database = new TemporaryDatabase();
-        CreateMalformedSchemaThreeMetadataDatabase(database.Path);
-
-        await Assert.That(() => CreateSubscriptionJournal(database.Path)).ThrowsExactly<InvalidOperationException>();
-    }
-
     /// <summary>Verifies future SQLite sequence positions on missing streams report end without a retained frontier.</summary>
     /// <returns>The asynchronous test operation.</returns>
     [Test]
@@ -551,79 +506,6 @@ public sealed partial class SqliteServerCommitJournalTests
             BEGIN
                 DELETE FROM oc_server_journal_subscriptions WHERE subscription_id = OLD.subscription_id;
             END;
-            """;
-        _ = command.ExecuteNonQuery();
-    }
-
-    /// <summary>Rewrites the empty subscription tables to their schema-three shape.</summary>
-    /// <param name="path">The database path.</param>
-    private static void RewriteSubscriptionTablesAsSchemaThree(string path)
-    {
-        using var connection = OpenRawConnection(path);
-        using var command = connection.CreateCommand();
-        command.CommandText = """
-            DROP TABLE oc_server_journal_subscription_offers;
-            DROP TABLE oc_server_journal_subscriptions;
-            CREATE TABLE oc_server_journal_subscriptions (
-                subscription_id TEXT NOT NULL PRIMARY KEY,
-                tenant_id TEXT NOT NULL,
-                stream_id TEXT NOT NULL,
-                client_id TEXT NOT NULL,
-                acknowledged_cursor TEXT NULL,
-                acknowledged_group_sequence INTEGER NOT NULL,
-                latest_offered_cursor TEXT NULL,
-                latest_offered_group_sequence INTEGER NOT NULL,
-                acknowledged_at_utc TEXT NULL,
-                updated_at_utc TEXT NOT NULL,
-                last_touched_utc TEXT NOT NULL,
-                logical_bytes INTEGER NOT NULL);
-            CREATE TABLE oc_server_journal_subscription_offers (
-                subscription_id TEXT NOT NULL,
-                cursor TEXT NOT NULL,
-                group_sequence INTEGER NOT NULL,
-                offered_at_utc TEXT NOT NULL,
-                logical_bytes INTEGER NOT NULL,
-                PRIMARY KEY (subscription_id, cursor),
-                FOREIGN KEY (subscription_id)
-                    REFERENCES oc_server_journal_subscriptions (subscription_id)
-                    ON DELETE CASCADE);
-            DELETE FROM oc_server_journal_metadata WHERE key = 'subscription_generation_high_water';
-            UPDATE oc_server_journal_metadata SET value = '3' WHERE key = 'schema_version';
-            PRAGMA user_version = 3;
-            """;
-        _ = command.ExecuteNonQuery();
-    }
-
-    /// <summary>Marks a database as schema three with unsupported metadata.</summary>
-    /// <param name="path">The database path.</param>
-    private static void WriteSchemaThreeUnsupportedMetadataVersion(string path)
-    {
-        using var connection = OpenRawConnection(path);
-        using var command = connection.CreateCommand();
-        command.CommandText = """
-            DELETE FROM oc_server_journal_metadata WHERE key = 'subscription_generation_high_water';
-            UPDATE oc_server_journal_metadata SET value = '2' WHERE key = 'schema_version';
-            PRAGMA user_version = 3;
-            """;
-        _ = command.ExecuteNonQuery();
-    }
-
-    /// <summary>Creates a schema-three database whose metadata table cannot satisfy migration reads.</summary>
-    /// <param name="path">The database path.</param>
-    private static void CreateMalformedSchemaThreeMetadataDatabase(string path)
-    {
-        using var connection = OpenRawConnection(path);
-        using var command = connection.CreateCommand();
-        command.CommandText = """
-            PRAGMA user_version = 3;
-            CREATE TABLE oc_server_journal_conflicts (id INTEGER NOT NULL);
-            CREATE TABLE oc_server_journal_event_metadata (id INTEGER NOT NULL);
-            CREATE TABLE oc_server_journal_events (id INTEGER NOT NULL);
-            CREATE TABLE oc_server_journal_ledger (id INTEGER NOT NULL);
-            CREATE TABLE oc_server_journal_metadata (id INTEGER NOT NULL);
-            CREATE TABLE oc_server_journal_streams (id INTEGER NOT NULL);
-            CREATE TABLE oc_server_journal_subscription_offers (id INTEGER NOT NULL);
-            CREATE TABLE oc_server_journal_subscriptions (id INTEGER NOT NULL);
             """;
         _ = command.ExecuteNonQuery();
     }

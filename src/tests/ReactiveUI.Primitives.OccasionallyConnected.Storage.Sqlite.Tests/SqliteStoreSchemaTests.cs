@@ -10,7 +10,28 @@ namespace ReactiveUI.Primitives.OccasionallyConnected.Storage.Sqlite.Tests;
 /// <summary>Tests for <see cref="SqliteStoreSchema"/>.</summary>
 public sealed partial class SqliteStoreSchemaTests
 {
-    /// <summary>Verifies local commit schema validation rejects stale metadata version drift.</summary>
+    /// <summary>An unsupported version used to test V1 metadata validation.</summary>
+    private const int UnsupportedSchemaVersion = 2;
+
+    /// <summary>Verifies the first release creates the complete local commit schema as V1.</summary>
+    /// <returns>A task that represents the asynchronous test.</returns>
+    [Test]
+    public async Task WhenLocalCommitSchemaIsCreated_ThenAllStateTablesStartAtVersionOne()
+    {
+        using var database = TempDatabase.Create();
+        await using var connection = OpenRawConnection(database.Path);
+        await using var transaction = (SqliteTransaction)await connection.BeginTransactionAsync();
+        SqliteStoreSchema.CreateLocalCommitSchema(connection, transaction);
+
+        await Assert.That(SelectUserVersion(connection, transaction)).IsEqualTo(1);
+        await Assert.That(SqliteStoreSchema.SelectMetadata(connection, transaction, SqliteStoreSchema.SchemaVersionKey)).IsEqualTo("1");
+        await Assert.That(TableExists(connection, transaction, SqliteStoreSchema.OutboxReceiveInclusionsTableName)).IsTrue();
+        await Assert.That(TableExists(connection, transaction, SqliteStoreSchema.PayloadQuarantineTableName)).IsTrue();
+        await Assert.That(TableExists(connection, transaction, "oc_operation_state_proofs")).IsTrue();
+        SqliteStoreSchema.ValidateLocalCommitSchema(connection, transaction);
+    }
+
+    /// <summary>Verifies V1 validation rejects metadata version drift.</summary>
     /// <returns>A task that represents the asynchronous test.</returns>
     [Test]
     public async Task WhenLocalCommitMetadataVersionDrifts_ThenValidationFailsClosed()
@@ -19,30 +40,14 @@ public sealed partial class SqliteStoreSchemaTests
         await using var connection = OpenRawConnection(database.Path);
         await using var transaction = (SqliteTransaction)await connection.BeginTransactionAsync();
         SqliteStoreSchema.CreateLocalCommitSchema(connection, transaction);
-        SetMetadataVersion(connection, transaction, SqliteStoreSchema.IdentitySchemaVersion);
+        SetMetadataVersion(connection, transaction, UnsupportedSchemaVersion);
 
         Action action = () => SqliteStoreSchema.ValidateLocalCommitSchema(connection, transaction);
 
         await Assert.That(action).ThrowsExactly<InvalidOperationException>();
     }
 
-    /// <summary>Verifies legacy local commit schema validation rejects current metadata version drift.</summary>
-    /// <returns>A task that represents the asynchronous test.</returns>
-    [Test]
-    public async Task WhenLegacyLocalCommitMetadataVersionDrifts_ThenValidationFailsClosed()
-    {
-        using var database = TempDatabase.Create();
-        await using var connection = OpenRawConnection(database.Path);
-        await using var transaction = (SqliteTransaction)await connection.BeginTransactionAsync();
-        CreateLegacyLocalCommitSchema(connection, transaction);
-        SetMetadataVersion(connection, transaction, SqliteStoreSchema.LocalCommitSchemaVersion);
-
-        Action action = () => SqliteStoreSchema.ValidateLegacyLocalCommitSchema(connection, transaction);
-
-        await Assert.That(action).ThrowsExactly<InvalidOperationException>();
-    }
-
-    /// <summary>Verifies missing table SQL metadata is rejected as schema corruption.</summary>
+    /// <summary>Verifies V1 validation rejects missing table SQL metadata.</summary>
     /// <returns>A task that represents the asynchronous test.</returns>
     [Test]
     public async Task WhenTableDefinitionIsMissingSqlText_ThenValidationFailsClosed()
@@ -58,126 +63,48 @@ public sealed partial class SqliteStoreSchemaTests
         await Assert.That(action).ThrowsExactly<InvalidOperationException>();
     }
 
-    /// <summary>Verifies migration fails closed when the metadata version row disappears during update.</summary>
+    /// <summary>Verifies a missing owned table is rejected during schema validation.</summary>
     /// <returns>A task that represents the asynchronous test.</returns>
     [Test]
-    public async Task WhenMigrationMetadataVersionUpdateAffectsNoRows_ThenMigrationFailsClosed()
+    public async Task WhenOwnedTableIsMissing_ThenValidationFailsClosed()
     {
         using var database = TempDatabase.Create();
         await using var connection = OpenRawConnection(database.Path);
-        await using (var transaction = (SqliteTransaction)await connection.BeginTransactionAsync())
+        await using var transaction = (SqliteTransaction)await connection.BeginTransactionAsync();
+        SqliteStoreSchema.CreateLocalCommitSchema(connection, transaction);
+        await using (var command = connection.CreateCommand())
         {
-            SqliteStoreSchema.CreateIdentitySchema(connection, transaction);
-            await transaction.CommitAsync();
+            command.Transaction = transaction;
+            command.CommandText = "DROP TABLE oc_payload_quarantine;";
+            _ = await command.ExecuteNonQueryAsync();
         }
 
-        CreateMetadataUpdateIgnoreTrigger(connection);
-        await using var migrationTransaction = (SqliteTransaction)await connection.BeginTransactionAsync();
-        Action action = () => SqliteStoreSchema.MigrateIdentityToLocalCommit(connection, migrationTransaction);
-
+        Action action = () => SqliteStoreSchema.ValidateLocalCommitSchema(connection, transaction);
         await Assert.That(action).ThrowsExactly<InvalidOperationException>();
     }
 
-    /// <summary>Verifies schema version six validates and migrates by adding receive inclusion sidecars.</summary>
+    /// <summary>Verifies a changed owned table definition is rejected even when its name remains intact.</summary>
     /// <returns>A task that represents the asynchronous test.</returns>
     [Test]
-    public async Task WhenAuthoritativeLocalCommitSchemaMigrates_ThenReceiveInclusionTableIsCreated()
+    public async Task WhenOwnedTableDefinitionChanges_ThenValidationFailsClosed()
     {
         using var database = TempDatabase.Create();
         await using var connection = OpenRawConnection(database.Path);
         await using var transaction = (SqliteTransaction)await connection.BeginTransactionAsync();
-        SchemaSixFixture.Create(connection, transaction);
-
-        _ = AssertNoThrow(() => SqliteStoreSchema.ValidateExistingSchemaForLocalCommit(
-            connection,
-            transaction,
-            SqliteStoreSchema.AuthoritativeLocalCommitSchemaVersion));
-        SqliteStoreSchema.MigrateAuthoritativeLocalCommitToCurrent(connection, transaction);
-
-        await Assert.That(SelectUserVersion(connection, transaction)).IsEqualTo(SqliteStoreSchema.LocalCommitSchemaVersion);
-        await Assert.That(SqliteStoreSchema.SelectMetadata(connection, transaction, SqliteStoreSchema.SchemaVersionKey))
-            .IsEqualTo(SqliteStoreSchema.LocalCommitSchemaVersion.ToString(System.Globalization.CultureInfo.InvariantCulture));
-        await Assert.That(TableExists(connection, transaction, SqliteStoreSchema.OutboxReceiveInclusionsTableName)).IsTrue();
-        SqliteStoreSchema.ValidateLocalCommitSchema(connection, transaction);
-    }
-
-    /// <summary>Verifies schema version six validation rejects mismatched metadata.</summary>
-    /// <returns>A task that represents the asynchronous test.</returns>
-    [Test]
-    public async Task WhenAuthoritativeLocalCommitMetadataVersionDrifts_ThenValidationFailsClosed()
-    {
-        using var database = TempDatabase.Create();
-        await using var connection = OpenRawConnection(database.Path);
-        await using var transaction = (SqliteTransaction)await connection.BeginTransactionAsync();
-        SchemaSixFixture.Create(connection, transaction);
-        SetMetadataVersion(connection, transaction, SqliteStoreSchema.LocalCommitSchemaVersion);
-
-        Action action = () => SqliteStoreSchema.ValidateAuthoritativeLocalCommitSchema(connection, transaction);
-
-        await Assert.That(action).ThrowsExactly<InvalidOperationException>();
-    }
-
-    /// <summary>Verifies schema version seven validates and migrates by adding durable payload quarantine markers.</summary>
-    /// <returns>A task that represents the asynchronous test.</returns>
-    [Test]
-    public async Task WhenPreQuarantineLocalCommitSchemaMigrates_ThenPayloadQuarantineTableIsCreated()
-    {
-        using var database = TempDatabase.Create();
-        await using var connection = OpenRawConnection(database.Path);
-        await using var transaction = (SqliteTransaction)await connection.BeginTransactionAsync();
-        CreatePreQuarantineLocalCommitSchema(connection, transaction);
-
-        _ = AssertNoThrow(() => SqliteStoreSchema.ValidateExistingSchemaForLocalCommit(
-            connection,
-            transaction,
-            SqliteStoreSchema.PreQuarantineLocalCommitSchemaVersion));
-        _ = AssertNoThrow(() => SqliteStoreSchema.ValidateExistingSchemaForIdentityFacade(
-            connection,
-            transaction,
-            SqliteStoreSchema.PreQuarantineLocalCommitSchemaVersion));
-        SqliteStoreSchema.MigratePreQuarantineLocalCommitToCurrent(connection, transaction);
-
-        await Assert.That(SelectUserVersion(connection, transaction)).IsEqualTo(SqliteStoreSchema.LocalCommitSchemaVersion);
-        await Assert.That(SqliteStoreSchema.SelectMetadata(connection, transaction, SqliteStoreSchema.SchemaVersionKey))
-            .IsEqualTo(SqliteStoreSchema.LocalCommitSchemaVersion.ToString(System.Globalization.CultureInfo.InvariantCulture));
-        await Assert.That(TableExists(connection, transaction, SqliteStoreSchema.PayloadQuarantineTableName)).IsTrue();
-        SqliteStoreSchema.ValidateLocalCommitSchema(connection, transaction);
-    }
-
-    /// <summary>Verifies schema version seven validation rejects mismatched metadata.</summary>
-    /// <returns>A task that represents the asynchronous test.</returns>
-    [Test]
-    public async Task WhenPreQuarantineLocalCommitMetadataVersionDrifts_ThenValidationFailsClosed()
-    {
-        using var database = TempDatabase.Create();
-        await using var connection = OpenRawConnection(database.Path);
-        await using var transaction = (SqliteTransaction)await connection.BeginTransactionAsync();
-        CreatePreQuarantineLocalCommitSchema(connection, transaction);
-        SetMetadataVersion(connection, transaction, SqliteStoreSchema.LocalCommitSchemaVersion);
-
-        Action action = () => SqliteStoreSchema.ValidatePreQuarantineLocalCommitSchema(connection, transaction);
-
-        await Assert.That(action).ThrowsExactly<InvalidOperationException>();
-    }
-
-    /// <summary>Creates a schema version seven local commit schema from the current schema definitions.</summary>
-    /// <param name="connection">The connection.</param>
-    /// <param name="transaction">The transaction.</param>
-    internal static void CreatePreQuarantineLocalCommitSchema(SqliteConnection connection, SqliteTransaction transaction)
-    {
         SqliteStoreSchema.CreateLocalCommitSchema(connection, transaction);
-        DropPayloadQuarantineTable(connection, transaction);
-        SetMetadataVersion(connection, transaction, SqliteStoreSchema.PreQuarantineLocalCommitSchemaVersion);
-        SetPreQuarantineUserVersion(connection, transaction);
-    }
+        await using (var command = connection.CreateCommand())
+        {
+            command.Transaction = transaction;
+            command.CommandText = """
+                PRAGMA writable_schema = ON;
+                UPDATE sqlite_master SET sql = sql || ' CHECK (1)' WHERE type = 'table' AND name = 'oc_metadata';
+                PRAGMA writable_schema = OFF;
+                """;
+            _ = await command.ExecuteNonQueryAsync();
+        }
 
-    /// <summary>Executes an action and returns true when it does not throw.</summary>
-    /// <param name="action">The action.</param>
-    /// <returns>True when the action completes.</returns>
-    private static bool AssertNoThrow(Action action)
-    {
-        action();
-        return true;
+        Action action = () => SqliteStoreSchema.ValidateLocalCommitSchema(connection, transaction);
+        await Assert.That(action).ThrowsExactly<InvalidOperationException>();
     }
 
     /// <summary>Sets the stored metadata schema version.</summary>
@@ -190,28 +117,6 @@ public sealed partial class SqliteStoreSchemaTests
         command.Transaction = transaction;
         command.CommandText = "UPDATE oc_metadata SET value = $value WHERE key = 'schema_version';";
         _ = command.Parameters.AddWithValue("$value", schemaVersion.ToString(System.Globalization.CultureInfo.InvariantCulture));
-        _ = command.ExecuteNonQuery();
-    }
-
-    /// <summary>Drops the payload quarantine table from a schema fixture.</summary>
-    /// <param name="connection">The connection.</param>
-    /// <param name="transaction">The transaction.</param>
-    private static void DropPayloadQuarantineTable(SqliteConnection connection, SqliteTransaction transaction)
-    {
-        using var command = connection.CreateCommand();
-        command.Transaction = transaction;
-        command.CommandText = "DROP TABLE oc_payload_quarantine;";
-        _ = command.ExecuteNonQuery();
-    }
-
-    /// <summary>Sets the SQLite user version for the pre-quarantine schema fixture.</summary>
-    /// <param name="connection">The connection.</param>
-    /// <param name="transaction">The transaction.</param>
-    private static void SetPreQuarantineUserVersion(SqliteConnection connection, SqliteTransaction transaction)
-    {
-        using var command = connection.CreateCommand();
-        command.Transaction = transaction;
-        command.CommandText = "PRAGMA user_version = 7;";
         _ = command.ExecuteNonQuery();
     }
 
@@ -229,23 +134,6 @@ public sealed partial class SqliteStoreSchemaTests
             PRAGMA writable_schema = OFF;
             """;
         _ = command.Parameters.AddWithValue("$tableName", tableName);
-        _ = command.ExecuteNonQuery();
-    }
-
-    /// <summary>Creates a trigger that makes the metadata version update affect no rows.</summary>
-    /// <param name="connection">The connection.</param>
-    private static void CreateMetadataUpdateIgnoreTrigger(SqliteConnection connection)
-    {
-        using var command = connection.CreateCommand();
-        command.CommandText = """
-            CREATE TRIGGER oc_metadata_version_update_ignore
-            BEFORE UPDATE OF value ON oc_metadata
-            WHEN OLD.key = 'schema_version'
-            BEGIN
-                DELETE FROM oc_metadata WHERE key = OLD.key;
-                SELECT RAISE(IGNORE);
-            END;
-            """;
         _ = command.ExecuteNonQuery();
     }
 

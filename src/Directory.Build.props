@@ -142,7 +142,14 @@
 
   <ItemGroup>
     <None Include="$(MSBuildThisFileDirectory)..\LICENSE" Pack="true" PackagePath="LICENSE"/>
-    <None Include="$(MSBuildThisFileDirectory)..\README.md" Pack="true" PackagePath="README.md"/>
+    <None Include="$(MSBuildThisFileDirectory)..\README.md" Pack="true" PackagePath="README.md"
+          Condition="'$(MSBuildProjectName)' != 'ReactiveUI.Primitives.OccasionallyConnected'
+                     And '$(MSBuildProjectName)' != 'ReactiveUI.Primitives.OccasionallyConnected.Core'
+                     And '$(MSBuildProjectName)' != 'ReactiveUI.Primitives.OccasionallyConnected.DependencyInjection'
+                     And '$(MSBuildProjectName)' != 'ReactiveUI.Primitives.OccasionallyConnected.Hosting'
+                     And '$(MSBuildProjectName)' != 'ReactiveUI.Primitives.OccasionallyConnected.Server'
+                     And '$(MSBuildProjectName)' != 'ReactiveUI.Primitives.OccasionallyConnected.Storage.Sqlite'
+                     And '$(MSBuildProjectName)' != 'ReactiveUI.Primitives.OccasionallyConnected.Transport.Http'"/>
     <None Include="$(MSBuildThisFileDirectory)..\images\logo.png" Pack="true" PackagePath="\"/>
   </ItemGroup>
 

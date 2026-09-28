@@ -453,17 +453,6 @@ public sealed partial class SqliteServerCommitJournalTests
         await Assert.That(() => CreateJournal(database.Path)).ThrowsExactly<InvalidOperationException>();
     }
 
-    /// <summary>Verifies schema-one migration wraps malformed metadata lookup failures.</summary>
-    /// <returns>The asynchronous test operation.</returns>
-    [Test]
-    public async Task WrongSchemaOneMetadataDefinitionFailsMigrationValidation()
-    {
-        using var database = new TemporaryDatabase();
-        CreateWrongSchemaOneMetadataDefinition(database.Path);
-
-        await Assert.That(() => CreateJournal(database.Path)).ThrowsExactly<InvalidOperationException>();
-    }
-
     /// <summary>Verifies a concurrent stream row disappearance fails instead of inserting detached sidecars.</summary>
     /// <returns>The asynchronous test operation.</returns>
     [Test]
@@ -807,49 +796,24 @@ public sealed partial class SqliteServerCommitJournalTests
         using var connection = OpenRawConnection(path);
         using var command = connection.CreateCommand();
         command.CommandText = """
-            PRAGMA user_version = 2;
-            CREATE TABLE oc_server_journal_conflicts (id INTEGER NOT NULL);
-            CREATE TABLE oc_server_journal_event_metadata (id INTEGER NOT NULL);
-            CREATE TABLE oc_server_journal_events (id INTEGER NOT NULL);
-            CREATE TABLE oc_server_journal_ledger (id INTEGER NOT NULL);
-            CREATE TABLE oc_server_journal_metadata (id INTEGER NOT NULL);
-            """;
-        _ = command.ExecuteNonQuery();
-    }
-
-    /// <summary>Creates all owned table names with intentionally wrong definitions.</summary>
-    /// <param name="path">The database path.</param>
-    private static void CreateWrongTableDefinitionSchema(string path)
-    {
-        using var connection = OpenRawConnection(path);
-        using var command = connection.CreateCommand();
-        command.CommandText = """
-            PRAGMA user_version = 2;
-            CREATE TABLE oc_server_journal_conflicts (id INTEGER NOT NULL);
-            CREATE TABLE oc_server_journal_event_metadata (id INTEGER NOT NULL);
-            CREATE TABLE oc_server_journal_events (id INTEGER NOT NULL);
-            CREATE TABLE oc_server_journal_ledger (id INTEGER NOT NULL);
-            CREATE TABLE oc_server_journal_metadata (id INTEGER NOT NULL);
-            CREATE TABLE oc_server_journal_streams (id INTEGER NOT NULL);
-            """;
-        _ = command.ExecuteNonQuery();
-    }
-
-    /// <summary>Creates schema-one table names with a malformed metadata table.</summary>
-    /// <param name="path">The database path.</param>
-    private static void CreateWrongSchemaOneMetadataDefinition(string path)
-    {
-        using var connection = OpenRawConnection(path);
-        using var command = connection.CreateCommand();
-        command.CommandText = """
             PRAGMA user_version = 1;
             CREATE TABLE oc_server_journal_conflicts (id INTEGER NOT NULL);
             CREATE TABLE oc_server_journal_event_metadata (id INTEGER NOT NULL);
             CREATE TABLE oc_server_journal_events (id INTEGER NOT NULL);
             CREATE TABLE oc_server_journal_ledger (id INTEGER NOT NULL);
             CREATE TABLE oc_server_journal_metadata (id INTEGER NOT NULL);
-            CREATE TABLE oc_server_journal_streams (id INTEGER NOT NULL);
             """;
+        _ = command.ExecuteNonQuery();
+    }
+
+    /// <summary>Adds an unexpected column to an owned table.</summary>
+    /// <param name="path">The database path.</param>
+    private static void CreateWrongTableDefinitionSchema(string path)
+    {
+        using var journal = CreateJournal(path);
+        using var connection = OpenRawConnection(path);
+        using var command = connection.CreateCommand();
+        command.CommandText = "ALTER TABLE oc_server_journal_streams ADD COLUMN unexpected TEXT NULL;";
         _ = command.ExecuteNonQuery();
     }
 

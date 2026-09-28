@@ -1,25 +1,46 @@
-# Occasionally connected collaboration client
+# OccasionallyConnected Collaboration Client
 
-This example is the matching client for `OccasionallyConnected.Collaboration.Server`. It uses a stable client id, a local SQLite database, the HTTP transport, and a custom serializer that emits the same activity payload contract as the server.
+This console example pairs with the `OccasionallyConnected.Collaboration.Server` example. It uses a stable client id, a local SQLite database, HTTP transport, and the activity payload contract shared with the server.
 
-Start the server first:
+These examples accompany the first v1 release of OccasionallyConnected. The feature has no earlier released version, so end users do not need a migration.
 
-```bash
-dotnet run --project src/examples/OccasionallyConnected.Collaboration.Server -- --url http://127.0.0.1:5088 --database server.db --credentials "token-a:tenant-a:client-a;token-b:tenant-a:client-b"
+## Run the examples
+
+Open two terminals at the repository root. Start the server in the first terminal:
+
+```powershell
+$env:OC_DEMO_CREDENTIALS = "token-a:tenant-a:client-a;token-b:tenant-a:client-b"
+dotnet run --project src/examples/OccasionallyConnected.Collaboration.Server/OccasionallyConnected.Collaboration.Server.csproj --framework net8.0
 ```
 
-Publish from client A:
+The server listens at `http://127.0.0.1:5088` and creates its default journal under its application directory. In the second terminal, publish an activity as client A:
 
-```bash
-dotnet run --project src/examples/OccasionallyConnected.Collaboration.Client -- publish --server http://127.0.0.1:5088 --database client-a.db --token token-a --client client-a --status active --title "Launch checklist" --details "Client A created the item"
+```powershell
+dotnet run --project src/examples/OccasionallyConnected.Collaboration.Client/OccasionallyConnected.Collaboration.Client.csproj --framework net8.0 -- publish --server http://127.0.0.1:5088 --database .\client-a.db --token token-a --client client-a --status active --title "Launch checklist" --details "Client A created the item"
 ```
 
-Watch from client B:
+Start a watcher as client B in a third terminal to see activity updates:
 
-```bash
-dotnet run --project src/examples/OccasionallyConnected.Collaboration.Client -- watch --server http://127.0.0.1:5088 --database client-b.db --token token-b --client client-b
+```powershell
+dotnet run --project src/examples/OccasionallyConnected.Collaboration.Client/OccasionallyConnected.Collaboration.Client.csproj --framework net8.0 -- watch --server http://127.0.0.1:5088 --database .\client-b.db --token token-b --client client-b
 ```
 
-To queue work while offline, run `publish --offline` with client A's database, token, and client id. The command prints the saved operation id. When the server is available, run `watch` with the same database, token, and client id. It reconnects, sends the saved operation with its original id, and resumes the persisted subscription. Running `publish` again would create another operation.
+Press Ctrl+C to stop `watch`. The client closes its subscriptions and SQLite store when canceled.
 
-Press Ctrl+C to stop `watch`. The client cancels the command, closes its subscriptions and SQLite store, and exits with the cancellation code. The client accepts its token through `--token`; the server's `--credentials` mapping must include that token and client id.
+To queue an update while the server is unavailable, run this command with client A's database, token, and client id:
+
+```powershell
+dotnet run --project src/examples/OccasionallyConnected.Collaboration.Client/OccasionallyConnected.Collaboration.Client.csproj --framework net8.0 -- publish --offline --server http://127.0.0.1:5088 --database .\client-a.db --token token-a --client client-a --status draft
+```
+
+The command persists the operation and prints its id, then exits without starting synchronization. Once the server is available, start `watch` with the same database, token, and client id. The context starts synchronization and retries the saved operation with its original id. Keep `watch` running until the operation synchronizes. Running `publish` again creates a separate operation.
+
+The client token must appear in the server's `OC_DEMO_CREDENTIALS` mapping with the matching tenant and client ids.
+
+## Test the client example
+
+Run from `src`:
+
+```powershell
+dotnet test tests/ReactiveUI.Primitives.OccasionallyConnected.Collaboration.Client.Tests/ReactiveUI.Primitives.OccasionallyConnected.Collaboration.Client.Tests.csproj -c Release -f net8.0
+```

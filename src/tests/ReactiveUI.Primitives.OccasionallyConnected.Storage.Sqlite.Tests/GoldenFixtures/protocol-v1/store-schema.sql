@@ -1,5 +1,5 @@
--- user_version: 8
--- schema_version: 8
+-- user_version: 1
+-- schema_version: 1
 -- table oc_inbox
 CREATE TABLE oc_inbox (
     store_identity TEXT NOT NULL,
@@ -13,6 +13,15 @@ CREATE TABLE oc_inbox (
         ON DELETE CASCADE);
 -- table oc_metadata
 CREATE TABLE oc_metadata (key TEXT NOT NULL PRIMARY KEY, value TEXT NOT NULL);
+-- table oc_operation_state_proofs
+CREATE TABLE oc_operation_state_proofs (
+    store_identity TEXT NOT NULL,
+    operation_id TEXT NOT NULL,
+    proof BLOB NOT NULL,
+    PRIMARY KEY (store_identity, operation_id),
+    FOREIGN KEY (store_identity, operation_id)
+        REFERENCES oc_outbox_operation_states (store_identity, operation_id)
+        ON DELETE CASCADE);
 -- table oc_outbox
 CREATE TABLE oc_outbox (
     store_identity TEXT NOT NULL,

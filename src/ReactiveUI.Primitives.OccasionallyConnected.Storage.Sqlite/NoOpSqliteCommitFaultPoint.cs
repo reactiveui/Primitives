@@ -16,6 +16,11 @@ internal sealed class NoOpSqliteCommitFaultPoint : ISqliteCommitFaultPoint
     internal static NoOpSqliteCommitFaultPoint Instance { get; } = new();
 
     /// <inheritdoc/>
+    public void BeforeLocalCommitTransaction(Microsoft.Data.Sqlite.SqliteConnection connection)
+    {
+    }
+
+    /// <inheritdoc/>
     public void Reached(SqliteCommitCheckpoint checkpoint)
     {
     }

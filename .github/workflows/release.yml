@@ -24,7 +24,23 @@ permissions:
   packages: read
 
 jobs:
+  check-occasionally-connected-packages:
+    uses: ./.github/workflows/occasionally-connected-packages.yml
+    with:
+      sourceRef: ${{ inputs.sourceRef }}
+
+  check-occasionally-connected-aot:
+    uses: ./.github/workflows/occasionally-connected-aot.yml
+    with:
+      sourceRef: ${{ inputs.sourceRef }}
+
+  scan-occasionally-connected:
+    uses: ./.github/workflows/occasionally-connected-supply-chain.yml
+    with:
+      sourceRef: ${{ inputs.sourceRef }}
+
   release:
+    needs: [check-occasionally-connected-packages, check-occasionally-connected-aot, scan-occasionally-connected]
     uses: reactiveui/actions-common/.github/workflows/workflow-common-release.yml@main
     with:
       solutionFile: ReactiveUI.Primitives.slnx

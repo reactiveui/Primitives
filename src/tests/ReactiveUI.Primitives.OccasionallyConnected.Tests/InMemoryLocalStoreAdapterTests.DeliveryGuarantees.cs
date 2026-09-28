@@ -89,4 +89,100 @@ public sealed partial class InMemoryLocalStoreAdapterTests
         await Assert.That(status?.State).IsEqualTo(SyncOperationState.QueuedForUpload);
         await Assert.That(status?.ReasonCode).IsNull();
     }
+
+    /// <summary>Verifies a lease cannot downgrade an exactly-once operation after guarantee expiry blocks the head.</summary>
+    /// <returns>The asynchronous test.</returns>
+    [Test]
+    public async Task DowngradeDeliveryGuaranteeRejectsExpiredHead()
+    {
+        var clock = new ManualTimeProvider(DateTimeOffset.UnixEpoch);
+        await using var store = await CreateInitializedStoreAsync(clock);
+        var operation = await CommitOperationAsync(store, Stream, FirstClientSequence, OperationPayloadText, ExactlyOncePolicy);
+        var lease = RequireBatch(await LeaseSingleBatchAsync(store, new(Stream, 1, DefaultLeaseBytes, TimeSpan.FromMinutes(1))));
+
+        _ = await store.ExpireDeliveryGuaranteeAsync(lease.LeaseId, operation.OperationId, CancellationToken.None);
+
+        await Assert.That(async () => await store.DowngradeDeliveryGuaranteeAsync(
+                lease.LeaseId,
+                operation.OperationId,
+                RetryState.Start(clock.GetUtcNow()),
+                CancellationToken.None))
+            .ThrowsExactly<InvalidOperationException>();
+        var status = await store.GetOperationStatusAsync(operation.OperationId, CancellationToken.None);
+        await Assert.That(status?.State).IsEqualTo(SyncOperationState.GuaranteeExpired);
+    }
+
+    /// <summary>Verifies a completed exactly-once operation cannot return to an in-flight guarantee state.</summary>
+    /// <returns>The asynchronous test.</returns>
+    [Test]
+    public async Task DowngradeDeliveryGuaranteeRejectsSynchronizedOperation()
+    {
+        var clock = new ManualTimeProvider(DateTimeOffset.UnixEpoch);
+        await using var store = await CreateInitializedStoreAsync(clock);
+        var operation = await CommitOperationAsync(store, Stream, FirstClientSequence, OperationPayloadText, ExactlyOncePolicy);
+        var lease = RequireBatch(await LeaseSingleBatchAsync(store, new(Stream, 1, DefaultLeaseBytes, TimeSpan.FromMinutes(1))));
+        _ = await store.TryBeginRemoteAttemptAsync(lease.LeaseId, operation.OperationId, 1, CancellationToken.None);
+        await store.ApplySyncResultAsync(
+            lease.LeaseId,
+            new(lease.LeaseId, [new(operation.OperationId, OperationResultKind.Accepted, null, null)], null, null),
+            CancellationToken.None);
+
+        await Assert.That(async () => await store.DowngradeDeliveryGuaranteeAsync(
+                lease.LeaseId,
+                operation.OperationId,
+                RetryState.Start(clock.GetUtcNow()),
+                CancellationToken.None))
+            .ThrowsExactly<InvalidOperationException>();
+        var status = await store.GetOperationStatusAsync(operation.OperationId, CancellationToken.None);
+        await Assert.That(status?.State).IsEqualTo(SyncOperationState.Synchronized);
+    }
+
+    /// <summary>Verifies a lease cannot change the guarantee of a later operation outside its leased prefix.</summary>
+    /// <returns>The asynchronous test.</returns>
+    [Test]
+    public async Task DowngradeDeliveryGuaranteeRejectsOperationOutsideLease()
+    {
+        var clock = new ManualTimeProvider(DateTimeOffset.UnixEpoch);
+        await using var store = await CreateInitializedStoreAsync(clock);
+        var first = await CommitOperationAsync(store, Stream, FirstClientSequence, OperationPayloadText, ExactlyOncePolicy);
+        var second = await CommitOperationAsync(store, Stream, FirstClientSequence + 1, OperationPayloadText, ExactlyOncePolicy);
+        var lease = RequireBatch(await LeaseSingleBatchAsync(store, new(Stream, 1, DefaultLeaseBytes, TimeSpan.FromMinutes(1))));
+
+        await Assert.That(async () => await store.DowngradeDeliveryGuaranteeAsync(
+                lease.LeaseId,
+                second.OperationId,
+                RetryState.Start(clock.GetUtcNow()),
+                CancellationToken.None))
+            .ThrowsExactly<InvalidOperationException>();
+        var firstStatus = await store.GetOperationStatusAsync(first.OperationId, CancellationToken.None);
+        var secondStatus = await store.GetOperationStatusAsync(second.OperationId, CancellationToken.None);
+        await Assert.That(firstStatus?.State).IsEqualTo(SyncOperationState.QueuedForUpload);
+        await Assert.That(secondStatus?.State).IsEqualTo(SyncOperationState.SavedLocally);
+    }
+
+    /// <summary>Verifies a successful remote result clears the in-flight downgrade marker.</summary>
+    /// <returns>The asynchronous test.</returns>
+    [Test]
+    public async Task SynchronizedResultClearsDowngradeMarker()
+    {
+        var clock = new ManualTimeProvider(DateTimeOffset.UnixEpoch);
+        await using var store = await CreateInitializedStoreAsync(clock);
+        var operation = await CommitOperationAsync(store, Stream, FirstClientSequence, OperationPayloadText, ExactlyOncePolicy);
+        var lease = RequireBatch(await LeaseSingleBatchAsync(store, new(Stream, 1, DefaultLeaseBytes, TimeSpan.FromMinutes(1))));
+        _ = await store.DowngradeDeliveryGuaranteeAsync(
+            lease.LeaseId,
+            operation.OperationId,
+            RetryState.Start(clock.GetUtcNow()),
+            CancellationToken.None);
+        _ = await store.TryBeginRemoteAttemptAsync(lease.LeaseId, operation.OperationId, 1, CancellationToken.None);
+
+        await store.ApplySyncResultAsync(
+            lease.LeaseId,
+            new(lease.LeaseId, [new(operation.OperationId, OperationResultKind.Accepted, null, null)], null, null),
+            CancellationToken.None);
+
+        var status = await store.GetOperationStatusAsync(operation.OperationId, CancellationToken.None);
+        await Assert.That(status?.State).IsEqualTo(SyncOperationState.Synchronized);
+        await Assert.That(status?.ReasonCode).IsNotEqualTo(SyncReasonCodes.GuaranteeDowngraded);
+    }
 }

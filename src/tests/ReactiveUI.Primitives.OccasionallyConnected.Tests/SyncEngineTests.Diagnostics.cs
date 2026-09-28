@@ -246,6 +246,7 @@ public sealed partial class SyncEngineTests
             session,
             faults,
             operationStates);
+        await operationStates.WaitForCountAsync(ExpectedTwoOperations, GuardTimeout);
 
         var faultTrace = string.Join(",", faults.Values.Select(static item => item.Code));
         var statusTrace = string.Join(

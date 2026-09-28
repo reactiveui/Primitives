@@ -7,6 +7,102 @@ namespace ReactiveUI.Primitives.OccasionallyConnected.Tests;
 /// <summary>Upload execution tests for <see cref="SyncEngine"/>.</summary>
 public sealed partial class SyncEngineTests
 {
+    /// <summary>Verifies an uncertain send of only at-most-once work reports ambiguity without scheduling a resend.</summary>
+    /// <returns>The assertion task.</returns>
+    [Test]
+    public async Task UploadAttemptDoesNotRetryWhenEverySentOperationIsAmbiguousAtMostOnce()
+    {
+        var clock = new ManualTimerTimeProvider(DateTimeOffset.UnixEpoch);
+        var operation = CreateOperation() with
+        {
+            Policy = OperationPolicy.Default with { DeliveryGuarantee = DeliveryGuarantee.AtMostOnce },
+        };
+        var store = CreateUploadStore([operation], timeProvider: clock);
+        var session = new PreparedSession(ExpectedSingleOperation, PreparedUploadBytes)
+        {
+            SendException = CreateTransportFailure(RetryFailureKind.AmbiguousTransportOutcome, TimeSpan.FromSeconds(1)),
+            OnSend = () => store.Statuses[operation.OperationId] = new(
+                operation.OperationId,
+                operation.StreamId,
+                SyncOperationState.Ambiguous,
+                Attempt: 1,
+                clock.GetUtcNow(),
+                ReasonCode: null),
+        };
+        var faults = new RecordingObserver<OccasionallyConnectedFault>();
+        var states = new RecordingObserver<SyncOperationStatus>();
+        await using var engine = CreateEngine(
+            store,
+            new() { SessionOverride = session },
+            CreateDiagnosticsBatchOptions(ExpectedSingleOperation, PreparedUploadBytes),
+            timeProvider: clock);
+        using var registration = engine.RegisterParticipant(CreateUploadParticipant(store));
+        using var faultSubscription = engine.Faults.Subscribe(faults);
+        using var stateSubscription = engine.OperationStates.Subscribe(states);
+        await engine.StartAsync(CancellationToken.None);
+
+        await TriggerAndDrainUploadWithTraceAsync(engine, clock, store, session, faults, states);
+
+        await Assert.That(session.SentBatches.Count).IsEqualTo(1);
+        await Assert.That(store.RetryStates).IsEmpty();
+        await Assert.That(store.Statuses[operation.OperationId].State).IsEqualTo(SyncOperationState.Ambiguous);
+        await Assert.That(faults.Values.Single().Code).IsEqualTo(SyncReasonCodes.AtMostOnceAmbiguous);
+        await Assert.That(states.Values.Exists(status => status.OperationId == operation.OperationId && status.State == SyncOperationState.Ambiguous)).IsTrue();
+        await engine.StopAsync(CancellationToken.None);
+    }
+
+    /// <summary>Verifies an uncertain mixed send reports at-most-once ambiguity and retries only the stronger operation.</summary>
+    /// <returns>The assertion task.</returns>
+    [Test]
+    public async Task UploadAttemptRetriesOnlyAtLeastOnceOperationAfterMixedAmbiguousSend()
+    {
+        var clock = new ManualTimerTimeProvider(DateTimeOffset.UnixEpoch);
+        var atMostOnce = CreateOperation(operationId: OperationId.New()) with
+        {
+            Policy = OperationPolicy.Default with { DeliveryGuarantee = DeliveryGuarantee.AtMostOnce },
+        };
+        var atLeastOnce = CreateOperation(sequence: ExpectedTwoOperations, operationId: OperationId.New());
+        var store = CreateUploadStore([atMostOnce, atLeastOnce], timeProvider: clock);
+        var session = new PreparedSession(ExpectedTwoOperations, PreparedUploadBytes)
+        {
+            NegotiatedCapabilities = CreateBatchPushCapabilities(ExpectedTwoOperations, PreparedUploadBytes),
+            SendException = CreateTransportFailure(RetryFailureKind.AmbiguousTransportOutcome, TimeSpan.FromSeconds(1)),
+            OnSend = () => store.Statuses[atMostOnce.OperationId] = new(
+                atMostOnce.OperationId,
+                atMostOnce.StreamId,
+                SyncOperationState.Ambiguous,
+                Attempt: 1,
+                clock.GetUtcNow(),
+                ReasonCode: null),
+        };
+        var faults = new RecordingObserver<OccasionallyConnectedFault>();
+        await using var engine = CreateEngine(
+            store,
+            new() { SessionOverride = session },
+            CreateDiagnosticsBatchOptions(ExpectedTwoOperations, PreparedUploadBytes),
+            timeProvider: clock);
+        using var registration = engine.RegisterParticipant(CreateUploadParticipant(store));
+        using var faultSubscription = engine.Faults.Subscribe(faults);
+        await engine.StartAsync(CancellationToken.None);
+
+        var sync = engine.TriggerSyncAsync(CancellationToken.None).AsTask();
+        await DriveUploadDwellWithTraceAsync(clock, store, session, faults, operationStates: null);
+        await WaitForUploadConditionWithTraceAsync(
+            () => store.RetryStates.ContainsKey(atLeastOnce.OperationId),
+            store,
+            session,
+            faults,
+            operationStates: null);
+
+        await Assert.That(session.SentBatches.Single().Operations.Count).IsEqualTo(ExpectedTwoOperations);
+        await Assert.That(store.RetryStates.Keys.Single()).IsEqualTo(atLeastOnce.OperationId);
+        await Assert.That(store.RetryStates[atLeastOnce.OperationId].TransientAttemptCount).IsEqualTo(1);
+        await Assert.That(store.Statuses[atMostOnce.OperationId].State).IsEqualTo(SyncOperationState.Ambiguous);
+        await Assert.That(faults.Values.Single().Code).IsEqualTo(SyncReasonCodes.AtMostOnceAmbiguous);
+        await engine.StopAsync(CancellationToken.None);
+        await AwaitSyncWithUploadTraceAsync(sync, store, session, faults);
+    }
+
     /// <summary>Verifies a denied durable attempt barrier releases the lease without sending a prepared upload.</summary>
     /// <returns>The assertion task.</returns>
     [Test]

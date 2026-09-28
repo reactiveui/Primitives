@@ -21,12 +21,6 @@ internal static class ServerSubscriptionJournalOperations
     /// <summary>The retained fixed bytes for one subscription row.</summary>
     private const long SubscriptionFixedBytes = SubscriptionIdByteCount + (DateTimeOffsetByteCount * 3) + (NullableMarkerByteCount * 7) + (sizeof(int) * 2) + (sizeof(long) * 6);
 
-    /// <summary>The retained fixed bytes for one schema-four subscription row.</summary>
-    private const long SchemaFourSubscriptionFixedBytes = SubscriptionIdByteCount + (DateTimeOffsetByteCount * 3) + (NullableMarkerByteCount * 7) + (sizeof(int) * 2) + (sizeof(long) * 4);
-
-    /// <summary>The retained fixed bytes for one schema-three subscription row.</summary>
-    private const long LegacySubscriptionFixedBytes = SubscriptionIdByteCount + (DateTimeOffsetByteCount * 3) + (NullableMarkerByteCount * 4) + (sizeof(long) * 2);
-
     /// <summary>The retained fixed bytes for one offered cursor row.</summary>
     private const long OfferFixedBytes = SubscriptionIdByteCount + DateTimeOffsetByteCount + sizeof(long);
 
@@ -189,18 +183,6 @@ internal static class ServerSubscriptionJournalOperations
         bytes = ServerCommitJournalSizer.AddLogicalBytes(bytes, GetOptionalCursorBytes(acknowledgedCursor));
         return bytes;
     }
-
-    /// <summary>Gets the logical bytes added to schema-three rows during start-position migration.</summary>
-    /// <returns>The schema-four logical byte delta for the default beginning position.</returns>
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    internal static long GetInitialPositionMigrationBytes() =>
-        SchemaFourSubscriptionFixedBytes - LegacySubscriptionFixedBytes + GetStartPositionBytes(StartPosition.FromSequence(0));
-
-    /// <summary>Gets the logical bytes added to schema-four rows during snapshot offer migration.</summary>
-    /// <returns>The schema-five logical byte delta.</returns>
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    internal static long GetSnapshotOfferMigrationBytes() =>
-        SubscriptionFixedBytes - SchemaFourSubscriptionFixedBytes;
 
     /// <summary>Calculates the retained logical byte delta for a nullable initial anchor cursor column.</summary>
     /// <param name="previous">The previously retained cursor.</param>

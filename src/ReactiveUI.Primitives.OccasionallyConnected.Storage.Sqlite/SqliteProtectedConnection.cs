@@ -18,4 +18,19 @@ internal sealed class SqliteProtectedConnection : SqliteConnection
 
     /// <summary>Gets the record cipher.</summary>
     internal SqliteRecordCipher Cipher { get; }
+
+    /// <summary>Gets or sets the data version observed in the authenticated read snapshot.</summary>
+    internal long? VerifiedDataVersion { get; set; }
+
+    /// <summary>Gets or sets whether this connection journals state mutations.</summary>
+    internal bool JournalInstalled { get; set; }
+
+    /// <summary>Gets or sets whether a full proof rewrite already covered this transaction.</summary>
+    internal bool FullProofRewriteCompleted { get; set; }
+
+    /// <summary>Gets or sets the integrity check to run after the writer lock is acquired.</summary>
+    internal Action<SqliteConnection, SqliteTransaction>? VerifyBeforeWrite { get; set; }
+
+    /// <summary>Gets or sets the integrity observer update to run after commit.</summary>
+    internal Action<bool>? ObserveAfterCommit { get; set; }
 }

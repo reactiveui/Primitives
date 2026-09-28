@@ -84,34 +84,6 @@ public sealed partial class SqliteLocalCommitStoreTests
         await Assert.That(recovery.Snapshot?.ServerCursor).IsEqualTo(SecondRemoteCursor);
     }
 
-    /// <summary>Verifies schema version two databases migrate to schema version three without losing committed data.</summary>
-    /// <returns>A task that represents the asynchronous test.</returns>
-    [Test]
-    public async Task WhenLegacyLocalCommitSchemaMigratesToCurrent_ThenCommittedRowsArePreserved()
-    {
-        using var database = TempDatabase.Create();
-        var subscriptionId = SubscriptionId.New();
-        var operation = CreateOperation(clientSequence: 1);
-        await using (var connection = OpenRawConnection(database.Path))
-        {
-            await using var transaction = (SqliteTransaction)await connection.BeginTransactionAsync();
-            SqliteStoreSchemaTests.CreateLegacyLocalCommitSchema(connection, transaction);
-            InsertLegacyLocalCommitRows(connection, transaction, subscriptionId, operation, CreateSnapshotMutation(expectedRevision: 0));
-            await transaction.CommitAsync();
-        }
-
-        using var store = CreateInitializedStore(database.Path);
-        var recovery = store.RecoverStream(Stream, subscriptionId, CancellationToken.None);
-        var unapplied = store.GetUnappliedEventIds(Stream, [Guid.NewGuid()], CancellationToken.None);
-
-        await Assert.That(ReadUserVersion(database.Path)).IsEqualTo(SchemaVersion);
-        await Assert.That(recovery.NextClientSequence).IsEqualTo(SecondClientSequence);
-        await Assert.That(recovery.PendingOperations.Count).IsEqualTo(1);
-        await Assert.That(recovery.PendingOperations[0].OperationId).IsEqualTo(operation.OperationId);
-        await Assert.That(recovery.Snapshot?.Revision).IsEqualTo(1);
-        await Assert.That(unapplied.Count).IsEqualTo(1);
-    }
-
     /// <summary>Verifies stale expected revision and cursor checks reject remote batches without durable side effects.</summary>
     /// <returns>A task that represents the asynchronous test.</returns>
     [Test]

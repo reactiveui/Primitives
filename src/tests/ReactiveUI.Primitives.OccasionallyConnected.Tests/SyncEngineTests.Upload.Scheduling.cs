@@ -118,6 +118,83 @@ public sealed partial class SyncEngineTests
         }
     }
 
+    /// <summary>Verifies an explicit sync still uploads a queued head after the UTC clock moves backward.</summary>
+    /// <returns>The assertion task.</returns>
+    [Test]
+    public async Task ExplicitSyncClampsElapsedHeadAgeAfterUtcClockRollback()
+    {
+        var clock = new ManualTimerTimeProvider(DateTimeOffset.UnixEpoch);
+        var operation = CreateOperation(operationId: OperationId.New());
+        var store = CreateUploadStore([operation], timeProvider: clock);
+        var options = CreateDiagnosticsBatchOptions(ExpectedSingleOperation, PreparedUploadBytes);
+        var session = new PreparedSession(ExpectedSingleOperation, PreparedUploadBytes);
+        await using var engine = CreateEngine(store, new() { SessionOverride = session }, options, timeProvider: clock);
+        using var registration = engine.RegisterParticipant(CreateUploadParticipant(store));
+
+        await engine.StartAsync(CancellationToken.None);
+        engine.NotifyLocalCommitReady(Stream, operation);
+        clock.SetUtcNow(DateTimeOffset.UnixEpoch.Subtract(TimeSpan.FromSeconds(ExpectedSingleOperation)));
+        await engine.TriggerSyncAsync(CancellationToken.None).AsTask().WaitAsync(GuardTimeout);
+
+        await Assert.That(session.SentBatches.Count).IsEqualTo(ExpectedSingleOperation);
+        await Assert.That(session.SentBatches[0].Operations[0].OperationId).IsEqualTo(operation.OperationId);
+    }
+
+    /// <summary>Verifies failed lease preparation classifies authentication and storage faults before remote work.</summary>
+    /// <param name="authenticationFailure">Whether the store reports an authentication failure.</param>
+    /// <returns>The assertion task.</returns>
+    [Test]
+    [Arguments(true)]
+    [Arguments(false)]
+    public async Task UploadLeaseFailureClassifiesSecurityAndStorageFaults(bool authenticationFailure)
+    {
+        var operation = CreateOperation();
+        var store = CreateUploadStore([operation]);
+        store.LeasePendingOperationsException = authenticationFailure
+            ? new LocalStoreRecordAuthenticationException("The local record failed authentication.")
+            : new DurableStorageException("The storage medium refused the lease read.");
+        var session = new PreparedSession(ExpectedSingleOperation, PreparedUploadBytes);
+        var faults = new RecordingObserver<OccasionallyConnectedFault>();
+        await using var engine = CreateEngine(store, new() { SessionOverride = session });
+        using var registration = engine.RegisterParticipant(CreateUploadParticipant(store));
+        using var faultSubscription = engine.Faults.Subscribe(faults);
+
+        await engine.StartAsync(CancellationToken.None);
+        await engine.TriggerSyncAsync(CancellationToken.None).AsTask().WaitAsync(GuardTimeout);
+        await faults.WaitForCountAsync(ExpectedSingleOperation, GuardTimeout);
+
+        await Assert.That(faults.Values[0].Category).IsEqualTo(authenticationFailure ? FaultCategory.Security : FaultCategory.Storage);
+        await Assert.That(faults.Values[0].Severity).IsEqualTo(authenticationFailure ? FaultSeverity.Critical : FaultSeverity.Error);
+        await Assert.That(session.SentBatches.Count).IsEqualTo(0);
+        await engine.StopAsync(CancellationToken.None);
+    }
+
+    /// <summary>Verifies fault diagnostics bound an unusually long exception type name.</summary>
+    /// <returns>The assertion task.</returns>
+    [Test]
+    public async Task UploadLeaseFailureBoundsDiagnosticExceptionTypeName()
+    {
+        const int maximumDiagnosticTypeNameLength = 256;
+        var store = CreateUploadStore([CreateOperation()]);
+        store.LeasePendingOperationsException = new VerboseDiagnosticException<
+            Dictionary<string, Dictionary<string, string>>,
+            Dictionary<string, Dictionary<string, string>>,
+            Dictionary<string, Dictionary<string, string>>,
+            Dictionary<string, Dictionary<string, string>>>();
+        var faults = new RecordingObserver<OccasionallyConnectedFault>();
+        await using var engine = CreateEngine(store, new() { SessionOverride = new PreparedSession(ExpectedSingleOperation, PreparedUploadBytes) });
+        using var registration = engine.RegisterParticipant(CreateUploadParticipant(store));
+        using var faultSubscription = engine.Faults.Subscribe(faults);
+
+        await engine.StartAsync(CancellationToken.None);
+        await engine.TriggerSyncAsync(CancellationToken.None).AsTask().WaitAsync(GuardTimeout);
+        await faults.WaitForCountAsync(ExpectedSingleOperation, GuardTimeout);
+
+        await Assert.That(faults.Values[0].Code).IsEqualTo(UploadAttemptFaultCode);
+        await Assert.That(faults.Values[0].Exception?.Message.Length).IsEqualTo(maximumDiagnosticTypeNameLength);
+        await engine.StopAsync(CancellationToken.None);
+    }
+
     /// <summary>Waits for denied-attempt cleanup and advances the pending local wake dwell.</summary>
     /// <param name="clock">The manual engine clock.</param>
     /// <param name="store">The recording store.</param>
@@ -165,5 +242,37 @@ public sealed partial class SyncEngineTests
                 DateTimeOffset.UnixEpoch,
                 null);
         }
+    }
+
+    /// <summary>Provides an exception type with diagnostic metadata longer than the engine's bound.</summary>
+    /// <typeparam name="TFirst">The first nested diagnostic type.</typeparam>
+    /// <typeparam name="TSecond">The second nested diagnostic type.</typeparam>
+    /// <typeparam name="TThird">The third nested diagnostic type.</typeparam>
+    /// <typeparam name="TFourth">The fourth nested diagnostic type.</typeparam>
+    private sealed class VerboseDiagnosticException<TFirst, TSecond, TThird, TFourth> : Exception
+    {
+        /// <summary>Initializes a new instance of the <see cref="VerboseDiagnosticException{TFirst, TSecond, TThird, TFourth}"/> class.</summary>
+        public VerboseDiagnosticException()
+        {
+        }
+
+        /// <summary>Initializes a new instance of the <see cref="VerboseDiagnosticException{TFirst, TSecond, TThird, TFourth}"/> class.</summary>
+        /// <param name="message">The error message.</param>
+        public VerboseDiagnosticException(string message)
+            : base(message)
+        {
+        }
+
+        /// <summary>Initializes a new instance of the <see cref="VerboseDiagnosticException{TFirst, TSecond, TThird, TFourth}"/> class.</summary>
+        /// <param name="message">The error message.</param>
+        /// <param name="innerException">The cause.</param>
+        public VerboseDiagnosticException(string message, Exception innerException)
+            : base(message, innerException)
+        {
+        }
+
+        /// <summary>Gets the type arguments that make this diagnostic exception distinct.</summary>
+        public static (Type First, Type Second, Type Third, Type Fourth) DiagnosticTypes =>
+            (typeof(TFirst), typeof(TSecond), typeof(TThird), typeof(TFourth));
     }
 }

@@ -11,25 +11,26 @@ using ReactiveUI.Primitives.OccasionallyConnected.Storage.Sqlite;
 
 namespace ReactiveUI.Primitives.OccasionallyConnected.Storage.Sqlite.Tests;
 
-/// <summary>Tests <see cref="SqliteLocalStoreAdapter"/> against the retained store schema v1 golden fixtures.</summary>
+/// <summary>Tests <see cref="SqliteLocalStoreAdapter"/> against the first release V1 golden fixtures.</summary>
 public sealed partial class SqliteLocalStoreAdapterTests
 {
-    /// <summary>The retained schema DDL fixture for the frozen store layout.</summary>
+    /// <summary>The V1 schema DDL fixture.</summary>
     private const string GoldenSchemaFile = "store-schema.sql";
 
     /// <summary>The retained populated store dump, kept for review and writer comparison.</summary>
     private const string GoldenPopulatedStoreFile = "store-populated.sql";
 
-    /// <summary>The retained populated store database written by the frozen release.</summary>
+    /// <summary>The populated V1 store database.</summary>
     private const string GoldenPopulatedDatabaseFile = "store-populated.db";
 
     /// <summary>The number of characters in a SQL list separator.</summary>
     private const int SqlListSeparatorLength = 2;
 
-    /// <summary>The constant query that reads every row of every frozen store table in a stable order.</summary>
+    /// <summary>The constant query that reads every row of every V1 store table in a stable order.</summary>
     private const string GoldenRowsQuery = """
         SELECT 'oc_inbox', * FROM oc_inbox ORDER BY rowid;
         SELECT 'oc_metadata', * FROM oc_metadata ORDER BY rowid;
+        SELECT 'oc_operation_state_proofs', * FROM oc_operation_state_proofs ORDER BY rowid;
         SELECT 'oc_outbox', * FROM oc_outbox ORDER BY rowid;
         SELECT 'oc_outbox_authoritative_mutations', * FROM oc_outbox_authoritative_mutations ORDER BY rowid;
         SELECT 'oc_outbox_leases', * FROM oc_outbox_leases ORDER BY rowid;
@@ -67,7 +68,7 @@ public sealed partial class SqliteLocalStoreAdapterTests
     /// <summary>The golden second operation identifier.</summary>
     private const string GoldenSecondOperationIdText = "00000000-0000-0000-0000-000000000002";
 
-    /// <summary>The golden third operation identifier, written only by the compatibility test.</summary>
+    /// <summary>The golden third operation identifier, written only by the reopen test.</summary>
     private const string GoldenThirdOperationIdText = "00000000-0000-0000-0000-000000000003";
 
     /// <summary>The golden remote cursor.</summary>
@@ -103,12 +104,20 @@ public sealed partial class SqliteLocalStoreAdapterTests
     public async Task WhenStoreIsInitialized_ThenSchemaMatchesGoldenDdl()
     {
         using var database = TempDatabase.Create();
+        using var retained = TempDatabase.Create();
+        CopyGoldenDatabase(retained.Path);
+        await Assert.That(DescribeGoldenSchema(retained.Path)).IsEqualTo(ReadGoldenFixture(GoldenSchemaFile));
         await using (var adapter = new SqliteLocalStoreAdapter(database.Path))
         {
             await adapter.InitializeAsync(new(GoldenStoreIdentity, SchemaVersion, false), CancellationToken.None);
         }
 
-        await Assert.That(DescribeGoldenSchema(database.Path)).IsEqualTo(ReadGoldenFixture(GoldenSchemaFile));
+        await using (var reopened = new SqliteLocalStoreAdapter(retained.Path))
+        {
+            await reopened.InitializeAsync(new(GoldenStoreIdentity, SchemaVersion, false), CancellationToken.None);
+        }
+
+        await Assert.That(DescribeGoldenSchema(database.Path)).IsEqualTo(DescribeGoldenSchema(retained.Path));
     }
 
     /// <summary>Verifies the current writer produces the retained populated store row for row.</summary>
@@ -117,15 +126,16 @@ public sealed partial class SqliteLocalStoreAdapterTests
     public async Task WhenGoldenStoreIsPopulated_ThenDumpMatchesGoldenScript()
     {
         using var database = TempDatabase.Create();
+        using var retained = TempDatabase.Create();
         await PopulateGoldenStoreAsync(database.Path);
+        CopyGoldenDatabase(retained.Path);
+        await Assert.That(DumpGoldenStore(retained.Path)).IsEqualTo(ReadGoldenFixture(GoldenPopulatedStoreFile));
+        await using (var reopened = new SqliteLocalStoreAdapter(retained.Path))
+        {
+            await reopened.InitializeAsync(new(GoldenStoreIdentity, SchemaVersion, false), CancellationToken.None);
+        }
 
-        await using var connection = OpenRawConnection(database.Path);
-        await using var transaction = (SqliteTransaction)await connection.BeginTransactionAsync();
-        var checksum = SqliteSchemaChecksum.TrySelect(connection, transaction);
-        await Assert.That(checksum).StartsWith(SqliteSchemaChecksum.AlgorithmPrefix);
-        var checksumRow = $"INSERT INTO oc_metadata VALUES ('schema_checksum', '{checksum}');\n";
-        var frozenRows = DumpGoldenStore(database.Path).Replace(checksumRow, string.Empty, StringComparison.Ordinal);
-        await Assert.That(frozenRows).IsEqualTo(ReadGoldenFixture(GoldenPopulatedStoreFile));
+        await Assert.That(DumpGoldenStore(database.Path)).IsEqualTo(DumpGoldenStore(retained.Path));
     }
 
     /// <summary>Verifies the retained database and its reviewable dump describe the same rows.</summary>
@@ -139,7 +149,7 @@ public sealed partial class SqliteLocalStoreAdapterTests
         await Assert.That(DumpGoldenStore(database.Path)).IsEqualTo(ReadGoldenFixture(GoldenPopulatedStoreFile));
     }
 
-    /// <summary>Verifies a store written by the frozen release opens and recovers with the current code.</summary>
+    /// <summary>Verifies a populated V1 store opens and recovers with the current code.</summary>
     /// <returns>A task that represents the asynchronous test.</returns>
     /// <exception cref="InvalidOperationException">The retained store has no snapshot.</exception>
     [Test]
@@ -152,7 +162,7 @@ public sealed partial class SqliteLocalStoreAdapterTests
 
         var subscriptionId = await adapter.GetOrCreateSubscriptionIdAsync(GoldenStoreStream, null, CancellationToken.None);
         var recovered = await adapter.RecoverStreamAsync(GoldenStoreStream, subscriptionId, CancellationToken.None);
-        var snapshot = recovered.Snapshot ?? throw new InvalidOperationException("Expected the retained snapshot.");
+        var snapshot = recovered.Snapshot ?? throw new InvalidOperationException("Expected the V1 snapshot.");
         var commit = await adapter.CommitLocalOperationAsync(
             CreateGoldenStoreOperation(GoldenThirdOperationIdText, recovered.NextClientSequence, """{"value":23.4,"unit":"C"}"""u8.ToArray()),
             new(GoldenStoreStream, CreateGoldenState("""{"readings":4,"last":23.4}"""u8.ToArray()), GoldenSnapshotFormatVersion, snapshot.Revision),
@@ -297,7 +307,7 @@ public sealed partial class SqliteLocalStoreAdapterTests
     {
         using var connection = OpenRawConnection(path);
         StringBuilder builder = new();
-        _ = builder.Append("-- Store written by the frozen release. Replay it into an empty database file.\n");
+        _ = builder.Append("-- First release V1 store. Replay it into an empty database file.\n");
         AppendGoldenSchemaObjects(connection, builder);
         AppendGoldenRows(connection, builder);
 

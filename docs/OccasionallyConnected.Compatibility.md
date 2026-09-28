@@ -16,7 +16,7 @@ The connect range fixture proves how the codec carries a range. It does not prom
 
 ## Local SQLite migrations
 
-The current local commit schema is version 8. Initialization validates the stored schema before migrating it. Invalid metadata, unsupported newer schemas and schema drift fail without silently repairing the database.
+The current local commit schema is version 9. Initialization validates the stored schema before migrating it. Invalid metadata, unsupported newer schemas and schema drift fail without silently repairing the database. Version 9 authenticates durable operation-state data. Opening an existing version 9 database verifies its stored integrity proofs.
 
 | Starting schema | State preserved or introduced | Fixture |
 | --- | --- | --- |
@@ -27,7 +27,10 @@ The current local commit schema is version 8. Initialization validates the store
 | 5 | Optimistic state and pending operations survive. Missing authoritative state remains unknown. | `SqliteLocalCommitStoreTests.AuthoritativeState.WhenSchemaFiveMigrates_ThenOptimisticAndPendingRecoverWithUnknownAuthoritativeState` |
 | 6 | Accepted operations remain available for replay when receive inclusion is unknown. | `SqliteLocalCommitStoreTests.AuthoritativeState.WhenSchemaSixMigrates_ThenAcceptedOperationsRecoverAsReplayVisibleUnknownInclusion` |
 | 7 | The migrated store can persist quarantine markers. | `SqliteLocalCommitStoreTests.Leases.WhenPreQuarantineSchemaMigratesToCurrent_ThenQuarantineMarkersCanBeWritten` |
-| 8 | Reopening preserves current durable state. | `ILocalStoreAdapterTests.SqliteDurableCapabilitiesReopenOperationInboxCursorSnapshotAndStatusState` |
+| 8 | Plaintext stores migrate automatically. Encrypted stores with operation states stop by default because version 8 did not authenticate those states. The caller can explicitly trust the file for this upgrade. The migration creates a verified version 8 backup before changing the store. | `SqliteLocalStoreAdapterTests.OperationStateIntegrity.WhenEncryptedVersionEightIsOpened_ThenExplicitTrustUpgradesOnce`, `SqliteLocalStoreAdapterTests.PreUpgradeBackup`, and `SqliteLocalStoreAdapterTests.MigrationCrash` |
+| 9 | Reopening verifies operation-state integrity proofs and preserves durable state. | `SqliteLocalStoreAdapterTests.OperationStateIntegrity` and `SqliteLocalStoreAdapterTests.GoldenSchema` |
+
+An older package cannot open a version 9 store. It rejects a newer schema without changing it. To roll back the package, stop all writers and restore a verified version 8 backup before opening the database with the older package. Restoring the backup also discards changes made after that backup was taken.
 
 Historical fixtures are kept in the SQLite test project. They include frozen SQL independent of current schema construction. The migration rollback tests also verify that failed migration leaves the old database usable.
 

@@ -405,6 +405,11 @@ public sealed partial class SqliteLocalStoreAdapterTests
     private sealed class ThrowingCommitFaultPoint(SqliteCommitCheckpoint target) : ISqliteCommitFaultPoint
     {
         /// <inheritdoc/>
+        public void BeforeLocalCommitTransaction(Microsoft.Data.Sqlite.SqliteConnection connection)
+        {
+        }
+
+        /// <inheritdoc/>
         public void Reached(SqliteCommitCheckpoint checkpoint)
         {
             if (checkpoint == target)

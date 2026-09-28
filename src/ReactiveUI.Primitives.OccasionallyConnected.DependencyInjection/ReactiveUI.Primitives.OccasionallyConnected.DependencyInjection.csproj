@@ -16,4 +16,7 @@
     <ProjectReference Include="..\ReactiveUI.Primitives.OccasionallyConnected\ReactiveUI.Primitives.OccasionallyConnected.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <None Include="README.md" Pack="true" PackagePath="README.md" />
+  </ItemGroup>
 </Project>

@@ -28,7 +28,7 @@ jobs:
         os: [ubuntu-latest, windows-latest, macos-latest]
         framework: [net8.0, net9.0, net10.0, net11.0]
     runs-on: ${{ matrix.os }}
-    timeout-minutes: 20
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@v5
         with:
@@ -48,25 +48,49 @@ jobs:
           OC_TEST_FRAMEWORK: ${{ matrix.framework }}
         run: |
           $ErrorActionPreference = 'Stop'
+          $expectedProjects = @(
+            'ReactiveUI.Primitives.OccasionallyConnected.Collaboration.Client.Tests'
+            'ReactiveUI.Primitives.OccasionallyConnected.Collaboration.Server.Tests'
+            'ReactiveUI.Primitives.OccasionallyConnected.Conformance.Tests'
+            'ReactiveUI.Primitives.OccasionallyConnected.Core.Tests'
+            'ReactiveUI.Primitives.OccasionallyConnected.DependencyInjection.Tests'
+            'ReactiveUI.Primitives.OccasionallyConnected.Examples.Tests'
+            'ReactiveUI.Primitives.OccasionallyConnected.Hosting.Tests'
+            'ReactiveUI.Primitives.OccasionallyConnected.ResilienceLab.Tests'
+            'ReactiveUI.Primitives.OccasionallyConnected.Server.Tests'
+            'ReactiveUI.Primitives.OccasionallyConnected.Storage.Sqlite.Tests'
+            'ReactiveUI.Primitives.OccasionallyConnected.Tests'
+            'ReactiveUI.Primitives.OccasionallyConnected.Transport.Http.Tests'
+          )
           $testProjects = @(Get-ChildItem tests -Directory -Filter 'ReactiveUI.Primitives.OccasionallyConnected*.Tests')
-          if ($testProjects.Count -eq 0) { throw 'No OccasionallyConnected test projects found.' }
+          $foundProjects = @($testProjects | ForEach-Object { $_.Name })
+          if (@(Compare-Object $expectedProjects $foundProjects).Count -ne 0) { throw 'OccasionallyConnected test project list differs from the expected 12 suites.' }
+          $coverageRoot = Join-Path $PWD "../artifacts/occasionally-connected/$env:GITHUB_RUN_ID-$env:GITHUB_RUN_ATTEMPT-$env:RUNNER_OS-$env:OC_TEST_FRAMEWORK"
+          if (Test-Path -LiteralPath $coverageRoot) { throw "Coverage output path already exists: $coverageRoot" }
+          $reportPaths = [System.Collections.Generic.List[string]]::new()
           foreach ($testProject in $testProjects) {
             $projectFile = Join-Path $testProject.FullName "$($testProject.Name).csproj"
             dotnet build $projectFile -c Release -f $env:OC_TEST_FRAMEWORK --disable-build-servers -m:1
             if ($LASTEXITCODE -ne 0) { throw "Build failed: $($testProject.Name)" }
             $testAssembly = Join-Path $testProject.FullName "bin/Release/$env:OC_TEST_FRAMEWORK/$($testProject.Name).dll"
-            $results = Join-Path $PWD "../artifacts/occasionally-connected/$($testProject.Name)/$env:OC_TEST_FRAMEWORK"
+            $results = Join-Path $coverageRoot "$($testProject.Name)/$env:OC_TEST_FRAMEWORK"
             dotnet $testAssembly --coverage --coverage-output-format cobertura --results-directory $results --progress off
             if ($LASTEXITCODE -ne 0) { throw "Tests failed: $($testProject.Name)" }
-            $reports = @(Get-ChildItem -LiteralPath $results -Filter '*.cobertura.xml')
-            if ($reports.Count -ne 1) { throw 'Expected exactly one fresh coverage report.' }
-            $packageNames = if ($testProject.Name -eq 'ReactiveUI.Primitives.OccasionallyConnected.Examples.Tests') {
-              @('ReactiveUI.Primitives.OccasionallyConnected.Examples.DurableOutbox')
-            } else {
-              @($testProject.Name.Substring(0, $testProject.Name.Length - '.Tests'.Length))
-            }
-            & ../tools/Test-OccasionallyConnectedCoverage.ps1 -ReportPath $reports[0].FullName -PackageNames $packageNames
+            $reports = @(Get-ChildItem -LiteralPath $results -Filter '*.cobertura.xml' -File -Recurse)
+            if ($reports.Count -ne 1) { throw "Expected one fresh coverage report for $($testProject.Name); found $($reports.Count)." }
+            $reportPaths.Add($reports[0].FullName)
           }
+          $reportFiles = $reportPaths.ToArray()
+          $packageNames = @(
+            'ReactiveUI.Primitives.OccasionallyConnected.Core'
+            'ReactiveUI.Primitives.OccasionallyConnected'
+            'ReactiveUI.Primitives.OccasionallyConnected.DependencyInjection'
+            'ReactiveUI.Primitives.OccasionallyConnected.Hosting'
+            'ReactiveUI.Primitives.OccasionallyConnected.Server'
+            'ReactiveUI.Primitives.OccasionallyConnected.Storage.Sqlite'
+            'ReactiveUI.Primitives.OccasionallyConnected.Transport.Http'
+          )
+          & ../tools/Test-OccasionallyConnectedCoverage.ps1 -ReportPath $reportFiles -PackageNames $packageNames
       - name: Retain coverage evidence
         if: always()
         uses: actions/upload-artifact@v4

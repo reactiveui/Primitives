@@ -145,4 +145,46 @@ public sealed partial class OccasionallyConnectedBuilderTests
         await Assert.That(async () => await stream.PublishAsync(new(1), options, CancellationToken.None))
             .ThrowsExactly<InvalidOperationException>();
     }
+
+    /// <summary>Verifies a throwing policy fails the publication and preserves the committed outbox.</summary>
+    /// <returns>A task representing the assertions.</returns>
+    [Test]
+    public async Task PublicCustomPolicyFailurePreservesPendingOperations()
+    {
+        var policy = new ScriptedOverflowPolicy(static _ => throw new InvalidOperationException("Policy failure."));
+        await using var store = CreatePublicAdmissionStore("oc-overflow-custom-throw-");
+        await using var transport = new RecordingTransportAdapter();
+        await using var context = CreateOverflowBuilder(store, transport).UseBufferOverflowPolicy(policy).Build();
+        var stream = context.GetOrCreateStream(CreateDefinition());
+        var custom = CreatePublicPublishOptions(BufferStrategy.Custom, durable: false);
+
+        _ = await stream.PublishAsync(new(1), custom, CancellationToken.None).AsTask().WaitAsync(GuardTimeout);
+        _ = await stream.PublishAsync(new(OverflowSecondDelta), custom, CancellationToken.None).AsTask().WaitAsync(GuardTimeout);
+
+        await Assert.That(async () => await stream.PublishAsync(new(OverflowThirdDelta), custom, CancellationToken.None).AsTask().WaitAsync(GuardTimeout))
+            .ThrowsExactly<InvalidOperationException>();
+        await AssertPendingValuesAsync(store, stream.SubscriptionId, 1, OverflowSecondDelta);
+        await Assert.That(policy.Contexts.Count).IsEqualTo(1);
+    }
+
+    /// <summary>Verifies a policy that returns no decision cannot change the committed outbox.</summary>
+    /// <returns>A task representing the assertions.</returns>
+    [Test]
+    public async Task PublicCustomPolicyWithoutDecisionPreservesPendingOperations()
+    {
+        var policy = new ScriptedOverflowPolicy(static _ => null!);
+        await using var store = CreatePublicAdmissionStore("oc-overflow-custom-null-");
+        await using var transport = new RecordingTransportAdapter();
+        await using var context = CreateOverflowBuilder(store, transport).UseBufferOverflowPolicy(policy).Build();
+        var stream = context.GetOrCreateStream(CreateDefinition());
+        var custom = CreatePublicPublishOptions(BufferStrategy.Custom, durable: false);
+
+        _ = await stream.PublishAsync(new(1), custom, CancellationToken.None).AsTask().WaitAsync(GuardTimeout);
+        _ = await stream.PublishAsync(new(OverflowSecondDelta), custom, CancellationToken.None).AsTask().WaitAsync(GuardTimeout);
+
+        await Assert.That(async () => await stream.PublishAsync(new(OverflowThirdDelta), custom, CancellationToken.None).AsTask().WaitAsync(GuardTimeout))
+            .ThrowsExactly<InvalidOperationException>();
+        await AssertPendingValuesAsync(store, stream.SubscriptionId, 1, OverflowSecondDelta);
+        await Assert.That(policy.Contexts.Count).IsEqualTo(1);
+    }
 }

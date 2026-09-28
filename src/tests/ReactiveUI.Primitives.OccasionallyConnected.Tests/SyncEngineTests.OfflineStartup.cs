@@ -120,6 +120,40 @@ public sealed partial class SyncEngineTests
         await Assert.That(transport.ConnectCalls).IsEqualTo(BreakerFailureThreshold + ExpectedSingleOperation);
     }
 
+    /// <summary>Verifies exhausted connection retries start a new episode after the maximum delay.</summary>
+    /// <returns>The assertion task.</returns>
+    [Test]
+    public async Task BackgroundReconnectStartsNewRetryEpisodeAfterAttemptLimit()
+    {
+        var clock = new ManualTimerTimeProvider(DateTimeOffset.UnixEpoch);
+        var transport = new RecordingTransport();
+        transport.ConnectFailures.Enqueue(new IOException("first"));
+        transport.ConnectFailures.Enqueue(new IOException("second"));
+        var options = CreateOfflineOptions() with
+        {
+            Retry = CreateOfflineOptions().Retry with { MaximumRetryAttempts = 1 },
+            CircuitBreaker = new() { FailureThreshold = BreakerFailureThreshold + ExpectedSingleOperation, OpenDuration = BreakerOpenDuration },
+        };
+        var states = new RecordingObserver<SyncState>();
+        await using var engine = CreateEngine(transport: transport, options: options, timeProvider: clock);
+        using var stateSubscription = engine.SyncStates.Subscribe(states);
+
+        await engine.StartAsync(CancellationToken.None);
+        await WaitForConditionAsync(() => clock.HasTimerDueIn(OfflineRetryDelay));
+        clock.Advance(OfflineRetryDelay);
+        await WaitForConditionAsync(() => transport.ConnectCalls == ExpectedCapacityCommitAttempts);
+        await WaitForConditionAsync(
+            () => states.Values.Count(static state => state.Status == SyncLifecycleStatus.Offline)
+                >= ExpectedCapacityCommitAttempts);
+        var secondOffline = states.Values.FindLast(static state => state.Status == SyncLifecycleStatus.Offline)!;
+        await Assert.That(secondOffline.RetryAfter).IsEqualTo(OfflineRetryDelay);
+
+        await WaitForConditionAsync(() => clock.HasTimerDueIn(OfflineRetryDelay));
+        clock.Advance(OfflineRetryDelay);
+        await WaitForConditionAsync(() => states.Values.Exists(static state => state.Status == SyncLifecycleStatus.Online));
+        await Assert.That(transport.ConnectCalls).IsEqualTo(ExpectedCapacityCommitAttempts + ExpectedSingleOperation);
+    }
+
     /// <summary>Verifies triggering synchronization while offline reconnects without waiting for the retry delay.</summary>
     /// <returns>The assertion task.</returns>
     [Test]

@@ -112,7 +112,28 @@ internal static class SqliteLocalCommitConnection
             cancellationToken.ThrowIfCancellationRequested();
             try
             {
-                return connection.BeginTransaction(IsolationLevel.Serializable, deferred: false);
+                var transaction = connection.BeginTransaction(IsolationLevel.Serializable, deferred: false);
+                try
+                {
+                    if (connection is SqliteProtectedConnection { VerifyBeforeWrite: { } verifyBeforeWrite })
+                    {
+                        verifyBeforeWrite(connection, transaction);
+                    }
+                    else if (connection is SqliteProtectedConnection protectedConnection
+                        && protectedConnection.VerifiedDataVersion is long verifiedVersion
+                        && GetDataVersion(connection, transaction) != verifiedVersion)
+                    {
+                        SqliteOperationStateIntegrity.Verify(connection, transaction);
+                        protectedConnection.VerifiedDataVersion = GetDataVersion(connection, transaction);
+                    }
+
+                    return transaction;
+                }
+                catch
+                {
+                    transaction.Dispose();
+                    throw;
+                }
             }
             catch (SqliteException exception) when (IsBusyOrLocked(exception))
             {
@@ -125,6 +146,18 @@ internal static class SqliteLocalCommitConnection
                 _ = cancellationToken.WaitHandle.WaitOne(WriterRetryDelay);
             }
         }
+    }
+
+    /// <summary>Gets the connection-local version used to detect commits from other connections.</summary>
+    /// <param name="connection">The connection.</param>
+    /// <param name="transaction">The active transaction.</param>
+    /// <returns>The connection-local data version.</returns>
+    internal static long GetDataVersion(SqliteConnection connection, SqliteTransaction transaction)
+    {
+        using var command = connection.CreateCommand();
+        command.Transaction = transaction;
+        command.CommandText = "PRAGMA data_version;";
+        return Convert.ToInt64(command.ExecuteScalar(), System.Globalization.CultureInfo.InvariantCulture);
     }
 
     /// <summary>Gets elapsed time since a stopwatch timestamp.</summary>

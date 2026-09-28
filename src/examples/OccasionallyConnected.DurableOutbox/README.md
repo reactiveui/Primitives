@@ -1,21 +1,21 @@
 # OccasionallyConnected Durable Outbox Example
 
-This console app teaches the public low-level durable storage workflow used by adapter authors.
-It uses `SqliteLocalStoreAdapter`, `JsonPayloadSerializer`, source-generated `JsonTypeInfo`,
-durable receipts, persisted subscription identity, leases, and attempt barriers against a real
-SQLite database chosen by the user.
+This console example shows the durable local storage workflow used by adapter authors. It stores readings and operation state in SQLite through `SqliteLocalStoreAdapter`. It also shows JSON payload registration, durable receipts, subscription identity, leases, and attempt barriers.
 
-It intentionally does not pretend to have a server. `simulate-attempt` is explicitly local: it
-records the same durable transitions an engine would need around network I/O, then prints whether a
-local simulated acknowledgement was recorded.
+The example has no server. `simulate-attempt` records local durable transitions around a simulated network attempt. It does not send a request or prove a remote delivery guarantee.
 
-Run from `src`:
+These examples accompany the first v1 release of OccasionallyConnected. The feature has no earlier released version, so end users do not need a migration.
+
+## Run the example
+
+Run these commands from `src` with the .NET 10 SDK or later. The first command appends a reading to `outbox.db` in the current directory.
 
 ```powershell
-dotnet run --project examples/OccasionallyConnected.DurableOutbox --framework net10.0 -- `
-  append-reading --database .\outbox.db --device device-a --value 21.5 --guarantee at-least-once
+$append = dotnet run --project examples/OccasionallyConnected.DurableOutbox --framework net10.0 -- append-reading --database .\outbox.db --device device-a --value 21.5 --guarantee at-least-once
+$append
+$operationId = ($append | Where-Object { $_ -like 'operation: *' } | Select-Object -First 1).Substring('operation: '.Length)
 dotnet run --project examples/OccasionallyConnected.DurableOutbox --framework net10.0 -- status --database .\outbox.db
-dotnet run --project examples/OccasionallyConnected.DurableOutbox --framework net10.0 -- status --database .\outbox.db --operation <operation-guid>
+dotnet run --project examples/OccasionallyConnected.DurableOutbox --framework net10.0 -- status --database .\outbox.db --operation $operationId
 dotnet run --project examples/OccasionallyConnected.DurableOutbox --framework net10.0 -- simulate-attempt --database .\outbox.db --outcome lost-response
 dotnet run --project examples/OccasionallyConnected.DurableOutbox --framework net10.0 -- pending --database .\outbox.db
 dotnet run --project examples/OccasionallyConnected.DurableOutbox --framework net10.0 -- subscription --database .\outbox.db
@@ -24,12 +24,14 @@ dotnet run --project examples/OccasionallyConnected.DurableOutbox --framework ne
 dotnet run --project examples/OccasionallyConnected.DurableOutbox --framework net10.0 -- --demo
 ```
 
-Delivery guarantee examples:
+`append-reading` prints the operation id, which the commands above pass to `status --operation`. `--demo` runs in an owned temporary directory and removes that directory when it finishes. The named database commands keep their database so you can inspect it across runs.
 
-- `at-most-once` writes a durable local audit record and records one attempt barrier. A lost response becomes ambiguous and is not retried automatically.
-- `at-least-once` keeps the same `OperationId` and client sequence in SQLite so an idempotent server can deduplicate retries.
-- `effectively-once` is rejected because this app has no server idempotency ledger, atomic server apply-plus-ack, or negotiated retention window.
+The sample limits the pending outbox to four operations and SQLite worker input to 1 MB. `at-most-once` and `at-least-once` can be demonstrated locally. `effectively-once` is rejected because this example has no server idempotency ledger, atomic server apply-and-acknowledge, or negotiated retention window.
 
-The sample has a finite pending capacity of four operations and a 1 MB SQLite worker input budget.
-`--demo` creates an owned temporary directory, exercises append/reopen/attempt ambiguity, and cleans
-only that marked directory before returning.
+## Test the example
+
+Run from `src`:
+
+```powershell
+dotnet test tests/ReactiveUI.Primitives.OccasionallyConnected.Examples.Tests/ReactiveUI.Primitives.OccasionallyConnected.Examples.Tests.csproj -c Release -f net10.0
+```

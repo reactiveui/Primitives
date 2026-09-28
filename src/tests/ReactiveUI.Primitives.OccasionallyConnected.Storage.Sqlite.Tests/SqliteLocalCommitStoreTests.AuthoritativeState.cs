@@ -3,7 +3,6 @@
 // See the LICENSE file in the project root for full license information.
 
 using System.Runtime.CompilerServices;
-using Microsoft.Data.Sqlite;
 using ReactiveUI.Primitives.OccasionallyConnected;
 using ReactiveUI.Primitives.OccasionallyConnected.Storage.Sqlite;
 
@@ -43,138 +42,6 @@ public sealed partial class SqliteLocalCommitStoreTests
     /// <summary>The second snapshot revision.</summary>
     private const int SecondSnapshotRevision = 2;
 
-    /// <summary>The exact schema-five local commit schema before authoritative sidecars existed.</summary>
-    private const string PreAuthoritativeLocalCommitSchemaSql = """
-        -- Frozen schema v5 from the operation-state local commit stage.
-        -- Keep this fixture independent from current schema construction.
-
-        PRAGMA user_version = 5;
-
-        CREATE TABLE oc_metadata (key TEXT NOT NULL PRIMARY KEY, value TEXT NOT NULL);
-
-        CREATE TABLE oc_subscription_identities (
-            store_identity TEXT NOT NULL,
-            stream_id TEXT NOT NULL,
-            subscription_id TEXT NOT NULL,
-            PRIMARY KEY (store_identity, stream_id));
-
-        CREATE TABLE oc_streams (
-            store_identity TEXT NOT NULL,
-            stream_id TEXT NOT NULL,
-            subscription_id TEXT NOT NULL,
-            next_client_sequence INTEGER NOT NULL,
-            server_cursor TEXT NULL,
-            PRIMARY KEY (store_identity, stream_id),
-            FOREIGN KEY (store_identity, stream_id)
-                REFERENCES oc_subscription_identities (store_identity, stream_id)
-                ON DELETE CASCADE);
-
-        CREATE TABLE oc_snapshots (
-            store_identity TEXT NOT NULL,
-            stream_id TEXT NOT NULL,
-            format_version INTEGER NOT NULL,
-            server_cursor TEXT NULL,
-            payload_contract_id TEXT NOT NULL,
-            payload_schema_version INTEGER NOT NULL,
-            payload_content_type TEXT NOT NULL,
-            payload BLOB NOT NULL,
-            payload_hash TEXT NOT NULL,
-            revision INTEGER NOT NULL,
-            saved_at_utc TEXT NOT NULL,
-            PRIMARY KEY (store_identity, stream_id),
-            FOREIGN KEY (store_identity, stream_id)
-                REFERENCES oc_streams (store_identity, stream_id)
-                ON DELETE CASCADE);
-
-        CREATE TABLE oc_outbox (
-            store_identity TEXT NOT NULL,
-            operation_id TEXT NOT NULL,
-            stream_id TEXT NOT NULL,
-            client_sequence INTEGER NOT NULL,
-            timestamp_utc TEXT NOT NULL,
-            base_version TEXT NULL,
-            operation_type INTEGER NOT NULL,
-            payload_contract_id TEXT NOT NULL,
-            payload_schema_version INTEGER NOT NULL,
-            payload_content_type TEXT NOT NULL,
-            payload BLOB NOT NULL,
-            payload_hash TEXT NOT NULL,
-            policy_delivery_guarantee INTEGER NOT NULL,
-            policy_durability INTEGER NOT NULL,
-            policy_priority INTEGER NOT NULL,
-            policy_conflict INTEGER NOT NULL,
-            snapshot_revision INTEGER NOT NULL,
-            committed_at_utc TEXT NOT NULL,
-            commit_fingerprint BLOB NOT NULL,
-            PRIMARY KEY (store_identity, operation_id),
-            UNIQUE (store_identity, stream_id, client_sequence),
-            FOREIGN KEY (store_identity, stream_id)
-                REFERENCES oc_streams (store_identity, stream_id)
-                ON DELETE CASCADE);
-
-        CREATE TABLE oc_outbox_metadata (
-            store_identity TEXT NOT NULL,
-            operation_id TEXT NOT NULL,
-            key TEXT NOT NULL,
-            value TEXT NOT NULL,
-            PRIMARY KEY (store_identity, operation_id, key),
-            FOREIGN KEY (store_identity, operation_id)
-                REFERENCES oc_outbox (store_identity, operation_id)
-                ON DELETE CASCADE);
-
-        CREATE TABLE oc_inbox (
-            store_identity TEXT NOT NULL,
-            stream_id TEXT NOT NULL,
-            event_id TEXT NOT NULL,
-            server_cursor TEXT NOT NULL,
-            committed_at_utc TEXT NOT NULL,
-            PRIMARY KEY (store_identity, stream_id, event_id),
-            FOREIGN KEY (store_identity, stream_id)
-                REFERENCES oc_streams (store_identity, stream_id)
-                ON DELETE CASCADE);
-
-        CREATE TABLE oc_outbox_leases (
-            store_identity TEXT NOT NULL,
-            lease_id TEXT NOT NULL,
-            operation_id TEXT NOT NULL,
-            stream_id TEXT NOT NULL,
-            client_sequence INTEGER NOT NULL,
-            lease_expires_at_utc TEXT NOT NULL,
-            lease_member_count INTEGER NOT NULL,
-            PRIMARY KEY (store_identity, lease_id, operation_id),
-            UNIQUE (store_identity, operation_id),
-            FOREIGN KEY (store_identity, operation_id)
-                REFERENCES oc_outbox (store_identity, operation_id)
-                ON DELETE CASCADE,
-            FOREIGN KEY (store_identity, stream_id)
-                REFERENCES oc_streams (store_identity, stream_id)
-                ON DELETE CASCADE);
-
-        CREATE TABLE oc_outbox_operation_states (
-            store_identity TEXT NOT NULL,
-            operation_id TEXT NOT NULL,
-            operation_state INTEGER NOT NULL,
-            attempt_count INTEGER NOT NULL,
-            changed_at_utc TEXT NOT NULL,
-            reason_code TEXT NULL,
-            retry_started_utc TEXT NULL,
-            retry_due_utc TEXT NULL,
-            retry_previous_delay_ticks INTEGER NULL,
-            retry_transient_attempt_count INTEGER NULL,
-            retry_authentication_state INTEGER NULL,
-            retry_credentials_version TEXT NULL,
-            PRIMARY KEY (store_identity, operation_id),
-            FOREIGN KEY (store_identity, operation_id)
-                REFERENCES oc_outbox (store_identity, operation_id)
-                ON UPDATE CASCADE
-                ON DELETE CASCADE);
-
-        INSERT INTO oc_metadata (key, value) VALUES ('schema_version', '5');
-        """;
-
-    /// <summary>The fixed operation identifier used by the schema-five legacy fixture.</summary>
-    private static readonly OperationId LegacySchemaFiveOperationId = new(new("11111111-1111-1111-1111-111111111111"));
-
     /// <summary>Verifies a local authoritative checkpoint is durable and remains independent from optimistic state.</summary>
     /// <returns>A task that represents the asynchronous test.</returns>
     [Test]
@@ -192,56 +59,6 @@ public sealed partial class SqliteLocalCommitStoreTests
 
         await Assert.That(PayloadText(recovery.Snapshot?.State)).IsEqualTo(OptimisticInitialText);
         await Assert.That(PayloadText(recovery.Snapshot?.AuthoritativeState)).IsEqualTo(AuthoritativeInitialText);
-    }
-
-    /// <summary>Verifies schema version five migration preserves optimistic state and pending work with unknown authoritative state.</summary>
-    /// <returns>A task that represents the asynchronous test.</returns>
-    [Test]
-    public async Task WhenSchemaFiveMigrates_ThenOptimisticAndPendingRecoverWithUnknownAuthoritativeState()
-    {
-        using var database = TempDatabase.Create();
-        var subscriptionId = SubscriptionId.New();
-        var operation = CreateOperation(FirstClientSequence) with { OperationId = LegacySchemaFiveOperationId };
-        var snapshot = new SnapshotMutation(Stream, CreatePayload(OptimisticInitialText), FormatVersion: 1, ExpectedRevision: 0);
-        var migratedEvent = CreateRemoteEvent(FirstRemoteCursor);
-        await using (var connection = OpenRawConnection(database.Path))
-        await using (var transaction = (SqliteTransaction)await connection.BeginTransactionAsync())
-        {
-            CreatePreAuthoritativeLocalCommitSchema(connection, transaction);
-            InsertPreAuthoritativeLocalCommitRows(connection, transaction, subscriptionId, operation, snapshot, migratedEvent);
-            await transaction.CommitAsync();
-        }
-
-        using (var bound = new SqliteLocalCommitStore(database.Path))
-        {
-            Action initialize = () => bound.Initialize(new(StoreIdentity, SchemaVersion, false) { ClientId = FirstBindingClientId }, CancellationToken.None);
-            await Assert.That(initialize).ThrowsExactly<InvalidOperationException>();
-            await Assert.That(ReadUserVersion(database.Path)).IsEqualTo(SqliteStoreSchema.PreAuthoritativeLocalCommitSchemaVersion);
-        }
-
-        using var store = CreateInitializedStore(database.Path);
-        var recovery = store.RecoverStream(Stream, subscriptionId, CancellationToken.None);
-        var duplicate = store.CommitLocalOperation(operation, snapshot, CancellationToken.None);
-        var status = store.GetOperationStatus(operation.OperationId, CancellationToken.None);
-        var unapplied = store.GetUnappliedEventIds(Stream, [migratedEvent.EventId], CancellationToken.None);
-        var blockedLease = await LeaseSingleBatch(store, new(Stream, 1, DefaultLeaseBytes, TimeSpan.FromMinutes(1)));
-        var changedAuthoritative = new Action(() => store.CommitLocalOperation(
-            operation,
-            snapshot with { AuthoritativeState = CreatePayload(AuthoritativeChangedText) },
-            CancellationToken.None));
-
-        await Assert.That(ReadUserVersion(database.Path)).IsEqualTo(SchemaVersion);
-        await Assert.That(recovery.NextClientSequence).IsEqualTo(SecondClientSequence);
-        await Assert.That(recovery.PendingOperations.Count).IsEqualTo(1);
-        await Assert.That(recovery.PendingOperations[0].OperationId).IsEqualTo(operation.OperationId);
-        await Assert.That(PayloadText(recovery.Snapshot?.State)).IsEqualTo(OptimisticInitialText);
-        await Assert.That(recovery.Snapshot?.AuthoritativeState).IsNull();
-        await Assert.That(status?.State).IsEqualTo(SyncOperationState.QueuedForUpload);
-        await Assert.That(status?.Attempt).IsEqualTo(0);
-        await Assert.That(unapplied.Count).IsEqualTo(0);
-        await Assert.That(blockedLease).IsNull();
-        await Assert.That(duplicate.SnapshotRevision).IsEqualTo(1);
-        await Assert.That(changedAuthoritative).ThrowsExactly<InvalidOperationException>();
     }
 
     /// <summary>Verifies recovery rejects a tampered authoritative payload hash.</summary>
@@ -263,40 +80,6 @@ public sealed partial class SqliteLocalCommitStoreTests
         var recover = new Action(() => reopened.RecoverStream(Stream, subscriptionId, CancellationToken.None));
 
         await Assert.That(recover).ThrowsExactly<InvalidOperationException>();
-    }
-
-    /// <summary>Verifies schema version six accepted operations retain replay until receive inclusion is known.</summary>
-    /// <returns>A task that represents the asynchronous test.</returns>
-    [Test]
-    public async Task WhenSchemaSixMigrates_ThenAcceptedOperationsRecoverAsReplayVisibleUnknownInclusion()
-    {
-        using var database = TempDatabase.Create();
-        var operation = CreateOperation(FirstClientSequence);
-        var subscriptionId = SubscriptionId.New();
-        var snapshot = CreateSnapshotMutation(expectedRevision: 0) with
-        {
-            AuthoritativeState = CreatePayload(AuthoritativeInitialText),
-        };
-        await using (var connection = OpenRawConnection(database.Path))
-        await using (var transaction = (SqliteTransaction)await connection.BeginTransactionAsync())
-        {
-            SchemaSixFixture.Create(connection, transaction);
-            _ = SqliteClientIdentityBinding.BindOrValidate(connection, transaction, StoreIdentity, FirstBindingClientId);
-            InsertLegacyLocalCommitRows(connection, transaction, subscriptionId, operation, snapshot);
-            SqliteLocalCommitSql.InsertInitialOperationState(connection, transaction, StoreIdentity, operation, operation.TimestampUtc);
-            SetOperationState(connection, transaction, operation.OperationId, SyncOperationState.Synchronized);
-            await transaction.CommitAsync();
-        }
-
-        using var migrated = new SqliteLocalCommitStore(database.Path);
-        migrated.Initialize(new(StoreIdentity, SchemaVersion, false) { ClientId = FirstBindingClientId }, CancellationToken.None);
-        var recovery = migrated.RecoverStream(Stream, subscriptionId, CancellationToken.None);
-
-        await Assert.That(ReadUserVersion(database.Path)).IsEqualTo(SchemaVersion);
-        await Assert.That(recovery.PendingOperations.Count).IsEqualTo(0);
-        await Assert.That(recovery.ReplayOperations.Count).IsEqualTo(1);
-        await Assert.That(recovery.ReplayOperations[0].OperationId).IsEqualTo(operation.OperationId);
-        await Assert.That(PayloadText(recovery.Snapshot?.AuthoritativeState)).IsEqualTo(AuthoritativeInitialText);
     }
 
     /// <summary>Verifies authoritative mutations with invalid canonical hashes are rejected before commit.</summary>
@@ -461,33 +244,6 @@ public sealed partial class SqliteLocalCommitStoreTests
         await Assert.That(PayloadText(recovery.Snapshot?.AuthoritativeState)).IsEqualTo(AuthoritativeRemoteText);
     }
 
-    /// <summary>Verifies inconsistent historical metadata aborts migration without creating authoritative tables.</summary>
-    /// <returns>A task that represents the asynchronous test.</returns>
-    [Test]
-    public async Task WhenSchemaFiveMetadataDisagrees_ThenMigrationPreservesHistoricalDatabase()
-    {
-        using var database = TempDatabase.Create();
-        await using (var connection = OpenRawConnection(database.Path))
-        await using (var transaction = (SqliteTransaction)await connection.BeginTransactionAsync())
-        {
-            CreatePreAuthoritativeLocalCommitSchema(connection, transaction);
-            SetSchemaMetadataVersion(connection, transaction, SchemaVersion);
-            await transaction.CommitAsync();
-        }
-
-        Action initialize = () =>
-        {
-            using var store = CreateInitializedStore(database.Path);
-        };
-        await Assert.That(initialize).ThrowsExactly<InvalidOperationException>();
-        await Assert.That(ReadUserVersion(database.Path)).IsEqualTo(SqliteStoreSchema.PreAuthoritativeLocalCommitSchemaVersion);
-        await using var reopened = OpenRawConnection(database.Path);
-        await using var command = reopened.CreateCommand();
-        command.CommandText = "SELECT COUNT(*) FROM sqlite_master WHERE name IN ('oc_snapshot_authoritative_states', 'oc_outbox_authoritative_mutations');";
-        var tableCount = Convert.ToInt64(await command.ExecuteScalarAsync(), System.Globalization.CultureInfo.InvariantCulture);
-        await Assert.That(tableCount).IsEqualTo(0);
-    }
-
     /// <summary>Creates a snapshot mutation.</summary>
     /// <param name="expectedRevision">The expected snapshot revision.</param>
     /// <param name="optimisticText">The optimistic payload text.</param>
@@ -548,83 +304,6 @@ public sealed partial class SqliteLocalCommitStoreTests
 
         throw new InvalidOperationException("The authoritative snapshot sidecar was not found.");
     }
-
-    /// <summary>Creates the schema that existed immediately before authoritative sidecars were introduced.</summary>
-    /// <param name="connection">The connection.</param>
-    /// <param name="transaction">The transaction.</param>
-    private static void CreatePreAuthoritativeLocalCommitSchema(SqliteConnection connection, SqliteTransaction transaction)
-    {
-        using var command = connection.CreateCommand();
-        command.Transaction = transaction;
-        command.CommandText = PreAuthoritativeLocalCommitSchemaSql;
-        _ = command.ExecuteNonQuery();
-    }
-
-    /// <summary>Inserts a pre-authoritative local commit row using a fixed old-format intent fingerprint.</summary>
-    /// <param name="connection">The connection.</param>
-    /// <param name="transaction">The transaction.</param>
-    /// <param name="subscriptionId">The subscription identifier.</param>
-    /// <param name="operation">The operation.</param>
-    /// <param name="snapshot">The snapshot mutation.</param>
-    /// <param name="remoteEvent">The already applied remote event.</param>
-    private static void InsertPreAuthoritativeLocalCommitRows(
-        SqliteConnection connection,
-        SqliteTransaction transaction,
-        SubscriptionId subscriptionId,
-        SyncOperation operation,
-        SnapshotMutation snapshot,
-        RemoteEvent remoteEvent)
-    {
-        SqliteSubscriptionIdentitySql.InsertSubscriptionIdentityIfMissing(connection, transaction, StoreIdentity, Stream, subscriptionId);
-        SqliteLocalCommitSql.EnsureStreamRow(connection, transaction, StoreIdentity, Stream, subscriptionId);
-        SqliteLocalCommitSql.InsertOutboxOperation(
-            connection,
-            transaction,
-            StoreIdentity,
-            operation,
-            snapshot.ExpectedRevision + 1,
-            CreateLegacySchemaFiveCommitFingerprint(),
-            operation.TimestampUtc);
-        SqliteLocalCommitSql.InsertOperationMetadata(connection, transaction, StoreIdentity, operation);
-        SqliteLocalCommitSql.InsertInitialOperationState(connection, transaction, StoreIdentity, operation, operation.TimestampUtc);
-        SqliteLocalCommitSql.InsertInboxEvent(connection, transaction, StoreIdentity, remoteEvent, remoteEvent.CommittedAtUtc);
-        InsertPreAuthoritativeLease(connection, transaction, operation);
-        SqliteLocalCommitSql.UpsertSnapshot(connection, transaction, StoreIdentity, snapshot, snapshot.ExpectedRevision + 1, null, operation.TimestampUtc);
-        SqliteLocalCommitSql.UpdateNextClientSequence(connection, transaction, StoreIdentity, Stream, operation.ClientSequence + 1);
-    }
-
-    /// <summary>Inserts an active pre-authoritative lease row for the migrated operation.</summary>
-    /// <param name="connection">The connection.</param>
-    /// <param name="transaction">The transaction.</param>
-    /// <param name="operation">The operation.</param>
-    private static void InsertPreAuthoritativeLease(SqliteConnection connection, SqliteTransaction transaction, SyncOperation operation)
-    {
-        using var command = connection.CreateCommand();
-        command.Transaction = transaction;
-        command.CommandText = """
-            INSERT INTO oc_outbox_leases
-                (store_identity, lease_id, operation_id, stream_id, client_sequence, lease_expires_at_utc, lease_member_count)
-            VALUES
-                ($storeIdentity, $leaseId, $operationId, $streamId, $clientSequence, $leaseExpiresAtUtc, 1);
-            """;
-        _ = command.Parameters.AddWithValue(StoreIdentityParameter, StoreIdentity);
-        _ = command.Parameters.AddWithValue("$leaseId", Guid.Parse("22222222-2222-2222-2222-222222222222").ToString("D"));
-        _ = command.Parameters.AddWithValue("$operationId", operation.OperationId.Value.ToString("D"));
-        _ = command.Parameters.AddWithValue(StreamIdParameter, Stream.Value);
-        _ = command.Parameters.AddWithValue("$clientSequence", operation.ClientSequence);
-        _ = command.Parameters.AddWithValue("$leaseExpiresAtUtc", SqliteLocalCommitSql.FormatDateTimeOffset(new(2100, 1, 1, 0, 0, 0, TimeSpan.Zero)));
-        _ = command.ExecuteNonQuery();
-    }
-
-    /// <summary>Returns the fixed old-format schema-five commit fingerprint for the fixture operation and snapshot.</summary>
-    /// <returns>The old-format SHA-256 fingerprint bytes.</returns>
-    private static byte[] CreateLegacySchemaFiveCommitFingerprint() =>
-        [
-            0x91, 0xE4, 0xB4, 0x3B, 0x39, 0x20, 0x79, 0xEA,
-            0xC2, 0xDD, 0x08, 0x28, 0x8D, 0x60, 0x8D, 0x68,
-            0x38, 0x61, 0x3E, 0x87, 0x67, 0x78, 0x75, 0x17,
-            0xCC, 0xBE, 0x13, 0x69, 0xE7, 0x9A, 0x98, 0xE7,
-        ];
 
     /// <summary>Reads payload text for test assertions.</summary>
     /// <param name="payload">The optional payload.</param>
