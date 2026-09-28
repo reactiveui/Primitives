@@ -89,6 +89,7 @@ internal sealed class SqliteSubscriptionIdentityStore : IDisposable
                 SqliteStoreSchema.ValidateExistingSchemaForIdentityFacade(connection, transaction, userVersion);
             }
 
+            _ = SqliteSchemaChecksum.Record(connection, transaction);
             cancellationToken.ThrowIfCancellationRequested();
             transaction.Commit();
             SqliteConnectionSettings.ConfigureDurability(connection);

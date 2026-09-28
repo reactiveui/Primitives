@@ -188,6 +188,8 @@ internal sealed partial class SqliteLocalCommitStore : IDisposable
             cancellationToken.ThrowIfCancellationRequested();
             var migrated = SqliteRecordProtectionMaintenance.EnsureProtectionState(connection, transaction, _protection, cancellationToken);
             cancellationToken.ThrowIfCancellationRequested();
+            _ = SqliteSchemaChecksum.Record(connection, transaction);
+            cancellationToken.ThrowIfCancellationRequested();
             if (migrated)
             {
                 CommitAtCheckpoints(

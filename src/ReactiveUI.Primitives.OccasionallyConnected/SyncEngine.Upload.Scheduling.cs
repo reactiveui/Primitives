@@ -235,12 +235,28 @@ internal sealed partial class SyncEngine
     /// <param name="streamId">The related stream, if any.</param>
     /// <param name="exception">The observed exception.</param>
     /// <param name="category">The fault category; credential and permission faults are not transient.</param>
-    /// <remarks>A local record that failed authentication always publishes a critical <see cref="FaultCategory.Security"/> fault.</remarks>
+    /// <remarks>
+    /// A local record that failed authentication always publishes a critical <see cref="FaultCategory.Security"/> fault.
+    /// A write the storage medium refused, such as a full disk, publishes a <see cref="FaultCategory.Storage"/> fault
+    /// that is not transient.
+    /// </remarks>
     private void PublishFault(string code, string message, StreamId? streamId, Exception exception, FaultCategory category)
     {
         const int maximumDiagnosticTypeNameLength = 256;
         var isSecurityFault = LocalStoreRecordAuthenticationException.IsInChain(exception);
-        category = isSecurityFault ? FaultCategory.Security : category;
+        var isStorageFault = !isSecurityFault && DurableStorageException.IsInChain(exception);
+        var severity = FaultSeverity.Warning;
+        if (isSecurityFault)
+        {
+            category = FaultCategory.Security;
+            severity = FaultSeverity.Critical;
+        }
+        else if (isStorageFault)
+        {
+            category = FaultCategory.Storage;
+            severity = FaultSeverity.Error;
+        }
+
         var diagnosticType = exception.GetType().ToString();
         if (diagnosticType.Length > maximumDiagnosticTypeNameLength)
         {
@@ -254,11 +270,7 @@ internal sealed partial class SyncEngine
             streamId,
             OperationId: null,
             new InvalidOperationException(diagnosticType))
-        {
-            Category = category,
-            Severity = isSecurityFault ? FaultSeverity.Critical : FaultSeverity.Warning,
-            IsTransient = category == FaultCategory.Transport,
-        };
+        { Category = category, Severity = severity, IsTransient = category == FaultCategory.Transport };
         _faults.Publish(fault);
     }
 

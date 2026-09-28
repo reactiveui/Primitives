@@ -445,6 +445,17 @@ internal static class SqliteStoreSchema
     /// <exception cref="InvalidOperationException">The SQLite schema state is invalid.</exception>
     internal static void ValidateExistingSchemaForIdentityFacade(SqliteConnection connection, SqliteTransaction transaction, long userVersion)
     {
+        ValidateExistingSchemaStructure(connection, transaction, userVersion);
+        SqliteSchemaChecksum.Verify(connection, transaction);
+    }
+
+    /// <summary>Validates the existing schema layout before checking its recorded checksum.</summary>
+    /// <param name="connection">The open connection.</param>
+    /// <param name="transaction">The current transaction.</param>
+    /// <param name="userVersion">The SQLite user version.</param>
+    /// <exception cref="InvalidOperationException">The SQLite schema state is invalid.</exception>
+    internal static void ValidateExistingSchemaStructure(SqliteConnection connection, SqliteTransaction transaction, long userVersion)
+    {
         if (userVersion == IdentitySchemaVersion)
         {
             ValidateIdentitySchema(connection, transaction);

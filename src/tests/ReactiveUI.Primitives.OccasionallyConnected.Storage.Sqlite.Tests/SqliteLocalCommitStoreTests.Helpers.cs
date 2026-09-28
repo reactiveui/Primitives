@@ -105,6 +105,9 @@ public sealed partial class SqliteLocalCommitStoreTests
             END;
             """;
         _ = command.ExecuteNonQuery();
+        using var transaction = connection.BeginTransaction();
+        _ = SqliteSchemaChecksum.Record(connection, transaction);
+        transaction.Commit();
     }
 
     /// <summary>Reads settings captured during an actual store write.</summary>
@@ -313,6 +316,9 @@ public sealed partial class SqliteLocalCommitStoreTests
             END;
             """;
         _ = command.ExecuteNonQuery();
+        using var transaction = connection.BeginTransaction();
+        _ = SqliteSchemaChecksum.Record(connection, transaction);
+        transaction.Commit();
         return connection;
     }
 

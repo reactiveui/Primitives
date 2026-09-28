@@ -119,7 +119,13 @@ public sealed partial class SqliteLocalStoreAdapterTests
         using var database = TempDatabase.Create();
         await PopulateGoldenStoreAsync(database.Path);
 
-        await Assert.That(DumpGoldenStore(database.Path)).IsEqualTo(ReadGoldenFixture(GoldenPopulatedStoreFile));
+        await using var connection = OpenRawConnection(database.Path);
+        await using var transaction = (SqliteTransaction)await connection.BeginTransactionAsync();
+        var checksum = SqliteSchemaChecksum.TrySelect(connection, transaction);
+        await Assert.That(checksum).StartsWith(SqliteSchemaChecksum.AlgorithmPrefix);
+        var checksumRow = $"INSERT INTO oc_metadata VALUES ('schema_checksum', '{checksum}');\n";
+        var frozenRows = DumpGoldenStore(database.Path).Replace(checksumRow, string.Empty, StringComparison.Ordinal);
+        await Assert.That(frozenRows).IsEqualTo(ReadGoldenFixture(GoldenPopulatedStoreFile));
     }
 
     /// <summary>Verifies the retained database and its reviewable dump describe the same rows.</summary>
