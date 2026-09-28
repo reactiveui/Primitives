@@ -114,10 +114,11 @@ public sealed class DispatcherSequencerTests
     [Test]
     public async Task CheckAccessFollowsTheDispatcher()
     {
-        DispatcherSequencer local = new(Dispatcher.CurrentDispatcher);
+        // Read the local answer before any await: the continuation may resume on another thread.
+        var localAccess = new DispatcherSequencer(Dispatcher.CurrentDispatcher).CheckAccess();
         var remote = await RunOnNewThread(static () => new DispatcherSequencer(Dispatcher.CurrentDispatcher));
 
-        await Assert.That(local.CheckAccess()).IsTrue();
+        await Assert.That(localAccess).IsTrue();
         await Assert.That(remote.CheckAccess()).IsFalse();
     }
 

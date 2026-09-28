@@ -19,6 +19,11 @@ jobs:
         uses: reactiveui/actions-common/.github/workflows/workflow-common-setup-and-build.yml@main
         with:
             productNamespacePrefix: ReactiveUI.Primitives
+            # The Uno.Sdk projects need MSBuild, so they build in their own Windows job.
+            solutionFile: ReactiveUI.Primitives.slnf
+            msbuildSolutionFile: ReactiveUI.Primitives.Uno.slnf
+            # The Uno projects compile the WinUI sequencer source, which the WinUI tests cover; the filter has no tests.
+            msbuildPerformTests: false
             installWorkloads: true
             minverMinimumMajorMinor: '0.1'
             testTimeout: '15m'

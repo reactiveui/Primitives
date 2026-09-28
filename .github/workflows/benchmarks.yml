@@ -19,5 +19,5 @@ jobs:
             projects: |
                 benchmarks/ReactiveUI.Primitives.Benchmarks/ReactiveUI.Primitives.Benchmarks.csproj
                 benchmarks/ReactiveUI.Primitives.ObservableEvents.Benchmarks/ReactiveUI.Primitives.ObservableEvents.Benchmarks.csproj
-            solutionFile: ReactiveUI.Primitives.slnx
+            solutionFile: ReactiveUI.Primitives.slnf
             installWorkloads: true
