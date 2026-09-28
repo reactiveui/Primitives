@@ -5,6 +5,8 @@
   <PropertyGroup>
     <TargetFrameworks>$(UnoTargetFrameworks)</TargetFrameworks>
     <OutputType>Library</OutputType>
+    <!-- Uno.Sdk does not pack a library unless asked. -->
+    <IsPackable>true</IsPackable>
     <!-- The implicit packages include Uno.Resizetizer, which adds window-icon helpers to a library's public API.
          The scheduler needs only the dispatcher queue, so it references Uno.WinUI or the Windows App SDK itself. -->
     <DisableImplicitUnoPackages>true</DisableImplicitUnoPackages>
