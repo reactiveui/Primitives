@@ -12,8 +12,11 @@ namespace ReactiveUI.Primitives.Reactive.Concurrency;
 /// <summary>Schedules immediate and delayed work on the Android handler thread.</summary>
 /// <seealso cref="System.Reactive.Concurrency.IScheduler" />
 [System.Diagnostics.DebuggerDisplay("{DebuggerDisplay,nq}")]
-public sealed class HandlerSequencer : LocalScheduler
+public sealed class HandlerSequencer : LocalScheduler, IThreadAffineSequencer
 {
+    /// <summary>The scheduler created for each looper other than <see cref="Main"/>'s, kept while its looper lives.</summary>
+    private static readonly ConditionalWeakTable<Looper, HandlerSequencer> ByLooper = new();
+
     /// <summary>Queues work and coalesces handler drains.</summary>
     private CoalescingDispatchState _dispatch;
 
@@ -42,6 +45,24 @@ public sealed class HandlerSequencer : LocalScheduler
     /// <summary>Gets the debugger display text.</summary>
     [System.Diagnostics.DebuggerBrowsable(System.Diagnostics.DebuggerBrowsableState.Never)]
     private string DebuggerDisplay => ToString() ?? string.Empty;
+
+    /// <summary>Returns the scheduler for <paramref name="looper"/>, created once per looper.</summary>
+    /// <param name="looper">The looper whose thread runs the scheduled work.</param>
+    /// <returns><see cref="Main"/> for the main looper; otherwise one scheduler per looper, kept while the looper lives.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="looper"/> is <see langword="null"/>.</exception>
+    public static HandlerSequencer For(Looper looper)
+    {
+        ArgumentExceptionHelper.ThrowIfNull(looper);
+
+        return looper.Equals(Main.Handler.Looper)
+            ? Main
+            : ByLooper.GetValue(looper, static owner => new(new(owner)));
+    }
+
+    /// <summary>Returns whether the calling thread runs <see cref="Handler"/>'s looper.</summary>
+    /// <returns><see langword="true"/> when the calling thread may run work for this scheduler inline.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public bool CheckAccess() => Handler.Looper.Equals(Looper.MyLooper());
 
     /// <inheritdoc/>
     public override string ToString() => $"HandlerSequencer({Handler})";

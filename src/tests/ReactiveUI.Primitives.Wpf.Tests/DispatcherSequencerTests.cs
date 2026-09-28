@@ -112,6 +112,42 @@ public sealed class DispatcherSequencerTests
         await Assert.That(rebound).IsSameReferenceAs(bound);
     }
 
+    /// <summary>The calling thread owns the sequencer exactly when it owns the dispatcher.</summary>
+    /// <returns>The test operation.</returns>
+    [Test]
+    public async Task CheckAccessFollowsTheDispatcher()
+    {
+        DispatcherSequencer local = new(Dispatcher.CurrentDispatcher);
+        var remote = await RunOnNewThread(static () => new DispatcherSequencer(Dispatcher.CurrentDispatcher));
+
+        await Assert.That(local.CheckAccess()).IsTrue();
+        await Assert.That(remote.CheckAccess()).IsFalse();
+    }
+
+    /// <summary>The per-dispatcher lookup rejects a missing dispatcher.</summary>
+    /// <returns>The test operation.</returns>
+    [Test]
+    public async Task ForRejectsNullDispatcher() =>
+        await Assert.That(static () => DispatcherSequencer.For(null!)).ThrowsExactly<ArgumentNullException>();
+
+    /// <summary>The lookup returns the bound main sequencer for its dispatcher and one cached sequencer for any other.</summary>
+    /// <returns>The test operation.</returns>
+    [Test]
+    public async Task ForCachesOneSequencerPerDispatcher()
+    {
+        var mainDispatcher = await RunOnNewThread(static () => Dispatcher.CurrentDispatcher);
+        var other = await RunOnNewThread(static () => Dispatcher.CurrentDispatcher);
+        DispatcherSequencer main = new(mainDispatcher);
+
+        var cached = DispatcherSequencer.For(other, main);
+
+        await Assert.That(DispatcherSequencer.For(mainDispatcher, main)).IsSameReferenceAs(main);
+        await Assert.That(cached.Dispatcher).IsSameReferenceAs(other);
+        await Assert.That(cached.Priority).IsEqualTo(DispatcherPriority.Normal);
+        await Assert.That(DispatcherSequencer.For(other, null)).IsSameReferenceAs(cached);
+        await Assert.That(DispatcherSequencer.For(other)).IsSameReferenceAs(cached);
+    }
+
     /// <summary>The dispatcher sequencer shares the monotonic timestamp scale used by scheduled work.</summary>
     /// <returns>A task representing the asynchronous test.</returns>
     [Test]

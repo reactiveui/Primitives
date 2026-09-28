@@ -27,6 +27,36 @@ public sealed class AvaloniaSchedulerTests
             .ThrowsExactly<ArgumentNullException>();
     }
 
+    /// <summary>The per-dispatcher lookup rejects a missing dispatcher.</summary>
+    /// <returns>The test operation.</returns>
+    [Test]
+    public async Task ForRejectsNullDispatcher() =>
+        await Assert.That(static () => AvaloniaScheduler.For(null!)).ThrowsExactly<ArgumentNullException>();
+
+    /// <summary>The lookup returns the shared scheduler for its dispatcher and one cached scheduler for any other.</summary>
+    /// <returns>The test operation.</returns>
+    [Test]
+    public async Task ForCachesOneSchedulerPerDispatcher()
+    {
+        var shared = AvaloniaScheduler.Instance;
+        AvaloniaScheduler? other = null;
+        var ownedOnItsThread = false;
+        Thread thread = new(() =>
+        {
+            other = AvaloniaScheduler.For(Dispatcher.CurrentDispatcher);
+            ownedOnItsThread = other.CheckAccess();
+        });
+        thread.Start();
+        thread.Join();
+
+        await Assert.That(AvaloniaScheduler.For(shared.Dispatcher)).IsSameReferenceAs(shared);
+        await Assert.That(other).IsNotSameReferenceAs(shared);
+        await Assert.That(AvaloniaScheduler.For(other!.Dispatcher)).IsSameReferenceAs(other);
+        await Assert.That(other.Priority).IsEqualTo(DispatcherPriority.Background);
+        await Assert.That(ownedOnItsThread).IsTrue();
+        await Assert.That(other.CheckAccess()).IsFalse();
+    }
+
     /// <summary>Constructors and the singleton retain the selected dispatcher and priority.</summary>
     /// <returns>The test operation.</returns>
     [Test]

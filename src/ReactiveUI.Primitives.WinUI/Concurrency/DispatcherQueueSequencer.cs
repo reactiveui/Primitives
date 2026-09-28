@@ -12,8 +12,11 @@ namespace ReactiveUI.Primitives.Concurrency;
 /// <remarks>Callbacks run in posted dispatcher queue batches without inline reentrancy; cancellation suppresses unstarted work.</remarks>
 /// <seealso cref="ISequencer" />
 [System.Diagnostics.DebuggerDisplay("{DebuggerDisplay,nq}")]
-public sealed class DispatcherQueueSequencer : ISequencer
+public sealed class DispatcherQueueSequencer : ISequencer, IThreadAffineSequencer
 {
+    /// <summary>The sequencer created for each dispatcher queue other than <see cref="Main"/>'s, kept while its queue lives.</summary>
+    private static readonly ConditionalWeakTable<DispatcherQueue, DispatcherQueueSequencer> ByDispatcherQueue = new();
+
     /// <summary>The shared main-thread sequencer, set once a UI thread first reads it.</summary>
     private static DispatcherQueueSequencer? _main;
 
@@ -103,6 +106,21 @@ public sealed class DispatcherQueueSequencer : ISequencer
     [System.Diagnostics.DebuggerBrowsable(System.Diagnostics.DebuggerBrowsableState.Never)]
     internal string DebuggerDisplay => ToString() ?? string.Empty;
 
+    /// <summary>Returns the sequencer for <paramref name="dispatcherQueue"/>, created once per dispatcher queue.</summary>
+    /// <param name="dispatcherQueue">The dispatcher queue whose thread runs the scheduled work.</param>
+    /// <returns>
+    /// <see cref="Main"/> once it is bound to <paramref name="dispatcherQueue"/>; otherwise one sequencer per dispatcher queue at
+    /// <see cref="DispatcherQueuePriority.Normal"/>, kept while the queue lives.
+    /// </returns>
+    /// <exception cref="ArgumentNullException"><paramref name="dispatcherQueue"/> is <see langword="null"/>.</exception>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static DispatcherQueueSequencer For(DispatcherQueue dispatcherQueue) => For(dispatcherQueue, Volatile.Read(ref _main));
+
+    /// <summary>Returns whether the calling thread owns <see cref="DispatcherQueue"/>.</summary>
+    /// <returns><see langword="true"/> when the calling thread may run work for this sequencer inline.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public bool CheckAccess() => DispatcherQueue.HasThreadAccess;
+
     /// <inheritdoc/>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void Schedule(IWorkItem item) => _state.Schedule(item);
@@ -110,6 +128,20 @@ public sealed class DispatcherQueueSequencer : ISequencer
     /// <inheritdoc/>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void Schedule(IWorkItem item, long dueTimestamp) => _state.Schedule(item, dueTimestamp);
+
+    /// <summary>Returns <paramref name="main"/> when it runs on <paramref name="dispatcherQueue"/>, and otherwise the cached sequencer for it.</summary>
+    /// <param name="dispatcherQueue">The dispatcher queue whose thread runs the scheduled work.</param>
+    /// <param name="main">The shared main-thread sequencer, or <see langword="null"/> while it is unbound.</param>
+    /// <returns>The sequencer for <paramref name="dispatcherQueue"/>.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="dispatcherQueue"/> is <see langword="null"/>.</exception>
+    internal static DispatcherQueueSequencer For(DispatcherQueue dispatcherQueue, DispatcherQueueSequencer? main)
+    {
+        ArgumentExceptionHelper.ThrowIfNull(dispatcherQueue);
+
+        return main is not null && ReferenceEquals(main.DispatcherQueue, dispatcherQueue)
+            ? main
+            : ByDispatcherQueue.GetValue(dispatcherQueue, static owner => new(owner));
+    }
 
     /// <summary>Caches the shared main-thread sequencer for a dispatcher queue, keeping the first one bound.</summary>
     /// <param name="slot">The field that holds the shared sequencer.</param>

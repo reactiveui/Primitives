@@ -11,8 +11,11 @@ namespace ReactiveUI.Primitives.Concurrency;
 /// <summary>Schedules immediate and delayed work on the Android handler thread.</summary>
 /// <seealso cref="ISequencer" />
 [System.Diagnostics.DebuggerDisplay("{DebuggerDisplay,nq}")]
-public sealed class HandlerSequencer : ISequencer
+public sealed class HandlerSequencer : ISequencer, IThreadAffineSequencer
 {
+    /// <summary>The sequencer created for each looper other than <see cref="Main"/>'s, kept while its looper lives.</summary>
+    private static readonly ConditionalWeakTable<Looper, HandlerSequencer> ByLooper = new();
+
     /// <summary>Coalescing dispatch engine.</summary>
     private DispatchSequencerState _state;
 
@@ -47,6 +50,24 @@ public sealed class HandlerSequencer : ISequencer
     /// <summary>Gets the debugger display text.</summary>
     [System.Diagnostics.DebuggerBrowsable(System.Diagnostics.DebuggerBrowsableState.Never)]
     private string DebuggerDisplay => ToString() ?? string.Empty;
+
+    /// <summary>Returns the sequencer for <paramref name="looper"/>, created once per looper.</summary>
+    /// <param name="looper">The looper whose thread runs the scheduled work.</param>
+    /// <returns><see cref="Main"/> for the main looper; otherwise one sequencer per looper, kept while the looper lives.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="looper"/> is <see langword="null"/>.</exception>
+    public static HandlerSequencer For(Looper looper)
+    {
+        ArgumentExceptionHelper.ThrowIfNull(looper);
+
+        return looper.Equals(Main.Handler.Looper)
+            ? Main
+            : ByLooper.GetValue(looper, static owner => new(new(owner)));
+    }
+
+    /// <summary>Returns whether the calling thread runs <see cref="Handler"/>'s looper.</summary>
+    /// <returns><see langword="true"/> when the calling thread may run work for this sequencer inline.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public bool CheckAccess() => Handler.Looper.Equals(Looper.MyLooper());
 
     /// <inheritdoc/>
     public override string ToString() => $"HandlerSequencer({Handler})";

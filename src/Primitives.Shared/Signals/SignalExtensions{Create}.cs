@@ -26,6 +26,18 @@ public static partial class SignalExtensions
         public IObservable<T> WitnessOn(ISequencer scheduler) =>
             new WitnessOnSignal<T>(source, scheduler);
 
+        /// <summary>Delivers the source notifications on the supplied sequencer, inline when the calling thread owns it and nothing is waiting.</summary>
+        /// <typeparam name="TSequencer">The sequencer type, which reports whether the calling thread owns it.</typeparam>
+        /// <param name="sequencer">The sequencer that notifications raised off its thread are delivered on.</param>
+        /// <returns>
+        /// A signal that forwards the source on <paramref name="sequencer"/>. A notification never overtakes one that is
+        /// already waiting.
+        /// </returns>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public IObservable<T> WitnessOnOwner<TSequencer>(TSequencer sequencer)
+            where TSequencer : ISequencer, IThreadAffineSequencer =>
+            new WitnessOnSignal<T>(source, sequencer, sequencer);
+
         /// <summary>Delivers only the newest waiting source value on the supplied sequencer.</summary>
         /// <param name="scheduler">The sequencer that notifications are delivered on.</param>
         /// <returns>A signal that forwards the latest source value on <paramref name="scheduler"/>.</returns>

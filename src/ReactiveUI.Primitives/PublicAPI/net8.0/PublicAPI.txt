@@ -1664,6 +1664,7 @@ namespace ReactiveUI.Primitives.Advanced
     public sealed class WitnessOnSignal<T> : ReactiveUI.Primitives.Advanced.IRequireCurrentThread<T>
     {
         public WitnessOnSignal(System.IObservable<T> source, ReactiveUI.Primitives.Concurrency.ISequencer scheduler) { }
+        public WitnessOnSignal(System.IObservable<T> source, ReactiveUI.Primitives.Concurrency.ISequencer scheduler, ReactiveUI.Primitives.Concurrency.IThreadAffineSequencer owner) { }
         [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
         public bool IsRequiredSubscribeOnCurrentThread() { }
         [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
@@ -2499,6 +2500,8 @@ namespace ReactiveUI.Primitives.Signals
             public System.IObservable<T> WitnessLatestOn(ReactiveUI.Primitives.Concurrency.ISequencer scheduler) { }
             [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
             public System.IObservable<T> WitnessOn(ReactiveUI.Primitives.Concurrency.ISequencer scheduler) { }
+            [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+            public System.IObservable<T> WitnessOnOwner<TSequencer>(TSequencer sequencer) where TSequencer : ReactiveUI.Primitives.Concurrency.ISequencer, ReactiveUI.Primitives.Concurrency.IThreadAffineSequencer { }
         }
         extension<TResult>(System.IObservable<TResult> asyncTask)
         {

@@ -13,7 +13,7 @@ namespace ReactiveUI.Primitives.Reactive.Concurrency;
 /// <summary>Schedules immediate and delayed work on the Apple main dispatch queue.</summary>
 /// <seealso cref="System.Reactive.Concurrency.IScheduler" />
 [System.Diagnostics.DebuggerDisplay("{DebuggerDisplay,nq}")]
-public sealed class NSRunloopSequencer : LocalScheduler
+public sealed class NSRunloopSequencer : LocalScheduler, IThreadAffineSequencer
 {
     /// <summary>Nanoseconds per millisecond, used to convert a managed delay into a <see cref="DispatchTime"/> offset.</summary>
     private const long NanosecondsPerMillisecond = 1_000_000;
@@ -33,6 +33,11 @@ public sealed class NSRunloopSequencer : LocalScheduler
     /// <summary>Gets the debugger display text.</summary>
     [System.Diagnostics.DebuggerBrowsable(System.Diagnostics.DebuggerBrowsableState.Never)]
     private string DebuggerDisplay => ToString() ?? string.Empty;
+
+    /// <summary>Returns whether the calling thread is the main thread, which drains the main dispatch queue.</summary>
+    /// <returns><see langword="true"/> when the calling thread may run work for this scheduler inline.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public bool CheckAccess() => Foundation.NSThread.IsMain;
 
     /// <inheritdoc/>
     public override string ToString() => "NSRunloopSequencer(main queue)";

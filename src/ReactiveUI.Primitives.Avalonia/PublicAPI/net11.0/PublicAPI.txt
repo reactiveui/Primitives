@@ -2,7 +2,7 @@
 namespace ReactiveUI.Primitives.Concurrency;
 
 [System.Diagnostics.DebuggerDisplay("{DebuggerDisplay,nq}")]
-public sealed class AvaloniaScheduler : ReactiveUI.Primitives.Concurrency.ISequencer
+public sealed class AvaloniaScheduler : ReactiveUI.Primitives.Concurrency.ISequencer, ReactiveUI.Primitives.Concurrency.IThreadAffineSequencer
 {
     public AvaloniaScheduler(Avalonia.Threading.Dispatcher dispatcher) { }
     public AvaloniaScheduler(Avalonia.Threading.Dispatcher dispatcher, Avalonia.Threading.DispatcherPriority priority) { }
@@ -12,7 +12,10 @@ public sealed class AvaloniaScheduler : ReactiveUI.Primitives.Concurrency.ISeque
     public Avalonia.Threading.DispatcherPriority Priority { get; }
     public long Timestamp { get; }
     [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+    public bool CheckAccess() { }
+    [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
     public void Schedule(ReactiveUI.Primitives.Concurrency.IWorkItem item) { }
     [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
     public void Schedule(ReactiveUI.Primitives.Concurrency.IWorkItem item, long dueTimestamp) { }
+    public static ReactiveUI.Primitives.Concurrency.AvaloniaScheduler For(Avalonia.Threading.Dispatcher dispatcher) { }
 }

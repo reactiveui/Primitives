@@ -6,6 +6,7 @@ using System.Reactive.Concurrency;
 using System.Reactive.Disposables;
 using System.Runtime.CompilerServices;
 using Microsoft.UI.Dispatching;
+using ReactiveUI.Primitives.Concurrency;
 
 namespace ReactiveUI.Primitives.Reactive.Concurrency;
 
@@ -13,8 +14,11 @@ namespace ReactiveUI.Primitives.Reactive.Concurrency;
 /// <remarks>Callbacks run on the dispatcher queue thread; cancellation stops pending timers and suppresses unstarted actions.</remarks>
 /// <seealso cref="System.Reactive.Concurrency.IScheduler" />
 [System.Diagnostics.DebuggerDisplay("DispatcherQueueSequencer: DispatcherQueue = {DispatcherQueue}, Priority = {Priority}")]
-public sealed class DispatcherQueueSequencer : LocalScheduler
+public sealed class DispatcherQueueSequencer : LocalScheduler, IThreadAffineSequencer
 {
+    /// <summary>The scheduler created for each dispatcher queue other than <see cref="Main"/>'s, kept while its queue lives.</summary>
+    private static readonly ConditionalWeakTable<DispatcherQueue, DispatcherQueueSequencer> ByDispatcherQueue = new();
+
     /// <summary>The shared main-thread scheduler, set once a UI thread first reads it.</summary>
     private static DispatcherQueueSequencer? _main;
 
@@ -98,6 +102,21 @@ public sealed class DispatcherQueueSequencer : LocalScheduler
     /// <summary>Gets the dispatcher queue priority used for posted drains.</summary>
     public DispatcherQueuePriority Priority { get; }
 
+    /// <summary>Returns the scheduler for <paramref name="dispatcherQueue"/>, created once per dispatcher queue.</summary>
+    /// <param name="dispatcherQueue">The dispatcher queue whose thread runs the scheduled work.</param>
+    /// <returns>
+    /// <see cref="Main"/> once it is bound to <paramref name="dispatcherQueue"/>; otherwise one scheduler per dispatcher queue at
+    /// <see cref="DispatcherQueuePriority.Normal"/>, kept while the queue lives.
+    /// </returns>
+    /// <exception cref="ArgumentNullException"><paramref name="dispatcherQueue"/> is <see langword="null"/>.</exception>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static DispatcherQueueSequencer For(DispatcherQueue dispatcherQueue) => For(dispatcherQueue, Volatile.Read(ref _main));
+
+    /// <summary>Returns whether the calling thread owns <see cref="DispatcherQueue"/>.</summary>
+    /// <returns><see langword="true"/> when the calling thread may run work for this scheduler inline.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public bool CheckAccess() => DispatcherQueue.HasThreadAccess;
+
     /// <inheritdoc/>
     /// <exception cref="ArgumentNullException"><paramref name="action"/> is <see langword="null"/>.</exception>
     /// <exception cref="InvalidOperationException">The dispatcher queue rejected the work.</exception>
@@ -111,6 +130,20 @@ public sealed class DispatcherQueueSequencer : LocalScheduler
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public override IDisposable Schedule<TState>(TState state, TimeSpan dueTime, Func<IScheduler, TState, IDisposable> action) =>
         _dispatch.Schedule(new DispatchHost(this), this, state, dueTime, action);
+
+    /// <summary>Returns <paramref name="main"/> when it runs on <paramref name="dispatcherQueue"/>, and otherwise the cached scheduler for it.</summary>
+    /// <param name="dispatcherQueue">The dispatcher queue whose thread runs the scheduled work.</param>
+    /// <param name="main">The shared main-thread scheduler, or <see langword="null"/> while it is unbound.</param>
+    /// <returns>The scheduler for <paramref name="dispatcherQueue"/>.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="dispatcherQueue"/> is <see langword="null"/>.</exception>
+    internal static DispatcherQueueSequencer For(DispatcherQueue dispatcherQueue, DispatcherQueueSequencer? main)
+    {
+        ArgumentExceptionHelper.ThrowIfNull(dispatcherQueue);
+
+        return main is not null && ReferenceEquals(main.DispatcherQueue, dispatcherQueue)
+            ? main
+            : ByDispatcherQueue.GetValue(dispatcherQueue, static owner => new(owner));
+    }
 
     /// <summary>Caches the shared main-thread scheduler for a dispatcher queue, keeping the first one bound.</summary>
     /// <param name="slot">The field that holds the shared scheduler.</param>

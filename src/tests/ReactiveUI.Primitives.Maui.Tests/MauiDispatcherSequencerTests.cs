@@ -208,6 +208,44 @@ public sealed class MauiDispatcherSequencerTests
         await Assert.That(rebound).IsSameReferenceAs(bound);
     }
 
+    /// <summary>The calling thread owns the sequencer exactly when its dispatcher needs no dispatch.</summary>
+    /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
+    [Test]
+    public async Task CheckAccessFollowsTheDispatcher()
+    {
+        FakeDispatcher dispatcher = new();
+        MauiDispatcherSequencer sequencer = new(dispatcher);
+
+        await Assert.That(sequencer.CheckAccess()).IsFalse();
+
+        dispatcher.IsDispatchRequired = false;
+
+        await Assert.That(sequencer.CheckAccess()).IsTrue();
+    }
+
+    /// <summary>The per-dispatcher lookup rejects a missing dispatcher.</summary>
+    /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
+    [Test]
+    public async Task ForRejectsNullDispatcher() =>
+        await Assert.That(static () => MauiDispatcherSequencer.For(null!)).ThrowsExactly<ArgumentNullException>();
+
+    /// <summary>The lookup returns the bound main sequencer for its dispatcher and one cached sequencer for any other.</summary>
+    /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
+    [Test]
+    public async Task ForCachesOneSequencerPerDispatcher()
+    {
+        FakeDispatcher mainDispatcher = new();
+        FakeDispatcher other = new();
+        MauiDispatcherSequencer main = new(mainDispatcher);
+
+        var cached = MauiDispatcherSequencer.For(other, main);
+
+        await Assert.That(MauiDispatcherSequencer.For(mainDispatcher, main)).IsSameReferenceAs(main);
+        await Assert.That(cached.Dispatcher).IsSameReferenceAs(other);
+        await Assert.That(MauiDispatcherSequencer.For(other, null)).IsSameReferenceAs(cached);
+        await Assert.That(MauiDispatcherSequencer.For(other)).IsSameReferenceAs(cached);
+    }
+
     /// <summary>Reads <see cref="MauiDispatcherSequencer.Current"/> twice on the calling thread.</summary>
     /// <returns>Both reads.</returns>
     private static (MauiDispatcherSequencer Sequencer, MauiDispatcherSequencer Repeat) CaptureCurrent() =>
@@ -303,7 +341,7 @@ public sealed class MauiDispatcherSequencerTests
         public TimeSpan LastDelay { get; private set; }
 
         /// <inheritdoc/>
-        public bool IsDispatchRequired => true;
+        public bool IsDispatchRequired { get; set; } = true;
 
         /// <inheritdoc/>
         public bool Dispatch(Action action)

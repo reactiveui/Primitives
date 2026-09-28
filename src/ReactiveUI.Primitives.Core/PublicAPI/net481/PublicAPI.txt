@@ -1092,6 +1092,10 @@ namespace ReactiveUI.Primitives.Concurrency
     {
         ReactiveUI.Primitives.Concurrency.IStopwatch StartStopwatch() { }
     }
+    public interface IThreadAffineSequencer
+    {
+        bool CheckAccess() { }
+    }
     public interface IWorkItem
     {
         void Execute() { }

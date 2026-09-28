@@ -2015,6 +2015,7 @@ namespace ReactiveUI.Primitives.Reactive.Advanced
     public sealed class WitnessOnSignal<T> : ReactiveUI.Primitives.Advanced.IRequireCurrentThread<T>
     {
         public WitnessOnSignal(System.IObservable<T> source, System.Reactive.Concurrency.IScheduler scheduler) { }
+        public WitnessOnSignal(System.IObservable<T> source, System.Reactive.Concurrency.IScheduler scheduler, ReactiveUI.Primitives.Concurrency.IThreadAffineSequencer owner) { }
         [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
         public bool IsRequiredSubscribeOnCurrentThread() { }
         [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
@@ -2059,9 +2060,11 @@ namespace ReactiveUI.Primitives.Reactive.Concurrency
         System.IDisposable ScheduleOnDispatcher(System.Action work, System.TimeSpan dueTime) { }
     }
     [System.Diagnostics.DebuggerDisplay("{DebuggerDisplay,nq}")]
-    public sealed class NSRunloopSequencer : System.Reactive.Concurrency.LocalScheduler
+    public sealed class NSRunloopSequencer : System.Reactive.Concurrency.LocalScheduler, ReactiveUI.Primitives.Concurrency.IThreadAffineSequencer
     {
         public static ReactiveUI.Primitives.Reactive.Concurrency.NSRunloopSequencer Main { get; }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public bool CheckAccess() { }
         [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
         public override System.IDisposable Schedule<TState>(TState state, System.Func<System.Reactive.Concurrency.IScheduler, TState, System.IDisposable> action) { }
         [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
@@ -2395,6 +2398,8 @@ namespace ReactiveUI.Primitives.Reactive.Signals
             public System.IObservable<T> WitnessLatestOn(System.Reactive.Concurrency.IScheduler scheduler) { }
             [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
             public System.IObservable<T> WitnessOn(System.Reactive.Concurrency.IScheduler scheduler) { }
+            [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+            public System.IObservable<T> WitnessOnOwner<TSequencer>(TSequencer sequencer) where TSequencer : System.Reactive.Concurrency.IScheduler, ReactiveUI.Primitives.Concurrency.IThreadAffineSequencer { }
         }
         extension<TResult>(System.IObservable<TResult> asyncTask)
         {

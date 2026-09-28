@@ -2,13 +2,17 @@
 namespace ReactiveUI.Primitives.Reactive.Concurrency;
 
 [System.Diagnostics.DebuggerDisplay("ControlSequencer: Control = {Control}")]
-public sealed class ControlSequencer : System.Reactive.Concurrency.LocalScheduler
+public sealed class ControlSequencer : System.Reactive.Concurrency.LocalScheduler, ReactiveUI.Primitives.Concurrency.IThreadAffineSequencer
 {
     public ControlSequencer(System.Windows.Forms.Control control) { }
     public System.Windows.Forms.Control Control { get; }
     public static ReactiveUI.Primitives.Reactive.Concurrency.ControlSequencer Main { get; }
     [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+    public bool CheckAccess() { }
+    [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
     public override System.IDisposable Schedule<TState>(TState state, System.Func<System.Reactive.Concurrency.IScheduler, TState, System.IDisposable> action) { }
     [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
     public override System.IDisposable Schedule<TState>(TState state, System.TimeSpan dueTime, System.Func<System.Reactive.Concurrency.IScheduler, TState, System.IDisposable> action) { }
+    [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+    public static ReactiveUI.Primitives.Reactive.Concurrency.ControlSequencer For(System.Windows.Forms.Control control) { }
 }
