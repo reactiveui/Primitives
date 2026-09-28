@@ -39,9 +39,10 @@ internal sealed partial class SyncEngine
 
     /// <summary>Determines whether a connection failure leaves the engine usable offline.</summary>
     /// <param name="exception">The observed connection failure.</param>
-    /// <returns><see langword="true"/> when the failure is transient.</returns>
+    /// <returns><see langword="true"/> when the failure is transient or has an ambiguous transport outcome.</returns>
+    /// <remarks>A connection attempt has no remote side effects, so an ambiguous outcome such as a refused connection is safe to retry.</remarks>
     private static bool IsTransientConnectFailure(Exception exception) =>
-        ClassifyRetryFailure(exception).Kind == RetryFailureKind.Transient;
+        ClassifyRetryFailure(exception).Kind is RetryFailureKind.Transient or RetryFailureKind.AmbiguousTransportOutcome;
 
     /// <summary>Gets the stable reason code for a transient connection failure.</summary>
     /// <param name="failure">The connection failure.</param>

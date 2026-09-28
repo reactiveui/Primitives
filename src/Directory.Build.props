@@ -81,6 +81,17 @@
     <PackageReference Include="Microsoft.SourceLink.GitHub" PrivateAssets="All"/>
   </ItemGroup>
 
+  <!-- OccasionallyConnected packages ship Source Link-enabled portable PDBs in a .snupkg symbol package
+       (spec section 18.1) instead of embedding them, and use CI build metadata on build servers so
+       source paths are deterministic. -->
+  <PropertyGroup Condition="'$(IsTestProject)' != 'true' and $(MSBuildProjectName.StartsWith('ReactiveUI.Primitives.OccasionallyConnected'))">
+    <DebugType>portable</DebugType>
+    <IncludeSymbols>true</IncludeSymbols>
+    <SymbolPackageFormat>snupkg</SymbolPackageFormat>
+    <AllowedOutputExtensionsInPackageBuildOutputFolder>$(AllowedOutputExtensionsInPackageBuildOutputFolder.Replace('.pdb', ''))</AllowedOutputExtensionsInPackageBuildOutputFolder>
+    <ContinuousIntegrationBuild Condition="'$(ContinuousIntegrationBuild)' == '' and ('$(GITHUB_ACTIONS)' == 'true' or '$(TF_BUILD)' == 'true')">true</ContinuousIntegrationBuild>
+  </PropertyGroup>
+
   <!-- The designer is emitted as a public type in this assembly's root namespace, so it would ship as library API. -->
   <PropertyGroup Condition="$(TargetFramework.Contains('-android'))">
     <AndroidGenerateResourceDesigner>false</AndroidGenerateResourceDesigner>

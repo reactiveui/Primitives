@@ -1,0 +1,50 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    A clean consumer of the packed OccasionallyConnected packages. It is not part of src/ReactiveUI.Primitives.slnx.
+    tools/Test-OccasionallyConnectedPackages.ps1 copies it into artifacts/clean-sample, next to an empty
+    Directory.Build.props, an empty Directory.Packages.props and a nuget.config that points at the local feed,
+    then passes the packed version in OccasionallyConnectedPackageVersion.
+  -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFrameworks>net8.0;net9.0;net10.0</TargetFrameworks>
+    <TargetFrameworks Condition="$([MSBuild]::VersionGreaterThanOrEquals('$(NETCoreSdkVersion)', '11.0'))">$(TargetFrameworks);net11.0</TargetFrameworks>
+    <TargetFrameworks Condition="'$(OS)' == 'Windows_NT'">$(TargetFrameworks);net462;net472;net48;net481</TargetFrameworks>
+    <LangVersion>latest</LangVersion>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <ManagePackageVersionsCentrally>false</ManagePackageVersionsCentrally>
+    <IsPackable>false</IsPackable>
+    <RootNamespace>OccasionallyConnected.PackedSample</RootNamespace>
+  </PropertyGroup>
+
+  <!-- A .NET Framework exe gets an inferred win-x86 runtime identifier, so SQLitePCLRaw copies the x86 e_sqlite3.dll
+       while an AnyCPU process runs as x64 and cannot load it. Pin the identifier so the native library matches. -->
+  <PropertyGroup Condition="$(TargetFramework.StartsWith('net4'))">
+    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
+  </PropertyGroup>
+
+  <!-- NativeAOT and trimming smoke test (dotnet publish -f net10.0 -p:PublishAot=true). -->
+  <PropertyGroup Condition="'$(PublishAot)' == 'true' or '$(PublishTrimmed)' == 'true'">
+    <IsAotCompatible>true</IsAotCompatible>
+    <TrimmerSingleWarn>false</TrimmerSingleWarn>
+    <InvariantGlobalization>true</InvariantGlobalization>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="ReactiveUI.Primitives.OccasionallyConnected.Core" Version="$(OccasionallyConnectedPackageVersion)" />
+    <PackageReference Include="ReactiveUI.Primitives.OccasionallyConnected" Version="$(OccasionallyConnectedPackageVersion)" />
+    <PackageReference Include="ReactiveUI.Primitives.OccasionallyConnected.DependencyInjection" Version="$(OccasionallyConnectedPackageVersion)" />
+    <PackageReference Include="ReactiveUI.Primitives.OccasionallyConnected.Hosting" Version="$(OccasionallyConnectedPackageVersion)" />
+    <PackageReference Include="ReactiveUI.Primitives.OccasionallyConnected.Server" Version="$(OccasionallyConnectedPackageVersion)" />
+    <PackageReference Include="ReactiveUI.Primitives.OccasionallyConnected.Storage.Sqlite" Version="$(OccasionallyConnectedPackageVersion)" />
+    <PackageReference Include="ReactiveUI.Primitives.OccasionallyConnected.Transport.Http" Version="$(OccasionallyConnectedPackageVersion)" />
+  </ItemGroup>
+
+  <Target Name="RequirePackedVersion" BeforeTargets="CollectPackageReferences" Condition="'$(OccasionallyConnectedPackageVersion)' == ''">
+    <Error Text="Set OccasionallyConnectedPackageVersion to the version packed by tools/Test-OccasionallyConnectedPackages.ps1." />
+  </Target>
+
+</Project>

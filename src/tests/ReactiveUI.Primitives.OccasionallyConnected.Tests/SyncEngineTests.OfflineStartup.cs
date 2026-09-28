@@ -51,6 +51,27 @@ public sealed partial class SyncEngineTests
         await Assert.That(transport.ConnectCalls).IsEqualTo(ExpectedCapacityCommitAttempts);
     }
 
+    /// <summary>Verifies an ambiguous first connection failure, such as a refused connection, starts offline.</summary>
+    /// <returns>The assertion task.</returns>
+    [Test]
+    public async Task StartAsyncCompletesOfflineAfterAmbiguousConnectFailure()
+    {
+        var clock = new ManualTimerTimeProvider(DateTimeOffset.UnixEpoch);
+        var transport = new RecordingTransport();
+        transport.ConnectFailures.Enqueue(CreateTransportFailure(RetryFailureKind.AmbiguousTransportOutcome));
+        var states = new RecordingObserver<SyncState>();
+        await using var engine = CreateEngine(transport: transport, options: CreateOfflineOptions(), timeProvider: clock);
+        using var stateSubscription = engine.SyncStates.Subscribe(states);
+
+        await engine.StartAsync(CancellationToken.None).AsTask().WaitAsync(GuardTimeout);
+
+        await WaitForConditionAsync(() => states.Values.Exists(static state => state.Status == SyncLifecycleStatus.Offline));
+        await WaitForConditionAsync(() => clock.HasTimerDueIn(OfflineRetryDelay));
+        clock.Advance(OfflineRetryDelay);
+        await WaitForConditionAsync(() => states.Values.Exists(static state => state.Status == SyncLifecycleStatus.Online));
+        await Assert.That(transport.ConnectCalls).IsEqualTo(ExpectedCapacityCommitAttempts);
+    }
+
     /// <summary>Verifies a permanent first connection failure still fails startup.</summary>
     /// <returns>The assertion task.</returns>
     [Test]
