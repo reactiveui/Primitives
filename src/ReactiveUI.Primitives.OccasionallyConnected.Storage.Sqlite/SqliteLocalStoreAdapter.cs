@@ -523,12 +523,16 @@ public sealed partial class SqliteLocalStoreAdapter : ILocalStoreAdapter, ILocal
     /// <param name="retainedBytes">The retained caller input byte count.</param>
     /// <param name="cancellationToken">The cancellation token.</param>
     /// <returns>The queued command task.</returns>
+    /// <remarks>A full disk or a SQLite I/O error completes the task with a non-transient <see cref="DurableStorageException"/>.</remarks>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private Task<T> ExecuteAsync<T>(
         Func<CancellationToken, T> command,
         long retainedBytes,
         CancellationToken cancellationToken) =>
-        _worker.ExecuteAsync(command, Math.Max(retainedBytes, SqliteLocalStoreAdapterSizing.MinimumCommandBytes), cancellationToken);
+        _worker.ExecuteAsync(
+            token => SqliteStorageFailure.Run(command, token),
+            Math.Max(retainedBytes, SqliteLocalStoreAdapterSizing.MinimumCommandBytes),
+            cancellationToken);
 
     /// <summary>Releases a capture-stage reservation.</summary>
     /// <param name="retainedBytes">The retained caller input byte count.</param>

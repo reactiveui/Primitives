@@ -1206,6 +1206,17 @@ internal sealed partial class OccasionallyConnectedStream<TState, TInput> :
     private void PublishFault(string code, string message, OperationId? operationId, Exception exception)
     {
         var diagnostic = CreateDiagnosticException(exception);
+        var isSecurityFault = LocalStoreRecordAuthenticationException.IsInChain(exception);
+        var category = FaultCategory.InternalInvariant;
+        if (isSecurityFault)
+        {
+            category = FaultCategory.Security;
+        }
+        else if (DurableStorageException.IsInChain(exception))
+        {
+            category = FaultCategory.Storage;
+        }
+
         var fault = new OccasionallyConnectedFault(
             code,
             message,
@@ -1213,11 +1224,7 @@ internal sealed partial class OccasionallyConnectedStream<TState, TInput> :
             StreamId,
             operationId,
             diagnostic)
-        {
-            Category = LocalStoreRecordAuthenticationException.IsInChain(exception) ? FaultCategory.Security : FaultCategory.InternalInvariant,
-            Severity = LocalStoreRecordAuthenticationException.IsInChain(exception) ? FaultSeverity.Critical : FaultSeverity.Error,
-            IsTransient = false,
-        };
+        { Category = category, Severity = isSecurityFault ? FaultSeverity.Critical : FaultSeverity.Error, IsTransient = false };
         _ = _faults.PublishEvent(fault, GetFaultNotificationSize(fault, diagnostic));
     }
 

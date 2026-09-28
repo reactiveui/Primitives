@@ -155,6 +155,22 @@ public record DiagnosticsOptions : System.IEquatable<ReactiveUI.Primitives.Occas
     public int MaximumQueuedFaults { get; init; }
     public void Validate() { }
 }
+[System.Diagnostics.DebuggerDisplay("{Message,nq}; Failure={Failure}")]
+public sealed class DurableStorageException : System.IO.IOException
+{
+    public DurableStorageException() { }
+    public DurableStorageException(string message) { }
+    public DurableStorageException(string message, System.Exception innerException) { }
+    public DurableStorageException(string message, ReactiveUI.Primitives.OccasionallyConnected.DurableStorageFailure failure, System.Exception innerException) { }
+    public ReactiveUI.Primitives.OccasionallyConnected.DurableStorageFailure Failure { get; }
+    public static bool IsInChain(System.Exception? exception) { }
+}
+public enum DurableStorageFailure
+{
+    Unknown = 0,
+    StorageFull = 1,
+    InputOutput = 2,
+}
 public enum ExactlyOnceExpiryBehavior
 {
     StopAndReport = 0,
