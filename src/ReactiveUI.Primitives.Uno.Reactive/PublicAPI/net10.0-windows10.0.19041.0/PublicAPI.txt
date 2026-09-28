@@ -1,4 +1,3 @@
-[assembly: System.Runtime.Versioning.SupportedOSPlatform("Windows10.0.19041.0")]
 namespace ReactiveUI.Primitives.Reactive.Concurrency;
 
 [System.Diagnostics.DebuggerDisplay("DispatcherQueueSequencer: DispatcherQueue = {DispatcherQueue}, Priority = {Priority}")]
