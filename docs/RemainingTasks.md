@@ -65,7 +65,7 @@ This list is limited to requirements from [ReactiveUI.Primitives.OccasionallyCon
     - `WhenServerWriterDiesAtCommitCheckpoint_ThenResendAppliesExactlyOnce` kills the server journal's writer.
     - `WhenProcessDiesAtStreamCrashPoint_ThenReopenedStreamHonorsDurableBoundary` covers serialization and inbox-before-notification.
     - The in-memory store skips each durable case with a stated reason.
-  - Remaining: migration crashes and disk-full, crashes across the transport, and the producer-by-buffer-strategy matrix.
+  - Remaining: migration crashes, public-adapter disk-full and transport crashes, and the producer-by-buffer-strategy matrix. A real SQLite page-limit test now proves that a refused transaction rolls back and reports a typed `StorageFull` failure; it does not exercise a full disk through the public adapter.
 - [ ] Prove restartable migrations, ownership coordination, authenticated encryption at rest, quarantine/dead-letter recovery, compaction, and retention without losing data required to rebuild snapshots or resolve pending operations.
   - Done: authenticated encryption at rest in `SqliteLocalStoreAdapter`, using AES-256-GCM with a random 96-bit nonce per value. The key comes from `ILocalStoreKeyProvider` via HKDF-SHA256.
     - The associated data ties each value to its store, record kind, column, and row keys.
@@ -76,7 +76,8 @@ This list is limited to requirements from [ReactiveUI.Primitives.OccasionallyCon
     - .NET Framework has no `AesGcm`, so a key provider there throws `PlatformNotSupportedException`.
     - Tests: `Storage.Sqlite.Tests` passes 542/542 on `net8.0`, `net10.0`, and `net11.0`.
   - Remaining (encryption): operation-state columns (state, attempts, retry fields, and reason codes other than the dead-letter reason) are neither encrypted nor MAC-protected. Protect them with a keyed row MAC. An encrypted database also leaves the schema version unchanged, so an older library can open it without failing closed. Bump the store version or add a marker the older library already checks.
-  - Remaining: migrations still lack checksums, backups, and crash-during-migration tests. The store does not handle a full disk (`SQLITE_FULL`).
+  - Done: SQLite identity and local-commit initialization record a SHA-256 checksum of their schema definitions and reject schema drift on reopen. The adapter translates `SQLITE_FULL` and `SQLITE_IOERR` into non-transient `DurableStorageException` failures; the stream and engine report `Storage` faults. The full SQLite TUnit suite passes 550/550 on `net8.0` and `net10.0`; the engine suite passes 1,623 tests with four documented capability skips on `net10.0`. MTP reports no missed coverage in the new checksum and failure translator files.
+  - Remaining: migration backups, crash-during-migration tests, and an end-to-end public-adapter disk-full test. The schema checksum detects drift but is not a keyed authenticity check.
 - [x] Complete end-to-end at-most-once, at-least-once, and capability-gated exactly-once-effect behaviour, including retention expiry, explicit downgrade, ambiguous outcomes, and server idempotency. The current components validate capabilities but do not yet prove the complete application path.
   - Done: `OccasionallyConnectedBuilderTests.DeliveryGuarantees*.cs` runs end to end over Loopback and HTTP against a SQLite `ServerStreamHub`. A fault injector drops the push response after the server commits.
     - `AtMostOnce` ends `Ambiguous` with no resend and emits `OC.AtMostOnceAmbiguous`.
@@ -115,13 +116,13 @@ This list is limited to requirements from [ReactiveUI.Primitives.OccasionallyCon
 
 ## Examples and release gates
 
-- [ ] Run the section 16 samples against the freshly packed public packages produced for every supported target framework. Demonstrate offline startup, optimistic writes, reconnect and restart recovery, conflict reconciliation, `PublishAsync`, observer input, and operation synchronization.
+- [ ] Re-run the section 16 packed-package sample on the current branch for every supported target framework. The previous package set passed the clean-consumer builds and runs on `net8.0` through `net11.0` and `net462` through `net481`; its `net10.0` run passed all 19 checks for offline startup, optimistic and observer writes, reconnect, restart recovery, conflict reconciliation, and operation synchronization. The storage changes merged afterward require a fresh pack and run.
 - [x] Add the remaining ResilienceLab demonstrations for duplicate/reordered delivery, capability downgrade, backpressure, slow observers, corruption/quarantine, and retention-gap recovery.
   - Scenarios: `duplicate-reordered-delivery`, `capability-downgrade`, `backpressure`, `slow-observers`, `corruption-quarantine`, and `retention-gap-recovery`. Each scenario uses public APIs only and reports expected against actual values. `README.md` lists how to run each one.
   - The lab tests pass 109/109 on `net8.0` and `net10.0`.
   - Limitation: the retention-gap scenario recovers through `ServerStreamHub.GetSnapshotAsync` directly. The loopback transport does not advertise `SnapshotRecovery`, so the engine recovers from a gap by itself only over HTTP.
 - [ ] Complete the quality gates in section 17.4: full transition/invariant coverage, mutation testing, child-process crash tests, and bounded throughput/allocation/recovery/compaction/slow-observer soak measurements. The supported framework builds and API baselines have passed; the remaining gates need their independent reports.
-- [ ] Complete the remaining release gates from section 18: clean-project pack/install tests, deterministic package comparison, Source Link and symbol-package verification, trimming/NativeAOT smoke tests, SBOM and dependency/license/security scans, and scheduled cross-platform crash/soak/performance jobs. All six feature packages now pack successfully for `net8.0`, `net9.0`, `net10.0`, `net11.0`, `net462`, `net472`, `net48`, and `net481`.
+- [ ] Complete the remaining release gates from section 18: rerun clean-project pack/install, deterministic package comparison, Source Link and symbol-package checks, and trimming against the current branch; install the Windows C++ linker needed for the NativeAOT smoke test; produce SBOM and dependency/license/security scans; and run scheduled cross-platform crash/soak/performance jobs. The previous package set passed clean install, deterministic entry comparison, symbols, Source Link and trimming. All seven feature packages pack for `net8.0`, `net9.0`, `net10.0`, `net11.0`, `net462`, `net472`, `net48`, and `net481`.
 
 ## Final release acceptance
 
