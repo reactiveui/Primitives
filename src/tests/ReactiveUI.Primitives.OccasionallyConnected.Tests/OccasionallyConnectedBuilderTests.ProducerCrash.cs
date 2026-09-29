@@ -180,6 +180,7 @@ public sealed partial class OccasionallyConnectedBuilderTests
             var databasePath = Path.Combine(directory.FullName, RecoveredUploadDatabaseFileName);
             var signalPath = Path.Combine(directory.FullName, "ready.signal");
             await KillProducerCrashChildAsync(string.Join('\n', producer, strategy, databasePath, signalPath), signalPath);
+            await WaitForProducerCrashOwnerReleaseAsync(databasePath);
             var fields = (await File.ReadAllTextAsync(signalPath)).Split('\n');
             var subscriptionId = new SubscriptionId(Guid.Parse(fields[0]));
             await using var store = new SqliteLocalStoreAdapter(databasePath);
@@ -385,5 +386,33 @@ public sealed partial class OccasionallyConnectedBuilderTests
         {
             throw new InvalidOperationException(string.Join(Environment.NewLine, "The producer crash child did not signal.", await output, await error));
         }
+    }
+
+    /// <summary>Waits until the killed producer releases its exclusive SQLite owner handle.</summary>
+    /// <param name="databasePath">The child database path.</param>
+    /// <returns>A task representing the bounded wait.</returns>
+    private static async Task WaitForProducerCrashOwnerReleaseAsync(string databasePath)
+    {
+        var ownerPath = $"{databasePath}.rxui-owner";
+        var started = Stopwatch.GetTimestamp();
+        var released = false;
+        while (!released && Stopwatch.GetElapsedTime(started) < ProducerCrashTimeout)
+        {
+            try
+            {
+                await using var owner = new FileStream(ownerPath, FileMode.Open, FileAccess.ReadWrite, FileShare.None);
+                released = true;
+            }
+            catch (IOException)
+            {
+                await Task.Delay(ProducerCrashPollMilliseconds);
+            }
+            catch (UnauthorizedAccessException)
+            {
+                await Task.Delay(ProducerCrashPollMilliseconds);
+            }
+        }
+
+        await Assert.That(released).IsTrue();
     }
 }
