@@ -27,6 +27,9 @@ internal static class ResilienceLabLoopback
     /// <summary>The scenario guard timeout in seconds.</summary>
     internal const int GuardTimeoutSeconds = 10;
 
+    /// <summary>The full run timeout in seconds for multi-step lab scenarios.</summary>
+    private const int ScenarioTimeoutSeconds = 60;
+
     /// <summary>The finite retained journal byte bound.</summary>
     private const int JournalBytes = 65_536;
 
@@ -72,6 +75,9 @@ internal static class ResilienceLabLoopback
 
     /// <summary>Gets the guard timeout that bounds every lab wait.</summary>
     internal static TimeSpan GuardTimeout { get; } = TimeSpan.FromSeconds(GuardTimeoutSeconds);
+
+    /// <summary>Gets the finite timeout for a scenario with several guarded operations.</summary>
+    internal static TimeSpan ScenarioTimeout { get; } = TimeSpan.FromSeconds(ScenarioTimeoutSeconds);
 
     /// <summary>Creates in-memory hub options with one G-counter registration per stream.</summary>
     /// <param name="clock">The server clock.</param>

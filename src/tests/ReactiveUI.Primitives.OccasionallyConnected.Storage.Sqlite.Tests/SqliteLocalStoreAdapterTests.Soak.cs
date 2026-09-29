@@ -43,7 +43,7 @@ public sealed partial class SqliteLocalStoreAdapterTests
     /// <summary>Checks throughput, allocation, recovery, and compaction release budgets.</summary>
     /// <returns>The assertion task.</returns>
     [Test]
-    [Property("Category", "Performance")]
+    [Explicit]
     [NotInParallel]
     public async Task DurableOutboxPerformanceStaysWithinReleaseBudgets()
     {

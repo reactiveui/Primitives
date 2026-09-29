@@ -326,12 +326,11 @@ public sealed partial class OccasionallyConnectedBuilderTests
         await Assert.That(clock.DwellTimerRegistered.Task.IsCompleted).IsFalse();
         await reopenedContext.StartAsync(CancellationToken.None).AsTask().WaitAsync(GuardTimeout);
         await clock.DwellTimerRegistered.Task.WaitAsync(GuardTimeout);
-        clock.Advance(OccasionallyConnectedOptions.Default.Batching.MaximumDwellTime);
+        var pushed = await AdvanceRecoveredUploadUntilFirstPushAsync(clock, reopenedTransport);
         await reopenedContext.SyncEngine
             .AwaitSynchronizedAsync(receipt.OperationId, GuardTimeout, clock, CancellationToken.None)
             .AsTask()
             .WaitAsync(GuardTimeout);
-        var pushed = await reopenedTransport.Pushed.Task.WaitAsync(GuardTimeout);
 
         await Assert.That(pushed.Operations.Count).IsEqualTo(1);
         await Assert.That(pushed.Operations[0].OperationId).IsEqualTo(receipt.OperationId);

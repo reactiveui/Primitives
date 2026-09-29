@@ -59,7 +59,7 @@ internal static class RetentionGapRecoveryScenario
     internal static async ValueTask<IReadOnlyList<ResilienceLabCaseResult>> RunAsync(CancellationToken cancellationToken)
     {
         using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-        timeout.CancelAfter(ResilienceLabLoopback.GuardTimeout);
+        timeout.CancelAfter(ResilienceLabLoopback.ScenarioTimeout);
         var token = timeout.Token;
         var clock = new ResilienceLabClock(ResilienceLabLoopback.InitialTime);
         var authorization = new ResilienceLabAuthorizationPolicy(ResilienceLabLoopback.TenantId);

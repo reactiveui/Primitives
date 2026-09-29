@@ -73,8 +73,7 @@ jobs:
             if ($LASTEXITCODE -ne 0) { throw "Build failed: $($testProject.Name)" }
             $testAssembly = Join-Path $testProject.FullName "bin/Release/$env:OC_TEST_FRAMEWORK/$($testProject.Name).dll"
             $results = Join-Path $coverageRoot "$($testProject.Name)/$env:OC_TEST_FRAMEWORK"
-            # The timing budget runs in the dedicated Release performance job without coverage instrumentation.
-            dotnet $testAssembly --coverage --coverage-output-format cobertura --results-directory $results --progress off --treenode-filter "/*/*/*/*[Category!=Performance]"
+            dotnet $testAssembly --coverage --coverage-output-format cobertura --results-directory $results --progress off
             if ($LASTEXITCODE -ne 0) { throw "Tests failed: $($testProject.Name)" }
             $reports = @(Get-ChildItem -LiteralPath $results -Filter '*.cobertura.xml' -File -Recurse)
             if ($reports.Count -ne 1) { throw "Expected one fresh coverage report for $($testProject.Name); found $($reports.Count)." }

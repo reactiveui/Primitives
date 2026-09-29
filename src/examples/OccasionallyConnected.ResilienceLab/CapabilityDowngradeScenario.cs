@@ -48,7 +48,7 @@ internal static class CapabilityDowngradeScenario
     internal static async ValueTask<IReadOnlyList<ResilienceLabCaseResult>> RunAsync(CancellationToken cancellationToken)
     {
         using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-        timeout.CancelAfter(ResilienceLabLoopback.GuardTimeout);
+        timeout.CancelAfter(ResilienceLabLoopback.ScenarioTimeout);
         var token = timeout.Token;
         var clock = new ResilienceLabClock(ResilienceLabLoopback.InitialTime);
         await using var hub = ServerStreamHub.CreateInMemory(ResilienceLabLoopback.CreateHubOptions(

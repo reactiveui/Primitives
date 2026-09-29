@@ -856,6 +856,7 @@ public sealed partial class SyncEngineTests
             _ = await publish.WaitAsync(GuardTimeout);
 
             await engine.StartAsync(CancellationToken.None);
+            await WaitForConditionAsync(() => clock.HasTimerDueIn(options.Batching.MaximumDwellTime));
             clock.Advance(options.Batching.MaximumDwellTime);
             await WaitForConditionAsync(() => second.SentBatches.Count == ExpectedSingleOperation);
 
