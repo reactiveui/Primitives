@@ -20,6 +20,9 @@ public sealed partial class OccasionallyConnectedBuilderTests
     /// <summary>The expected operation count in the recovered mixed-priority upload batch.</summary>
     private const int RecoveredUploadMixedPriorityBatchCount = 2;
 
+    /// <summary>The number of recovered streams whose wakes may be observed before the first upload.</summary>
+    private const int RecoveredUploadPriorityStreamCount = 2;
+
     /// <summary>The retry delay used by the recovered upload retry-due test.</summary>
     private const int RecoveredUploadRetryDelaySeconds = 3;
 
@@ -290,8 +293,7 @@ public sealed partial class OccasionallyConnectedBuilderTests
 
         await reopenedContext.StartAsync(CancellationToken.None).AsTask().WaitAsync(GuardTimeout);
         await clock.DwellTimerRegistered.Task.WaitAsync(GuardTimeout);
-        clock.Advance(OccasionallyConnectedOptions.Default.Batching.MaximumDwellTime);
-        var pushed = await reopenedTransport.Pushed.Task.WaitAsync(GuardTimeout);
+        var pushed = await AdvanceRecoveredUploadUntilFirstPushAsync(clock, reopenedTransport);
 
         await Assert.That(pushed.Operations.Count).IsEqualTo(RecoveredUploadMixedPriorityBatchCount);
         await Assert.That(pushed.Operations[0].StreamId).IsEqualTo(RecoveredUploadHighStream);
@@ -601,6 +603,37 @@ public sealed partial class OccasionallyConnectedBuilderTests
             var status = await store.GetOperationStatusAsync(operationId, CancellationToken.None);
             throw new TimeoutException(CreateRecoveredUploadDiagnosticMessage(transport, status, faults, operationStates), exception);
         }
+    }
+
+    /// <summary>Advances each observed upload wake until the first recovered batch is pushed.</summary>
+    /// <param name="clock">The fake clock that records upload wakes.</param>
+    /// <param name="transport">The recording transport.</param>
+    /// <returns>The first pushed batch.</returns>
+    private static async Task<SyncBatch> AdvanceRecoveredUploadUntilFirstPushAsync(
+        RecoveredUploadTimeProvider clock,
+        RecoveredUploadTransportAdapter transport)
+    {
+        var dwell = OccasionallyConnectedOptions.Default.Batching.MaximumDwellTime;
+        for (var attempt = 0; attempt < RecoveredUploadPriorityStreamCount; attempt++)
+        {
+            var observedWakeCount = clock.UploadWakeTimerCount;
+            clock.Advance(dwell);
+            if (transport.Pushed.Task.IsCompleted)
+            {
+                break;
+            }
+
+            var nextWake = clock.WaitForUploadWakeAfterAsync(observedWakeCount);
+            var completed = await Task.WhenAny(transport.Pushed.Task, nextWake).WaitAsync(GuardTimeout);
+            if (completed == transport.Pushed.Task)
+            {
+                break;
+            }
+
+            await Assert.That(await nextWake).IsLessThanOrEqualTo(dwell);
+        }
+
+        return await transport.Pushed.Task.WaitAsync(GuardTimeout);
     }
 
     /// <summary>Creates the recovered upload diagnostic timeout message.</summary>

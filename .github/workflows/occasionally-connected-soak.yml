@@ -1,6 +1,14 @@
 name: OccasionallyConnected soak and performance
 
 on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'src/ReactiveUI.Primitives.OccasionallyConnected.Core/**'
+      - 'src/ReactiveUI.Primitives.OccasionallyConnected.Storage.Sqlite/**'
+      - 'src/tests/ReactiveUI.Primitives.OccasionallyConnected.Storage.Sqlite.Tests/**'
+      - 'src/Directory.*'
+      - '.github/workflows/occasionally-connected-soak.yml'
   schedule:
     - cron: '23 3 * * 1'
   workflow_dispatch:
@@ -14,6 +22,7 @@ concurrency:
 
 jobs:
   soak:
+    if: github.event_name != 'pull_request'
     strategy:
       fail-fast: false
       matrix:
