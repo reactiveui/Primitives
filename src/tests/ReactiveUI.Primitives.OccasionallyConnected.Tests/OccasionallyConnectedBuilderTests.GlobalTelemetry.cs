@@ -16,6 +16,9 @@ public sealed partial class OccasionallyConnectedBuilderTests
     /// <summary>The configured number of pending notifications per diagnostic subscriber.</summary>
     private const int GlobalDiagnosticQueueCapacity = 256;
 
+    /// <summary>The error raised when retained diagnostic work reaches its bound.</summary>
+    private const string DiagnosticSubscriptionLimitMessage = "The synchronization engine diagnostic subscription limit has been reached.";
+
     /// <summary>One more event than a stalled observer queue can retain.</summary>
     private const int OverflowingDiagnosticEventCount = GlobalDiagnosticQueueCapacity + 1;
 
@@ -123,11 +126,21 @@ public sealed partial class OccasionallyConnectedBuilderTests
         });
         initialSubscription.Dispose();
 
-        for (var i = 0; i < GlobalDiagnosticQueueCapacity; i++)
+        var subscriptionLimitReached = false;
+        for (var i = 0; i <= GlobalDiagnosticQueueCapacity; i++)
         {
-            context.SyncStates.Subscribe(new RecoveredUploadDiagnosticObserver<SyncState>()).Dispose();
+            try
+            {
+                context.SyncStates.Subscribe(new RecoveredUploadDiagnosticObserver<SyncState>()).Dispose();
+            }
+            catch (InvalidOperationException exception) when (exception.Message == DiagnosticSubscriptionLimitMessage)
+            {
+                subscriptionLimitReached = true;
+                break;
+            }
         }
 
+        await Assert.That(subscriptionLimitReached).IsTrue();
         await WaitForConditionAsync(() => sequencer.PendingCount >= GlobalDiagnosticQueueCapacity);
         await Assert.That(() => context.SyncStates.Subscribe(new RecoveredUploadDiagnosticObserver<SyncState>()))
             .ThrowsExactly<InvalidOperationException>();
