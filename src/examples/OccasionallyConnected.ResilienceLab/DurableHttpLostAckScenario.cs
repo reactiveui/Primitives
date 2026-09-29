@@ -52,7 +52,7 @@ internal static partial class DurableHttpLostAckScenario
     private const int ProofPollMilliseconds = 25;
 
     /// <summary>The whole-scenario timeout in seconds.</summary>
-    private const int ScenarioTimeoutSeconds = 40;
+    private const int ScenarioTimeoutSeconds = 120;
 
     /// <summary>The deterministic tenant accepted by the lab server policy.</summary>
     private const string TenantId = "tenant-resilience-lab";

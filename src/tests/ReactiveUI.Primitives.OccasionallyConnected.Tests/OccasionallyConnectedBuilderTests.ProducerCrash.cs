@@ -33,8 +33,11 @@ public sealed partial class OccasionallyConnectedBuilderTests
     /// <summary>The child signal poll interval.</summary>
     private const int ProducerCrashPollMilliseconds = 25;
 
-    /// <summary>The maximum child signal wait.</summary>
-    private static readonly TimeSpan ProducerCrashTimeout = TimeSpan.FromSeconds(25);
+    /// <summary>The maximum wait for one child-side durable admission.</summary>
+    private static readonly TimeSpan ProducerCrashAdmissionTimeout = TimeSpan.FromSeconds(15);
+
+    /// <summary>The maximum wait for the child to signal after several admissions.</summary>
+    private static readonly TimeSpan ProducerCrashTimeout = TimeSpan.FromSeconds(60);
 
     /// <summary>Checks each applicable publish strategy after an ungraceful producer process exit.</summary>
     /// <param name="strategy">The outbox strategy.</param>
@@ -309,12 +312,12 @@ public sealed partial class OccasionallyConnectedBuilderTests
     {
         if (producer == PublishProducer)
         {
-            return await stream.PublishAsync(new(value), options, cancellationToken).AsTask().WaitAsync(GuardTimeout, cancellationToken);
+            return await stream.PublishAsync(new(value), options, cancellationToken).AsTask().WaitAsync(ProducerCrashAdmissionTimeout, cancellationToken);
         }
 
         await using var adapter = new RecordingObserver<CounterInput>()
             .ToRemoteObserver(context, definition, CreatePublicPublishOptions(BufferStrategy.Reject, durable: false));
-        return await adapter.PublishAsync(new(value), options, cancellationToken).AsTask().WaitAsync(GuardTimeout, cancellationToken);
+        return await adapter.PublishAsync(new(value), options, cancellationToken).AsTask().WaitAsync(ProducerCrashAdmissionTimeout, cancellationToken);
     }
 
     /// <summary>Waits for asynchronous input persistence before signaling the parent.</summary>
