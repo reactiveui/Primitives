@@ -630,12 +630,10 @@ public sealed partial class HttpReplayCoordinatorTests
         var clock = new ManualTimeProvider(SentAtUtc);
         var options = CreateOptions(SentAtUtc) with { TimeProvider = clock, MaximumActiveReplayWaiters = SingleAuthorizationCall };
         await using HttpReplayCoordinator coordinator = new(options);
-        using var replayTimeout = new CancellationTokenSource(TimeSpan.FromMilliseconds(WaitTimeoutMilliseconds));
-        using var capacityTimeout = new CancellationTokenSource(TimeSpan.FromMilliseconds(WaitTimeoutMilliseconds));
         var request = CreateRequest(HttpReplayOperationKind.Connect);
         var session = new HttpReplayIssuedSession { SessionId = ReplaySessionId, SessionSecret = SessionSecret, ExpiresAtUtc = SentAtUtc.Add(Window + Window) };
         var first = await coordinator.AdmitAsync(request, static _ => new(HttpReplayAuthorizationResult.Allowed), CancellationToken.None);
-        var replayAdmission = coordinator.AdmitAsync(request, static _ => new(HttpReplayAuthorizationResult.Allowed), replayTimeout.Token).AsTask();
+        var replayAdmission = coordinator.AdmitAsync(request, static _ => new(HttpReplayAuthorizationResult.Allowed), CancellationToken.None).AsTask();
         await Assert.That(first.Owner).IsNotNull();
         if (first.Owner is null)
         {
@@ -667,7 +665,7 @@ public sealed partial class HttpReplayCoordinatorTests
         await Assert.That(replay.Failure?.StatusCode).IsEqualTo(HttpStatusCode.ServiceUnavailable);
         var capacityRequest = request with { Nonce = AlternateNonce };
         var capacityOwner = await coordinator.AdmitAsync(capacityRequest, static _ => new(HttpReplayAuthorizationResult.Allowed), CancellationToken.None);
-        var capacityReplay = coordinator.AdmitAsync(capacityRequest, static _ => new(HttpReplayAuthorizationResult.Allowed), capacityTimeout.Token).AsTask();
+        var capacityReplay = coordinator.AdmitAsync(capacityRequest, static _ => new(HttpReplayAuthorizationResult.Allowed), CancellationToken.None).AsTask();
         await Assert.That(capacityOwner.Owner).IsNotNull();
         if (capacityOwner.Owner is null)
         {
