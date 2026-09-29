@@ -6,7 +6,11 @@ using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Text.Json.Serialization.Metadata;
 
+#if REACTIVE_SHIM
+namespace ReactiveUI.Primitives.OccasionallyConnected.Reactive;
+#else
 namespace ReactiveUI.Primitives.OccasionallyConnected;
+#endif
 
 /// <summary>Stores allowlisted JSON payload schemas and upcasters.</summary>
 [DebuggerDisplay("SchemaRegistry")]

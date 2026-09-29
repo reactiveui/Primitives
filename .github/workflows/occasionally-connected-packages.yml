@@ -9,7 +9,7 @@ on:
       - 'src/ReactiveUI.Disposables/**'
       - 'src/Directory.*'
       - 'samples/OccasionallyConnected.PackedSample/**'
-      - 'tools/Test-OccasionallyConnectedPackages.ps1'
+      - 'tools/OccasionallyConnected.Ci/**'
       - 'tools/OccasionallyConnectedPackageInspector.cs'
       - '.github/workflows/occasionally-connected-packages.yml'
   workflow_call:
@@ -43,8 +43,8 @@ jobs:
             10.0.x
             11.0.x
       - name: Verify package determinism, metadata, and clean consumer
-        shell: pwsh
-        run: ./tools/Test-OccasionallyConnectedPackages.ps1 -Version "0.1.0-ocpkg.${{ github.run_id }}.${{ github.run_attempt }}" -SkipAot
+        shell: bash
+        run: dotnet run --project tools/OccasionallyConnected.Ci/OccasionallyConnected.Ci.csproj -- packages --version "0.1.0-ocpkg.${{ github.run_id }}.${{ github.run_attempt }}" --skip-aot
       - name: Retain package gate evidence
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2

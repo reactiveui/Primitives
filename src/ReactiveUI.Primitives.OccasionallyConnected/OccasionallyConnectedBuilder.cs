@@ -6,7 +6,11 @@ using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using ReactiveUI.Primitives.Concurrency;
 
+#if REACTIVE_SHIM
+namespace ReactiveUI.Primitives.OccasionallyConnected.Reactive;
+#else
 namespace ReactiveUI.Primitives.OccasionallyConnected;
+#endif
 
 /// <summary>Composes an occasionally connected public context from concrete store, transport, serialization, and scheduling dependencies.</summary>
 [DebuggerDisplay("Client={_client,nq}; Store={_storeIdentity,nq}; Built={_built,nq}")]
@@ -193,11 +197,7 @@ public sealed class OccasionallyConnectedBuilder
 #if NET8_0_OR_GREATER
         ArgumentException.ThrowIfNullOrWhiteSpace(storeIdentity);
 #else
-        ArgumentExceptionHelper.ThrowIfNull(storeIdentity);
-        if (string.IsNullOrWhiteSpace(storeIdentity))
-        {
-            throw new ArgumentException("Store identity must be supplied.", nameof(storeIdentity));
-        }
+        ArgumentExceptionHelper.ThrowIfNullOrWhiteSpace(storeIdentity);
 #endif
 
         _storeIdentity = storeIdentity;

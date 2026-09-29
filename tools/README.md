@@ -2,6 +2,28 @@
 
 Maintenance scripts for the ReactiveUI.Primitives repository.
 
+## OccasionallyConnected CI gates
+
+The .NET CLI in `OccasionallyConnected.Ci` runs the coverage, package, supply-chain,
+mutation, and NativeAOT gates. Run it from the repository root with a .NET 10 SDK:
+
+```sh
+dotnet run --project tools/OccasionallyConnected.Ci/OccasionallyConnected.Ci.csproj -- coverage --framework net10.0 --run-id 123 --run-attempt 1 --runner-os Linux
+dotnet run --project tools/OccasionallyConnected.Ci/OccasionallyConnected.Ci.csproj -- packages --version 0.1.0-ocpkg.123.1 --skip-aot
+dotnet run --project tools/OccasionallyConnected.Ci/OccasionallyConnected.Ci.csproj -- supply-chain --version 0.1.0-ocscan.123
+dotnet run --project tools/OccasionallyConnected.Ci/OccasionallyConnected.Ci.csproj -- mutation --campaign Durability
+dotnet run --project tools/OccasionallyConnected.Ci/OccasionallyConnected.Ci.csproj -- aot --version 0.1.0-ocaot.123.1
+```
+
+Coverage checks the exact 12 test suites on net8.0, net9.0, net10.0, or net11.0.
+To check existing Cobertura reports without running tests, use `coverage` with
+repeated `--report-path <file>` and `--package-name <name>` options instead.
+The package command also accepts `--sample-target-frameworks <tfm,tfm>`,
+`--skip-determinism`, and `--skip-sample`. Supply-chain accepts repeated
+`--project-name <name>` options. Packages, supply-chain, and AOT accept
+`--artifacts-path <path>`. The AOT gate requires a Windows x64 build host with
+the native toolchain. Gate logs and reports remain under `artifacts/`.
+
 ## generate-publicapi
 
 Regenerates the **PublicAPI baseline files** consumed by

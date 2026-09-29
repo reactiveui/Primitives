@@ -4,7 +4,11 @@
 
 using System.Diagnostics;
 
+#if REACTIVE_SHIM
+namespace ReactiveUI.Primitives.OccasionallyConnected.Reactive;
+#else
 namespace ReactiveUI.Primitives.OccasionallyConnected;
+#endif
 
 /// <summary>Configures the in-process loopback transport adapter.</summary>
 [DebuggerDisplay("Loopback; Client={AuthenticatedClient,nq}; Features={PeerCapabilities.Features,nq}")]

@@ -4,7 +4,11 @@
 
 using ReactiveUI.Primitives.Concurrency;
 
+#if REACTIVE_SHIM
+namespace ReactiveUI.Primitives.OccasionallyConnected.Reactive;
+#else
 namespace ReactiveUI.Primitives.OccasionallyConnected;
+#endif
 
 /// <summary>Schedules isolated observer notification work.</summary>
 internal interface IObserverNotificationScheduler

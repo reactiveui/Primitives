@@ -29,15 +29,7 @@ internal sealed class JsonContractRegistration
         int schemaVersion,
         JsonTypeInfo<T> jsonTypeInfo)
     {
-#if NET8_0_OR_GREATER
-        ArgumentException.ThrowIfNullOrWhiteSpace(contractId);
-#else
-        ArgumentExceptionHelper.ThrowIfNull(contractId);
-        if (string.IsNullOrWhiteSpace(contractId))
-        {
-            throw new ArgumentException("Contract identifier must be supplied.", nameof(contractId));
-        }
-#endif
+        ArgumentExceptionHelper.ThrowIfNullOrWhiteSpace(contractId);
         ArgumentOutOfRangeExceptionHelper.ThrowIfNegativeOrZero(schemaVersion);
         ArgumentExceptionHelper.ThrowIfNull(jsonTypeInfo);
         return new(registry => _ = registry.Register(contractId, schemaVersion, jsonTypeInfo));

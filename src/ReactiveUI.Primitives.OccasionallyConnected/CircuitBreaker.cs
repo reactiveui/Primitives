@@ -4,7 +4,11 @@
 
 using System.Diagnostics;
 
+#if REACTIVE_SHIM
+namespace ReactiveUI.Primitives.OccasionallyConnected.Reactive;
+#else
 namespace ReactiveUI.Primitives.OccasionallyConnected;
+#endif
 
 /// <summary>Coordinates deterministic admission for one remote endpoint.</summary>
 [DebuggerDisplay("{_endpoint,nq}; {_state,nq}")]

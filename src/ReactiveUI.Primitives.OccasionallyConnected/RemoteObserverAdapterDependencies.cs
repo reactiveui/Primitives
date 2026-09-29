@@ -2,7 +2,11 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+#if REACTIVE_SHIM
+namespace ReactiveUI.Primitives.OccasionallyConnected.Reactive;
+#else
 namespace ReactiveUI.Primitives.OccasionallyConnected;
+#endif
 
 /// <summary>Composes the observers, publication callbacks, and owned producer factory for a remote adapter.</summary>
 /// <typeparam name="T">The remote input type.</typeparam>

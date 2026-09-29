@@ -70,15 +70,7 @@ internal sealed class OccasionallyConnectedStreamRegistry : IOccasionallyConnect
     /// <exception cref="InvalidOperationException">The stream name is missing or registered with another type.</exception>
     private NamedStreamRegistration GetTypedRegistration<TState, TInput>(string name)
     {
-#if NET8_0_OR_GREATER
-        ArgumentException.ThrowIfNullOrWhiteSpace(name);
-#else
-        ArgumentExceptionHelper.ThrowIfNull(name);
-        if (string.IsNullOrWhiteSpace(name))
-        {
-            throw new ArgumentException("Stream name must be supplied.", nameof(name));
-        }
-#endif
+        ArgumentExceptionHelper.ThrowIfNullOrWhiteSpace(name);
         if (!_registrations.TryGetValue(name, out var registration))
         {
             throw new InvalidOperationException("The named stream is not registered.");

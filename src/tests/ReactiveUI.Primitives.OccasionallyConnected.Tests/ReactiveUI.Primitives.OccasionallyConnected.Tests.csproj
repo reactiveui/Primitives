@@ -10,6 +10,7 @@
   <ItemGroup>
     <ProjectReference Include="..\..\ReactiveUI.Primitives.OccasionallyConnected\ReactiveUI.Primitives.OccasionallyConnected.csproj" />
     <ProjectReference Include="..\..\ReactiveUI.Primitives.OccasionallyConnected.Storage.Sqlite\ReactiveUI.Primitives.OccasionallyConnected.Storage.Sqlite.csproj" />
+    <ProjectReference Include="..\..\..\tools\OccasionallyConnected.Ci\OccasionallyConnected.Ci.csproj" />
     <PackageReference Include="Microsoft.Extensions.TimeProvider.Testing" />
   </ItemGroup>
 

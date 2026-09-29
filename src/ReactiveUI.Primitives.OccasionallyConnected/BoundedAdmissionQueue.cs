@@ -5,7 +5,11 @@
 using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
 
+#if REACTIVE_SHIM
+namespace ReactiveUI.Primitives.OccasionallyConnected.Reactive;
+#else
 namespace ReactiveUI.Primitives.OccasionallyConnected;
+#endif
 
 /// <summary>Maintains a count-and-byte bounded FIFO admission queue.</summary>
 /// <typeparam name="T">The queued value type.</typeparam>

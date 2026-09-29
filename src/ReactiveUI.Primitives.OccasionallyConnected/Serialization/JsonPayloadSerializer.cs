@@ -10,7 +10,11 @@ using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization.Metadata;
 
+#if REACTIVE_SHIM
+namespace ReactiveUI.Primitives.OccasionallyConnected.Reactive;
+#else
 namespace ReactiveUI.Primitives.OccasionallyConnected;
+#endif
 
 /// <summary>Serializes allowlisted payload contracts as canonical JSON bytes.</summary>
 [DebuggerDisplay("{ContentType,nq}, MaxPayloadBytes = {_maximumPayloadBytes}")]

@@ -9,7 +9,7 @@ on:
       - 'src/ReactiveUI.Disposables/**'
       - 'src/Directory.*'
       - 'samples/OccasionallyConnected.PackedSample/**'
-      - 'tools/Test-OccasionallyConnectedAot.ps1'
+      - 'tools/OccasionallyConnected.Ci/**'
       - '.github/workflows/occasionally-connected-aot.yml'
   workflow_dispatch:
   workflow_call:
@@ -43,8 +43,8 @@ jobs:
             10.0.x
             11.0.x
       - name: Pack, publish, and run clean NativeAOT consumer
-        shell: pwsh
-        run: ./tools/Test-OccasionallyConnectedAot.ps1 -Version "0.1.0-ocaot.${{ github.run_id }}.${{ github.run_attempt }}"
+        shell: bash
+        run: dotnet run --project tools/OccasionallyConnected.Ci/OccasionallyConnected.Ci.csproj -- aot --version "0.1.0-ocaot.${{ github.run_id }}.${{ github.run_attempt }}"
       - name: Retain NativeAOT evidence
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2

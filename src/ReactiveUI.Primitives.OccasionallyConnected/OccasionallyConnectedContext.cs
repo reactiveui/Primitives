@@ -5,7 +5,11 @@
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
 
+#if REACTIVE_SHIM
+namespace ReactiveUI.Primitives.OccasionallyConnected.Reactive;
+#else
 namespace ReactiveUI.Primitives.OccasionallyConnected;
+#endif
 
 /// <summary>Coordinates synchronization and typed local-first stream lifetimes for one client context.</summary>
 [DebuggerDisplay("Streams={_registrations.Count,nq}; Startup={StartupTask.Status,nq}")]

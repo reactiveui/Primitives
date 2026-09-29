@@ -5,7 +5,11 @@
 using System.Runtime.CompilerServices;
 using System.Text;
 
+#if REACTIVE_SHIM
+namespace ReactiveUI.Primitives.OccasionallyConnected.Reactive;
+#else
 namespace ReactiveUI.Primitives.OccasionallyConnected;
+#endif
 
 /// <summary>Contains snapshot recovery capture helpers.</summary>
 internal sealed partial class InMemoryLocalStoreAdapter

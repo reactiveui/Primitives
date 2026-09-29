@@ -33,12 +33,9 @@ public sealed record RemoteEventOrigin
 
         _ = ClientIdEncoding.GetByteCount(clientId);
 #if NET5_0_OR_GREATER
-        ArgumentExceptionHelper.ThrowIfNullOrWhiteSpace(clientId);
+        ArgumentException.ThrowIfNullOrWhiteSpace(clientId);
 #else
-        if (string.IsNullOrWhiteSpace(clientId))
-        {
-            throw new ArgumentException("A remote event origin client identity is invalid.", nameof(clientId));
-        }
+        ArgumentExceptionHelper.ThrowIfNullOrWhiteSpace(clientId);
 #endif
 
         if (operationId.Value == Guid.Empty)

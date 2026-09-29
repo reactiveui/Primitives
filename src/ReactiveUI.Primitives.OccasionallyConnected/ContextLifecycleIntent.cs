@@ -4,7 +4,11 @@
 
 using System.Runtime.CompilerServices;
 
+#if REACTIVE_SHIM
+namespace ReactiveUI.Primitives.OccasionallyConnected.Reactive;
+#else
 namespace ReactiveUI.Primitives.OccasionallyConnected;
+#endif
 
 /// <summary>Stores context lifecycle intent while the owning context gate is held.</summary>
 internal sealed class ContextLifecycleIntent

@@ -4,7 +4,11 @@
 
 using System.Runtime.CompilerServices;
 
+#if REACTIVE_SHIM
+namespace ReactiveUI.Primitives.OccasionallyConnected.Reactive;
+#else
 namespace ReactiveUI.Primitives.OccasionallyConnected;
+#endif
 
 /// <summary>Provides helpers for observing occasionally connected operations.</summary>
 public static class OccasionallyConnectedExtensions

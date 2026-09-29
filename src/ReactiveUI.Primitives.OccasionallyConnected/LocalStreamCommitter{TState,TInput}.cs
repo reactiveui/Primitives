@@ -5,7 +5,11 @@
 using System.Runtime.CompilerServices;
 using System.Text;
 
+#if REACTIVE_SHIM
+namespace ReactiveUI.Primitives.OccasionallyConnected.Reactive;
+#else
 namespace ReactiveUI.Primitives.OccasionallyConnected;
+#endif
 
 /// <summary>Coordinates atomic local stream recovery and optimistic operation commits.</summary>
 /// <typeparam name="TState">The projected local state type.</typeparam>

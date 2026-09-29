@@ -4,7 +4,11 @@
 
 using System.Runtime.CompilerServices;
 
+#if REACTIVE_SHIM
+namespace ReactiveUI.Primitives.OccasionallyConnected.Reactive;
+#else
 namespace ReactiveUI.Primitives.OccasionallyConnected;
+#endif
 
 /// <summary>Owns cancellation for one context start generation.</summary>
 internal sealed class StartGeneration : IDisposable

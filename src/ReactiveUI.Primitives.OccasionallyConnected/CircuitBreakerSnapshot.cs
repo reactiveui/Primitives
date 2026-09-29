@@ -4,7 +4,11 @@
 
 using System.Diagnostics;
 
+#if REACTIVE_SHIM
+namespace ReactiveUI.Primitives.OccasionallyConnected.Reactive;
+#else
 namespace ReactiveUI.Primitives.OccasionallyConnected;
+#endif
 
 /// <summary>Provides an immutable view of one endpoint circuit breaker.</summary>
 /// <param name="Endpoint">The endpoint represented by the breaker.</param>

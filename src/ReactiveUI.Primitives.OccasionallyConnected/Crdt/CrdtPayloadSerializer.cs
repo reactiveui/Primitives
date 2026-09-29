@@ -5,7 +5,11 @@
 using System.Text;
 using ReactiveUI.Primitives.OccasionallyConnected.Crdt;
 
+#if REACTIVE_SHIM
+namespace ReactiveUI.Primitives.OccasionallyConnected.Reactive.Crdt;
+#else
 namespace ReactiveUI.Primitives.OccasionallyConnected.Crdt;
+#endif
 
 /// <summary>Serializes built-in CRDT state and input contracts as bounded binary payloads.</summary>
 [System.Diagnostics.DebuggerDisplay("{ContentType,nq}")]

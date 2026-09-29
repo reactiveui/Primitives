@@ -2,7 +2,11 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+#if REACTIVE_SHIM
+namespace ReactiveUI.Primitives.OccasionallyConnected.Reactive;
+#else
 namespace ReactiveUI.Primitives.OccasionallyConnected;
+#endif
 
 /// <summary>Contains a bounded FIFO prefix and its full encoded byte count.</summary>
 /// <param name="Kind">The reason the prefix is ready, waiting, or blocked.</param>

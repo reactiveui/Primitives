@@ -2,7 +2,11 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+#if REACTIVE_SHIM
+namespace ReactiveUI.Primitives.OccasionallyConnected.Reactive;
+#else
 namespace ReactiveUI.Primitives.OccasionallyConnected;
+#endif
 
 /// <summary>Publishes owned serialized input payloads without decoding them back to caller-owned typed values.</summary>
 internal interface IOccasionallyConnectedSerializedInputPublisher

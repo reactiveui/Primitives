@@ -4,7 +4,11 @@
 
 using System.Runtime.CompilerServices;
 
+#if REACTIVE_SHIM
+namespace ReactiveUI.Primitives.OccasionallyConnected.Reactive;
+#else
 namespace ReactiveUI.Primitives.OccasionallyConnected;
+#endif
 
 /// <summary>Creates operation identifiers from random GUIDs.</summary>
 internal sealed class GuidOperationIdSource : IOperationIdSource

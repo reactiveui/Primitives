@@ -6,7 +6,11 @@ using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Runtime.ExceptionServices;
 
+#if REACTIVE_SHIM
+namespace ReactiveUI.Primitives.OccasionallyConnected.Reactive;
+#else
 namespace ReactiveUI.Primitives.OccasionallyConnected;
+#endif
 
 /// <summary>Connects a transport session directly to an in-process server stream hub supplied by the trusted host.</summary>
 [DebuggerDisplay("Loopback; Capabilities={Capabilities,nq}")]

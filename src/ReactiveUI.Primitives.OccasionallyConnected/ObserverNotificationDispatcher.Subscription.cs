@@ -6,7 +6,11 @@ using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
 using ReactiveUI.Primitives.Concurrency;
 
+#if REACTIVE_SHIM
+namespace ReactiveUI.Primitives.OccasionallyConnected.Reactive;
+#else
 namespace ReactiveUI.Primitives.OccasionallyConnected;
+#endif
 
 /// <summary>Contains per-subscription notification drain mechanics.</summary>
 internal sealed partial class ObserverNotificationDispatcher<T>

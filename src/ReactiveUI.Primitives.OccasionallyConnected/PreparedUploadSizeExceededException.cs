@@ -2,7 +2,11 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+#if REACTIVE_SHIM
+namespace ReactiveUI.Primitives.OccasionallyConnected.Reactive;
+#else
 namespace ReactiveUI.Primitives.OccasionallyConnected;
+#endif
 
 /// <summary>Identifies a prepared upload body that exceeds the negotiated encoded byte limit.</summary>
 internal sealed class PreparedUploadSizeExceededException : InvalidOperationException

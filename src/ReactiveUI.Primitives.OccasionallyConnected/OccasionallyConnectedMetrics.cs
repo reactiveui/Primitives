@@ -5,7 +5,11 @@
 using System.Diagnostics.Metrics;
 using System.Runtime.CompilerServices;
 
+#if REACTIVE_SHIM
+namespace ReactiveUI.Primitives.OccasionallyConnected.Reactive;
+#else
 namespace ReactiveUI.Primitives.OccasionallyConnected;
+#endif
 
 /// <summary>Records privacy-preserving runtime metrics for occasionally connected streams.</summary>
 internal sealed class OccasionallyConnectedMetrics : IDisposable

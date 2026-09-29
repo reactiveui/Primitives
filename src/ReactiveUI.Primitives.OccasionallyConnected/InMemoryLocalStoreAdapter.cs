@@ -6,7 +6,11 @@ using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
 
+#if REACTIVE_SHIM
+namespace ReactiveUI.Primitives.OccasionallyConnected.Reactive;
+#else
 namespace ReactiveUI.Primitives.OccasionallyConnected;
+#endif
 
 /// <summary>Stores occasionally connected stream state in this process.</summary>
 /// <remarks>The adapter is ephemeral and retains data only for the lifetime of this instance.</remarks>

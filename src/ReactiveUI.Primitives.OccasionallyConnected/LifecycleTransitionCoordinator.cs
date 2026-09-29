@@ -4,7 +4,11 @@
 
 using System.Runtime.CompilerServices;
 
+#if REACTIVE_SHIM
+namespace ReactiveUI.Primitives.OccasionallyConnected.Reactive;
+#else
 namespace ReactiveUI.Primitives.OccasionallyConnected;
+#endif
 
 /// <summary>Coordinates asynchronous start and cleanup transitions for an owned runtime component.</summary>
 /// <remarks>

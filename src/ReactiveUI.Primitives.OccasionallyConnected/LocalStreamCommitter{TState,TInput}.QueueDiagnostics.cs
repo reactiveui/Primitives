@@ -4,7 +4,11 @@
 
 using System.Runtime.CompilerServices;
 
+#if REACTIVE_SHIM
+namespace ReactiveUI.Primitives.OccasionallyConnected.Reactive;
+#else
 namespace ReactiveUI.Primitives.OccasionallyConnected;
+#endif
 
 /// <summary>Queue diagnostic helpers for <see cref="LocalStreamCommitter{TState,TInput}"/>.</summary>
 internal sealed partial class LocalStreamCommitter<TState, TInput>

@@ -152,9 +152,12 @@
                      And '$(MSBuildProjectName)' != 'ReactiveUI.Primitives.OccasionallyConnected.Core'
                      And '$(MSBuildProjectName)' != 'ReactiveUI.Primitives.OccasionallyConnected.DependencyInjection'
                      And '$(MSBuildProjectName)' != 'ReactiveUI.Primitives.OccasionallyConnected.Hosting'
+                     And '$(MSBuildProjectName)' != 'ReactiveUI.Primitives.OccasionallyConnected.Reactive'
                      And '$(MSBuildProjectName)' != 'ReactiveUI.Primitives.OccasionallyConnected.Server'
+                     And '$(MSBuildProjectName)' != 'ReactiveUI.Primitives.OccasionallyConnected.Storage.FileSystem'
                      And '$(MSBuildProjectName)' != 'ReactiveUI.Primitives.OccasionallyConnected.Storage.Sqlite'
-                     And '$(MSBuildProjectName)' != 'ReactiveUI.Primitives.OccasionallyConnected.Transport.Http'"/>
+                     And '$(MSBuildProjectName)' != 'ReactiveUI.Primitives.OccasionallyConnected.Transport.Http'
+                     And '$(MSBuildProjectName)' != 'ReactiveUI.Primitives.OccasionallyConnected.Transport.WebSockets'"/>
     <None Include="$(MSBuildThisFileDirectory)..\images\logo.png" Pack="true" PackagePath="\"/>
   </ItemGroup>
 

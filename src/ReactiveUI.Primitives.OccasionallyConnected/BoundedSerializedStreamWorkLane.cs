@@ -4,7 +4,11 @@
 
 using System.Runtime.CompilerServices;
 
+#if REACTIVE_SHIM
+namespace ReactiveUI.Primitives.OccasionallyConnected.Reactive;
+#else
 namespace ReactiveUI.Primitives.OccasionallyConnected;
+#endif
 
 /// <summary>Runs admitted stream mutations one at a time with a bounded FIFO backlog.</summary>
 internal sealed partial class BoundedSerializedStreamWorkLane : IDisposable

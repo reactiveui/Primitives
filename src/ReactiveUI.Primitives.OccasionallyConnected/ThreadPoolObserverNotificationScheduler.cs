@@ -5,7 +5,11 @@
 using System.Runtime.CompilerServices;
 using ReactiveUI.Primitives.Concurrency;
 
+#if REACTIVE_SHIM
+namespace ReactiveUI.Primitives.OccasionallyConnected.Reactive;
+#else
 namespace ReactiveUI.Primitives.OccasionallyConnected;
+#endif
 
 /// <summary>Schedules observer notification drain work on the thread pool.</summary>
 internal sealed class ThreadPoolObserverNotificationScheduler : IObserverNotificationScheduler

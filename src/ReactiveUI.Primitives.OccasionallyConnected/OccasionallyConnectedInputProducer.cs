@@ -5,7 +5,11 @@
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
 
+#if REACTIVE_SHIM
+namespace ReactiveUI.Primitives.OccasionallyConnected.Reactive;
+#else
 namespace ReactiveUI.Primitives.OccasionallyConnected;
+#endif
 
 /// <summary>Captures observer input into owned serialized payloads and publishes them asynchronously.</summary>
 /// <typeparam name="TInput">The input value type.</typeparam>

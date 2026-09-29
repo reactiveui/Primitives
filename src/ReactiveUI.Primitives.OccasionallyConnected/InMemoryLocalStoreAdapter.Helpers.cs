@@ -6,7 +6,11 @@ using System.Collections.ObjectModel;
 using System.Runtime.CompilerServices;
 using System.Text;
 
+#if REACTIVE_SHIM
+namespace ReactiveUI.Primitives.OccasionallyConnected.Reactive;
+#else
 namespace ReactiveUI.Primitives.OccasionallyConnected;
+#endif
 
 /// <summary>Contains helper members for <see cref="InMemoryLocalStoreAdapter"/>.</summary>
 internal sealed partial class InMemoryLocalStoreAdapter

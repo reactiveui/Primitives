@@ -5,7 +5,11 @@
 using System;
 using System.IO;
 
+#if REACTIVE_SHIM
+namespace ReactiveUI.Primitives.OccasionallyConnected.Reactive;
+#else
 namespace ReactiveUI.Primitives.OccasionallyConnected;
+#endif
 
 /// <summary>Represents a retryable snapshot recovery conflict that requires a fresh bounded capture.</summary>
 internal sealed class SnapshotRecoveryRetryableConcurrentChangeException : IOException

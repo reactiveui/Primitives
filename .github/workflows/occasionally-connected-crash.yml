@@ -41,10 +41,20 @@ jobs:
             class: HttpRemoteTransportAdapterTests
             test: WhenProcessDiesDuringHttpPush_ThenRestartedTransportPreservesServerEffect
           - os: ubuntu-latest
+            project: ReactiveUI.Primitives.OccasionallyConnected.Transport.WebSockets.Tests
+            namespace: ReactiveUI.Primitives.OccasionallyConnected.Transport.WebSockets.Tests
+            class: WebSocketRemoteTransportAdapterTests
+            test: WhenProcessDiesDuringWebSocketPush_ThenRestartedTransportPreservesServerEffect
+          - os: ubuntu-latest
             project: ReactiveUI.Primitives.OccasionallyConnected.Storage.Sqlite.Tests
             namespace: ReactiveUI.Primitives.OccasionallyConnected.Storage.Sqlite.Tests
             class: SqliteLocalStoreAdapterTests
             test: WhenWriterProcessDiesAtCommitCheckpoint_ThenReopenHonorsTransactionBoundary
+          - os: ubuntu-latest
+            project: ReactiveUI.Primitives.OccasionallyConnected.Storage.FileSystem.Tests
+            namespace: ReactiveUI.Primitives.OccasionallyConnected.Storage.FileSystem.Tests
+            class: FileSystemLocalStoreAdapterTests
+            test: WhenProcessDiesAtCompactionCheckpoint_ThenReopenUsesCompleteJournal
           - os: ubuntu-latest
             project: ReactiveUI.Primitives.OccasionallyConnected.Server.Tests
             namespace: ReactiveUI.Primitives.OccasionallyConnected.Server.Tests
@@ -66,10 +76,20 @@ jobs:
             class: HttpRemoteTransportAdapterTests
             test: WhenProcessDiesDuringHttpPush_ThenRestartedTransportPreservesServerEffect
           - os: windows-latest
+            project: ReactiveUI.Primitives.OccasionallyConnected.Transport.WebSockets.Tests
+            namespace: ReactiveUI.Primitives.OccasionallyConnected.Transport.WebSockets.Tests
+            class: WebSocketRemoteTransportAdapterTests
+            test: WhenProcessDiesDuringWebSocketPush_ThenRestartedTransportPreservesServerEffect
+          - os: windows-latest
             project: ReactiveUI.Primitives.OccasionallyConnected.Storage.Sqlite.Tests
             namespace: ReactiveUI.Primitives.OccasionallyConnected.Storage.Sqlite.Tests
             class: SqliteLocalStoreAdapterTests
             test: WhenWriterProcessDiesAtCommitCheckpoint_ThenReopenHonorsTransactionBoundary
+          - os: windows-latest
+            project: ReactiveUI.Primitives.OccasionallyConnected.Storage.FileSystem.Tests
+            namespace: ReactiveUI.Primitives.OccasionallyConnected.Storage.FileSystem.Tests
+            class: FileSystemLocalStoreAdapterTests
+            test: WhenProcessDiesAtCompactionCheckpoint_ThenReopenUsesCompleteJournal
           - os: windows-latest
             project: ReactiveUI.Primitives.OccasionallyConnected.Server.Tests
             namespace: ReactiveUI.Primitives.OccasionallyConnected.Server.Tests
@@ -91,10 +111,20 @@ jobs:
             class: HttpRemoteTransportAdapterTests
             test: WhenProcessDiesDuringHttpPush_ThenRestartedTransportPreservesServerEffect
           - os: macos-latest
+            project: ReactiveUI.Primitives.OccasionallyConnected.Transport.WebSockets.Tests
+            namespace: ReactiveUI.Primitives.OccasionallyConnected.Transport.WebSockets.Tests
+            class: WebSocketRemoteTransportAdapterTests
+            test: WhenProcessDiesDuringWebSocketPush_ThenRestartedTransportPreservesServerEffect
+          - os: macos-latest
             project: ReactiveUI.Primitives.OccasionallyConnected.Storage.Sqlite.Tests
             namespace: ReactiveUI.Primitives.OccasionallyConnected.Storage.Sqlite.Tests
             class: SqliteLocalStoreAdapterTests
             test: WhenWriterProcessDiesAtCommitCheckpoint_ThenReopenHonorsTransactionBoundary
+          - os: macos-latest
+            project: ReactiveUI.Primitives.OccasionallyConnected.Storage.FileSystem.Tests
+            namespace: ReactiveUI.Primitives.OccasionallyConnected.Storage.FileSystem.Tests
+            class: FileSystemLocalStoreAdapterTests
+            test: WhenProcessDiesAtCompactionCheckpoint_ThenReopenUsesCompleteJournal
           - os: macos-latest
             project: ReactiveUI.Primitives.OccasionallyConnected.Server.Tests
             namespace: ReactiveUI.Primitives.OccasionallyConnected.Server.Tests

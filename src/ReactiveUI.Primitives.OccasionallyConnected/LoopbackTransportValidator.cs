@@ -4,7 +4,11 @@
 
 using System.Text;
 
+#if REACTIVE_SHIM
+namespace ReactiveUI.Primitives.OccasionallyConnected.Reactive;
+#else
 namespace ReactiveUI.Primitives.OccasionallyConnected;
+#endif
 
 /// <summary>Validates loopback transport input and logical in-process bounds.</summary>
 internal static class LoopbackTransportValidator

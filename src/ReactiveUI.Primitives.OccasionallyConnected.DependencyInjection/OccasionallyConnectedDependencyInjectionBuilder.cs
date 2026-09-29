@@ -86,15 +86,7 @@ public sealed class OccasionallyConnectedDependencyInjectionBuilder
     /// <exception cref="ArgumentException">The store identity is blank.</exception>
     public OccasionallyConnectedDependencyInjectionBuilder UseStoreIdentity(string storeIdentity)
     {
-#if NET8_0_OR_GREATER
-        ArgumentException.ThrowIfNullOrWhiteSpace(storeIdentity);
-#else
-        ArgumentExceptionHelper.ThrowIfNull(storeIdentity);
-        if (string.IsNullOrWhiteSpace(storeIdentity))
-        {
-            throw new ArgumentException("Store identity must be supplied.", nameof(storeIdentity));
-        }
-#endif
+        ArgumentExceptionHelper.ThrowIfNullOrWhiteSpace(storeIdentity);
         _storeIdentity = storeIdentity;
         return this;
     }
@@ -375,15 +367,7 @@ public sealed class OccasionallyConnectedDependencyInjectionBuilder
     /// <exception cref="ArgumentException">The name is blank or too long.</exception>
     private void ValidateStreamName(string name)
     {
-#if NET8_0_OR_GREATER
-        ArgumentException.ThrowIfNullOrWhiteSpace(name);
-#else
-        ArgumentExceptionHelper.ThrowIfNull(name);
-        if (string.IsNullOrWhiteSpace(name))
-        {
-            throw new ArgumentException("Stream name must be supplied.", nameof(name));
-        }
-#endif
+        ArgumentExceptionHelper.ThrowIfNullOrWhiteSpace(name);
 
         if (name.Length > _maximumStreamNameLength)
         {

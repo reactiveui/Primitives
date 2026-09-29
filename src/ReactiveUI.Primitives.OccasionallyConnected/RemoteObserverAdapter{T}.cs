@@ -5,7 +5,11 @@
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
 
+#if REACTIVE_SHIM
+namespace ReactiveUI.Primitives.OccasionallyConnected.Reactive;
+#else
 namespace ReactiveUI.Primitives.OccasionallyConnected;
+#endif
 
 /// <summary>Adapts a context stream to a disposable remote observer bridge.</summary>
 /// <typeparam name="T">The remote input type.</typeparam>

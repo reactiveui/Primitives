@@ -16,6 +16,9 @@ public sealed partial class SqliteLocalStoreAdapterTests
     /// <summary>The child ownership mode marker environment variable.</summary>
     private const string OwnershipChildModeVariable = "RXUI_SQLITE_OWNERSHIP_CHILD";
 
+    /// <summary>The Windows error code for a missing symbolic-link privilege.</summary>
+    private const int SymbolicLinkPrivilegeNotHeldErrorCode = 1314;
+
     /// <summary>The child ownership database path environment variable.</summary>
     private const string OwnershipDatabasePathVariable = "RXUI_SQLITE_OWNERSHIP_DATABASE";
 
@@ -508,9 +511,17 @@ public sealed partial class SqliteLocalStoreAdapterTests
         {
             _ = Directory.CreateSymbolicLink(linkPath, targetPath);
         }
-        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or PlatformNotSupportedException)
+        catch (UnauthorizedAccessException exception)
         {
-            throw new PlatformNotSupportedException("The current host cannot create directory symbolic links for reparse-point coverage.", exception);
+            Skip.Test($"The current host cannot create directory symbolic links for reparse-point coverage: {exception.Message}");
+        }
+        catch (PlatformNotSupportedException exception)
+        {
+            Skip.Test($"The current host does not support directory symbolic links for reparse-point coverage: {exception.Message}");
+        }
+        catch (IOException exception) when ((exception.HResult & 0xffff) == SymbolicLinkPrivilegeNotHeldErrorCode)
+        {
+            Skip.Test($"The current host does not grant the privilege required for directory symbolic links: {exception.Message}");
         }
     }
 
@@ -524,9 +535,17 @@ public sealed partial class SqliteLocalStoreAdapterTests
         {
             _ = File.CreateSymbolicLink(linkPath, targetPath);
         }
-        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or PlatformNotSupportedException)
+        catch (UnauthorizedAccessException exception)
         {
-            throw new PlatformNotSupportedException("The current host cannot create file symbolic links for reparse-point coverage.", exception);
+            Skip.Test($"The current host cannot create file symbolic links for reparse-point coverage: {exception.Message}");
+        }
+        catch (PlatformNotSupportedException exception)
+        {
+            Skip.Test($"The current host does not support file symbolic links for reparse-point coverage: {exception.Message}");
+        }
+        catch (IOException exception) when ((exception.HResult & 0xffff) == SymbolicLinkPrivilegeNotHeldErrorCode)
+        {
+            Skip.Test($"The current host does not grant the privilege required for file symbolic links: {exception.Message}");
         }
     }
 

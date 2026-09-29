@@ -5,7 +5,11 @@
 using System.Runtime.CompilerServices;
 using ReactiveUI.Primitives.Concurrency;
 
+#if REACTIVE_SHIM
+namespace ReactiveUI.Primitives.OccasionallyConnected.Reactive;
+#else
 namespace ReactiveUI.Primitives.OccasionallyConnected;
+#endif
 
 /// <summary>Builds engine and stream diagnostics from one protected lifecycle and queue snapshot.</summary>
 internal sealed partial class SyncEngine

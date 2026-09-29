@@ -4,7 +4,11 @@
 
 using ReactiveUI.Primitives.Concurrency;
 
+#if REACTIVE_SHIM
+namespace ReactiveUI.Primitives.OccasionallyConnected.Reactive;
+#else
 namespace ReactiveUI.Primitives.OccasionallyConnected;
+#endif
 
 /// <summary>Adapts public sequencer scheduling to observer notification dispatch.</summary>
 internal sealed class SequencerObserverNotificationScheduler : IObserverNotificationScheduler
@@ -24,6 +28,16 @@ internal sealed class SequencerObserverNotificationScheduler : IObserverNotifica
     public void Schedule(IWorkItem item)
     {
         ArgumentExceptionHelper.ThrowIfNull(item);
+#if REACTIVE_SHIM
+        _ = _sequencer.Schedule(
+            item,
+            static (_, workItem) =>
+            {
+                workItem.Execute();
+                return System.Reactive.Disposables.Disposable.Empty;
+            });
+#else
         _sequencer.Schedule(item);
+#endif
     }
 }

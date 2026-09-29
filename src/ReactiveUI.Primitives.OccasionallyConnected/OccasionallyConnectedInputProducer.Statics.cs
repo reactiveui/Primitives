@@ -4,7 +4,11 @@
 
 using System.Runtime.CompilerServices;
 
+#if REACTIVE_SHIM
+namespace ReactiveUI.Primitives.OccasionallyConnected.Reactive;
+#else
 namespace ReactiveUI.Primitives.OccasionallyConnected;
+#endif
 
 /// <summary>Provides static helpers for <see cref="OccasionallyConnectedInputProducer{TInput}"/>.</summary>
 internal sealed partial class OccasionallyConnectedInputProducer<TInput>

@@ -23,32 +23,31 @@ The app prints `PASS` or `FAIL` for each check. It exits with code 0 when all ch
 
 ## Run the package gate
 
-Run from the repository root with PowerShell 7:
+Run from the repository root:
 
-```powershell
-pwsh tools/Test-OccasionallyConnectedPackages.ps1
+```sh
+dotnet run --project tools/OccasionallyConnected.Ci/OccasionallyConnected.Ci.csproj -- packages
 ```
 
-The script packs the feature packages and their ReactiveUI dependencies into a local feed with one temporary prerelease version. It repeats the pack and compares the resulting files, checks package frameworks, symbols, and Source Link, then copies this sample into a clean consumer directory. That copy restores only from the local feed and builds and runs for each selected target framework. The script also publishes the sample for `net10.0` as trimmed and NativeAOT apps where the required platform linker is available. It exits with code 1 if a gate fails and writes logs under `artifacts/oc-packages/logs`.
+The gate packs the feature packages and their ReactiveUI dependencies into a local feed with one temporary prerelease version. It repeats the pack and compares the resulting files, checks package frameworks, symbols, and Source Link, then copies this sample into a clean consumer directory. That copy restores only from the local feed and builds and runs for each selected target framework. The gate also publishes the sample for `net10.0` as trimmed and NativeAOT apps where the required platform linker is available. It exits with code 1 if a gate fails and writes logs under `artifacts/oc-packages/logs`.
 
 ### Options
 
 | Option | Effect |
 | --- | --- |
-| `-Version <value>` | Sets the package version. By default, the script uses a unique `0.1.0-octest` prerelease version for local verification. |
-| `-SampleTargetFrameworks net8.0,net48` | Runs the sample only for the listed target frameworks. |
-| `-SkipDeterminism` | Skips the second pack and file comparison. |
-| `-SkipSample` | Skips the clean install, sample runs, and publish checks. |
-| `-SkipAot` | Skips the trimmed and NativeAOT publish checks. |
+| `--version <value>` | Sets the package version. By default, the gate uses a unique `0.1.0-octest` prerelease version for local verification. |
+| `--sample-target-frameworks net8.0,net48` | Runs the sample only for the listed target frameworks. |
+| `--skip-determinism` | Skips the second pack and file comparison. |
+| `--skip-sample` | Skips the clean install, sample runs, and publish checks. |
+| `--skip-aot` | Skips the trimmed and NativeAOT publish checks. |
 
-NativeAOT requires a platform linker. On Windows, install the Visual C++ build tools workload. If the linker is unavailable, the script reports that gate as skipped and names the missing tool.
+Pass an option after the command separator, for example `dotnet run --project tools/OccasionallyConnected.Ci/OccasionallyConnected.Ci.csproj -- packages --skip-aot`. NativeAOT requires a platform linker. On Windows, install the Visual C++ build tools workload. If the linker is unavailable, the gate reports that check as skipped and names the missing tool.
 
 ## Run the clean sample by hand
 
 After the package gate completes, use the version it printed for the local feed:
 
-```powershell
-Set-Location artifacts/oc-packages/clean-sample
-$version = Read-Host "Package version from the gate output"
-dotnet run --framework net10.0 -p:OccasionallyConnectedPackageVersion=$version
+```sh
+cd artifacts/oc-packages/clean-sample
+dotnet run --framework net10.0 -p:OccasionallyConnectedPackageVersion=VERSION_FROM_GATE_OUTPUT
 ```

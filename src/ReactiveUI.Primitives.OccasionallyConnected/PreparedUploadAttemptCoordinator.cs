@@ -6,7 +6,11 @@ using System.Runtime.CompilerServices;
 using System.Runtime.ExceptionServices;
 using System.Text;
 
+#if REACTIVE_SHIM
+namespace ReactiveUI.Primitives.OccasionallyConnected.Reactive;
+#else
 namespace ReactiveUI.Primitives.OccasionallyConnected;
+#endif
 
 /// <summary>Coordinates one prepared remote upload attempt for an already leased operation batch.</summary>
 internal static class PreparedUploadAttemptCoordinator

@@ -5,7 +5,11 @@
 using System.Diagnostics;
 using System.Threading;
 
+#if REACTIVE_SHIM
+namespace ReactiveUI.Primitives.OccasionallyConnected.Reactive;
+#else
 namespace ReactiveUI.Primitives.OccasionallyConnected;
+#endif
 
 /// <summary>Creates bounded diagnostic activities without attaching operation payloads or tags.</summary>
 internal sealed class OccasionallyConnectedActivities : IDisposable

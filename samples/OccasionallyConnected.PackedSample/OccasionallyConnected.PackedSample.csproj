@@ -2,7 +2,7 @@
 
   <!--
     A clean consumer of the packed OccasionallyConnected packages. It is not part of src/ReactiveUI.Primitives.slnx.
-    tools/Test-OccasionallyConnectedPackages.ps1 copies it into artifacts/clean-sample, next to an empty
+    the OccasionallyConnected.Ci packages command copies it into artifacts/clean-sample, next to an empty
     Directory.Build.props, an empty Directory.Packages.props and a nuget.config that points at the local feed,
     then passes the packed version in OccasionallyConnectedPackageVersion.
   -->
@@ -44,7 +44,7 @@
   </ItemGroup>
 
   <Target Name="RequirePackedVersion" BeforeTargets="CollectPackageReferences" Condition="'$(OccasionallyConnectedPackageVersion)' == ''">
-    <Error Text="Set OccasionallyConnectedPackageVersion to the version packed by tools/Test-OccasionallyConnectedPackages.ps1." />
+    <Error Text="Set OccasionallyConnectedPackageVersion to the version packed by the OccasionallyConnected.Ci packages command." />
   </Target>
 
 </Project>

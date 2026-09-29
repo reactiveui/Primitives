@@ -5,7 +5,11 @@
 using System.Runtime.CompilerServices;
 using System.Runtime.ExceptionServices;
 
+#if REACTIVE_SHIM
+namespace ReactiveUI.Primitives.OccasionallyConnected.Reactive;
+#else
 namespace ReactiveUI.Primitives.OccasionallyConnected;
+#endif
 
 /// <summary>Wraps an observable source around a context-owned occasionally connected stream.</summary>
 /// <typeparam name="TState">The state type.</typeparam>

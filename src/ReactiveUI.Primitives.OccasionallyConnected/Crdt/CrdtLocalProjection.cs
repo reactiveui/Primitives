@@ -5,7 +5,11 @@
 using System.Runtime.CompilerServices;
 using ReactiveUI.Primitives.OccasionallyConnected.Crdt;
 
+#if REACTIVE_SHIM
+namespace ReactiveUI.Primitives.OccasionallyConnected.Reactive.Crdt;
+#else
 namespace ReactiveUI.Primitives.OccasionallyConnected.Crdt;
+#endif
 
 /// <summary>Adapts built-in CRDT helpers to the local stream committer projection contract.</summary>
 [System.Diagnostics.DebuggerDisplay("{AuthenticatedClientId,nq} {InitialState.Kind,nq}")]

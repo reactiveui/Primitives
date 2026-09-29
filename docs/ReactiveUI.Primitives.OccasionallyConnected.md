@@ -1128,7 +1128,7 @@ The test plan MUST include forged tenant IDs, unauthorized streams, duplicate/re
 
 ## 13. Configuration and dependency injection
 
-**Status: prospective design.** The Core contracts shown above are implemented, but the builder, dependency-injection, hosting, and concrete-adapter composition examples in this section are not yet implemented and do not indicate that the feature is ready.
+The core builder, dependency-injection, and hosting composition described here is implemented. See [RemainingTasks.md](RemainingTasks.md) for outstanding adapter and release requirements.
 
 ### 13.1 Core builder
 
@@ -1368,14 +1368,19 @@ src/
   ReactiveUI.Primitives.OccasionallyConnected.Reactive/
   ReactiveUI.Primitives.OccasionallyConnected.DependencyInjection/
   ReactiveUI.Primitives.OccasionallyConnected.Hosting/
+  ReactiveUI.Primitives.OccasionallyConnected.Storage.FileSystem/
   ReactiveUI.Primitives.OccasionallyConnected.Server/
   ReactiveUI.Primitives.OccasionallyConnected.Storage.Sqlite/
   ReactiveUI.Primitives.OccasionallyConnected.Transport.Http/
+  ReactiveUI.Primitives.OccasionallyConnected.Transport.WebSockets/
 tests/
   ReactiveUI.Primitives.OccasionallyConnected.Tests/
   ReactiveUI.Primitives.OccasionallyConnected.ContractTests/
   ReactiveUI.Primitives.OccasionallyConnected.Storage.Sqlite.Tests/
+  ReactiveUI.Primitives.OccasionallyConnected.Storage.FileSystem.Tests/
   ReactiveUI.Primitives.OccasionallyConnected.Transport.Http.Tests/
+  ReactiveUI.Primitives.OccasionallyConnected.Transport.WebSockets.Tests/
+  ReactiveUI.Primitives.OccasionallyConnected.Reactive.Tests/
   ReactiveUI.Primitives.OccasionallyConnected.Server.Tests/
   ReactiveUI.Primitives.OccasionallyConnected.CrashTests/
 benchmarks/
@@ -1389,7 +1394,7 @@ Shared lean/Reactive implementation files use neutral `RxVoid` and `ISequencer` 
 
 ## 16. API usage examples
 
-**Status: prospective composition examples.** These examples depend on the not-yet-implemented builder and hosting/adapter composition described in section 13. They illustrate the intended use of the implemented Core contracts and do not indicate feature readiness.
+These examples show how to compose the implemented builder, context, hosting, and transport APIs.
 
 ### 16.1 Local-first temperature stream
 

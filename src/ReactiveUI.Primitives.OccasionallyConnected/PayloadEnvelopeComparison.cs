@@ -5,7 +5,11 @@
 using System.Runtime.CompilerServices;
 using System.Text;
 
+#if REACTIVE_SHIM
+namespace ReactiveUI.Primitives.OccasionallyConnected.Reactive;
+#else
 namespace ReactiveUI.Primitives.OccasionallyConnected;
+#endif
 
 /// <summary>Compares serialized payload content across local storage and reconciliation.</summary>
 internal static class PayloadEnvelopeComparison

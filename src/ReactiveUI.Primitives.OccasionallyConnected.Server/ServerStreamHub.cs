@@ -135,11 +135,7 @@ public sealed partial class ServerStreamHub : IServerStreamHub, IServerSnapshotR
 #if NET8_0_OR_GREATER
         ArgumentException.ThrowIfNullOrWhiteSpace(databasePath);
 #else
-        ArgumentExceptionHelper.ThrowIfNull(databasePath);
-        if (string.IsNullOrWhiteSpace(databasePath))
-        {
-            throw new ArgumentException("The SQLite database path cannot be empty.", nameof(databasePath));
-        }
+        ArgumentExceptionHelper.ThrowIfNullOrWhiteSpace(databasePath);
 #endif
 
         ArgumentExceptionHelper.ThrowIfNull(options);

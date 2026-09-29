@@ -5,7 +5,11 @@
 using System.Runtime.CompilerServices;
 using System.Text;
 
+#if REACTIVE_SHIM
+namespace ReactiveUI.Primitives.OccasionallyConnected.Reactive;
+#else
 namespace ReactiveUI.Primitives.OccasionallyConnected;
+#endif
 
 /// <summary>Validates in-memory local store input.</summary>
 internal static class InMemoryLocalStoreAdapterValidation

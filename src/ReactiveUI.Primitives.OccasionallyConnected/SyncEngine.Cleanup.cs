@@ -4,7 +4,11 @@
 
 using System.Runtime.ExceptionServices;
 
+#if REACTIVE_SHIM
+namespace ReactiveUI.Primitives.OccasionallyConnected.Reactive;
+#else
 namespace ReactiveUI.Primitives.OccasionallyConnected;
+#endif
 
 /// <summary>Cleanup helpers for <see cref="SyncEngine"/>.</summary>
 internal sealed partial class SyncEngine

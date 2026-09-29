@@ -16,6 +16,9 @@ public sealed class OwnedDemoDirectoryTests
     /// <summary>The user file name used by ownership safety tests.</summary>
     private const string ExistingUserFileName = "user-data.txt";
 
+    /// <summary>The Windows error code for a missing symbolic-link privilege.</summary>
+    private const int SymbolicLinkPrivilegeNotHeldErrorCode = 1314;
+
     /// <summary>Verifies a volume root produces an immediate child without requiring permission to write there.</summary>
     /// <returns>A task that represents the asynchronous test.</returns>
     [Test]
@@ -140,8 +143,13 @@ public sealed class OwnedDemoDirectoryTests
             _ = Directory.CreateDirectory(aliasContainer);
             await Assert.That(Directory.Exists(physicalRoot)).IsTrue();
             var aliasCreationFailure = TryCreateDirectoryAlias(aliasRoot, physicalRoot);
+            aliasCreated = aliasCreationFailure is null;
+            if (aliasCreationFailure is not null)
+            {
+                Skip.Test(aliasCreationFailure);
+            }
+
             await Assert.That(aliasCreationFailure).IsNull();
-            aliasCreated = true;
             var resolvedAlias = new DirectoryInfo(aliasRoot).ResolveLinkTarget(returnFinalTarget: true)?.FullName;
             await Assert.That(resolvedAlias).IsEqualTo(physicalRoot);
 
@@ -230,7 +238,15 @@ public sealed class OwnedDemoDirectoryTests
             _ = Directory.CreateSymbolicLink(aliasRoot, physicalRoot);
             return null;
         }
-        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or PlatformNotSupportedException)
+        catch (UnauthorizedAccessException exception)
+        {
+            return $"{exception.GetType().Name}: {exception.Message}";
+        }
+        catch (PlatformNotSupportedException exception)
+        {
+            return $"{exception.GetType().Name}: {exception.Message}";
+        }
+        catch (IOException exception) when ((exception.HResult & 0xffff) == SymbolicLinkPrivilegeNotHeldErrorCode)
         {
             return $"{exception.GetType().Name}: {exception.Message}";
         }

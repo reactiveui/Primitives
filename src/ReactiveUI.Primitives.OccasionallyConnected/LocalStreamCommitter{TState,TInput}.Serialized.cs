@@ -4,7 +4,11 @@
 
 using System.Text;
 
+#if REACTIVE_SHIM
+namespace ReactiveUI.Primitives.OccasionallyConnected.Reactive;
+#else
 namespace ReactiveUI.Primitives.OccasionallyConnected;
+#endif
 
 /// <summary>Coordinates atomic local stream recovery and optimistic operation commits.</summary>
 /// <content>Commits caller-supplied serialized operations through the local projection path.</content>

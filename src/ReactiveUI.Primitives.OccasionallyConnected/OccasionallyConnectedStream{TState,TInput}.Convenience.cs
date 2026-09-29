@@ -4,7 +4,11 @@
 
 using System.Runtime.CompilerServices;
 
+#if REACTIVE_SHIM
+namespace ReactiveUI.Primitives.OccasionallyConnected.Reactive;
+#else
 namespace ReactiveUI.Primitives.OccasionallyConnected;
+#endif
 
 /// <content>Convenience publication and paired queue observation for a typed stream.</content>
 internal sealed partial class OccasionallyConnectedStream<TState, TInput>

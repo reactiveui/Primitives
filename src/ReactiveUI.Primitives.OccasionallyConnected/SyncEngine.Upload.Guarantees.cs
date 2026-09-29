@@ -5,7 +5,11 @@
 using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
 
+#if REACTIVE_SHIM
+namespace ReactiveUI.Primitives.OccasionallyConnected.Reactive;
+#else
 namespace ReactiveUI.Primitives.OccasionallyConnected;
+#endif
 
 /// <summary>Delivery-guarantee outcomes for the <see cref="SyncEngine"/> upload pump.</summary>
 internal sealed partial class SyncEngine

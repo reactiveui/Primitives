@@ -3,7 +3,7 @@
 // See the LICENSE file in the project root for full license information.
 
 // A file-based app (dotnet run OccasionallyConnectedPackageInspector.cs -- ...) used by
-// Test-OccasionallyConnectedPackages.ps1. It only uses the BCL (System.IO.Compression and
+// OccasionallyConnected.Ci's packages command. It only uses the BCL (System.IO.Compression and
 // System.Reflection.Metadata), so it adds no NuGet dependencies.
 //
 // Modes:

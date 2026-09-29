@@ -47,6 +47,9 @@ public sealed partial class CollaborationClientApplicationTests
     /// <summary>The offline status used by the first client.</summary>
     private const string OfflineStatus = "draft";
 
+    /// <summary>The Windows error code for a missing symbolic-link privilege.</summary>
+    private const int SymbolicLinkPrivilegeNotHeldErrorCode = 1314;
+
     /// <summary>The online status used by the second client.</summary>
     private const string OnlineStatus = "approved";
 
@@ -86,7 +89,23 @@ public sealed partial class CollaborationClientApplicationTests
         _ = Directory.CreateDirectory(physicalDirectory);
         try
         {
-            _ = Directory.CreateSymbolicLink(aliasDirectory, physicalDirectory);
+            try
+            {
+                _ = Directory.CreateSymbolicLink(aliasDirectory, physicalDirectory);
+            }
+            catch (UnauthorizedAccessException exception)
+            {
+                Skip.Test($"The current host cannot create directory symbolic links: {exception.Message}");
+            }
+            catch (PlatformNotSupportedException exception)
+            {
+                Skip.Test($"The current host does not support directory symbolic links: {exception.Message}");
+            }
+            catch (IOException exception) when ((exception.HResult & 0xffff) == SymbolicLinkPrivilegeNotHeldErrorCode)
+            {
+                Skip.Test($"The current host does not grant the privilege required for directory symbolic links: {exception.Message}");
+            }
+
             _ = Directory.CreateDirectory(Path.Combine(physicalDirectory, nestedDirectoryName));
             using var lease = new CollaborationClientDatabaseLease(Path.Combine(aliasDirectory, nestedDirectoryName));
 
