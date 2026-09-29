@@ -81,26 +81,24 @@ public sealed partial class ServerStreamHubTests
         await Assert.That(hasPage).IsFalse();
     }
 
-    /// <summary>Verifies enumerator disposal cancels and drains an active empty-poll move.</summary>
+    /// <summary>Verifies enumerator disposal cancels and drains an active move.</summary>
     /// <returns>A task that represents the asynchronous test.</returns>
     [Test]
     public async Task SubscribeStreamAsyncDisposeEnumeratorWaitsForPendingMoveNext()
     {
-        var timeProvider = new SignalingFixedTimeProvider(Start);
+        var policy = new BlockingSubscribePolicy();
         await using var hub = ServerStreamHub.CreateInMemory(
-            Options(new AllowPolicy(Tenant), new RecordingDomainHandler()) with
-            {
-                EmptyPollDelay = TimeSpan.FromMinutes(LongPollMinutes),
-                MaximumActiveSubscriptions = 1,
-                TimeProvider = timeProvider,
-            });
+            Options(policy, new RecordingDomainHandler()) with { MaximumActiveSubscriptions = 1 });
         var first = hub.SubscribeStreamAsync(new(Stream, SubscriptionId.New(), null, StartPosition.FromSequence(0)), new(Tenant, Client), CancellationToken.None);
         var firstEnumerator = first.GetAsyncEnumerator(CancellationToken.None);
         var pendingMove = firstEnumerator.MoveNextAsync().AsTask();
-        await timeProvider.WaitUntilTimerCreatedAsync();
+        await policy.WaitUntilStartedAsync();
 
         var dispose = firstEnumerator.DisposeAsync().AsTask();
+        await policy.WaitUntilCanceledAsync();
         await Assert.That(dispose.IsCompleted).IsFalse();
+        await Assert.That(pendingMove.IsCompleted).IsFalse();
+        policy.Release();
         var firstResult = await pendingMove;
         await dispose;
 
