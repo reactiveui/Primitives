@@ -22,7 +22,7 @@ public sealed partial class InMemoryLocalStoreAdapterTests
         var commit = Task.Run(async () => await CommitOperationAsync(store, Stream, SecondClientSequence, "second"));
         try
         {
-            await Assert.That(clock.Entered.Wait(TimeSpan.FromSeconds(TimeoutSeconds))).IsTrue();
+            await clock.Entered.Task.WaitAsync(TimeSpan.FromSeconds(TimeoutSeconds));
             var status = await Task.Run(async () => await store.GetOperationStatusAsync(operation.OperationId, CancellationToken.None))
                 .WaitAsync(TimeSpan.FromSeconds(TimeoutSeconds));
             await Assert.That(status?.OperationId).IsEqualTo(operation.OperationId);
@@ -108,7 +108,7 @@ public sealed partial class InMemoryLocalStoreAdapterTests
         private readonly ManualResetEventSlim _release = new();
 
         /// <summary>Gets the callback entry signal.</summary>
-        public ManualResetEventSlim Entered { get; } = new();
+        public TaskCompletionSource Entered { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
         /// <summary>Gets or sets whether the callback waits.</summary>
         public bool Block { get; set; }
@@ -118,7 +118,7 @@ public sealed partial class InMemoryLocalStoreAdapterTests
         {
             if (Block)
             {
-                Entered.Set();
+                _ = Entered.TrySetResult();
                 _release.Wait();
             }
 
@@ -130,10 +130,7 @@ public sealed partial class InMemoryLocalStoreAdapterTests
         public void Release() => _release.Set();
 
         /// <inheritdoc/>
-        public void Dispose()
-        {
-            Entered.Dispose();
-            _release.Dispose();
-        }
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void Dispose() => _release.Dispose();
     }
 }

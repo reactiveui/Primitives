@@ -109,18 +109,18 @@ public sealed partial class InMemoryLocalStoreAdapterTests
             CancellationToken.None);
         var lease = RequireBatch(await LeaseSingleBatchAsync(store, new(Stream, 1, DefaultLeaseBytes, TimeSpan.FromMinutes(1))));
         var result = new RemoteSyncResult(lease.LeaseId, [new(operation.OperationId, OperationResultKind.Rejected, ResultRejectedReason, null)], null, null);
-        using var entered = new ManualResetEventSlim();
+        var entered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         using var release = new ManualResetEventSlim();
         var mutations = new ResultMutationList(1, () =>
         {
-            entered.Set();
+            _ = entered.TrySetResult();
             release.Wait();
             return CreateSnapshotMutation(1, AuthoritativeInitialText);
         });
         var commit = Task.Run(async () => await store.ApplySyncResultAsync(lease.LeaseId, result, mutations, CancellationToken.None));
         try
         {
-            await Assert.That(entered.Wait(TimeSpan.FromSeconds(TimeoutSeconds))).IsTrue();
+            await entered.Task.WaitAsync(TimeSpan.FromSeconds(TimeoutSeconds));
             var status = await Task.Run(async () => await store.GetOperationStatusAsync(operation.OperationId, CancellationToken.None))
                 .WaitAsync(TimeSpan.FromSeconds(TimeoutSeconds));
             await Assert.That(status?.State).IsEqualTo(SyncOperationState.QueuedForUpload);

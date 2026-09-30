@@ -389,16 +389,16 @@ public sealed class OccasionallyConnectedContextTests
     public async Task StartAsyncDuringStopDrainWaitsForAcceptedStopCompletion()
     {
         var transport = new RecordingTransportAdapter();
-        using ManualResetEventSlim connectEntered = new();
+        TaskCompletionSource connectEntered = new(TaskCreationOptions.RunContinuationsAsynchronously);
         using ManualResetEventSlim releaseConnect = new();
-        using ManualResetEventSlim callbackEntered = new();
+        TaskCompletionSource callbackEntered = new(TaskCreationOptions.RunContinuationsAsynchronously);
         using ManualResetEventSlim releaseCallback = new();
         transport.OnConnect = token =>
         {
             _ = token.UnsafeRegister(
                 RunCancellationCallback,
                 new CancellationCallbackGate(callbackEntered, releaseCallback, GuardTimeout));
-            connectEntered.Set();
+            _ = connectEntered.TrySetResult();
             if (!releaseConnect.Wait(GuardTimeout, CancellationToken.None))
             {
                 throw new TimeoutException(ConnectReleaseTimeoutMessage);
@@ -410,9 +410,9 @@ public sealed class OccasionallyConnectedContextTests
         var blockedStart = StartContextOnDedicatedThread(context);
         try
         {
-            await Assert.That(connectEntered.Wait(GuardTimeout)).IsTrue();
+            await connectEntered.Task.WaitAsync(GuardTimeout);
             var stopTask = context.StopAsync(CancellationToken.None).AsTask();
-            await Assert.That(callbackEntered.Wait(GuardTimeout)).IsTrue();
+            await callbackEntered.Task.WaitAsync(GuardTimeout);
             var startTask = context.StartAsync(CancellationToken.None).AsTask();
             await Assert.That(startTask.IsCompleted).IsFalse();
 
@@ -437,9 +437,9 @@ public sealed class OccasionallyConnectedContextTests
     public async Task StopCancellationCallbacksDoNotHoldContextGate()
     {
         var transport = new RecordingTransportAdapter();
-        using ManualResetEventSlim connectEntered = new();
+        TaskCompletionSource connectEntered = new(TaskCreationOptions.RunContinuationsAsynchronously);
         using ManualResetEventSlim releaseConnect = new();
-        using ManualResetEventSlim callbackEntered = new();
+        TaskCompletionSource callbackEntered = new(TaskCreationOptions.RunContinuationsAsynchronously);
         using ManualResetEventSlim releaseCallback = new();
         using var callerCancellation = new CancellationTokenSource();
         transport.OnConnect = token =>
@@ -447,7 +447,7 @@ public sealed class OccasionallyConnectedContextTests
             _ = token.UnsafeRegister(
                 RunCancellationCallback,
                 new CancellationCallbackGate(callbackEntered, releaseCallback, GuardTimeout));
-            connectEntered.Set();
+            _ = connectEntered.TrySetResult();
             if (!releaseConnect.Wait(GuardTimeout, CancellationToken.None))
             {
                 throw new TimeoutException(ConnectReleaseTimeoutMessage);
@@ -460,9 +460,9 @@ public sealed class OccasionallyConnectedContextTests
             .Build();
         try
         {
-            await Assert.That(connectEntered.Wait(GuardTimeout)).IsTrue();
+            await connectEntered.Task.WaitAsync(GuardTimeout);
             var stopTask = context.StopAsync(callerCancellation.Token).AsTask();
-            await Assert.That(callbackEntered.Wait(GuardTimeout)).IsTrue();
+            await callbackEntered.Task.WaitAsync(GuardTimeout);
             await callerCancellation.CancelAsync();
             await Assert.That(async () => await stopTask).Throws<OperationCanceledException>();
 
@@ -493,9 +493,9 @@ public sealed class OccasionallyConnectedContextTests
         try
         {
             fixture.StartContext();
-            await Assert.That(fixture.ConnectEntered.Wait(GuardTimeout)).IsTrue();
+            await fixture.ConnectEntered.Task.WaitAsync(GuardTimeout);
             fixture.StopContext();
-            await Assert.That(fixture.CallbackEntered.Wait(GuardTimeout)).IsTrue();
+            await fixture.CallbackEntered.Task.WaitAsync(GuardTimeout);
             fixture.ReleaseConnect();
 
             await fixture.AssertStopReportsCallbackFailureAsync();
@@ -670,13 +670,13 @@ public sealed class OccasionallyConnectedContextTests
     /// <param name="entered">The signal set when the callback starts.</param>
     /// <param name="release">The signal that releases the callback.</param>
     /// <param name="timeout">The bounded wait timeout.</param>
-    private sealed class CancellationCallbackGate(ManualResetEventSlim entered, ManualResetEventSlim release, TimeSpan timeout)
+    private sealed class CancellationCallbackGate(TaskCompletionSource entered, ManualResetEventSlim release, TimeSpan timeout)
     {
         /// <summary>Runs the blocking callback.</summary>
         /// <exception cref="TimeoutException">The test did not release the callback.</exception>
         public void Run()
         {
-            entered.Set();
+            _ = entered.TrySetResult();
             if (!release.Wait(timeout))
             {
                 throw new TimeoutException("The test did not release the cancellation callback.");
@@ -710,10 +710,10 @@ public sealed class OccasionallyConnectedContextTests
         }
 
         /// <summary>Gets the connect entry signal.</summary>
-        public ManualResetEventSlim ConnectEntered { get; } = new();
+        public TaskCompletionSource ConnectEntered { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
         /// <summary>Gets the callback entry signal.</summary>
-        public ManualResetEventSlim CallbackEntered { get; } = new();
+        public TaskCompletionSource CallbackEntered { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
         /// <summary>Gets the transport adapter.</summary>
         public RecordingTransportAdapter Transport { get; } = new();
@@ -787,8 +787,6 @@ public sealed class OccasionallyConnectedContextTests
                 }
                 finally
                 {
-                    ConnectEntered.Dispose();
-                    CallbackEntered.Dispose();
                     _releaseConnect.Dispose();
                 }
             }
@@ -804,7 +802,7 @@ public sealed class OccasionallyConnectedContextTests
             _ = token.UnsafeRegister(
                 RunThrowingCancellationCallback,
                 new ThrowingCancellationCallbackGate(CallbackEntered, _callbackFailure));
-            ConnectEntered.Set();
+            _ = ConnectEntered.TrySetResult();
             if (!_releaseConnect.Wait(GuardTimeout, CancellationToken.None))
             {
                 throw new TimeoutException(ConnectReleaseTimeoutMessage);
@@ -818,13 +816,13 @@ public sealed class OccasionallyConnectedContextTests
     /// <summary>Signals and throws a named cancellation callback failure.</summary>
     /// <param name="entered">The callback entry signal.</param>
     /// <param name="failure">The original failure to throw.</param>
-    private sealed class ThrowingCancellationCallbackGate(ManualResetEventSlim entered, Exception failure)
+    private sealed class ThrowingCancellationCallbackGate(TaskCompletionSource entered, Exception failure)
     {
         /// <summary>Signals callback entry and throws the original failure.</summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Run()
         {
-            entered.Set();
+            _ = entered.TrySetResult();
             throw failure;
         }
     }

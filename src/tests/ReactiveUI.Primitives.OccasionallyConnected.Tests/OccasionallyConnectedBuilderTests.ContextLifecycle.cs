@@ -17,12 +17,12 @@ public sealed partial class OccasionallyConnectedBuilderTests
     {
         await using var store = new RecordingStoreAdapter();
         await using var transport = new RecordingTransportAdapter();
-        using ManualResetEventSlim recoverEntered = new();
+        TaskCompletionSource recoverEntered = new(TaskCreationOptions.RunContinuationsAsynchronously);
         using ManualResetEventSlim releaseRecover = new();
         var failure = new InvalidOperationException("recover failed");
         store.BeforeRecover = () =>
         {
-            recoverEntered.Set();
+            _ = recoverEntered.TrySetResult();
             if (!releaseRecover.Wait(GuardTimeout))
             {
                 throw new TimeoutException("The test did not release stream recovery.");
@@ -34,7 +34,7 @@ public sealed partial class OccasionallyConnectedBuilderTests
         await context.StartAsync(CancellationToken.None);
 
         var stream = context.GetOrCreateStream(CreateDefinition());
-        await Assert.That(recoverEntered.Wait(GuardTimeout)).IsTrue();
+        await recoverEntered.Task.WaitAsync(GuardTimeout);
         var faults = new FaultObserver();
         using var faultSubscription = stream.Faults.Subscribe(faults);
         releaseRecover.Set();

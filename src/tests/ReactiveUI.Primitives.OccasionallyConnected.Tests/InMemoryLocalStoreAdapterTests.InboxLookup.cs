@@ -48,18 +48,18 @@ public sealed partial class InMemoryLocalStoreAdapterTests
         const int TimeoutSeconds = 5;
         await using var store = new InMemoryLocalStoreAdapter(recordCapacity, byteCapacity);
         await store.InitializeAsync(new(StoreIdentity, SchemaVersion, false), CancellationToken.None);
-        using var entered = new ManualResetEventSlim();
+        var entered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         using var release = new ManualResetEventSlim();
         Action blockCapture = () =>
         {
-            entered.Set();
+            _ = entered.TrySetResult();
             release.Wait();
         };
         var candidates = new ChangingEventIdList(1, false) { OnRead = blockCapture };
         var lookup = Task.Run(async () => await store.GetUnappliedEventIdsAsync(Stream, candidates, CancellationToken.None));
         try
         {
-            await Assert.That(entered.Wait(TimeSpan.FromSeconds(TimeoutSeconds))).IsTrue();
+            await entered.Task.WaitAsync(TimeSpan.FromSeconds(TimeoutSeconds));
             var status = await Task.Run(async () => await store.GetOperationStatusAsync(OperationId.New(), CancellationToken.None))
                 .WaitAsync(TimeSpan.FromSeconds(TimeoutSeconds));
             await Assert.That(status).IsNull();
