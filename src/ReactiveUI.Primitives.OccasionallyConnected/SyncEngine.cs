@@ -388,7 +388,12 @@ internal sealed partial class SyncEngine : ISyncEngine, IOccasionallyConnectedSt
                 throw new InvalidOperationException("A synchronization participant is already registered for the stream.");
             }
 
-            var registration = new ParticipantRegistration(this, participant, startRemoteActive);
+            var requiresStartupPreparation = participant is IEngineStartupParticipant { InitializeOnEngineStart: true };
+            var registration = new ParticipantRegistration(
+                this,
+                participant,
+                remoteActive: startRemoteActive && !requiresStartupPreparation,
+                activateOnEngineStart: requiresStartupPreparation);
             _participants.Add(participant.StreamId, registration);
             _capacitySignals.Add(participant.StreamId, new(_capacityWaiterBudget));
             _scheduler.Register(new(participant.StreamId, Weight: 1));

@@ -72,6 +72,9 @@ internal sealed record OccasionallyConnectedStreamOptions<TState, TInput>
     /// <summary>Gets the inclusive maximum operation priority.</summary>
     public int MaximumPriority { get; init; } = OperationPolicy.MaximumPriority;
 
+    /// <summary>Gets whether direct engine startup initializes and activates this stream.</summary>
+    internal bool InitializeOnEngineStart { get; init; } = true;
+
     /// <summary>Validates the option set.</summary>
     /// <exception cref="InvalidOperationException">The option set is malformed.</exception>
     internal void Validate()

@@ -96,6 +96,16 @@ internal static class SqliteLocalCommitConnection
     /// <param name="connection">The connection.</param>
     internal static void ConfigureLockPolling(SqliteConnection connection) => connection.DefaultTimeout = 1;
 
+    /// <summary>Applies verified durability settings after ownership validation, retrying only lock contention.</summary>
+    /// <param name="connection">The validated SQLite connection.</param>
+    /// <param name="cancellationToken">The token used to cancel lock waits.</param>
+    /// <exception cref="OperationCanceledException">The durability wait is canceled.</exception>
+    /// <exception cref="SqliteException">SQLite rejects the durability settings for a reason other than lock contention.</exception>
+    /// <exception cref="TimeoutException">A writer holds the database past the bounded retry period.</exception>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    internal static void ConfigureDurabilityAfterOwnershipValidation(SqliteConnection connection, CancellationToken cancellationToken) =>
+        RetryWhileBusyOrLocked(() => SqliteConnectionSettings.ConfigureDurability(connection), cancellationToken);
+
     /// <summary>Begins a write transaction, observing cancellation between lock attempts.</summary>
     /// <param name="connection">The connection.</param>
     /// <param name="cancellationToken">The cancellation token.</param>
@@ -178,4 +188,34 @@ internal static class SqliteLocalCommitConnection
     /// <param name="exception">The exception.</param>
     /// <returns>Whether the exception is retryable lock contention.</returns>
     internal static bool IsBusyOrLocked(SqliteException exception) => exception.SqliteErrorCode == SqliteBusy || exception.SqliteErrorCode == SqliteLocked;
+
+    /// <summary>Runs an operation while observing cancellation between bounded SQLite lock retries.</summary>
+    /// <param name="operation">The operation that can report SQLite lock contention.</param>
+    /// <param name="cancellationToken">The token used to cancel lock waits.</param>
+    /// <exception cref="OperationCanceledException">The operation wait is canceled.</exception>
+    /// <exception cref="SqliteException">SQLite rejects the operation for a reason other than lock contention.</exception>
+    /// <exception cref="TimeoutException">A writer holds the database past the bounded retry period.</exception>
+    private static void RetryWhileBusyOrLocked(Action operation, CancellationToken cancellationToken)
+    {
+        var startTimestamp = Stopwatch.GetTimestamp();
+        while (true)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            try
+            {
+                operation();
+                return;
+            }
+            catch (SqliteException exception) when (IsBusyOrLocked(exception))
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                if (GetElapsedSince(startTimestamp) >= WriterTotalTimeout)
+                {
+                    throw new TimeoutException("Timed out waiting for the SQLite writer lock.", exception);
+                }
+
+                _ = cancellationToken.WaitHandle.WaitOne(WriterRetryDelay);
+            }
+        }
+    }
 }

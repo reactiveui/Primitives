@@ -58,6 +58,7 @@ internal sealed partial class SyncEngine
     private async ValueTask StartWithCancellationAsync(StartupCancellationOwner cancellation)
     {
         await EnsureStoreInitializedAsync(CancellationToken.None).ConfigureAwait(false);
+        await PrepareParticipantsForEngineStartAsync().ConfigureAwait(false);
         var requiredGuarantees = await GetRequiredTransportGuaranteesAsync(cancellation.Token).ConfigureAwait(false);
         IRemoteTransportSession session;
         try
@@ -78,6 +79,75 @@ internal sealed partial class SyncEngine
         }
 
         StartSessionPumps(uploadCancellation);
+    }
+
+    /// <summary>Initializes and activates typed participants before startup exposes remote receive or upload work.</summary>
+    /// <returns>The participant preparation operation.</returns>
+    private async ValueTask PrepareParticipantsForEngineStartAsync()
+    {
+        var registrations = CaptureParticipantsPendingEngineStart();
+        if (registrations is null)
+        {
+            return;
+        }
+
+        for (var i = 0; i < registrations.Count; i++)
+        {
+            if (registrations[i].Participant is IEngineStartupParticipant participant)
+            {
+                await participant.InitializeForEngineStartAsync().ConfigureAwait(false);
+            }
+        }
+
+        ActivatePreparedParticipants(registrations);
+    }
+
+    /// <summary>Captures participants that need initialization before global startup activates remote work.</summary>
+    /// <returns>The pending participant registrations, or null when none need preparation.</returns>
+    private List<ParticipantRegistration>? CaptureParticipantsPendingEngineStart()
+    {
+        List<ParticipantRegistration>? registrations = null;
+        lock (_gate)
+        {
+            foreach (var registration in _participants.Values)
+            {
+                if (registration.ActivateOnEngineStart
+                    && registration.Participant is IEngineStartupParticipant { InitializeOnEngineStart: true })
+                {
+                    (registrations ??= []).Add(registration);
+                }
+            }
+        }
+
+        return registrations;
+    }
+
+    /// <summary>Activates initialized participants while the engine gate is held.</summary>
+    /// <param name="registrations">The registrations prepared for this startup generation.</param>
+    private void ActivatePreparedParticipants(List<ParticipantRegistration> registrations)
+    {
+        lock (_gate)
+        {
+            if (_admissionState is EngineAdmissionState.Stopping or EngineAdmissionState.Disposed)
+            {
+                return;
+            }
+
+            for (var i = 0; i < registrations.Count; i++)
+            {
+                var registration = registrations[i];
+                if (!_participants.TryGetValue(registration.Participant.StreamId, out var current)
+                    || !ReferenceEquals(current, registration)
+                    || !registration.ActivateOnEngineStart)
+                {
+                    continue;
+                }
+
+                registration.RemoteActive = true;
+                registration.ActivateOnEngineStart = false;
+                ScheduleDeferredUploadHeadLocked(registration.Participant.StreamId);
+            }
+        }
     }
 
     /// <summary>Starts upload and receive pumps for a newly published session and reports the online state.</summary>

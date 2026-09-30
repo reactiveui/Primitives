@@ -89,7 +89,7 @@ internal sealed class ServerCommitSnapshot
     private static ReadOnlyCollection<ServerLedgerEntry> Copy(IReadOnlyList<ServerLedgerEntry> source)
     {
         var count = source.Count;
-        if (count < 0)
+        if ((uint)count > int.MaxValue)
         {
             throw new ArgumentOutOfRangeException(nameof(source), count, "The snapshot entry count is outside the supported bounds.");
         }

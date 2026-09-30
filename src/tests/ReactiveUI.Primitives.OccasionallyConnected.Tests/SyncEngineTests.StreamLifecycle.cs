@@ -54,6 +54,53 @@ public sealed partial class SyncEngineTests
         await engine.StopAsync(CancellationToken.None);
     }
 
+    /// <summary>Verifies global engine startup initializes and activates a typed stream without a separate stream start call.</summary>
+    /// <returns>The assertion task.</returns>
+    [Test]
+    public async Task EngineStartInitializesAndActivatesTypedStream()
+    {
+        var clock = new ManualTimerTimeProvider(DateTimeOffset.UnixEpoch);
+        var store = CreateDiagnosticsMemoryStore(clock);
+        var session = new ReceiveSession();
+        var transport = new RecordingTransport { SessionOverride = session };
+        await using var engine = CreateEngine(store, transport, timeProvider: clock);
+        await using var stream = CreateReceiveCounterStream(store, engine, new(), clock, workCapacity: ExpectedSingleOperation);
+
+        await engine.StartAsync(CancellationToken.None);
+        await session.SubscribeEntered.Task.WaitAsync(GuardTimeout);
+
+        await Assert.That(stream.SubscriptionId).IsEqualTo(Subscription);
+        await Assert.That(session.SubscribeRequests.Count).IsEqualTo(ExpectedSingleOperation);
+        await Assert.That(session.SubscribeRequests[0].SubscriptionId).IsEqualTo(Subscription);
+
+        await engine.StopAsync(CancellationToken.None);
+    }
+
+    /// <summary>Verifies a typed stream explicitly stopped before engine startup stays parked until it starts again.</summary>
+    /// <returns>The assertion task.</returns>
+    [Test]
+    public async Task TypedStreamStopBeforeEngineStartRemainsParkedUntilTypedStart()
+    {
+        var clock = new ManualTimerTimeProvider(DateTimeOffset.UnixEpoch);
+        var store = CreateDiagnosticsMemoryStore(clock);
+        var session = new ReceiveSession();
+        var transport = new RecordingTransport { SessionOverride = session };
+        await using var engine = CreateEngine(store, transport, timeProvider: clock);
+        await using var stream = CreateReceiveCounterStream(store, engine, new(), clock);
+
+        await stream.StopAsync(CancellationToken.None);
+        await engine.StartAsync(CancellationToken.None);
+
+        await Assert.That(session.SubscribeEntered.Task.IsCompleted).IsFalse();
+        await Assert.That(session.SubscribeRequests.Count).IsEqualTo(0);
+
+        await stream.StartAsync(CancellationToken.None);
+        await session.SubscribeEntered.Task.WaitAsync(GuardTimeout);
+        await Assert.That(session.SubscribeRequests.Count).IsEqualTo(ExpectedSingleOperation);
+
+        await engine.StopAsync(CancellationToken.None);
+    }
+
     /// <summary>Verifies a stream stopped before the global engine starts stays parked until the stream is explicitly resumed.</summary>
     /// <returns>The assertion task.</returns>
     [Test]

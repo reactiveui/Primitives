@@ -193,7 +193,7 @@ internal sealed partial class SqliteLocalCommitStore : IDisposable
                 },
                 static () => Thread.Sleep(RecoveryOpenRetryMilliseconds),
                 cancellationToken);
-            SqliteConnectionSettings.ConfigureDurability(connection);
+            SqliteLocalCommitConnection.ConfigureDurabilityAfterOwnershipValidation(connection, cancellationToken);
             using var transaction = SqliteLocalCommitConnection.BeginWriteTransaction(connection, cancellationToken);
             var userVersion = SqliteLocalCommitConnection.GetUserVersion(connection, transaction);
             InitializeSchema(connection, transaction, userVersion);

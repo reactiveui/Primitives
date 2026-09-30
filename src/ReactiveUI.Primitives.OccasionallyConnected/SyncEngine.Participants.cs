@@ -50,6 +50,9 @@ internal sealed partial class SyncEngine
                 registration.RemoteActive = true;
             }
 
+            registration.ActivateOnEngineStart = false;
+            registration.ExplicitlyStopped = false;
+
             ScheduleDeferredUploadHeadLocked(streamId);
             previousCancellation = StartReceivePumpForRegistrationLocked(registration);
         }
@@ -115,6 +118,8 @@ internal sealed partial class SyncEngine
     {
         registration = GetParticipantLocked(streamId);
         cancellationCompletion = null;
+        registration.ActivateOnEngineStart = false;
+        registration.ExplicitlyStopped = true;
         if (!registration.RemoteActive)
         {
             receiveCancellation = null;

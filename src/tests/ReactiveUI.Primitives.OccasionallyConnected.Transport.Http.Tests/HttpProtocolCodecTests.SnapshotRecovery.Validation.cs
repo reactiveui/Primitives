@@ -173,6 +173,23 @@ public sealed partial class HttpProtocolCodecTests
         await Assert.That(decoded.ReasonCode).IsNull();
     }
 
+    /// <summary>Verifies a non-recovered response rejects dispositions even when their JSON shape is valid.</summary>
+    /// <returns>The asynchronous test operation.</returns>
+    [Test]
+    public async Task DeserializeSnapshotRecoveryResponseRejectsNonRecoveredDispositionsBeforeMaterialization()
+    {
+        var codec = CreateCodec();
+        var request = CreateSnapshotRecoveryCodecRequest([CreateSnapshotRecoveryOperation()]);
+        var json = ReplaceRequiredSnapshotJsonFragment(
+            SnapshotRecoveryNonRecoveredResponseJson(1),
+            SnapshotEmptyOperationDispositionsJson,
+            $"\"operationDispositions\":[{{\"operationId\":\"{SnapshotFirstOperationIdText}\",\"kind\":2}}]");
+
+        var exception = CaptureHttpException(() => codec.DeserializeSnapshotRecoveryResponse(request, Encode(json)));
+
+        await Assert.That(exception.Kind).IsEqualTo(HttpTransportFailureKind.ValidationRejected);
+    }
+
     /// <summary>Verifies empty base64 payloads are counted without forcing operation materialization failure.</summary>
     /// <returns>The asynchronous test operation.</returns>
     [Test]

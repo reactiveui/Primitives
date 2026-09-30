@@ -284,6 +284,7 @@ public sealed class OccasionallyConnectedContext : IOccasionallyConnectedContext
             TimeProvider = _options.TimeProvider,
             OperationIdSource = _options.OperationIdSource,
             Coordinator = _options.Engine,
+            InitializeOnEngineStart = false,
             LocalStateSnapshotFactory = DeserializeStateAsync<TState>,
             RemoteInputSnapshotFactory = DeserializeInputAsync<TInput>,
             NotificationScheduler = _options.NotificationScheduler,

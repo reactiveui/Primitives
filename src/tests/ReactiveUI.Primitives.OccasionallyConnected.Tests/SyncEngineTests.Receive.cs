@@ -810,12 +810,14 @@ public sealed partial class SyncEngineTests
     /// <param name="coordinator">The engine coordinator.</param>
     /// <param name="projection">The projection under observation.</param>
     /// <param name="timeProvider">The test clock.</param>
+    /// <param name="workCapacity">The maximum serialized stream work items.</param>
     /// <returns>The constructed stream participant.</returns>
     private static OccasionallyConnectedStream<ReceiveCounterState, ReceiveCounterInput> CreateReceiveCounterStream(
         ILocalStoreAdapter store,
         IOccasionallyConnectedStreamCoordinator coordinator,
         ReceiveCounterProjection projection,
-        TimeProvider timeProvider)
+        TimeProvider timeProvider,
+        int workCapacity = ExpectedCapacityCommitAttempts)
     {
         var serializer = new ReceiveCounterSerializer();
         return new(new()
@@ -839,7 +841,7 @@ public sealed partial class SyncEngineTests
             RemoteInputSnapshotFactory = static (payload, _) => new(ReceiveCounterSerializer.CreateInput(payload)),
             NotificationScheduler = InlineObserverScheduler.Instance,
             NotificationOptions = new(ReceiveReplayNotificationCapacity, ReceiveReplayNotificationBytes, ObserverNotificationOverflowMode.CoalesceLatest),
-            WorkCapacity = ExpectedCapacityCommitAttempts,
+            WorkCapacity = workCapacity,
             LocalAdmissionRetainedBytes = PreparedUploadBytes,
             ClientId = "client",
         });

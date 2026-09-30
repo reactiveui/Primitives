@@ -300,6 +300,20 @@ public sealed class WebSocketRemoteTransportAdapterTests
             .ThrowsExactly<ObjectDisposedException>();
     }
 
+    /// <summary>Verifies the test peer accepts the client's close frame as normal connection shutdown.</summary>
+    /// <returns>A task that represents the asynchronous test.</returns>
+    [Test]
+    public async Task TestPeerStopsWhenClientSendsCloseFrame()
+    {
+        await using var peer = await TestPeer.StartAsync(static (_, _) => Task.CompletedTask);
+        using var socket = new ClientWebSocket();
+        await socket.ConnectAsync(peer.Endpoint, CancellationToken.None);
+        await socket.CloseOutputAsync(WebSocketCloseStatus.NormalClosure, null, CancellationToken.None);
+        await peer.Completion.WaitAsync(SubscriptionResponseTimeout);
+
+        await Assert.That(peer.Completion.IsCompletedSuccessfully).IsTrue();
+    }
+
     /// <summary>Verifies a process crash after server application can safely retry the same WebSocket operation.</summary>
     /// <returns>A task that represents the asynchronous test.</returns>
     /// <exception cref="InvalidOperationException">The crash child does not reach the server within the timeout.</exception>
@@ -522,6 +536,9 @@ public sealed class WebSocketRemoteTransportAdapterTests
         /// <summary>Gets the most recent message type received by the peer.</summary>
         internal string? LastMessageType => _messageTypes.LastOrDefault();
 
+        /// <summary>Gets the task that completes when the peer stops accepting the client connection.</summary>
+        internal Task Completion => _acceptTask;
+
         /// <inheritdoc />
         public async ValueTask DisposeAsync()
         {
@@ -550,16 +567,22 @@ public sealed class WebSocketRemoteTransportAdapterTests
 
         /// <summary>Reads one protocol frame and records it with the request handler.</summary>
         /// <param name="socket">The connected socket.</param>
+        /// <param name="cancellationToken">The token that stops the peer.</param>
         /// <returns>The received protocol frame.</returns>
-        private static async Task<WebSocketProtocol.Frame> ReceiveAsync(WebSocket socket)
+        private static async Task<WebSocketProtocol.Frame?> ReceiveAsync(WebSocket socket, CancellationToken cancellationToken)
         {
             var buffer = new byte[16_384];
             await using var message = new MemoryStream();
             WebSocketReceiveResult result;
             do
             {
-                result = await socket.ReceiveAsync(buffer, CancellationToken.None).ConfigureAwait(false);
-                await message.WriteAsync(buffer.AsMemory(0, result.Count), CancellationToken.None).ConfigureAwait(false);
+                result = await socket.ReceiveAsync(buffer, cancellationToken).ConfigureAwait(false);
+                if (result.MessageType == WebSocketMessageType.Close)
+                {
+                    return null;
+                }
+
+                await message.WriteAsync(buffer.AsMemory(0, result.Count), cancellationToken).ConfigureAwait(false);
             }
             while (!result.EndOfMessage);
             return WebSocketProtocol.Parse(message.ToArray(), TestMaximumPayloadBytes);
@@ -575,7 +598,12 @@ public sealed class WebSocketRemoteTransportAdapterTests
                 var webSocket = (await context.AcceptWebSocketAsync(null).ConfigureAwait(false)).WebSocket;
                 while (!_shutdown.IsCancellationRequested && webSocket.State == WebSocketState.Open)
                 {
-                    var frame = await ReceiveAsync(webSocket).ConfigureAwait(false);
+                    var frame = await ReceiveAsync(webSocket, _shutdown.Token).ConfigureAwait(false);
+                    if (frame is null)
+                    {
+                        return;
+                    }
+
                     _messageTypes.Add(frame.MessageType);
                     await _handler(webSocket, frame).ConfigureAwait(false);
                 }
@@ -587,6 +615,9 @@ public sealed class WebSocketRemoteTransportAdapterTests
             {
             }
             catch (WebSocketException)
+            {
+            }
+            catch (OperationCanceledException) when (_shutdown.IsCancellationRequested)
             {
             }
         }

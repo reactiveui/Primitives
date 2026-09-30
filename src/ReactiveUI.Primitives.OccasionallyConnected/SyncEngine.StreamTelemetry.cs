@@ -36,8 +36,10 @@ internal sealed partial class SyncEngine
     private SyncState CreateStreamSyncStateLocked(StreamId streamId, ParticipantRegistration registration)
     {
         _ = _queueDiagnosticSnapshots.TryGetValue(streamId, out var queue);
-        var status = registration.RemoteActive ? _diagnosticLifecycleStatus : SyncLifecycleStatus.Stopped;
-        var networkAvailable = registration.RemoteActive && _diagnosticNetworkAvailable;
+        var remoteActive = registration.RemoteActive
+            || (registration.Participant is IEngineStartupParticipant && !registration.ExplicitlyStopped);
+        var status = remoteActive ? _diagnosticLifecycleStatus : SyncLifecycleStatus.Stopped;
+        var networkAvailable = remoteActive && _diagnosticNetworkAvailable;
         return CreateSyncState(status, networkAvailable, queue.PendingOperations, queue.PendingBytes);
     }
 

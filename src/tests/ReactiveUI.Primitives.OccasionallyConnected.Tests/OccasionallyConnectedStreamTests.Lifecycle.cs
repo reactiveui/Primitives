@@ -96,7 +96,12 @@ public sealed partial class OccasionallyConnectedStreamTests
         await Assert.That(faults.Values).Count().IsEqualTo(1);
         await Assert.That(faults.Values[0].Code).IsEqualTo("OC.Stream.Lifecycle");
         await Assert.That(coordinator.StopCalls).IsEqualTo(1);
-        await Assert.That(() => stream.SubscriptionId).ThrowsExactly<InvalidOperationException>();
+        var subscriptionId = stream.SubscriptionId;
+        await Assert.That(subscriptionId.Value).IsNotEqualTo(Guid.Empty);
+
+        coordinator.ThrowOnStart = false;
+        await stream.StartAsync(CancellationToken.None);
+        await Assert.That(stream.SubscriptionId).IsEqualTo(subscriptionId);
     }
 
     /// <summary>Verifies canceled publish admission does not commit the input.</summary>

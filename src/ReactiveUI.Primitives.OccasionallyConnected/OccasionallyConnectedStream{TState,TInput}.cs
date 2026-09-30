@@ -16,6 +16,7 @@ namespace ReactiveUI.Primitives.OccasionallyConnected;
 internal sealed partial class OccasionallyConnectedStream<TState, TInput> :
     IOccasionallyConnectedStream<TState, TInput>,
     IOccasionallyConnectedStreamParticipant,
+    IEngineStartupParticipant,
     IOccasionallyConnectedStreamDiagnosticsSink,
     IReportsSavedLocalCommitDiagnostics,
     IOccasionallyConnectedSerializedInputPublisher,
@@ -87,6 +88,9 @@ internal sealed partial class OccasionallyConnectedStream<TState, TInput> :
     /// <summary>Tracks a pending remote stop request that does not require typed initialization.</summary>
     private bool _stopRequested;
 
+    /// <summary>Tracks whether a direct engine start should activate this stream.</summary>
+    private bool _initializeOnEngineStart;
+
     /// <summary>Tracks whether the stream has been disposed.</summary>
     private bool _disposed;
 
@@ -100,6 +104,7 @@ internal sealed partial class OccasionallyConnectedStream<TState, TInput> :
         ArgumentExceptionHelper.ThrowIfNull(options);
         options.Validate();
         _options = options;
+        _initializeOnEngineStart = options.InitializeOnEngineStart;
         _subscriptionId = GetPreferredSubscriptionId(options.Definition);
         _workLane = new(options.WorkCapacity);
         _faults = new(options.NotificationScheduler);
@@ -200,6 +205,23 @@ internal sealed partial class OccasionallyConnectedStream<TState, TInput> :
         var committer = await EnsureInitializedCoreAsync(cancellationToken).ConfigureAwait(false);
         var current = committer.Current;
         return new(StreamId, current.SubscriptionId, current.ServerCursor, subscription.StartPosition, subscription.DeliveryGuarantee);
+    }
+
+    /// <inheritdoc />
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    ValueTask IEngineStartupParticipant.InitializeForEngineStartAsync() =>
+        new((Task)_workLane.EnqueueAsync(token => EnsureInitializedCoreAsync(token), CancellationToken.None));
+
+    /// <inheritdoc />
+    bool IEngineStartupParticipant.InitializeOnEngineStart
+    {
+        get
+        {
+            lock (_gate)
+            {
+                return _initializeOnEngineStart;
+            }
+        }
     }
 
     /// <inheritdoc/>

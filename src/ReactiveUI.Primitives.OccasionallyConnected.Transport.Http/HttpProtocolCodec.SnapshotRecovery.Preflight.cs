@@ -18,6 +18,9 @@ internal sealed partial class HttpProtocolCodec
     /// <summary>The snapshot format version property name.</summary>
     private const string SnapshotFormatVersionPropertyName = "snapshotFormatVersion";
 
+    /// <summary>The snapshot recovery status property name.</summary>
+    private const string SnapshotStatusPropertyName = "status";
+
     /// <summary>Reads a validated snapshot JSON string with sanitized malformed escape handling.</summary>
     /// <param name="element">The JSON string element.</param>
     /// <returns>The decoded JSON string.</returns>
@@ -701,7 +704,6 @@ internal sealed partial class HttpProtocolCodec
     /// <exception cref="HttpRemoteTransportException"><paramref name="element"/> is not bound to <paramref name="request"/>.</exception>
     private void ValidateSnapshotRecoveryResponseElement(RemoteSnapshotRecoveryRequest request, JsonElement element)
     {
-        var status = -1;
         var logicalBytes = 0L;
         var checkpointLogicalBytes = 0L;
         var hasCheckpoint = false;
@@ -709,17 +711,17 @@ internal sealed partial class HttpProtocolCodec
         var dispositionsLogicalBytes = 0L;
         ValidateObject(
             element,
-            ["status", "operationDispositions"],
+            [SnapshotStatusPropertyName, "operationDispositions"],
             ["checkpoint", "reasonCode"],
             property => logicalBytes = checked(logicalBytes + CountSnapshotRecoveryResponseProperty(
                 request,
                 property,
-                ref status,
                 ref hasCheckpoint,
                 ref checkpointLogicalBytes,
                 ref dispositionCount,
                 ref dispositionsLogicalBytes)));
 
+        var status = ReadSnapshotInt32Element(element.GetProperty(SnapshotStatusPropertyName));
         if (status != 0)
         {
             if (hasCheckpoint || dispositionCount != 0)
@@ -746,7 +748,6 @@ internal sealed partial class HttpProtocolCodec
     /// <summary>Counts one snapshot recovery response JSON property before DTO materialization.</summary>
     /// <param name="request">The request binding.</param>
     /// <param name="property">The response property.</param>
-    /// <param name="status">The decoded status.</param>
     /// <param name="hasCheckpoint">Whether a checkpoint was present.</param>
     /// <param name="checkpointLogicalBytes">The checkpoint logical bytes.</param>
     /// <param name="dispositionCount">The disposition count.</param>
@@ -755,16 +756,15 @@ internal sealed partial class HttpProtocolCodec
     private long CountSnapshotRecoveryResponseProperty(
         RemoteSnapshotRecoveryRequest request,
         JsonProperty property,
-        ref int status,
         ref bool hasCheckpoint,
         ref long checkpointLogicalBytes,
         ref int dispositionCount,
         ref long dispositionsLogicalBytes)
     {
         var propertyName = ReadJsonPropertyName(property);
-        if (StringComparer.Ordinal.Equals(propertyName, "status"))
+        if (StringComparer.Ordinal.Equals(propertyName, SnapshotStatusPropertyName))
         {
-            status = ReadSnapshotInt32Element(property.Value);
+            _ = ReadSnapshotInt32Element(property.Value);
             return SnapshotInt32LogicalBytes;
         }
 
