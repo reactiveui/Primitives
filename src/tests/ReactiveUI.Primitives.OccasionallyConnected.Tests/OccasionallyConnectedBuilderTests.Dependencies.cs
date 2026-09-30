@@ -36,6 +36,9 @@ public sealed partial class OccasionallyConnectedBuilderTests
         /// <summary>Gets or sets a token-aware callback invoked before stream recovery delegates to the store.</summary>
         public Action<CancellationToken> BeforeRecoverWithToken { get; set; } = static _ => { };
 
+        /// <summary>Gets or sets an asynchronous callback invoked before stream recovery delegates to the store.</summary>
+        public Func<CancellationToken, ValueTask>? BeforeRecoverAsync { get; set; }
+
         /// <summary>Gets or sets a callback invoked before a durable operation status is read.</summary>
         public Action<SyncOperationStatus?> AfterGetOperationStatus { get; set; } = static _ => { };
 
@@ -68,7 +71,9 @@ public sealed partial class OccasionallyConnectedBuilderTests
         {
             BeforeRecover();
             BeforeRecoverWithToken(cancellationToken);
-            return _inner.RecoverStreamAsync(streamId, subscriptionId, cancellationToken);
+            return BeforeRecoverAsync is { } callback
+                ? RecoverAfterCallbackAsync(callback, streamId, subscriptionId, cancellationToken)
+                : _inner.RecoverStreamAsync(streamId, subscriptionId, cancellationToken);
         }
 
         /// <inheritdoc />
@@ -178,6 +183,22 @@ public sealed partial class OccasionallyConnectedBuilderTests
         {
             DisposeCalls++;
             await _inner.DisposeAsync().ConfigureAwait(false);
+        }
+
+        /// <summary>Awaits the recovery callback before delegating to the store.</summary>
+        /// <param name="callback">The asynchronous recovery callback.</param>
+        /// <param name="streamId">The stream identifier.</param>
+        /// <param name="subscriptionId">The subscription identifier.</param>
+        /// <param name="cancellationToken">The recovery cancellation token.</param>
+        /// <returns>The recovered stream.</returns>
+        private async ValueTask<RecoveredStream> RecoverAfterCallbackAsync(
+            Func<CancellationToken, ValueTask> callback,
+            StreamId streamId,
+            SubscriptionId subscriptionId,
+            CancellationToken cancellationToken)
+        {
+            await callback(cancellationToken).ConfigureAwait(false);
+            return await _inner.RecoverStreamAsync(streamId, subscriptionId, cancellationToken).ConfigureAwait(false);
         }
     }
 

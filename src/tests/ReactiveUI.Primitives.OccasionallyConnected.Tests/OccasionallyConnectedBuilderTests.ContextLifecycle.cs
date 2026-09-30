@@ -10,6 +10,32 @@ namespace ReactiveUI.Primitives.OccasionallyConnected.Tests;
 /// <content>Context lifecycle failure tests for <see cref="OccasionallyConnectedBuilder"/>.</content>
 public sealed partial class OccasionallyConnectedBuilderTests
 {
+    /// <summary>Verifies asynchronous recovery yields to the caller and preserves the callback failure.</summary>
+    /// <returns>A task representing the assertions.</returns>
+    [Test]
+    public async Task AsynchronousRecoveryCallbackYieldsAndPreservesFailure()
+    {
+        await using var store = new RecordingStoreAdapter();
+        TaskCompletionSource releaseRecover = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        var failure = new InvalidOperationException("asynchronous recover failed");
+        store.BeforeRecoverAsync = async cancellationToken =>
+        {
+            await releaseRecover.Task.WaitAsync(GuardTimeout, CancellationToken.None).ConfigureAwait(false);
+            throw failure;
+        };
+        var recovery = store.RecoverStreamAsync(Stream, SubscriptionId.New(), CancellationToken.None).AsTask();
+        try
+        {
+            await Assert.That(recovery.IsCompleted).IsFalse();
+        }
+        finally
+        {
+            _ = releaseRecover.TrySetResult();
+            var exception = await Assert.ThrowsExactlyAsync<InvalidOperationException>(() => recovery.WaitAsync(GuardTimeout));
+            await Assert.That(exception).IsSameReferenceAs(failure);
+        }
+    }
+
     /// <summary>Verifies a late stream auto-start failure is promptly observable through stream faults.</summary>
     /// <returns>A task representing the assertions.</returns>
     [Test]
@@ -18,14 +44,18 @@ public sealed partial class OccasionallyConnectedBuilderTests
         await using var store = new RecordingStoreAdapter();
         await using var transport = new RecordingTransportAdapter();
         TaskCompletionSource recoverEntered = new(TaskCreationOptions.RunContinuationsAsynchronously);
-        using ManualResetEventSlim releaseRecover = new();
+        TaskCompletionSource releaseRecover = new(TaskCreationOptions.RunContinuationsAsynchronously);
         var failure = new InvalidOperationException("recover failed");
-        store.BeforeRecover = () =>
+        store.BeforeRecoverAsync = async cancellationToken =>
         {
             _ = recoverEntered.TrySetResult();
-            if (!releaseRecover.Wait(GuardTimeout))
+            try
             {
-                throw new TimeoutException("The test did not release stream recovery.");
+                await releaseRecover.Task.WaitAsync(GuardTimeout, CancellationToken.None).ConfigureAwait(false);
+            }
+            catch (TimeoutException exception)
+            {
+                throw new TimeoutException("The test did not release stream recovery.", exception);
             }
 
             throw failure;
@@ -34,16 +64,23 @@ public sealed partial class OccasionallyConnectedBuilderTests
         await context.StartAsync(CancellationToken.None);
 
         var stream = context.GetOrCreateStream(CreateDefinition());
-        await recoverEntered.Task.WaitAsync(GuardTimeout);
-        var faults = new FaultObserver();
-        using var faultSubscription = stream.Faults.Subscribe(faults);
-        releaseRecover.Set();
-        await WaitForConditionAsync(() => faults.Values.Count != 0);
+        try
+        {
+            await recoverEntered.Task.WaitAsync(GuardTimeout);
+            var faults = new FaultObserver();
+            using var faultSubscription = stream.Faults.Subscribe(faults);
+            _ = releaseRecover.TrySetResult();
+            await WaitForConditionAsync(() => faults.Values.Count != 0);
 
-        await Assert.That(faults.Values).Count().IsEqualTo(1);
-        await Assert.That(faults.Values[0].Code).IsEqualTo("OC.Stream.Lifecycle");
-        await Assert.That(faults.Values[0].Exception).IsNotSameReferenceAs(failure);
-        await DisposeExpectedFailureAsync(context);
+            await Assert.That(faults.Values).Count().IsEqualTo(1);
+            await Assert.That(faults.Values[0].Code).IsEqualTo("OC.Stream.Lifecycle");
+            await Assert.That(faults.Values[0].Exception).IsNotSameReferenceAs(failure);
+        }
+        finally
+        {
+            _ = releaseRecover.TrySetResult();
+            await DisposeExpectedFailureAsync(context);
+        }
     }
 
     /// <summary>Verifies context startup failure after engine start stops the shared engine session.</summary>
