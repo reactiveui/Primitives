@@ -159,7 +159,9 @@ public sealed partial class OccasionallyConnectedBuilderTests
     /// <summary>Verifies recovered retry-due work keeps its future blocker when same-stream work and a manual trigger arrive early.</summary>
     /// <param name="dwellSeconds">The configured batching dwell seconds.</param>
     /// <returns>A task representing the assertions.</returns>
+    /// <remarks>Isolates virtual-clock upload coordination from unrelated synchronous database fixtures.</remarks>
     [Test]
+    [NotInParallel]
     [Arguments(1)]
     [Arguments(RecoveredUploadRetryDelaySeconds)]
     [Arguments(RecoveredUploadRetryDelaySeconds + 1)]
