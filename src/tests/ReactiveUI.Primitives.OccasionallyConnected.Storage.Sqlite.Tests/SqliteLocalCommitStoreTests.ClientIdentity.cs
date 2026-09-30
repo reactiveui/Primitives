@@ -24,6 +24,11 @@ public sealed partial class SqliteLocalCommitStoreTests
     public async Task ConcurrentFirstClientBindingsAllowOnlyOneWinner()
     {
         using var database = TempDatabase.Create();
+        using (var unbound = new SqliteLocalCommitStore(database.Path))
+        {
+            unbound.Initialize(new(StoreIdentity, SchemaVersion, false), CancellationToken.None);
+        }
+
         using var ready = new ManualResetEventSlim();
         var first = Task.Run(() => InitializeClientWhenReady(database.Path, FirstBindingClientId, ready));
         var second = Task.Run(() => InitializeClientWhenReady(database.Path, SecondBindingClientId, ready));

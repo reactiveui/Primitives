@@ -50,6 +50,7 @@ public sealed partial class SqliteLocalStoreAdapterTests
     /// <returns>A task that represents the asynchronous test.</returns>
     /// <exception cref="InvalidOperationException">The child process fails to start, fails to signal, or publishes a malformed signal.</exception>
     [Test]
+    [NotInParallel(SqliteChildProcessParallelKey)]
     public async Task WhenWriterProcessDiesAfterAcknowledgedLocalCommit_ThenReopenRecoversReceiptWithoutDuplicateOptimism()
     {
         using var database = TempDatabase.Create();

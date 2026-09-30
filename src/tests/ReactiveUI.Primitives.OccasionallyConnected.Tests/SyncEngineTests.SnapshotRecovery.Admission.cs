@@ -330,6 +330,7 @@ public sealed partial class SyncEngineTests
             await session.SubscriptionGapReady.Task.WaitAsync(GuardTimeout);
             releaseGap.SetResult();
             await session.SubscribeCompleted.Task.WaitAsync(GuardTimeout);
+            await WaitForConditionAsync(() => engine.IsSnapshotRecoveryActive(Stream));
             var parked = await stream.PublishAsync(new(ExpectedTwoOperations), CreateVolatilePublishOptions(Stream), CancellationToken.None);
             var later = await stream.PublishAsync(
                 new(ExpectedCapacityCommitAttempts + ExpectedSingleOperation),
@@ -387,6 +388,7 @@ public sealed partial class SyncEngineTests
             await session.SubscriptionGapReady.Task.WaitAsync(GuardTimeout);
             releaseGap.SetResult();
             await session.SubscribeCompleted.Task.WaitAsync(GuardTimeout);
+            await WaitForConditionAsync(() => engine.IsSnapshotRecoveryActive(Stream));
             session.ReleasePausedSendAttempt();
             await uploadSync.WaitAsync(GuardTimeout);
             await session.SnapshotRecoveryEntered.Task.WaitAsync(GuardTimeout);

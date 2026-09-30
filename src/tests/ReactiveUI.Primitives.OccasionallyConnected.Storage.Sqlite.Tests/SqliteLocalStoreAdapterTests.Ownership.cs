@@ -99,6 +99,7 @@ public sealed partial class SqliteLocalStoreAdapterTests
     /// <returns>A task that represents the asynchronous test.</returns>
     /// <exception cref="InvalidOperationException">The child process fails to signal readiness.</exception>
     [Test]
+    [NotInParallel(SqliteChildProcessParallelKey)]
     public async Task WhenCurrentDirectoryChangesBeforeInitialize_ThenAdapterUsesConstructionPath()
     {
         var signalPath = System.IO.Path.Combine(TempDatabase.GetTemporaryDirectory(), OwnershipTempRootName, $"{Guid.NewGuid():N}.signal");
@@ -341,6 +342,7 @@ public sealed partial class SqliteLocalStoreAdapterTests
     /// <returns>A task that represents the asynchronous test.</returns>
     /// <exception cref="InvalidOperationException">The child process fails to start or signal readiness.</exception>
     [Test]
+    [NotInParallel(SqliteChildProcessParallelKey)]
     public async Task WhenChildProcessOwnsDatabase_ThenParentWriterFailsUntilChildIsKilled()
     {
         using var database = TempDatabase.Create();

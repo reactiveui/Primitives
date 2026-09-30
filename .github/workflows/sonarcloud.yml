@@ -19,6 +19,8 @@ jobs:
             minverMinimumMajorMinor: '0.1'
             sonarProjectKey: reactiveui_Primitives
             sonarOrganization: reactiveui
+            # Synchronous trace writes distort the multi-framework test and coverage run.
+            enableDetailedTestLogging: false
             # Below 200 tokens copy/paste detection reports the interface members every sink must
             # declare, whose bodies already delegate to shared static helpers. At 300 it reports nothing.
             sonarExtraBeginArgs: '/d:sonar.cpd.cs.minimumTokens=200'

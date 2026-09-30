@@ -105,7 +105,7 @@ internal sealed class ServerLedgerEntry
     private static ReadOnlyCollection<T> Copy<T>(IReadOnlyList<T> source, int maximumCount, string parameterName)
     {
         var count = source.Count;
-        if (count < 0 || count > maximumCount)
+        if ((uint)count > (uint)maximumCount)
         {
             throw new ArgumentOutOfRangeException(parameterName, count, "The item count is outside the supported bounds.");
         }

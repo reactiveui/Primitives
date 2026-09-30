@@ -27,8 +27,8 @@ jobs:
             installWorkloads: true
             minverMinimumMajorMinor: '0.1'
             # Synchronous trace logging adds substantial I/O to the complete test suite.
-            # Keep normal runs lean and collect detailed diagnostics on a rerun.
-            enableDetailedTestLogging: ${{ github.run_attempt > 1 }}
+            # Keep both normal runs and reruns free of synchronous per-event trace writes.
+            enableDetailedTestLogging: false
             testTimeout: '15m'
         secrets:
             CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}

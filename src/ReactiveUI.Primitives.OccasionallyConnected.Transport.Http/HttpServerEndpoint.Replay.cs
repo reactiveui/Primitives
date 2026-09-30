@@ -420,28 +420,30 @@ public sealed partial class HttpServerEndpoint
         var observedUtc = _replayTimeProvider.GetUtcNow();
         var issued = _replayCoordinator.Sessions.CreatePending(new(authenticatedClient.TenantId, authenticatedClient.ClientId), observedUtc);
         var response = CreateProtocolResponse(responseBytes);
+        HttpStatusCode? failureStatus;
         try
         {
             response.Headers.Add(HttpReplayHeaders.TenantId, HttpReplayBase64Url.Encode(Encoding.UTF8.GetBytes(issued.TenantId)));
             response.Headers.Add(HttpReplayHeaders.SessionId, issued.SessionId);
             response.Headers.Add(HttpReplayHeaders.SessionSecret, issued.SessionSecret);
             response.Headers.Add(HttpReplayHeaders.SessionExpires, issued.ExpiresAtUtc.ToString("O", CultureInfo.InvariantCulture));
-            var failureStatus = await _replayCoordinator.CompleteAsync(
+            failureStatus = await _replayCoordinator.CompleteAsync(
                 owner,
                 new() { StatusCode = HttpStatusCode.OK, ContentType = HttpProtocolContent.MediaType, ResponseBytes = responseBytes, ConnectSession = issued }).ConfigureAwait(false);
-            if (failureStatus is not null)
-            {
-                response.Dispose();
-                return CreateReplayFailureResponse(new(failureStatus.Value, HttpTransportFailureKind.Transient));
-            }
-
-            return response;
         }
         catch
         {
             response.Dispose();
             throw;
         }
+
+        if (failureStatus is not null)
+        {
+            response.Dispose();
+            return CreateReplayFailureResponse(new(failureStatus.Value, HttpTransportFailureKind.Transient));
+        }
+
+        return response;
     }
 
     /// <summary>Completes a non-connect replay owner.</summary>

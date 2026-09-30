@@ -79,7 +79,7 @@ internal static class ServerCommitJournalGuard
     {
         ArgumentExceptionHelper.ThrowIfNull(operationKeys);
         var count = operationKeys.Count;
-        if (count < 0 || count > maximumCount)
+        if ((uint)count > (uint)maximumCount)
         {
             throw new ArgumentOutOfRangeException(nameof(operationKeys), count, "The requested operation key count is outside the supported bounds.");
         }

@@ -16,9 +16,6 @@ public sealed partial class SqliteLocalStoreAdapterTests
     /// <summary>The child crash matrix environment variable that carries the encoded case.</summary>
     private const string CrashMatrixChildCaseVariable = "RXUI_SQLITE_CRASH_MATRIX_CASE";
 
-    /// <summary>The parallel constraint key shared by crash matrix parent tests.</summary>
-    private const string CrashMatrixParallelKey = "sqlite-crash-matrix";
-
     /// <summary>The number of encoded crash matrix case fields.</summary>
     private const int CrashMatrixCaseFieldCount = 9;
 
@@ -52,7 +49,7 @@ public sealed partial class SqliteLocalStoreAdapterTests
     /// <returns>A task that represents the asynchronous test.</returns>
     /// <exception cref="InvalidOperationException">The child process fails to start or signal.</exception>
     [Test]
-    [NotInParallel(CrashMatrixParallelKey)]
+    [NotInParallel(SqliteChildProcessParallelKey)]
     [Arguments(nameof(SqliteCommitCheckpoint.LocalCommitBeforeCommit), DeliveryGuarantee.AtMostOnce)]
     [Arguments(nameof(SqliteCommitCheckpoint.LocalCommitBeforeCommit), DeliveryGuarantee.AtLeastOnce)]
     [Arguments(nameof(SqliteCommitCheckpoint.LocalCommitBeforeCommit), DeliveryGuarantee.ExactlyOnce)]

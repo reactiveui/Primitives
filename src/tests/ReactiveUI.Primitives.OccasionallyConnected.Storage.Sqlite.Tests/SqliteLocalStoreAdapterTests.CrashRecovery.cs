@@ -123,6 +123,7 @@ public sealed partial class SqliteLocalStoreAdapterTests
     /// <returns>A task that represents the asynchronous test.</returns>
     /// <exception cref="InvalidOperationException">The child process fails to start or signal.</exception>
     [Test]
+    [NotInParallel(SqliteChildProcessParallelKey)]
     [Arguments(DeliveryGuarantee.AtMostOnce)]
     [Arguments(DeliveryGuarantee.AtLeastOnce)]
     [Arguments(DeliveryGuarantee.ExactlyOnce)]
@@ -149,6 +150,7 @@ public sealed partial class SqliteLocalStoreAdapterTests
     /// <returns>A task that represents the asynchronous test.</returns>
     /// <exception cref="InvalidOperationException">The child process fails to start or signal.</exception>
     [Test]
+    [NotInParallel(SqliteChildProcessParallelKey)]
     public async Task WhenWriterProcessDiesAfterRemoteBatchApply_ThenReopenPreservesCursorAndRejectsStaleReplay()
     {
         using var database = TempDatabase.Create();
@@ -197,6 +199,7 @@ public sealed partial class SqliteLocalStoreAdapterTests
     /// <returns>A task that represents the asynchronous test.</returns>
     /// <exception cref="InvalidOperationException">The child process fails to start or signal.</exception>
     [Test]
+    [NotInParallel(SqliteChildProcessParallelKey)]
     public async Task WhenWriterProcessDiesAfterSyncResultApply_ThenReopenKeepsTerminalOutcomesAndRemainingOrder()
     {
         using var database = TempDatabase.Create();
@@ -252,6 +255,7 @@ public sealed partial class SqliteLocalStoreAdapterTests
     /// <returns>A task that represents the asynchronous test.</returns>
     /// <exception cref="InvalidOperationException">The child process fails to start or signal.</exception>
     [Test]
+    [NotInParallel(SqliteChildProcessParallelKey)]
     public async Task WhenWriterProcessDiesAfterDeadLetter_ThenReopenKeepsDeadLetterAndRemainingLease()
     {
         using var database = TempDatabase.Create();
@@ -309,18 +313,30 @@ public sealed partial class SqliteLocalStoreAdapterTests
             return;
         }
 
-        await using var adapter = CreateAdapter(childContext.DatabasePath, new FixedTimeProvider(CrashRecoveryTimestamp));
-        await adapter.InitializeAsync(CreateCrashRecoveryInitialization(childContext.Boundary), CancellationToken.None);
-        var signal = childContext.Boundary switch
+        WriteCrashRecoveryChildProgress(childContext.SignalPath, "MTP child test entered");
+        try
         {
-            AttemptBoundary => await CommitAttemptBoundaryAsync(adapter, childContext),
-            RemoteApplyBoundary => await CommitRemoteApplyBoundaryAsync(adapter, childContext),
-            SyncResultBoundary => await CommitSyncResultBoundaryAsync(adapter, childContext),
-            DeadLetterBoundary => await CommitDeadLetterBoundaryAsync(adapter, childContext),
-            _ => throw new InvalidOperationException("The child crash recovery boundary is unknown."),
-        };
-        await PublishCrashRecoverySignalAsync(childContext.SignalPath, signal);
-        await Task.Delay(Timeout.InfiniteTimeSpan);
+            await using var adapter = CreateAdapter(childContext.DatabasePath, new FixedTimeProvider(CrashRecoveryTimestamp));
+            WriteCrashRecoveryChildProgress(childContext.SignalPath, "adapter created; initializing SQLite provider and database");
+            await adapter.InitializeAsync(CreateCrashRecoveryInitialization(childContext.Boundary), CancellationToken.None);
+            WriteCrashRecoveryChildProgress(childContext.SignalPath, $"SQLite initialized; committing {childContext.Boundary}");
+            var signal = childContext.Boundary switch
+            {
+                AttemptBoundary => await CommitAttemptBoundaryAsync(adapter, childContext),
+                RemoteApplyBoundary => await CommitRemoteApplyBoundaryAsync(adapter, childContext),
+                SyncResultBoundary => await CommitSyncResultBoundaryAsync(adapter, childContext),
+                DeadLetterBoundary => await CommitDeadLetterBoundaryAsync(adapter, childContext),
+                _ => throw new InvalidOperationException("The child crash recovery boundary is unknown."),
+            };
+            await PublishCrashRecoverySignalAsync(childContext.SignalPath, signal);
+            WriteCrashRecoveryChildProgress(childContext.SignalPath, $"{childContext.Boundary} committed; signal published");
+            await Task.Delay(Timeout.InfiniteTimeSpan);
+        }
+        catch (Exception exception)
+        {
+            WriteCrashRecoveryChildProgress(childContext.SignalPath, exception.ToString());
+            throw;
+        }
     }
 
     /// <summary>Commits the child process attempt boundary.</summary>
@@ -592,7 +608,9 @@ public sealed partial class SqliteLocalStoreAdapterTests
             if (!signaled)
             {
                 output = await StopAndDrainCrashReceiptChildAsync(child, standardOutput, standardError);
-                throw new InvalidOperationException(CreateCrashRecoverySignalTimeoutMessage(output));
+                throw new InvalidOperationException(
+                    $"{CreateCrashRecoverySignalTimeoutMessage(output)}{Environment.NewLine}"
+                    + $"Child progress: {ReadCrashRecoveryChildProgress(start.SignalPath)}");
             }
 
             output = await StopAndDrainCrashReceiptChildAsync(child, standardOutput, standardError);
