@@ -29,12 +29,22 @@ public sealed partial class SqliteLocalCommitConnectionTests
         await InsertStartupLockAsync(writer, transaction);
 
         SqliteLocalCommitConnection.ConfigureLockPolling(durability);
-        var configure = Task.Run(() => SqliteLocalCommitConnection.ConfigureDurabilityAfterOwnershipValidation(durability, CancellationToken.None));
-        await Task.Delay(BusyWaitObservationDelay);
-        await Assert.That(configure.IsCompleted).IsFalse();
-
-        await transaction.CommitAsync();
-        await configure;
+        using var configureEntered = new ManualResetEventSlim();
+        var configure = Task.Factory.StartNew(
+            ConfigureDurabilityOnDedicatedThread,
+            (durability, configureEntered),
+            CancellationToken.None,
+            TaskCreationOptions.LongRunning | TaskCreationOptions.DenyChildAttach,
+            TaskScheduler.Default);
+        var observation = Task.Factory.StartNew(
+            ObserveAndReleaseStartupWriter,
+            (transaction, configure, configureEntered),
+            CancellationToken.None,
+            TaskCreationOptions.LongRunning | TaskCreationOptions.DenyChildAttach,
+            TaskScheduler.Default);
+        await Task.WhenAll(configure, observation);
+        var completedWhileWriterHeld = await observation;
+        await Assert.That(completedWhileWriterHeld).IsFalse();
     }
 
     /// <summary>Verifies a writer-held WAL transition observes cancellation while retrying lock contention.</summary>
@@ -68,6 +78,33 @@ public sealed partial class SqliteLocalCommitConnectionTests
         Action configure = () => SqliteLocalCommitConnection.ConfigureDurabilityAfterOwnershipValidation(connection, CancellationToken.None);
 
         await Assert.That(configure).ThrowsExactly<InvalidOperationException>();
+    }
+
+    /// <summary>Runs the blocking durability retry without occupying a test-runner worker.</summary>
+    /// <param name="state">The durability connection and entry signal.</param>
+    private static void ConfigureDurabilityOnDedicatedThread(object? state)
+    {
+        var (connection, entered) = ((SqliteConnection, ManualResetEventSlim))state!;
+        entered.Set();
+        SqliteLocalCommitConnection.ConfigureDurabilityAfterOwnershipValidation(connection, CancellationToken.None);
+    }
+
+    /// <summary>Observes the retry and releases its writer independently of thread-pool scheduling.</summary>
+    /// <param name="state">The writer transaction, durability task, and entry signal.</param>
+    /// <returns>Whether durability completed while the writer was held.</returns>
+    private static bool ObserveAndReleaseStartupWriter(object? state)
+    {
+        var (transaction, configure, entered) = ((SqliteTransaction, Task, ManualResetEventSlim))state!;
+        try
+        {
+            entered.Wait();
+            Thread.Sleep(BusyWaitObservationDelay);
+            return configure.IsCompleted;
+        }
+        finally
+        {
+            transaction.Commit();
+        }
     }
 
     /// <summary>Creates the table used to hold a SQLite writer lock.</summary>
