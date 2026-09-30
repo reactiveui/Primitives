@@ -6,10 +6,13 @@ using System.Collections;
 using System.Globalization;
 using System.Runtime.CompilerServices;
 using Microsoft.Data.Sqlite;
+using TUnit.Core.Helpers;
 
 namespace ReactiveUI.Primitives.OccasionallyConnected.Server.Tests;
 
 /// <summary>Tests for <see cref="SqliteServerCommitJournal"/>.</summary>
+/// <remarks>Shares the CPU-sized fixture budget with the server hub integration tests.</remarks>
+[ParallelLimiter<ProcessorCountParallelLimit>]
 public sealed partial class SqliteServerCommitJournalTests
 {
     /// <summary>The default authenticated tenant.</summary>

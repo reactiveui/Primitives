@@ -8,6 +8,7 @@ using System.Diagnostics;
 using System.Globalization;
 using System.IO;
 using System.Linq;
+using System.Text.Json;
 using System.Text.RegularExpressions;
 using System.Xml.Linq;
 
@@ -19,7 +20,7 @@ namespace OccasionallyConnected.Ci;
 /// <list type="bullet">
 /// <item><description>
 /// A full CI invocation (<c>--framework</c>, <c>--run-id</c>, <c>--run-attempt</c>, <c>--runner-os</c>)
-/// that verifies the exact 15 OccasionallyConnected test suites exist, builds and runs each of them for
+/// that verifies the complete OccasionallyConnected test suite list, builds and runs each suite for
 /// the requested target framework into a fresh coverage output path, then validates/merges the resulting
 /// Cobertura reports.
 /// </description></item>
@@ -59,9 +60,11 @@ public static partial class Coverage
         "ReactiveUI.Primitives.OccasionallyConnected.DependencyInjection.Tests",
         "ReactiveUI.Primitives.OccasionallyConnected.Examples.Tests",
         "ReactiveUI.Primitives.OccasionallyConnected.Hosting.Tests",
+        "ReactiveUI.Primitives.OccasionallyConnected.Mobile.Tests",
         "ReactiveUI.Primitives.OccasionallyConnected.ResilienceLab.Tests",
         "ReactiveUI.Primitives.OccasionallyConnected.Reactive.Tests",
         "ReactiveUI.Primitives.OccasionallyConnected.Server.Tests",
+        "ReactiveUI.Primitives.OccasionallyConnected.SignalR.Tests",
         "ReactiveUI.Primitives.OccasionallyConnected.Storage.BliteDb.Tests",
         "ReactiveUI.Primitives.OccasionallyConnected.Storage.FileSystem.Tests",
         "ReactiveUI.Primitives.OccasionallyConnected.Storage.IndexedDB.Tests",
@@ -70,6 +73,7 @@ public static partial class Coverage
         "ReactiveUI.Primitives.OccasionallyConnected.Tests",
         "ReactiveUI.Primitives.OccasionallyConnected.Transport.Http.Tests",
         "ReactiveUI.Primitives.OccasionallyConnected.Transport.WebSockets.Tests",
+        "ReactiveUI.Primitives.OccasionallyConnected.Web.Tests",
     ];
 
     private static readonly string[] PackageNamesForCiInvocation =
@@ -78,8 +82,10 @@ public static partial class Coverage
         "ReactiveUI.Primitives.OccasionallyConnected",
         "ReactiveUI.Primitives.OccasionallyConnected.DependencyInjection",
         "ReactiveUI.Primitives.OccasionallyConnected.Hosting",
+        "ReactiveUI.Primitives.OccasionallyConnected.Mobile",
         ReactivePackageName,
         "ReactiveUI.Primitives.OccasionallyConnected.Server",
+        "ReactiveUI.Primitives.OccasionallyConnected.SignalR",
         "ReactiveUI.Primitives.OccasionallyConnected.Storage.BliteDb",
         "ReactiveUI.Primitives.OccasionallyConnected.Storage.FileSystem",
         "ReactiveUI.Primitives.OccasionallyConnected.Storage.IndexedDB",
@@ -87,6 +93,7 @@ public static partial class Coverage
         "ReactiveUI.Primitives.OccasionallyConnected.Storage.Sqlite",
         "ReactiveUI.Primitives.OccasionallyConnected.Transport.Http",
         "ReactiveUI.Primitives.OccasionallyConnected.Transport.WebSockets",
+        "ReactiveUI.Primitives.OccasionallyConnected.Web",
     ];
 
     private static readonly string[] GeneratedJsonSerializerSegments =
@@ -105,7 +112,7 @@ public static partial class Coverage
     /// </summary>
     /// <param name="args">
     /// Either <c>--framework</c>/<c>--run-id</c>/<c>--run-attempt</c>/<c>--runner-os</c> for a full CI
-    /// invocation that builds, tests, and validates all 15 suites, or one-or-more repeated
+    /// invocation that builds, tests, and validates every expected suite, or one-or-more repeated
     /// <c>--report-path</c>/<c>--package-name</c> pairs for standalone validation of existing reports.
     /// </param>
     /// <returns>0 on success; 1 when a gate step fails.</returns>
@@ -147,7 +154,7 @@ public static partial class Coverage
         if (!new HashSet<string>(ExpectedTestProjects, StringComparer.Ordinal)
                 .SetEquals(new HashSet<string>(foundProjects, StringComparer.Ordinal)))
         {
-            throw new CoverageGateException("OccasionallyConnected test project list differs from the expected 15 suites.");
+            throw new CoverageGateException($"OccasionallyConnected test project list differs from the expected {ExpectedTestProjects.Length} suites.");
         }
 
         var coverageRoot = Path.Combine(
@@ -221,31 +228,68 @@ public static partial class Coverage
         ValidateAndMergeCoverage([.. reportPaths], packageNames, includeReactiveRecompiledSources: true);
     }
 
-    private static bool TargetsFramework(string projectFile, string framework)
+    internal static bool TargetsFramework(string projectFile, string framework)
     {
         try
         {
-            var document = XDocument.Load(projectFile);
-            var targetFrameworkValues = document
-                .Descendants()
-                .Where(element => element.Name.LocalName is "TargetFramework" or "TargetFrameworks")
-                .Select(element => element.Value.Trim())
-                .Where(value => value.Length > 0)
-                .ToArray();
-            if (targetFrameworkValues.Length == 0)
+            using var process = new Process
             {
-                throw new CoverageGateException($"Test project does not declare TargetFramework or TargetFrameworks: {projectFile}");
+                StartInfo = new ProcessStartInfo("dotnet")
+                {
+                    WorkingDirectory = Path.GetDirectoryName(Path.GetFullPath(projectFile))!,
+                    UseShellExecute = false,
+                    RedirectStandardOutput = true,
+                    RedirectStandardError = true,
+                },
+            };
+            foreach (var argument in new[]
+            {
+                "msbuild", Path.GetFullPath(projectFile), "-nologo",
+                "-getProperty:TargetFramework,TargetFrameworks",
+                "-p:AndroidPrimitivesTargetFrameworks=", "-p:ApplePrimitivesTargetFrameworks=",
+            })
+            {
+                process.StartInfo.ArgumentList.Add(argument);
             }
 
-            return targetFrameworkValues.Any(value => value.Contains("$(", StringComparison.Ordinal)
-                || value.Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
-                    .Contains(framework, StringComparer.Ordinal));
+            process.Start();
+            var output = process.StandardOutput.ReadToEndAsync();
+            var errors = process.StandardError.ReadToEndAsync();
+            if (!process.WaitForExit(60_000))
+            {
+                process.Kill(entireProcessTree: true);
+                process.WaitForExit();
+                throw new CoverageGateException($"Timed out evaluating target frameworks: {projectFile}");
+            }
+
+            var text = output.GetAwaiter().GetResult();
+            var errorText = errors.GetAwaiter().GetResult();
+            if (process.ExitCode != 0)
+            {
+                throw new CoverageGateException($"Unable to evaluate target frameworks: {projectFile}\n{text}\n{errorText}");
+            }
+
+            using var document = JsonDocument.Parse(text);
+            var properties = document.RootElement.GetProperty("Properties");
+            var frameworks = properties.GetProperty("TargetFrameworks").GetString();
+            if (string.IsNullOrWhiteSpace(frameworks))
+            {
+                frameworks = properties.GetProperty("TargetFramework").GetString();
+            }
+
+            if (string.IsNullOrWhiteSpace(frameworks))
+            {
+                throw new CoverageGateException($"Project does not declare TargetFramework or TargetFrameworks: {projectFile}");
+            }
+
+            return frameworks.Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                .Contains(framework, StringComparer.Ordinal);
         }
         catch (CoverageGateException)
         {
             throw;
         }
-        catch (Exception exception) when (exception is IOException or System.Xml.XmlException)
+        catch (Exception exception) when (exception is IOException or JsonException or System.ComponentModel.Win32Exception)
         {
             throw new CoverageGateException($"Unable to discover target frameworks for test project: {projectFile}", exception);
         }

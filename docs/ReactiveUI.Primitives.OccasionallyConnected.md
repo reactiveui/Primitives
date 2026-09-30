@@ -1280,10 +1280,10 @@ Health details expose counts, ages, and reason codes—not payloads or raw ident
 | `ReactiveUI.Primitives.OccasionallyConnected.Storage.FileSystem` | v1.x | Append-only log/snapshot adapter for constrained IoT/desktop. |
 | `ReactiveUI.Primitives.OccasionallyConnected.Transport.Http` | v1 | Batched sync and long-poll/SSE reference transport. |
 | `ReactiveUI.Primitives.OccasionallyConnected.Transport.WebSockets` | v1.x | Bidirectional streaming adapter. |
-| `ReactiveUI.Primitives.OccasionallyConnected.SignalR` | later | SignalR client/server adapter. |
+| `ReactiveUI.Primitives.OccasionallyConnected.SignalR` | v1.x | SignalR client/server adapter. |
 | `ReactiveUI.Primitives.OccasionallyConnected.Mqtt` | later | MQTT topic/QoS adapter. MQTT QoS is mapped explicitly and does not replace end-to-end idempotency. |
-| `ReactiveUI.Primitives.OccasionallyConnected.Web` | later | IndexedDB storage and browser connectivity/lifecycle adapters. |
-| `ReactiveUI.Primitives.OccasionallyConnected.Mobile` | later | Mobile lifecycle, secure storage, and SQLite convenience integration. |
+| `ReactiveUI.Primitives.OccasionallyConnected.Web` | v1.x | IndexedDB storage and browser connectivity/lifecycle adapters. |
+| `ReactiveUI.Primitives.OccasionallyConnected.Mobile` | v1.x | Mobile lifecycle, secure storage, and SQLite convenience integration. |
 | `ReactiveUI.Primitives.OccasionallyConnected.IoT` | later | File/embedded-store defaults and MQTT convenience integration. |
 
 Storage and transport package names describe mechanisms; Web, Mobile, and IoT are convenience compositions and MUST NOT duplicate core logic.
@@ -1373,6 +1373,9 @@ src/
   ReactiveUI.Primitives.OccasionallyConnected.Storage.Sqlite/
   ReactiveUI.Primitives.OccasionallyConnected.Transport.Http/
   ReactiveUI.Primitives.OccasionallyConnected.Transport.WebSockets/
+  ReactiveUI.Primitives.OccasionallyConnected.SignalR/
+  ReactiveUI.Primitives.OccasionallyConnected.Web/
+  ReactiveUI.Primitives.OccasionallyConnected.Mobile/
 tests/
   ReactiveUI.Primitives.OccasionallyConnected.Tests/
   ReactiveUI.Primitives.OccasionallyConnected.ContractTests/
@@ -1380,6 +1383,9 @@ tests/
   ReactiveUI.Primitives.OccasionallyConnected.Storage.FileSystem.Tests/
   ReactiveUI.Primitives.OccasionallyConnected.Transport.Http.Tests/
   ReactiveUI.Primitives.OccasionallyConnected.Transport.WebSockets.Tests/
+  ReactiveUI.Primitives.OccasionallyConnected.SignalR.Tests/
+  ReactiveUI.Primitives.OccasionallyConnected.Web.Tests/
+  ReactiveUI.Primitives.OccasionallyConnected.Mobile.Tests/
   ReactiveUI.Primitives.OccasionallyConnected.Reactive.Tests/
   ReactiveUI.Primitives.OccasionallyConnected.Server.Tests/
   ReactiveUI.Primitives.OccasionallyConnected.CrashTests/

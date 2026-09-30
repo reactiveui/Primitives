@@ -1,0 +1,14 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFrameworks>$(NetTargetFrameworks)</TargetFrameworks>
+    <PackageDescription>SignalR client and server composition for occasionally connected synchronization.</PackageDescription>
+    <EnableSystemTextJsonSourceGenerator>true</EnableSystemTextJsonSourceGenerator>
+  </PropertyGroup>
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+    <ProjectReference Include="..\ReactiveUI.Primitives.OccasionallyConnected.Transport.Http\ReactiveUI.Primitives.OccasionallyConnected.Transport.Http.csproj" />
+    <PackageReference Include="Microsoft.AspNetCore.SignalR.Client" />
+    <None Include="README.md" Pack="true" PackagePath="README.md" />
+    <InternalsVisibleTo Include="ReactiveUI.Primitives.OccasionallyConnected.SignalR.Tests" />
+  </ItemGroup>
+</Project>

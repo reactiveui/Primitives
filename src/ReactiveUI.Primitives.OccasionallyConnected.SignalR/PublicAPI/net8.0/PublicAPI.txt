@@ -1,0 +1,46 @@
+[assembly: System.Runtime.CompilerServices.InternalsVisibleTo("ReactiveUI.Primitives.OccasionallyConnected.SignalR.Tests")]
+namespace ReactiveUI.Primitives.OccasionallyConnected.SignalR;
+
+[System.Diagnostics.DebuggerDisplay("{Context.ConnectionId}")]
+public sealed class OccasionallyConnectedHub : Microsoft.AspNetCore.SignalR.Hub
+{
+    public OccasionallyConnectedHub(ReactiveUI.Primitives.OccasionallyConnected.SignalR.SignalRServerEndpoint endpoint) { }
+    public System.Collections.Generic.IAsyncEnumerable<byte[]> Exchange(byte[] request, System.Threading.CancellationToken cancellationToken) { }
+}
+[System.Diagnostics.DebuggerDisplay("{Capabilities}")]
+public sealed class SignalRRemoteTransportAdapter : ReactiveUI.Primitives.OccasionallyConnected.IRemoteTransportAdapter
+{
+    public SignalRRemoteTransportAdapter(ReactiveUI.Primitives.OccasionallyConnected.SignalR.SignalRRemoteTransportOptions options) { }
+    public ReactiveUI.Primitives.OccasionallyConnected.RemoteTransportCapabilities Capabilities { get; }
+    public System.Threading.Tasks.ValueTask<ReactiveUI.Primitives.OccasionallyConnected.IRemoteTransportSession> ConnectAsync(ReactiveUI.Primitives.OccasionallyConnected.TransportConnectRequest request, System.Threading.CancellationToken cancellationToken) { }
+    public System.Threading.Tasks.ValueTask DisposeAsync() { }
+}
+[System.Diagnostics.DebuggerDisplay("{Endpoint}")]
+public record SignalRRemoteTransportOptions : System.IEquatable<ReactiveUI.Primitives.OccasionallyConnected.SignalR.SignalRRemoteTransportOptions>
+{
+    public required System.Uri Endpoint { get; init; }
+    public bool AllowInsecureLoopbackHttp { get; init; }
+    public int MaximumSessions { get; init; }
+    public System.Action<Microsoft.AspNetCore.Http.Connections.Client.HttpConnectionOptions>? ConfigureConnection { get; init; }
+    public System.Func<System.Net.Http.HttpClient, ReactiveUI.Primitives.OccasionallyConnected.Transport.Http.HttpRemoteTransportOptions>? ConfigureProtocol { get; init; }
+    public void Validate() { }
+}
+[System.Diagnostics.DebuggerDisplay("{_endpoint.DeclaredCapabilities}")]
+public sealed class SignalRServerEndpoint : System.IAsyncDisposable
+{
+    public SignalRServerEndpoint(ReactiveUI.Primitives.OccasionallyConnected.Transport.Http.HttpServerEndpointOptions options, System.Func<System.Security.Claims.ClaimsPrincipal, ReactiveUI.Primitives.OccasionallyConnected.ServerAuthenticatedClient?> authenticate) { }
+    [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+    public System.Threading.Tasks.ValueTask DisposeAsync() { }
+}
+public static class SignalRServiceCollectionExtensions
+{
+    extension(Microsoft.AspNetCore.Routing.IEndpointRouteBuilder endpoints)
+    {
+        public Microsoft.AspNetCore.Builder.HubEndpointConventionBuilder MapOccasionallyConnectedSignalR(string pattern) { }
+    }
+    extension(Microsoft.Extensions.DependencyInjection.IServiceCollection services)
+    {
+        [System.Diagnostics.CodeAnalysis.RequiresUnreferencedCode("ASP.NET Core 8 SignalR service registration does not support trimming.")]
+        public Microsoft.AspNetCore.SignalR.ISignalRServerBuilder AddOccasionallyConnectedSignalR() { }
+    }
+}

@@ -4,10 +4,13 @@
 
 using System.Runtime.CompilerServices;
 using System.Text;
+using TUnit.Core.Helpers;
 
 namespace ReactiveUI.Primitives.OccasionallyConnected.Server.Tests;
 
 /// <summary>Tests for <see cref="ServerStreamHub"/>.</summary>
+/// <remarks>Bounds database fixture pressure without limiting concurrent operations inside a test.</remarks>
+[ParallelLimiter<ProcessorCountParallelLimit>]
 public sealed partial class ServerStreamHubTests
 {
     /// <summary>The trusted tenant returned by allow policies.</summary>

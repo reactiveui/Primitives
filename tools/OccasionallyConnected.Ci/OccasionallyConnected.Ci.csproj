@@ -6,4 +6,7 @@
     <Nullable>enable</Nullable>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
   </PropertyGroup>
+  <ItemGroup>
+    <InternalsVisibleTo Include="ReactiveUI.Primitives.OccasionallyConnected.Tests" />
+  </ItemGroup>
 </Project>

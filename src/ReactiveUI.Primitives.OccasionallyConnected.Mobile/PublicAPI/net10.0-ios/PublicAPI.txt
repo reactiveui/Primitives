@@ -1,0 +1,71 @@
+namespace ReactiveUI.Primitives.OccasionallyConnected.Mobile;
+
+public static class MauiMobileServices
+{
+    public static ReactiveUI.Primitives.OccasionallyConnected.Mobile.MauiConnectivityHint CreateConnectivityHint() { }
+    public static System.Threading.Tasks.ValueTask<ReactiveUI.Primitives.OccasionallyConnected.Mobile.MobileSqliteStorage> CreateSqliteStorageAsync(string fileName, string secureStorageKey, ReactiveUI.Primitives.OccasionallyConnected.Storage.Sqlite.SqliteLocalStoreAdapterOptions options, System.Threading.CancellationToken cancellationToken) { }
+}
+
+public interface IMobileConnectivityHint
+{
+    bool NetworkAvailable { get; }
+    event System.EventHandler? Changed;
+}
+public interface IMobileLifecycle
+{
+    bool IsSuspended { get; }
+    event System.EventHandler? Resuming;
+    event System.EventHandler? Suspending;
+}
+[System.Diagnostics.DebuggerDisplay("NetworkAvailable = {NetworkAvailable}")]
+public sealed class MauiConnectivityHint : ReactiveUI.Primitives.OccasionallyConnected.Mobile.IMobileConnectivityHint, System.IDisposable
+{
+    public MauiConnectivityHint(Microsoft.Maui.Networking.IConnectivity connectivity) { }
+    public bool NetworkAvailable { get; }
+    public event System.EventHandler? Changed;
+    public void Dispose() { }
+}
+[System.Diagnostics.DebuggerDisplay("Suspended = {IsSuspended}")]
+public sealed class MauiWindowLifecycle : ReactiveUI.Primitives.OccasionallyConnected.Mobile.IMobileLifecycle, System.IDisposable
+{
+    public MauiWindowLifecycle(Microsoft.Maui.Controls.Window window, bool initiallySuspended) { }
+    public bool IsSuspended { get; }
+    public event System.EventHandler? Resuming;
+    public event System.EventHandler? Suspending;
+    public void Dispose() { }
+}
+[System.Diagnostics.DebuggerDisplay("Mobile secure identity and key provider")]
+public sealed class MobileSecureState : ReactiveUI.Primitives.OccasionallyConnected.ILocalStoreKeyProvider
+{
+    public ReactiveUI.Primitives.OccasionallyConnected.ClientIdentity Identity { get; }
+    [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+    public ReactiveUI.Primitives.OccasionallyConnected.LocalStoreKey GetCurrentKey() { }
+    public ReactiveUI.Primitives.OccasionallyConnected.LocalStoreKey? GetKey(string keyId) { }
+    public System.Threading.Tasks.ValueTask<string> RotateAsync(System.Threading.CancellationToken cancellationToken) { }
+    public static System.Threading.Tasks.ValueTask<ReactiveUI.Primitives.OccasionallyConnected.Mobile.MobileSecureState> OpenAsync(Microsoft.Maui.Storage.ISecureStorage storage, string storageKey, bool allowCreate, System.Threading.CancellationToken cancellationToken) { }
+}
+[System.Diagnostics.DebuggerDisplay("Encrypted mobile SQLite storage")]
+public sealed class MobileSqliteStorage : System.IAsyncDisposable
+{
+    public string DatabasePath { get; }
+    public ReactiveUI.Primitives.OccasionallyConnected.ClientIdentity Identity { get; }
+    public ReactiveUI.Primitives.OccasionallyConnected.Mobile.MobileSecureState Keys { get; }
+    public ReactiveUI.Primitives.OccasionallyConnected.Storage.Sqlite.SqliteLocalStoreAdapter Store { get; }
+    [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+    public System.Threading.Tasks.ValueTask DisposeAsync() { }
+    public static System.Threading.Tasks.ValueTask<ReactiveUI.Primitives.OccasionallyConnected.Mobile.MobileSqliteStorage> CreateAsync(Microsoft.Maui.Storage.ISecureStorage secureStorage, Microsoft.Maui.Storage.IFileSystem fileSystem, string fileName, string secureStorageKey, ReactiveUI.Primitives.OccasionallyConnected.Storage.Sqlite.SqliteLocalStoreAdapterOptions options, System.Threading.CancellationToken cancellationToken) { }
+}
+[System.Diagnostics.DebuggerDisplay("Disposed = {_disposed}, Resume = {_resume}")]
+public sealed class MobileSyncSession : System.IAsyncDisposable
+{
+    public MobileSyncSession(ReactiveUI.Primitives.OccasionallyConnected.IOccasionallyConnectedContext context, ReactiveUI.Primitives.OccasionallyConnected.Mobile.IMobileLifecycle lifecycle, ReactiveUI.Primitives.OccasionallyConnected.Mobile.IMobileConnectivityHint connectivity) { }
+    public System.Exception? LastFailure { get; }
+    public System.Threading.Tasks.Task Transition { get; }
+    public System.Threading.Tasks.ValueTask DisposeAsync() { }
+    [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+    public System.Threading.Tasks.ValueTask RefreshAsync(System.Threading.CancellationToken cancellationToken) { }
+    [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+    public System.Threading.Tasks.ValueTask ResumeAsync(System.Threading.CancellationToken cancellationToken) { }
+    [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+    public System.Threading.Tasks.ValueTask SuspendAsync(System.Threading.CancellationToken cancellationToken) { }
+}

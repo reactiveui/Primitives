@@ -211,13 +211,25 @@ public static partial class Packages
 
         // 3. Symbol packages, portable PDBs, Source Link and lib/<tfm> folders.
         var fullFrameworkPackages = OccasionallyConnectedProjects
-            .Where(project => project != OccasionallyConnectedPackageSet.WebSockets);
+            .Where(project => project != OccasionallyConnectedPackageSet.WebSockets
+                && project is not ("ReactiveUI.Primitives.OccasionallyConnected.SignalR"
+                    or "ReactiveUI.Primitives.OccasionallyConnected.Mobile"
+                    or "ReactiveUI.Primitives.OccasionallyConnected.Web"
+                    or "ReactiveUI.Primitives.OccasionallyConnected.Storage.IndexedDB"
+                    or "ReactiveUI.Primitives.OccasionallyConnected.Storage.BliteDb"));
         InvokeInspector(
             "symbols-sourcelink-tfms",
             ["verify", "--feed", feed, "--version", version, "--packages", string.Join(',', fullFrameworkPackages), "--tfms", string.Join(',', LibraryTargetFrameworks), "--commit", commit]);
         InvokeInspector(
             "symbols-sourcelink-websockets",
-            ["verify", "--feed", feed, "--version", version, "--packages", OccasionallyConnectedPackageSet.WebSockets, "--tfms", "net8.0,net9.0,net10.0,net11.0", "--commit", commit]);
+            ["verify", "--feed", feed, "--version", version, "--packages",
+                string.Join(',', OccasionallyConnectedPackageSet.WebSockets, "ReactiveUI.Primitives.OccasionallyConnected.SignalR", "ReactiveUI.Primitives.OccasionallyConnected.Storage.BliteDb"),
+                "--tfms", "net8.0,net9.0,net10.0,net11.0", "--commit", commit]);
+        InvokeInspector(
+            "symbols-sourcelink-platform-compositions",
+            ["verify", "--feed", feed, "--version", version, "--packages",
+                "ReactiveUI.Primitives.OccasionallyConnected.Web,ReactiveUI.Primitives.OccasionallyConnected.Mobile,ReactiveUI.Primitives.OccasionallyConnected.Storage.IndexedDB",
+                "--tfms", "net10.0,net11.0", "--commit", commit]);
 
         var sampleProject = "OccasionallyConnected.PackedSample.csproj";
         var sampleProperties = new[]
@@ -415,7 +427,17 @@ public static partial class Packages
             var reference = new XElement("PackageReference",
                 new XAttribute("Include", name),
                 new XAttribute("Version", "$(OccasionallyConnectedPackageVersion)"));
-            if (name == OccasionallyConnectedPackageSet.WebSockets)
+            if (name is "ReactiveUI.Primitives.OccasionallyConnected.Web"
+                or "ReactiveUI.Primitives.OccasionallyConnected.Mobile"
+                or "ReactiveUI.Primitives.OccasionallyConnected.Storage.IndexedDB")
+            {
+                reference.SetAttributeValue(
+                    "Condition",
+                    "$([MSBuild]::IsTargetFrameworkCompatible('$(TargetFramework)', 'net10.0'))");
+            }
+            else if (name == OccasionallyConnectedPackageSet.WebSockets
+                || name is "ReactiveUI.Primitives.OccasionallyConnected.SignalR"
+                    or "ReactiveUI.Primitives.OccasionallyConnected.Storage.BliteDb")
             {
                 reference.SetAttributeValue("Condition", "!$(TargetFramework.StartsWith('net4'))");
             }

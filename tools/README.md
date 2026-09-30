@@ -15,7 +15,8 @@ dotnet run --project tools/OccasionallyConnected.Ci/OccasionallyConnected.Ci.csp
 dotnet run --project tools/OccasionallyConnected.Ci/OccasionallyConnected.Ci.csproj -- aot --version 0.1.0-ocaot.123.1
 ```
 
-Coverage checks the exact 12 test suites on net8.0, net9.0, net10.0, or net11.0.
+Coverage checks the complete OccasionallyConnected test suite list on net8.0,
+net9.0, net10.0, or net11.0. Each adapter runs only on its supported frameworks.
 To check existing Cobertura reports without running tests, use `coverage` with
 repeated `--report-path <file>` and `--package-name <name>` options instead.
 The package command also accepts `--sample-target-frameworks <tfm,tfm>`,

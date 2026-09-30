@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFrameworks>$(MauiTargetFrameworks)</TargetFrameworks>
+    <TargetFrameworks Condition="'$(MobilePlatformTargetFrameworks)' != ''">$(TargetFrameworks);$([MSBuild]::Unescape('$(MobilePlatformTargetFrameworks)'))</TargetFrameworks>
+    <PackageDescription>Mobile lifecycle, secure identity and encryption keys, and SQLite composition for occasionally connected streams.</PackageDescription>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Maui.Controls.Core" />
+    <PackageReference Include="Microsoft.Maui.Essentials" />
+    <ProjectReference Include="..\ReactiveUI.Primitives.OccasionallyConnected.Storage.Sqlite\ReactiveUI.Primitives.OccasionallyConnected.Storage.Sqlite.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Remove="..\..\README.md" />
+    <None Include="README.md" Pack="true" PackagePath="README.md" />
+  </ItemGroup>
+</Project>

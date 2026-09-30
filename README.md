@@ -3026,6 +3026,9 @@ packages that provide the contracts and adapters your application needs:
 | [ReactiveUI.Primitives.OccasionallyConnected.Server](src/ReactiveUI.Primitives.OccasionallyConnected.Server/README.md) | Server-side streams, durable server state and synchronization. |
 | [ReactiveUI.Primitives.OccasionallyConnected.Hosting](src/ReactiveUI.Primitives.OccasionallyConnected.Hosting/README.md) | Hosting and health integration for a client context. |
 | [ReactiveUI.Primitives.OccasionallyConnected.DependencyInjection](src/ReactiveUI.Primitives.OccasionallyConnected.DependencyInjection/README.md) | Dependency-injection registration for client and server services. |
+| [ReactiveUI.Primitives.OccasionallyConnected.Web](src/ReactiveUI.Primitives.OccasionallyConnected.Web/README.md) | Browser connectivity and lifecycle with IndexedDB storage. |
+| [ReactiveUI.Primitives.OccasionallyConnected.SignalR](src/ReactiveUI.Primitives.OccasionallyConnected.SignalR/README.md) | SignalR client transport and server hub integration. |
+| [ReactiveUI.Primitives.OccasionallyConnected.Mobile](src/ReactiveUI.Primitives.OccasionallyConnected.Mobile/README.md) | Mobile lifecycle, secure storage and SQLite integration. |
 
 For complete workflows, read the [collaboration client](src/examples/OccasionallyConnected.Collaboration.Client/README.md),
 [collaboration server](src/examples/OccasionallyConnected.Collaboration.Server/README.md), [durable outbox](src/examples/OccasionallyConnected.DurableOutbox/README.md),

@@ -152,12 +152,18 @@
                      And '$(MSBuildProjectName)' != 'ReactiveUI.Primitives.OccasionallyConnected.Core'
                      And '$(MSBuildProjectName)' != 'ReactiveUI.Primitives.OccasionallyConnected.DependencyInjection'
                      And '$(MSBuildProjectName)' != 'ReactiveUI.Primitives.OccasionallyConnected.Hosting'
+                     And '$(MSBuildProjectName)' != 'ReactiveUI.Primitives.OccasionallyConnected.Mobile'
                      And '$(MSBuildProjectName)' != 'ReactiveUI.Primitives.OccasionallyConnected.Reactive'
                      And '$(MSBuildProjectName)' != 'ReactiveUI.Primitives.OccasionallyConnected.Server'
+                     And '$(MSBuildProjectName)' != 'ReactiveUI.Primitives.OccasionallyConnected.SignalR'
+                     And '$(MSBuildProjectName)' != 'ReactiveUI.Primitives.OccasionallyConnected.Storage.BliteDb'
                      And '$(MSBuildProjectName)' != 'ReactiveUI.Primitives.OccasionallyConnected.Storage.FileSystem'
+                     And '$(MSBuildProjectName)' != 'ReactiveUI.Primitives.OccasionallyConnected.Storage.IndexedDB'
+                     And '$(MSBuildProjectName)' != 'ReactiveUI.Primitives.OccasionallyConnected.Storage.LiteDb'
                      And '$(MSBuildProjectName)' != 'ReactiveUI.Primitives.OccasionallyConnected.Storage.Sqlite'
                      And '$(MSBuildProjectName)' != 'ReactiveUI.Primitives.OccasionallyConnected.Transport.Http'
-                     And '$(MSBuildProjectName)' != 'ReactiveUI.Primitives.OccasionallyConnected.Transport.WebSockets'"/>
+                     And '$(MSBuildProjectName)' != 'ReactiveUI.Primitives.OccasionallyConnected.Transport.WebSockets'
+                     And '$(MSBuildProjectName)' != 'ReactiveUI.Primitives.OccasionallyConnected.Web'"/>
     <None Include="$(MSBuildThisFileDirectory)..\images\logo.png" Pack="true" PackagePath="\"/>
   </ItemGroup>
 
