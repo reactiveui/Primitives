@@ -85,6 +85,9 @@ public sealed class WebSocketRemoteTransportAdapter : IRemoteTransportAdapter
         /// <summary>The protocol code used for malformed responses.</summary>
         private const string ProtocolErrorCode = "protocol-error";
 
+        /// <summary>The maximum time allowed for the peer to acknowledge a normal close handshake.</summary>
+        private static readonly TimeSpan CloseTimeout = TimeSpan.FromSeconds(5);
+
         /// <summary>The active WebSocket.</summary>
         private readonly WebSocket _socket;
 
@@ -169,18 +172,29 @@ public sealed class WebSocketRemoteTransportAdapter : IRemoteTransportAdapter
                 _ = entry.Value.TrySetException(new ObjectDisposedException(nameof(WebSocketRemoteTransportSession)));
             }
 
+            // Cancellation can abort a managed WebSocket while its ReceiveAsync call unwinds. Wait for that sole
+            // receiver before inspecting state or beginning a close handshake, because concurrent receive and close
+            // operations are not supported by all WebSocket implementations.
+            await _receiveLoop.ConfigureAwait(false);
+
             if (_socket.State is WebSocketState.Open or WebSocketState.CloseReceived)
             {
+                using var closeTimeout = new CancellationTokenSource(CloseTimeout);
                 try
                 {
-                    await _socket.CloseAsync(WebSocketCloseStatus.NormalClosure, "disposed", CancellationToken.None).ConfigureAwait(false);
+                    await _socket.CloseAsync(
+                        WebSocketCloseStatus.NormalClosure,
+                        "disposed",
+                        closeTimeout.Token).ConfigureAwait(false);
                 }
                 catch (WebSocketException)
                 {
                 }
+                catch (OperationCanceledException) when (closeTimeout.IsCancellationRequested)
+                {
+                }
             }
 
-            await _receiveLoop.ConfigureAwait(false);
             _socket.Dispose();
             _sendGate.Dispose();
             _shutdown.Dispose();

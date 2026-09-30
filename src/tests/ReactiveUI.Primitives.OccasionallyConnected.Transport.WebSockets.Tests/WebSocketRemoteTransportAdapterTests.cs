@@ -35,6 +35,9 @@ public sealed class WebSocketRemoteTransportAdapterTests
     /// <summary>The test event cursor.</summary>
     private const string EventCursor = "cursor-1";
 
+    /// <summary>An endpoint used when a connected test socket is supplied directly.</summary>
+    private const string UnreachableEndpoint = "ws://127.0.0.1:1/";
+
     /// <summary>The number of fields in the serialized WebSocket crash case.</summary>
     private const int CrashCaseFieldCount = 2;
 
@@ -79,7 +82,7 @@ public sealed class WebSocketRemoteTransportAdapterTests
     [Test]
     public async Task CapabilitiesAdvertiseOnlyImplementedWebSocketFeatures()
     {
-        await using var adapter = new WebSocketRemoteTransportAdapter(CreateOptions(new("ws://127.0.0.1:1/")));
+        await using var adapter = new WebSocketRemoteTransportAdapter(CreateOptions(new(UnreachableEndpoint)));
 
         await Assert.That(adapter.Capabilities).IsEqualTo(
             RemoteTransportCapabilities.BatchPush
@@ -300,6 +303,64 @@ public sealed class WebSocketRemoteTransportAdapterTests
             .ThrowsExactly<ObjectDisposedException>();
     }
 
+    /// <summary>Verifies disposal waits for its cancelled receiver before it starts the close handshake.</summary>
+    /// <returns>A task that represents the asynchronous test.</returns>
+    [Test]
+    public async Task DisposeAsyncWaitsForCancelledReceiveBeforeClosingSocket()
+    {
+        var socket = new CancelledReceiveWebSocket();
+        var session = new WebSocketRemoteTransportAdapter.WebSocketRemoteTransportSession(
+            socket,
+            CreateOptions(new(UnreachableEndpoint)));
+        await socket.WaitForReceiveStartedAsync().WaitAsync(SubscriptionResponseTimeout);
+
+        var dispose = session.DisposeAsync().AsTask();
+        try
+        {
+            await socket.WaitForReceiveCancellationAsync().WaitAsync(SubscriptionResponseTimeout);
+            await Assert.That(socket.GetCloseAsyncCallCount()).IsEqualTo(0);
+        }
+        finally
+        {
+            socket.CompleteReceiveCancellation();
+            try
+            {
+                await dispose.WaitAsync(SubscriptionResponseTimeout);
+            }
+            catch (InvalidOperationException) when (socket.GetCloseAsyncCallCount() != 0)
+            {
+                // The pre-fix implementation calls CloseAsync while the receive is still unwinding.
+            }
+        }
+
+        await Assert.That(socket.GetCloseAsyncCallCount()).IsEqualTo(1);
+    }
+
+    /// <summary>Verifies disposal bounds a close handshake when a peer does not acknowledge it.</summary>
+    /// <returns>A task that represents the asynchronous test.</returns>
+    [Test]
+    public async Task DisposeAsyncCompletesWhenCloseHandshakeDoesNotComplete()
+    {
+        var socket = new CancelledReceiveWebSocket(completeCloseHandshake: false);
+        var session = new WebSocketRemoteTransportAdapter.WebSocketRemoteTransportSession(
+            socket,
+            CreateOptions(new(UnreachableEndpoint)));
+        await socket.WaitForReceiveStartedAsync().WaitAsync(SubscriptionResponseTimeout);
+
+        var dispose = session.DisposeAsync().AsTask();
+        try
+        {
+            await socket.WaitForReceiveCancellationAsync().WaitAsync(SubscriptionResponseTimeout);
+        }
+        finally
+        {
+            socket.CompleteReceiveCancellation();
+        }
+
+        await dispose.WaitAsync(SubscriptionResponseTimeout);
+        await Assert.That(socket.GetCloseAsyncCallCount()).IsEqualTo(1);
+    }
+
     /// <summary>Verifies the test peer accepts the client's close frame as normal connection shutdown.</summary>
     /// <returns>A task that represents the asynchronous test.</returns>
     [Test]
@@ -494,6 +555,127 @@ public sealed class WebSocketRemoteTransportAdapterTests
         }
 
         throw new InvalidOperationException("The WebSocket test listener could not bind a local port.");
+    }
+
+    /// <summary>Models a receive cancellation that finishes only when the test permits it.</summary>
+    private sealed class CancelledReceiveWebSocket : WebSocket
+    {
+        /// <summary>Signals that the receive loop has begun reading.</summary>
+        private readonly TaskCompletionSource _receiveStarted = new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        /// <summary>Signals that disposal cancelled the receive operation.</summary>
+        private readonly TaskCompletionSource _receiveCancelled = new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        /// <summary>Allows the cancelled receive operation to finish unwinding.</summary>
+        private readonly TaskCompletionSource _completeReceiveCancellation = new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        /// <summary>Determines whether the close handshake completes without cancellation.</summary>
+        private readonly bool _completeCloseHandshake;
+
+        /// <summary>Tracks the socket state.</summary>
+        private WebSocketState _state = WebSocketState.Open;
+
+        /// <summary>Tracks close handshake calls.</summary>
+        private int _closeAsyncCallCount;
+
+        /// <summary>Tracks whether the cancelled receive operation has finished unwinding.</summary>
+        private int _receiveCancellationCompleted;
+
+        /// <summary>Initializes a new instance of the <see cref="CancelledReceiveWebSocket"/> class.</summary>
+        /// <param name="completeCloseHandshake">Whether the simulated peer acknowledges the close handshake.</param>
+        internal CancelledReceiveWebSocket(bool completeCloseHandshake = true) =>
+            _completeCloseHandshake = completeCloseHandshake;
+
+        /// <inheritdoc />
+        public override WebSocketCloseStatus? CloseStatus => null;
+
+        /// <inheritdoc />
+        public override string? CloseStatusDescription => null;
+
+        /// <inheritdoc />
+        public override WebSocketState State => _state;
+
+        /// <inheritdoc />
+        public override string? SubProtocol => null;
+
+        /// <inheritdoc />
+        public override void Abort() => _state = WebSocketState.Aborted;
+
+        /// <inheritdoc />
+        public override Task CloseAsync(
+            WebSocketCloseStatus closeStatus,
+            string? statusDescription,
+            CancellationToken cancellationToken)
+        {
+            _ = Interlocked.Increment(ref _closeAsyncCallCount);
+            if (Volatile.Read(ref _receiveCancellationCompleted) == 0)
+            {
+                throw new InvalidOperationException("CloseAsync ran before the cancelled receive operation finished.");
+            }
+
+            if (!_completeCloseHandshake)
+            {
+                return Task.Delay(Timeout.InfiniteTimeSpan, cancellationToken);
+            }
+
+            _state = WebSocketState.Closed;
+            return Task.CompletedTask;
+        }
+
+        /// <inheritdoc />
+        public override Task CloseOutputAsync(
+            WebSocketCloseStatus closeStatus,
+            string? statusDescription,
+            CancellationToken cancellationToken) => Task.CompletedTask;
+
+        /// <inheritdoc />
+        public override void Dispose() => _state = WebSocketState.Closed;
+
+        /// <inheritdoc />
+        public override async Task<WebSocketReceiveResult> ReceiveAsync(
+            ArraySegment<byte> buffer,
+            CancellationToken cancellationToken)
+        {
+            _ = _receiveStarted.TrySetResult();
+            try
+            {
+                await Task.Delay(Timeout.InfiniteTimeSpan, cancellationToken);
+            }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                _ = _receiveCancelled.TrySetResult();
+                await _completeReceiveCancellation.Task;
+                Volatile.Write(ref _receiveCancellationCompleted, 1);
+                throw;
+            }
+
+            throw new InvalidOperationException("The receive cancellation was not observed.");
+        }
+
+        /// <inheritdoc />
+        public override Task SendAsync(
+            ArraySegment<byte> buffer,
+            WebSocketMessageType messageType,
+            bool endOfMessage,
+            CancellationToken cancellationToken) => Task.CompletedTask;
+
+        /// <summary>Lets the cancelled receive operation finish unwinding.</summary>
+        internal void CompleteReceiveCancellation() => _ = _completeReceiveCancellation.TrySetResult();
+
+        /// <summary>Gets the task that completes when receiving starts.</summary>
+        /// <returns>A task that completes when the receive loop begins.</returns>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        internal Task WaitForReceiveStartedAsync() => _receiveStarted.Task;
+
+        /// <summary>Gets the task that completes when receiving is cancelled.</summary>
+        /// <returns>A task that completes when disposal cancels the receive operation.</returns>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        internal Task WaitForReceiveCancellationAsync() => _receiveCancelled.Task;
+
+        /// <summary>Gets the number of close handshake calls.</summary>
+        /// <returns>The number of close handshake calls.</returns>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        internal int GetCloseAsyncCallCount() => Volatile.Read(ref _closeAsyncCallCount);
     }
 
     /// <summary>Hosts a local WebSocket endpoint for adapter tests.</summary>
