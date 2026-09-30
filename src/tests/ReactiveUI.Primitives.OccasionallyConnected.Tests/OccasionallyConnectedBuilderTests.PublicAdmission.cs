@@ -25,6 +25,11 @@ public sealed partial class OccasionallyConnectedBuilderTests
 
         await Assert.That(async () => await stream.PublishAsync(new(1), CreatePublicPublishOptions(strategy, durable), CancellationToken.None))
             .ThrowsExactly<InvalidOperationException>();
+        var coordinator = (IOccasionallyConnectedStreamCoordinator)context.SyncEngine;
+        var subscriptionId = await coordinator.EnsureSubscriptionIdAsync(Stream, null, CancellationToken.None);
+        var rejectedState = await store.RecoverStreamAsync(Stream, subscriptionId, CancellationToken.None);
+        await Assert.That(rejectedState.PendingOperations.Count).IsEqualTo(0);
+        await Assert.That(transport.ConnectCalls).IsEqualTo(0);
         var receipt = await stream.PublishAsync(new(1), null, CancellationToken.None).AsTask().WaitAsync(GuardTimeout);
 
         await Assert.That(receipt.ClientSequence).IsEqualTo(1L);
