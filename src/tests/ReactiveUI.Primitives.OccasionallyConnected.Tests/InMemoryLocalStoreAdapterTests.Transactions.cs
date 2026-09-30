@@ -19,7 +19,12 @@ public sealed partial class InMemoryLocalStoreAdapterTests
         await using var store = await CreateInitializedStoreAsync(clock);
         var operation = await CommitOperationAsync(store, Stream, 1, "first");
         clock.Block = true;
-        var commit = Task.Run(async () => await CommitOperationAsync(store, Stream, SecondClientSequence, "second"));
+        var commit = Task.Factory.StartNew(
+            static state => CommitOperationAsync((InMemoryLocalStoreAdapter)state!, Stream, SecondClientSequence, "second"),
+            store,
+            CancellationToken.None,
+            TaskCreationOptions.LongRunning,
+            TaskScheduler.Default).Unwrap();
         try
         {
             await clock.Entered.Task.WaitAsync(TimeSpan.FromSeconds(TimeoutSeconds));

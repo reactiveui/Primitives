@@ -117,7 +117,17 @@ public sealed partial class InMemoryLocalStoreAdapterTests
             release.Wait();
             return CreateSnapshotMutation(1, AuthoritativeInitialText);
         });
-        var commit = Task.Run(async () => await store.ApplySyncResultAsync(lease.LeaseId, result, mutations, CancellationToken.None));
+        var commit = Task.Factory.StartNew(
+            static state =>
+            {
+                var (captureStore, captureLeaseId, captureResult, captureMutations) =
+                    ((InMemoryLocalStoreAdapter, Guid, RemoteSyncResult, ResultMutationList))state!;
+                return captureStore.ApplySyncResultAsync(captureLeaseId, captureResult, captureMutations, CancellationToken.None).AsTask();
+            },
+            (store, lease.LeaseId, result, mutations),
+            CancellationToken.None,
+            TaskCreationOptions.LongRunning,
+            TaskScheduler.Default).Unwrap();
         try
         {
             await entered.Task.WaitAsync(TimeSpan.FromSeconds(TimeoutSeconds));

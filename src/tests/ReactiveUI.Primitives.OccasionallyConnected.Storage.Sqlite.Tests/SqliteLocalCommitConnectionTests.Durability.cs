@@ -30,15 +30,16 @@ public sealed partial class SqliteLocalCommitConnectionTests
 
         SqliteLocalCommitConnection.ConfigureLockPolling(durability);
         using var configureEntered = new ManualResetEventSlim();
+        using var observerReady = new ManualResetEventSlim();
         var configure = Task.Factory.StartNew(
             ConfigureDurabilityOnDedicatedThread,
-            (durability, configureEntered),
+            (durability, configureEntered, observerReady),
             CancellationToken.None,
             TaskCreationOptions.LongRunning | TaskCreationOptions.DenyChildAttach,
             TaskScheduler.Default);
         var observation = Task.Factory.StartNew(
             ObserveAndReleaseStartupWriter,
-            (transaction, configure, configureEntered),
+            (transaction, configure, configureEntered, observerReady),
             CancellationToken.None,
             TaskCreationOptions.LongRunning | TaskCreationOptions.DenyChildAttach,
             TaskScheduler.Default);
@@ -81,22 +82,24 @@ public sealed partial class SqliteLocalCommitConnectionTests
     }
 
     /// <summary>Runs the blocking durability retry without occupying a test-runner worker.</summary>
-    /// <param name="state">The durability connection and entry signal.</param>
+    /// <param name="state">The durability connection, entry signal, and observer-ready signal.</param>
     private static void ConfigureDurabilityOnDedicatedThread(object? state)
     {
-        var (connection, entered) = ((SqliteConnection, ManualResetEventSlim))state!;
+        var (connection, entered, observerReady) = ((SqliteConnection, ManualResetEventSlim, ManualResetEventSlim))state!;
+        observerReady.Wait();
         entered.Set();
         SqliteLocalCommitConnection.ConfigureDurabilityAfterOwnershipValidation(connection, CancellationToken.None);
     }
 
     /// <summary>Observes the retry and releases its writer independently of thread-pool scheduling.</summary>
-    /// <param name="state">The writer transaction, durability task, and entry signal.</param>
+    /// <param name="state">The writer transaction, durability task, entry signal, and observer-ready signal.</param>
     /// <returns>Whether durability completed while the writer was held.</returns>
     private static bool ObserveAndReleaseStartupWriter(object? state)
     {
-        var (transaction, configure, entered) = ((SqliteTransaction, Task, ManualResetEventSlim))state!;
+        var (transaction, configure, entered, observerReady) = ((SqliteTransaction, Task, ManualResetEventSlim, ManualResetEventSlim))state!;
         try
         {
+            observerReady.Set();
             entered.Wait();
             Thread.Sleep(BusyWaitObservationDelay);
             return configure.IsCompleted;
