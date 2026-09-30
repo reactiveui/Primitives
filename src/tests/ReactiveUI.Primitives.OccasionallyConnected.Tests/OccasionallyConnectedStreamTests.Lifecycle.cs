@@ -245,6 +245,7 @@ public sealed partial class OccasionallyConnectedStreamTests
         await stream.StopAsync(CancellationToken.None);
 
         await Assert.That(coordinator.RegisterCalls).IsEqualTo(1);
+        await Assert.That(coordinator.LastStartRemoteActive).IsFalse();
         await Assert.That(coordinator.StopCalls).IsEqualTo(1);
         await Assert.That(coordinator.StartCalls).IsEqualTo(0);
         await Assert.That(coordinator.EnterLocalCommitCalls).IsEqualTo(0);

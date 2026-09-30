@@ -250,6 +250,9 @@ public sealed partial class OccasionallyConnectedStreamTests
         /// <summary>Gets the number of participant registration calls.</summary>
         public int RegisterCalls { get; private set; }
 
+        /// <summary>Gets whether the most recently registered participant starts remote work immediately.</summary>
+        public bool? LastStartRemoteActive { get; private set; }
+
         /// <summary>Gets the number of local admission calls.</summary>
         public int EnterLocalCommitCalls { get; private set; }
 
@@ -294,9 +297,14 @@ public sealed partial class OccasionallyConnectedStreamTests
 
         /// <inheritdoc />
         public IDisposable RegisterParticipant(IOccasionallyConnectedStreamParticipant participant)
+            => RegisterParticipant(participant, startRemoteActive: true);
+
+        /// <inheritdoc />
+        public IDisposable RegisterParticipant(IOccasionallyConnectedStreamParticipant participant, bool startRemoteActive)
         {
             ArgumentNullException.ThrowIfNull(participant);
             RegisterCalls++;
+            LastStartRemoteActive = startRemoteActive;
             return new Registration();
         }
 

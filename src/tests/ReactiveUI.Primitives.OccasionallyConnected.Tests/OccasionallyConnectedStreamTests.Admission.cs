@@ -175,6 +175,10 @@ public sealed partial class OccasionallyConnectedStreamTests
 
         /// <inheritdoc/>
         public IDisposable RegisterParticipant(IOccasionallyConnectedStreamParticipant participant)
+            => RegisterParticipant(participant, startRemoteActive: true);
+
+        /// <inheritdoc/>
+        public IDisposable RegisterParticipant(IOccasionallyConnectedStreamParticipant participant, bool startRemoteActive)
         {
             ArgumentNullException.ThrowIfNull(participant);
             return new Registration();

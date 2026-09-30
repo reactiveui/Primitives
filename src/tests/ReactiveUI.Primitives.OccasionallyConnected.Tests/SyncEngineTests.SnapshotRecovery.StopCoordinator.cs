@@ -23,6 +23,11 @@ public sealed partial class SyncEngineTests
 
         /// <inheritdoc/>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public IDisposable RegisterParticipant(IOccasionallyConnectedStreamParticipant participant, bool startRemoteActive) =>
+            inner.RegisterParticipant(participant, startRemoteActive);
+
+        /// <inheritdoc/>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public ValueTask<SubscriptionId> EnsureSubscriptionIdAsync(
             StreamId streamId,
             SubscriptionId? preferredId,

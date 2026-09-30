@@ -28,6 +28,13 @@ public sealed partial class SyncEngineTests
         }
 
         /// <inheritdoc/>
+        public IDisposable RegisterParticipant(IOccasionallyConnectedStreamParticipant participant, bool startRemoteActive)
+        {
+            _participant = participant;
+            return NoopRegistration.Instance;
+        }
+
+        /// <inheritdoc/>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public ValueTask<SubscriptionId> EnsureSubscriptionIdAsync(
             StreamId streamId,
