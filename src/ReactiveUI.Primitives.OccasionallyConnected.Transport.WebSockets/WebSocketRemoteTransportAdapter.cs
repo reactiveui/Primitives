@@ -306,8 +306,13 @@ public sealed class WebSocketRemoteTransportAdapter : IRemoteTransportAdapter
             {
                 await SendAsync(WebSocketProtocol.Serialize(messageType, messageId, null, body), cancellationToken).ConfigureAwait(false);
                 await using var registration = cancellationToken.UnsafeRegister(
-                    static state => _ = ((TaskCompletionSource<WebSocketProtocol.Frame>)state!).TrySetCanceled(),
-                    completion);
+                    static state =>
+                    {
+                        var request =
+                            ((TaskCompletionSource<WebSocketProtocol.Frame> Completion, CancellationToken CancellationToken))state!;
+                        _ = request.Completion.TrySetCanceled(request.CancellationToken);
+                    },
+                    (Completion: completion, CancellationToken: cancellationToken));
                 return await completion.Task.ConfigureAwait(false);
             }
             finally
@@ -386,6 +391,13 @@ public sealed class WebSocketRemoteTransportAdapter : IRemoteTransportAdapter
                 }
             }
             while (!result.EndOfMessage);
+
+            if (message.Length == 0)
+            {
+                // Some platforms deliver an abrupt peer disconnect as a zero-byte, non-Close result rather than a
+                // proper close frame. Treat it the same as an explicit close instead of failing JSON parsing.
+                throw new WebSocketRemoteTransportException("closed", "The remote WebSocket closed the session.");
+            }
 
             return WebSocketProtocol.Parse(message.ToArray(), _options.MaximumMessageBytes);
         }

@@ -16,8 +16,9 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Microsoft.Data.Sqlite" />
-    <PackageReference Include="SQLitePCLRaw.bundle_e_sqlite3" />
+    <PackageReference Include="Microsoft.Data.Sqlite.Core" />
+    <PackageReference Include="SQLitePCLRaw.core" />
+    <PackageReference Include="SQLite3MC.PCLRaw.bundle" />
   </ItemGroup>
 
   <ItemGroup>

@@ -8,7 +8,7 @@ SQLite implementation of the local durable store contracts. `SqliteLocalStoreAda
 dotnet add package ReactiveUI.Primitives.OccasionallyConnected.Storage.Sqlite
 ```
 
-The package targets `net8.0`, `net9.0`, `net10.0`, `net11.0`, `net462`, `net472`, `net48`, and `net481`. It depends on the core contracts, Microsoft.Data.Sqlite, and the SQLite native bundle.
+The package targets `net8.0`, `net9.0`, `net10.0`, `net11.0`, `net462`, `net472`, `net48`, and `net481`. It depends on the core contracts, `Microsoft.Data.Sqlite.Core`, and the SQLite3 Multiple Ciphers native bundle (`SQLite3MC.PCLRaw.bundle`).
 
 ## Use
 

@@ -19,10 +19,10 @@ internal sealed partial class SyncEngine
         TaskCompletionSource<bool> completion,
         CancellationToken cancellationToken) =>
         new(cancellationToken.UnsafeRegister(
-            static state =>
+            static (state, token) =>
             {
                 ArgumentExceptionHelper.ThrowIfNull(state);
-                _ = ((TaskCompletionSource<bool>)state).TrySetCanceled();
+                _ = ((TaskCompletionSource<bool>)state).TrySetCanceled(token);
             },
             completion));
 

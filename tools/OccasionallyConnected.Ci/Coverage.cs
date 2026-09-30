@@ -62,7 +62,10 @@ public static partial class Coverage
         "ReactiveUI.Primitives.OccasionallyConnected.ResilienceLab.Tests",
         "ReactiveUI.Primitives.OccasionallyConnected.Reactive.Tests",
         "ReactiveUI.Primitives.OccasionallyConnected.Server.Tests",
+        "ReactiveUI.Primitives.OccasionallyConnected.Storage.BliteDb.Tests",
         "ReactiveUI.Primitives.OccasionallyConnected.Storage.FileSystem.Tests",
+        "ReactiveUI.Primitives.OccasionallyConnected.Storage.IndexedDB.Tests",
+        "ReactiveUI.Primitives.OccasionallyConnected.Storage.LiteDb.Tests",
         "ReactiveUI.Primitives.OccasionallyConnected.Storage.Sqlite.Tests",
         "ReactiveUI.Primitives.OccasionallyConnected.Tests",
         "ReactiveUI.Primitives.OccasionallyConnected.Transport.Http.Tests",
@@ -77,7 +80,10 @@ public static partial class Coverage
         "ReactiveUI.Primitives.OccasionallyConnected.Hosting",
         ReactivePackageName,
         "ReactiveUI.Primitives.OccasionallyConnected.Server",
+        "ReactiveUI.Primitives.OccasionallyConnected.Storage.BliteDb",
         "ReactiveUI.Primitives.OccasionallyConnected.Storage.FileSystem",
+        "ReactiveUI.Primitives.OccasionallyConnected.Storage.IndexedDB",
+        "ReactiveUI.Primitives.OccasionallyConnected.Storage.LiteDb",
         "ReactiveUI.Primitives.OccasionallyConnected.Storage.Sqlite",
         "ReactiveUI.Primitives.OccasionallyConnected.Transport.Http",
         "ReactiveUI.Primitives.OccasionallyConnected.Transport.WebSockets",
@@ -162,6 +168,12 @@ public static partial class Coverage
                 throw new CoverageGateException($"Missing test project: {projectFile}");
             }
 
+            if (!TargetsFramework(projectFile, options.Framework!))
+            {
+                Console.WriteLine($"Skipping {name} ({options.Framework}) because the project does not target that framework.");
+                continue;
+            }
+
             Console.WriteLine($"Building {name} ({options.Framework})");
             // Analyzer compliance is checked by the package gate; coverage builds focus on compiling and running the test suites.
             var buildExitCode = RunProcess(
@@ -203,7 +215,40 @@ public static partial class Coverage
             reportPaths.Add(reports[0]);
         }
 
-        ValidateAndMergeCoverage([.. reportPaths], PackageNamesForCiInvocation, includeReactiveRecompiledSources: true);
+        var packageNames = PackageNamesForCiInvocation
+            .Where(name => TargetsFramework(Path.Combine(src, name, $"{name}.csproj"), options.Framework!))
+            .ToArray();
+        ValidateAndMergeCoverage([.. reportPaths], packageNames, includeReactiveRecompiledSources: true);
+    }
+
+    private static bool TargetsFramework(string projectFile, string framework)
+    {
+        try
+        {
+            var document = XDocument.Load(projectFile);
+            var targetFrameworkValues = document
+                .Descendants()
+                .Where(element => element.Name.LocalName is "TargetFramework" or "TargetFrameworks")
+                .Select(element => element.Value.Trim())
+                .Where(value => value.Length > 0)
+                .ToArray();
+            if (targetFrameworkValues.Length == 0)
+            {
+                throw new CoverageGateException($"Test project does not declare TargetFramework or TargetFrameworks: {projectFile}");
+            }
+
+            return targetFrameworkValues.Any(value => value.Contains("$(", StringComparison.Ordinal)
+                || value.Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                    .Contains(framework, StringComparer.Ordinal));
+        }
+        catch (CoverageGateException)
+        {
+            throw;
+        }
+        catch (Exception exception) when (exception is IOException or System.Xml.XmlException)
+        {
+            throw new CoverageGateException($"Unable to discover target frameworks for test project: {projectFile}", exception);
+        }
     }
 
     private static int RunProcess(string fileName, string workingDirectory, params string[] arguments)

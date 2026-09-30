@@ -320,14 +320,8 @@ internal sealed partial class BoundedSerializedStreamWorkLane : IDisposable
         /// <summary>Gets or sets the linked-list node while this item is queued.</summary>
         internal abstract LinkedListNode<QueuedWorkItem>? Node { get; set; }
 
-        /// <summary>Starts running this work item.</summary>
-        internal abstract void Begin();
-
         /// <summary>Schedules this work item to run without chaining on the completing stack.</summary>
         internal abstract void Schedule();
-
-        /// <summary>Registers cancellation for queued work.</summary>
-        internal abstract void RegisterCancellation();
 
         /// <summary>Disposes the queued cancellation registration.</summary>
         internal abstract void DisposeRegistration();
@@ -402,22 +396,10 @@ internal sealed partial class BoundedSerializedStreamWorkLane : IDisposable
         internal Task<T> Task => _completion.Task;
 
         /// <inheritdoc />
-        internal override void Begin()
-        {
-            if (Interlocked.CompareExchange(ref _startState, StartRunning, StartPending) != StartPending)
-            {
-                return;
-            }
-
-            DisposeRegistration();
-            _ = RunAsync();
-        }
-
-        /// <inheritdoc />
         internal override void Schedule() => _owner._schedule(Begin);
 
-        /// <inheritdoc />
-        internal override void RegisterCancellation()
+        /// <summary>Registers cancellation for queued work.</summary>
+        internal void RegisterCancellation()
         {
             if (!_cancellationToken.CanBeCanceled)
             {
@@ -472,6 +454,18 @@ internal sealed partial class BoundedSerializedStreamWorkLane : IDisposable
             ArgumentExceptionHelper.ThrowIfNull(state);
             var item = (QueuedWorkItem<T>)state;
             item._owner.CancelQueued(item);
+        }
+
+        /// <summary>Starts running this work item.</summary>
+        private void Begin()
+        {
+            if (Interlocked.CompareExchange(ref _startState, StartRunning, StartPending) != StartPending)
+            {
+                return;
+            }
+
+            DisposeRegistration();
+            _ = RunAsync();
         }
 
         /// <summary>Runs the work and completes the result.</summary>

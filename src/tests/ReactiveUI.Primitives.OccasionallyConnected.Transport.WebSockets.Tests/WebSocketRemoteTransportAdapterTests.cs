@@ -534,6 +534,9 @@ public sealed class WebSocketRemoteTransportAdapterTests
             catch (HttpListenerException)
             {
             }
+            catch (ObjectDisposedException)
+            {
+            }
         }
 
         /// <summary>Starts a peer and accepts one WebSocket client.</summary>
@@ -578,6 +581,9 @@ public sealed class WebSocketRemoteTransportAdapterTests
                 }
             }
             catch (HttpListenerException) when (_shutdown.IsCancellationRequested)
+            {
+            }
+            catch (ObjectDisposedException) when (_shutdown.IsCancellationRequested)
             {
             }
             catch (WebSocketException)
@@ -645,6 +651,9 @@ public sealed class WebSocketRemoteTransportAdapterTests
             catch (HttpListenerException) when (_shutdown.IsCancellationRequested)
             {
             }
+            catch (ObjectDisposedException) when (_shutdown.IsCancellationRequested)
+            {
+            }
         }
 
         /// <summary>Starts a peer that holds the first push response until released.</summary>
@@ -692,6 +701,13 @@ public sealed class WebSocketRemoteTransportAdapterTests
                 }
                 catch (HttpListenerException) when (_shutdown.IsCancellationRequested)
                 {
+                    return;
+                }
+                catch (ObjectDisposedException) when (_shutdown.IsCancellationRequested)
+                {
+                    // Some platforms (e.g. macOS) surface a disposed listener as
+                    // ObjectDisposedException instead of HttpListenerException when
+                    // Stop() races with a pending GetContextAsync() call.
                     return;
                 }
 

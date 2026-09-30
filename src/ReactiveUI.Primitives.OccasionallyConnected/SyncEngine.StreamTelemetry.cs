@@ -182,7 +182,7 @@ internal sealed partial class SyncEngine
         if (startWorker)
         {
             // Even an inline public sequencer cannot invoke observers on the mutation caller's stack.
-            _ = Task.Run(ScheduleGlobalSyncStateDrain);
+            _ = Task.Run(ScheduleGlobalSyncStateDrain, CancellationToken.None);
         }
     }
 

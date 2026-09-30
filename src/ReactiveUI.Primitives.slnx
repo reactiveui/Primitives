@@ -45,7 +45,10 @@
         <Project Path="ReactiveUI.Primitives.OccasionallyConnected.Hosting/ReactiveUI.Primitives.OccasionallyConnected.Hosting.csproj" />
         <Project Path="ReactiveUI.Primitives.OccasionallyConnected.Reactive/ReactiveUI.Primitives.OccasionallyConnected.Reactive.csproj" />
         <Project Path="ReactiveUI.Primitives.OccasionallyConnected.Server/ReactiveUI.Primitives.OccasionallyConnected.Server.csproj" />
+        <Project Path="ReactiveUI.Primitives.OccasionallyConnected.Storage.BliteDb/ReactiveUI.Primitives.OccasionallyConnected.Storage.BliteDb.csproj" />
         <Project Path="ReactiveUI.Primitives.OccasionallyConnected.Storage.FileSystem/ReactiveUI.Primitives.OccasionallyConnected.Storage.FileSystem.csproj" />
+        <Project Path="ReactiveUI.Primitives.OccasionallyConnected.Storage.IndexedDB/ReactiveUI.Primitives.OccasionallyConnected.Storage.IndexedDB.csproj" />
+        <Project Path="ReactiveUI.Primitives.OccasionallyConnected.Storage.LiteDb/ReactiveUI.Primitives.OccasionallyConnected.Storage.LiteDb.csproj" />
         <Project Path="ReactiveUI.Primitives.OccasionallyConnected.Storage.Sqlite/ReactiveUI.Primitives.OccasionallyConnected.Storage.Sqlite.csproj" />
         <Project Path="ReactiveUI.Primitives.OccasionallyConnected.Transport.Http/ReactiveUI.Primitives.OccasionallyConnected.Transport.Http.csproj" />
         <Project Path="ReactiveUI.Primitives.OccasionallyConnected.Transport.WebSockets/ReactiveUI.Primitives.OccasionallyConnected.Transport.WebSockets.csproj" />
@@ -75,7 +78,10 @@
         <Project Path="tests/ReactiveUI.Primitives.OccasionallyConnected.ResilienceLab.Tests/ReactiveUI.Primitives.OccasionallyConnected.ResilienceLab.Tests.csproj" />
         <Project Path="tests/ReactiveUI.Primitives.OccasionallyConnected.Reactive.Tests/ReactiveUI.Primitives.OccasionallyConnected.Reactive.Tests.csproj" />
         <Project Path="tests/ReactiveUI.Primitives.OccasionallyConnected.Server.Tests/ReactiveUI.Primitives.OccasionallyConnected.Server.Tests.csproj" />
+        <Project Path="tests/ReactiveUI.Primitives.OccasionallyConnected.Storage.BliteDb.Tests/ReactiveUI.Primitives.OccasionallyConnected.Storage.BliteDb.Tests.csproj" />
         <Project Path="tests/ReactiveUI.Primitives.OccasionallyConnected.Storage.FileSystem.Tests/ReactiveUI.Primitives.OccasionallyConnected.Storage.FileSystem.Tests.csproj" />
+        <Project Path="tests/ReactiveUI.Primitives.OccasionallyConnected.Storage.IndexedDB.Tests/ReactiveUI.Primitives.OccasionallyConnected.Storage.IndexedDB.Tests.csproj" />
+        <Project Path="tests/ReactiveUI.Primitives.OccasionallyConnected.Storage.LiteDb.Tests/ReactiveUI.Primitives.OccasionallyConnected.Storage.LiteDb.Tests.csproj" />
         <Project Path="tests/ReactiveUI.Primitives.OccasionallyConnected.Storage.Sqlite.Tests/ReactiveUI.Primitives.OccasionallyConnected.Storage.Sqlite.Tests.csproj" />
         <Project Path="tests/ReactiveUI.Primitives.OccasionallyConnected.Tests/ReactiveUI.Primitives.OccasionallyConnected.Tests.csproj" />
         <Project Path="tests/ReactiveUI.Primitives.OccasionallyConnected.Transport.Http.Tests/ReactiveUI.Primitives.OccasionallyConnected.Transport.Http.Tests.csproj" />

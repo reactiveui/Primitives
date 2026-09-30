@@ -209,7 +209,7 @@ internal sealed partial class InMemoryLocalStoreAdapter
     private SnapshotMutation[] CaptureResultMutations(IReadOnlyList<SnapshotMutation> mutations, CancellationToken cancellationToken)
     {
         var count = mutations.Count;
-        if (count < 0 || count > _maximumRecordCount)
+        if ((uint)count > (uint)_maximumRecordCount)
         {
             throw new QueueCapacityExceededException("The result mutation count exceeds the transient budget.", false);
         }

@@ -8,7 +8,7 @@ Server-side stream and conflict-resolution primitives for authenticated synchron
 dotnet add package ReactiveUI.Primitives.OccasionallyConnected.Server
 ```
 
-The package targets `net8.0`, `net9.0`, `net10.0`, `net11.0`, `net462`, `net472`, `net48`, and `net481`. It depends on `ReactiveUI.Primitives.OccasionallyConnected.Core`, Microsoft.Data.Sqlite, and the SQLite native bundle.
+The package targets `net8.0`, `net9.0`, `net10.0`, `net11.0`, `net462`, `net472`, `net48`, and `net481`. It depends on `ReactiveUI.Primitives.OccasionallyConnected.Core`, `Microsoft.Data.Sqlite.Core`, and the SQLite3 Multiple Ciphers native bundle (`SQLite3MC.PCLRaw.bundle`).
 
 ## Use
 

@@ -103,6 +103,7 @@ public sealed partial class SyncEngineTests
         var operation = CreateOperation();
         _ = await engine.EnqueueOperationAsync(operation, CancellationToken.None);
         await WaitForConditionAsync(() => syncObserver.Values.Exists(static state => state.PendingOperations == 1));
+        await WaitForConditionAsync(() => operationObserver.Values.Count == 1);
         syncSubscription.Dispose();
         syncSubscription.Dispose();
         operationSubscription.Dispose();
