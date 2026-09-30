@@ -236,7 +236,8 @@ public sealed partial class SqliteLocalStoreAdapterTests
         Task<string> standardOutput,
         Task<string> standardError)
     {
-        if (!child.HasExited)
+        var exitedBeforeStop = child.HasExited;
+        if (!exitedBeforeStop)
         {
             child.Kill(entireProcessTree: true);
             await child.WaitForExitAsync().WaitAsync(ChildExitTimeout);
@@ -244,6 +245,9 @@ public sealed partial class SqliteLocalStoreAdapterTests
 
         return new(
             child.HasExited,
+            exitedBeforeStop,
+            !exitedBeforeStop,
+            child.ExitCode,
             await standardOutput.WaitAsync(GuardTimeout),
             await standardError.WaitAsync(GuardTimeout));
     }
@@ -257,6 +261,9 @@ public sealed partial class SqliteLocalStoreAdapterTests
             Environment.NewLine,
             "The child process did not publish the acknowledged commit signal.",
             $"HasExited: {output.HasExited.ToString(CultureInfo.InvariantCulture)}",
+            $"ExitedBeforeStop: {output.ExitedBeforeStop.ToString(CultureInfo.InvariantCulture)}",
+            $"KilledByParent: {output.KilledByParent.ToString(CultureInfo.InvariantCulture)}",
+            $"ExitCode: {output.ExitCode.ToString(CultureInfo.InvariantCulture)}",
             "StandardOutput:",
             output.StandardOutput,
             "StandardError:",
@@ -326,9 +333,18 @@ public sealed partial class SqliteLocalStoreAdapterTests
 
     /// <summary>The drained child process output.</summary>
     /// <param name="HasExited">A value indicating whether the child process exited.</param>
+    /// <param name="ExitedBeforeStop">Whether the child had exited before parent cleanup.</param>
+    /// <param name="KilledByParent">Whether parent cleanup requested process termination.</param>
+    /// <param name="ExitCode">The exit code after the child was drained.</param>
     /// <param name="StandardOutput">The child process standard output.</param>
     /// <param name="StandardError">The child process standard error.</param>
-    private sealed record CrashReceiptChildOutput(bool HasExited, string StandardOutput, string StandardError);
+    private sealed record CrashReceiptChildOutput(
+        bool HasExited,
+        bool ExitedBeforeStop,
+        bool KilledByParent,
+        int ExitCode,
+        string StandardOutput,
+        string StandardError);
 
     /// <summary>The acknowledged local commit receipt published by the child process.</summary>
     /// <param name="OperationId">The operation identifier.</param>

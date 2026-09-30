@@ -218,7 +218,7 @@ public sealed partial class SqliteLocalStoreAdapterTests
     public async Task WhenResultCommitFailsAfterStatusUpdate_ThenStatusLeaseAndSnapshotRollBack()
     {
         using var database = TempDatabase.Create();
-        await using var adapter = CreateAdapter(database.Path);
+        await using var adapter = CreateAdapter(database.Path, new FixedTimeProvider(DeadLetterTimestamp));
         await adapter.InitializeAsync(new(StoreIdentity, SchemaVersion, false), CancellationToken.None);
         var subscription = await adapter.GetOrCreateSubscriptionIdAsync(Stream, null, CancellationToken.None);
         var operation = CreateOperation(FirstClientSequence);
