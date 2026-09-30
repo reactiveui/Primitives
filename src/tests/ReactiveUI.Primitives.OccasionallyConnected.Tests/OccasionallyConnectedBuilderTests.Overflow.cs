@@ -27,9 +27,18 @@ public sealed partial class OccasionallyConnectedBuilderTests
         using var localSubscription = stream.Local.Subscribe(local);
         var dropOldest = CreatePublicPublishOptions(BufferStrategy.DropOldest, durable: false);
 
-        var first = await stream.PublishAsync(new(1), dropOldest, CancellationToken.None).AsTask().WaitAsync(GuardTimeout);
-        var second = await stream.PublishAsync(new(OverflowSecondDelta), dropOldest, CancellationToken.None).AsTask().WaitAsync(GuardTimeout);
-        var third = await stream.PublishAsync(new(OverflowThirdDelta), dropOldest, CancellationToken.None).AsTask().WaitAsync(GuardTimeout);
+        var first = await AwaitOverflowPublicationAsync(
+            stream.PublishAsync(new(1), dropOldest, CancellationToken.None).AsTask(),
+            nameof(PublicDropOldestEvictsOldestNonDurableOperationFirst),
+            FirstOverflowPublication);
+        var second = await AwaitOverflowPublicationAsync(
+            stream.PublishAsync(new(OverflowSecondDelta), dropOldest, CancellationToken.None).AsTask(),
+            nameof(PublicDropOldestEvictsOldestNonDurableOperationFirst),
+            SecondOverflowPublication);
+        var third = await AwaitOverflowPublicationAsync(
+            stream.PublishAsync(new(OverflowThirdDelta), dropOldest, CancellationToken.None).AsTask(),
+            nameof(PublicDropOldestEvictsOldestNonDurableOperationFirst),
+            ThirdOverflowPublication);
 
         await AssertPendingValuesAsync(store, stream.SubscriptionId, OverflowSecondDelta, OverflowThirdDelta);
         await AssertDeadLetteredAsync(store, first.OperationId, DroppedOldestReasonCode);
@@ -42,7 +51,10 @@ public sealed partial class OccasionallyConnectedBuilderTests
         await Assert.That(faults.Values[0].Category).IsEqualTo(FaultCategory.Capacity);
         await Assert.That(third.ClientSequence).IsEqualTo(first.ClientSequence + OverflowSecondDelta);
 
-        _ = await stream.PublishAsync(new(OverflowFourthDelta), dropOldest, CancellationToken.None).AsTask().WaitAsync(GuardTimeout);
+        _ = await AwaitOverflowPublicationAsync(
+            stream.PublishAsync(new(OverflowFourthDelta), dropOldest, CancellationToken.None).AsTask(),
+            nameof(PublicDropOldestEvictsOldestNonDurableOperationFirst),
+            FourthOverflowPublication);
 
         await AssertPendingValuesAsync(store, stream.SubscriptionId, OverflowThirdDelta, OverflowFourthDelta);
         await AssertDeadLetteredAsync(store, second.OperationId, DroppedOldestReasonCode);
@@ -60,9 +72,18 @@ public sealed partial class OccasionallyConnectedBuilderTests
         var durable = CreatePublicPublishOptions(BufferStrategy.Reject, durable: true);
         var dropOldest = CreatePublicPublishOptions(BufferStrategy.DropOldest, durable: false);
 
-        var first = await stream.PublishAsync(new(1), durable, CancellationToken.None).AsTask().WaitAsync(GuardTimeout);
-        var second = await stream.PublishAsync(new(OverflowSecondDelta), dropOldest, CancellationToken.None).AsTask().WaitAsync(GuardTimeout);
-        _ = await stream.PublishAsync(new(OverflowThirdDelta), dropOldest, CancellationToken.None).AsTask().WaitAsync(GuardTimeout);
+        var first = await AwaitOverflowPublicationAsync(
+            stream.PublishAsync(new(1), durable, CancellationToken.None).AsTask(),
+            nameof(PublicDropOldestNeverEvictsDurableOperations),
+            FirstOverflowPublication);
+        var second = await AwaitOverflowPublicationAsync(
+            stream.PublishAsync(new(OverflowSecondDelta), dropOldest, CancellationToken.None).AsTask(),
+            nameof(PublicDropOldestNeverEvictsDurableOperations),
+            SecondOverflowPublication);
+        _ = await AwaitOverflowPublicationAsync(
+            stream.PublishAsync(new(OverflowThirdDelta), dropOldest, CancellationToken.None).AsTask(),
+            nameof(PublicDropOldestNeverEvictsDurableOperations),
+            ThirdOverflowPublication);
 
         await AssertPendingValuesAsync(store, stream.SubscriptionId, 1, OverflowThirdDelta);
         await AssertDeadLetteredAsync(store, second.OperationId, DroppedOldestReasonCode);
@@ -84,11 +105,20 @@ public sealed partial class OccasionallyConnectedBuilderTests
         var durable = CreatePublicPublishOptions(BufferStrategy.Reject, durable: true);
         var dropOldest = CreatePublicPublishOptions(BufferStrategy.DropOldest, durable: false);
 
-        _ = await stream.PublishAsync(new(1), durable, CancellationToken.None).AsTask().WaitAsync(GuardTimeout);
-        _ = await stream.PublishAsync(new(OverflowSecondDelta), durable, CancellationToken.None).AsTask().WaitAsync(GuardTimeout);
+        _ = await AwaitOverflowPublicationAsync(
+            stream.PublishAsync(new(1), durable, CancellationToken.None).AsTask(),
+            nameof(PublicDropOldestRejectsWhenOnlyDurableOperationsArePending),
+            FirstOverflowPublication);
+        _ = await AwaitOverflowPublicationAsync(
+            stream.PublishAsync(new(OverflowSecondDelta), durable, CancellationToken.None).AsTask(),
+            nameof(PublicDropOldestRejectsWhenOnlyDurableOperationsArePending),
+            SecondOverflowPublication);
 
         await Assert.ThrowsExactlyAsync<QueueCapacityExceededException>(
-            () => stream.PublishAsync(new(OverflowThirdDelta), dropOldest, CancellationToken.None).AsTask().WaitAsync(GuardTimeout));
+            () => AwaitOverflowPublicationAsync(
+                stream.PublishAsync(new(OverflowThirdDelta), dropOldest, CancellationToken.None).AsTask(),
+                nameof(PublicDropOldestRejectsWhenOnlyDurableOperationsArePending),
+                ThirdOverflowPublication));
         await AssertPendingValuesAsync(store, stream.SubscriptionId, 1, OverflowSecondDelta);
         await WaitForConditionAsync(() => faults.Values.Count == 1);
         await Assert.That(faults.Values[0].Code).IsEqualTo(OutboxOverflowFaultCode);
@@ -105,16 +135,28 @@ public sealed partial class OccasionallyConnectedBuilderTests
         await using var context = CreateOverflowBuilder(store, transport).Build();
         var stream = context.GetOrCreateStream(CreateDefinition());
         var dropOldest = CreatePublicPublishOptions(BufferStrategy.DropOldest, durable: false);
-        var first = await stream.PublishAsync(new(1), dropOldest, CancellationToken.None).AsTask().WaitAsync(GuardTimeout);
-        _ = await stream.PublishAsync(new(OverflowSecondDelta), dropOldest, CancellationToken.None).AsTask().WaitAsync(GuardTimeout);
+        var first = await AwaitOverflowPublicationAsync(
+            stream.PublishAsync(new(1), dropOldest, CancellationToken.None).AsTask(),
+            nameof(PublicDropOldestNeverEvictsLeasedOperations),
+            FirstOverflowPublication);
+        _ = await AwaitOverflowPublicationAsync(
+            stream.PublishAsync(new(OverflowSecondDelta), dropOldest, CancellationToken.None).AsTask(),
+            nameof(PublicDropOldestNeverEvictsLeasedOperations),
+            SecondOverflowPublication);
         var lease = await LeaseHeadAsync(store);
 
         await Assert.ThrowsExactlyAsync<QueueCapacityExceededException>(
-            () => stream.PublishAsync(new(OverflowThirdDelta), dropOldest, CancellationToken.None).AsTask().WaitAsync(GuardTimeout));
+            () => AwaitOverflowPublicationAsync(
+                stream.PublishAsync(new(OverflowThirdDelta), dropOldest, CancellationToken.None).AsTask(),
+                nameof(PublicDropOldestNeverEvictsLeasedOperations),
+                ThirdOverflowPublication));
         await AssertPendingValuesAsync(store, stream.SubscriptionId, 1, OverflowSecondDelta);
 
         await store.ReleaseLeaseAsync(lease.LeaseId, CancellationToken.None);
-        _ = await stream.PublishAsync(new(OverflowThirdDelta), dropOldest, CancellationToken.None).AsTask().WaitAsync(GuardTimeout);
+        _ = await AwaitOverflowPublicationAsync(
+            stream.PublishAsync(new(OverflowThirdDelta), dropOldest, CancellationToken.None).AsTask(),
+            nameof(PublicDropOldestNeverEvictsLeasedOperations),
+            "third after lease release publication");
 
         await AssertPendingValuesAsync(store, stream.SubscriptionId, OverflowSecondDelta, OverflowThirdDelta);
         await AssertDeadLetteredAsync(store, first.OperationId, DroppedOldestReasonCode);
@@ -133,11 +175,20 @@ public sealed partial class OccasionallyConnectedBuilderTests
         using var faultSubscription = stream.Faults.Subscribe(faults);
         var dropNewest = CreatePublicPublishOptions(BufferStrategy.DropNewest, durable: false);
 
-        _ = await stream.PublishAsync(new(1), dropNewest, CancellationToken.None).AsTask().WaitAsync(GuardTimeout);
-        _ = await stream.PublishAsync(new(OverflowSecondDelta), dropNewest, CancellationToken.None).AsTask().WaitAsync(GuardTimeout);
+        _ = await AwaitOverflowPublicationAsync(
+            stream.PublishAsync(new(1), dropNewest, CancellationToken.None).AsTask(),
+            nameof(PublicDropNewestReportsOverflowAndKeepsCommittedWork),
+            FirstOverflowPublication);
+        _ = await AwaitOverflowPublicationAsync(
+            stream.PublishAsync(new(OverflowSecondDelta), dropNewest, CancellationToken.None).AsTask(),
+            nameof(PublicDropNewestReportsOverflowAndKeepsCommittedWork),
+            SecondOverflowPublication);
 
         await Assert.ThrowsExactlyAsync<QueueCapacityExceededException>(
-            () => stream.PublishAsync(new(OverflowThirdDelta), dropNewest, CancellationToken.None).AsTask().WaitAsync(GuardTimeout));
+            () => AwaitOverflowPublicationAsync(
+                stream.PublishAsync(new(OverflowThirdDelta), dropNewest, CancellationToken.None).AsTask(),
+                nameof(PublicDropNewestReportsOverflowAndKeepsCommittedWork),
+                ThirdOverflowPublication));
         await AssertPendingValuesAsync(store, stream.SubscriptionId, 1, OverflowSecondDelta);
         await WaitForConditionAsync(() => faults.Values.Count == 1);
         await Assert.That(faults.Values[0].Code).IsEqualTo(OutboxOverflowFaultCode);
@@ -156,15 +207,27 @@ public sealed partial class OccasionallyConnectedBuilderTests
         var stream = context.GetOrCreateStream(CreateDefinition());
         var dropOldest = CreatePublicPublishOptions(BufferStrategy.DropOldest, durable: false);
 
-        _ = await stream.PublishAsync(new(1), dropOldest, CancellationToken.None).AsTask().WaitAsync(GuardTimeout);
-        _ = await stream.PublishAsync(new(OverflowSecondDelta), dropOldest, CancellationToken.None).AsTask().WaitAsync(GuardTimeout);
+        _ = await AwaitOverflowPublicationAsync(
+            stream.PublishAsync(new(1), dropOldest, CancellationToken.None).AsTask(),
+            nameof(PublicDropStrategiesRecordOverflowMetric),
+            FirstOverflowPublication);
+        _ = await AwaitOverflowPublicationAsync(
+            stream.PublishAsync(new(OverflowSecondDelta), dropOldest, CancellationToken.None).AsTask(),
+            nameof(PublicDropStrategiesRecordOverflowMetric),
+            SecondOverflowPublication);
         var beforeOverflow = counter.Total;
-        _ = await stream.PublishAsync(new(OverflowThirdDelta), dropOldest, CancellationToken.None).AsTask().WaitAsync(GuardTimeout);
+        _ = await AwaitOverflowPublicationAsync(
+            stream.PublishAsync(new(OverflowThirdDelta), dropOldest, CancellationToken.None).AsTask(),
+            nameof(PublicDropStrategiesRecordOverflowMetric),
+            ThirdOverflowPublication);
         await Assert.ThrowsExactlyAsync<QueueCapacityExceededException>(
-            () => stream.PublishAsync(
-                new(OverflowFourthDelta),
-                CreatePublicPublishOptions(BufferStrategy.DropNewest, durable: false),
-                CancellationToken.None).AsTask().WaitAsync(GuardTimeout));
+            () => AwaitOverflowPublicationAsync(
+                stream.PublishAsync(
+                    new(OverflowFourthDelta),
+                    CreatePublicPublishOptions(BufferStrategy.DropNewest, durable: false),
+                    CancellationToken.None).AsTask(),
+                nameof(PublicDropStrategiesRecordOverflowMetric),
+                FourthOverflowPublication));
 
         await Assert.That(counter.Total - beforeOverflow).IsGreaterThanOrEqualTo(OverflowSecondDelta);
     }
