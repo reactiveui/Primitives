@@ -3,10 +3,13 @@
 // See the LICENSE file in the project root for full license information.
 
 using System.Runtime.CompilerServices;
+using TUnit.Core.Helpers;
 
 namespace ReactiveUI.Primitives.OccasionallyConnected.Tests;
 
 /// <summary>Tests for <see cref="OccasionallyConnectedBuilder"/>.</summary>
+/// <remarks>Bounds cold database fixture pressure while preserving concurrency within each test.</remarks>
+[ParallelLimiter<ProcessorCountParallelLimit>]
 public sealed partial class OccasionallyConnectedBuilderTests
 {
     /// <summary>The client identifier used by builder tests.</summary>

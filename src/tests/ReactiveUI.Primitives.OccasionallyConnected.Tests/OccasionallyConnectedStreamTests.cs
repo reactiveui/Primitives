@@ -2,9 +2,13 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using TUnit.Core.Helpers;
+
 namespace ReactiveUI.Primitives.OccasionallyConnected.Tests;
 
 /// <summary>Tests for <see cref="OccasionallyConnectedStream{TState,TInput}"/>.</summary>
+/// <remarks>Shares the CPU-sized database fixture budget with builder integration tests.</remarks>
+[ParallelLimiter<ProcessorCountParallelLimit>]
 public sealed partial class OccasionallyConnectedStreamTests
 {
     /// <summary>The input contract used by counter fixtures.</summary>
