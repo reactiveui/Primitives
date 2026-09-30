@@ -252,11 +252,11 @@ public sealed partial class OccasionallyConnectedBuilderTests
     {
         await using var store = new RecordingStoreAdapter();
         await using var transport = new RecordingTransportAdapter();
-        using ManualResetEventSlim initializeEntered = new();
+        TaskCompletionSource initializeEntered = new(TaskCreationOptions.RunContinuationsAsynchronously);
         using ManualResetEventSlim releaseInitialize = new();
         store.BeforeInitialize = () =>
         {
-            initializeEntered.Set();
+            _ = initializeEntered.TrySetResult();
             if (!releaseInitialize.Wait(GuardTimeout))
             {
                 throw new TimeoutException("The test did not release blocked store initialization.");
@@ -267,7 +267,7 @@ public sealed partial class OccasionallyConnectedBuilderTests
         try
         {
             var context = await buildTask.WaitAsync(GuardTimeout);
-            await Assert.That(initializeEntered.Wait(GuardTimeout)).IsTrue();
+            await initializeEntered.Task.WaitAsync(GuardTimeout);
             await Assert.That(context.StartupTask.IsCompleted).IsFalse();
 
             releaseInitialize.Set();
@@ -287,11 +287,11 @@ public sealed partial class OccasionallyConnectedBuilderTests
     {
         await using var store = new RecordingStoreAdapter();
         await using var transport = new RecordingTransportAdapter();
-        using ManualResetEventSlim connectEntered = new();
+        TaskCompletionSource connectEntered = new(TaskCreationOptions.RunContinuationsAsynchronously);
         using ManualResetEventSlim releaseConnect = new();
         transport.BeforeConnect = () =>
         {
-            connectEntered.Set();
+            _ = connectEntered.TrySetResult();
             if (!releaseConnect.Wait(GuardTimeout))
             {
                 throw new TimeoutException("The test did not release blocked transport connection.");
@@ -302,7 +302,7 @@ public sealed partial class OccasionallyConnectedBuilderTests
         try
         {
             var context = await buildTask.WaitAsync(GuardTimeout);
-            await Assert.That(connectEntered.Wait(GuardTimeout)).IsTrue();
+            await connectEntered.Task.WaitAsync(GuardTimeout);
             await Assert.That(context.StartupTask.IsCompleted).IsFalse();
 
             releaseConnect.Set();
@@ -415,11 +415,11 @@ public sealed partial class OccasionallyConnectedBuilderTests
     {
         await using var store = new RecordingStoreAdapter();
         await using var transport = new RecordingTransportAdapter();
-        using ManualResetEventSlim recoverEntered = new();
+        TaskCompletionSource recoverEntered = new(TaskCreationOptions.RunContinuationsAsynchronously);
         using ManualResetEventSlim releaseRecover = new();
         store.BeforeRecover = () =>
         {
-            recoverEntered.Set();
+            _ = recoverEntered.TrySetResult();
             if (!releaseRecover.Wait(GuardTimeout))
             {
                 throw new TimeoutException("The test did not release blocked stream recovery.");
@@ -433,7 +433,7 @@ public sealed partial class OccasionallyConnectedBuilderTests
             var stream = context.GetOrCreateStream(CreateDefinition());
 
             await Assert.That(stream).IsNotNull();
-            await Assert.That(recoverEntered.Wait(GuardTimeout)).IsTrue();
+            await recoverEntered.Task.WaitAsync(GuardTimeout);
             var stopTask = context.StopAsync(CancellationToken.None).AsTask();
             await Assert.That(stopTask.IsCompleted).IsFalse();
             releaseRecover.Set();

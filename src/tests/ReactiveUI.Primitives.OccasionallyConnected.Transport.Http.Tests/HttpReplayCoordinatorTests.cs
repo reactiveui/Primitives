@@ -792,8 +792,8 @@ public sealed partial class HttpReplayCoordinatorTests
     {
         var options = CreateOptions(SentAtUtc) with { MaximumActiveReplayWaiters = SingleAuthorizationCall };
         await using HttpReplayCoordinator coordinator = new(options);
-        using var firstReplayTimeout = new CancellationTokenSource(TimeSpan.FromMilliseconds(WaitTimeoutMilliseconds));
-        using var secondReplayTimeout = new CancellationTokenSource(TimeSpan.FromMilliseconds(WaitTimeoutMilliseconds));
+        using var firstReplayTimeout = new CancellationTokenSource();
+        using var secondReplayTimeout = new CancellationTokenSource();
         var request = CreateRequest(HttpReplayOperationKind.Connect);
         var first = await coordinator.AdmitAsync(request, static _ => new(HttpReplayAuthorizationResult.Allowed), CancellationToken.None);
         var firstReplay = coordinator.AdmitAsync(request, static _ => new(HttpReplayAuthorizationResult.Allowed), firstReplayTimeout.Token).AsTask();

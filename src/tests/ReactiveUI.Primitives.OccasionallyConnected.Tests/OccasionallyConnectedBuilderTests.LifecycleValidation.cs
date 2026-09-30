@@ -63,14 +63,14 @@ public sealed partial class OccasionallyConnectedBuilderTests
     {
         await using var store = new RecordingStoreAdapter();
         await using var transport = new RecordingTransportAdapter();
-        using ManualResetEventSlim recoverEntered = new();
+        TaskCompletionSource recoverEntered = new(TaskCreationOptions.RunContinuationsAsynchronously);
         using ManualResetEventSlim releaseRecover = new();
         var recoverCalls = 0;
         store.BeforeRecover = () =>
         {
             if (Interlocked.Increment(ref recoverCalls) == 1)
             {
-                recoverEntered.Set();
+                _ = recoverEntered.TrySetResult();
                 if (!releaseRecover.Wait(GuardTimeout))
                 {
                     throw new TimeoutException(RecoveryReleaseTimeoutMessage);
@@ -82,7 +82,7 @@ public sealed partial class OccasionallyConnectedBuilderTests
         var startTask = StartContextOnDedicatedThreadForBuilder(context);
         try
         {
-            await Assert.That(recoverEntered.Wait(GuardTimeout)).IsTrue();
+            await recoverEntered.Task.WaitAsync(GuardTimeout);
             _ = context.GetOrCreateStream(CreateDefinition(AlternateBuilderStream));
             releaseRecover.Set();
             await startTask.WaitAsync(GuardTimeout);
@@ -103,12 +103,12 @@ public sealed partial class OccasionallyConnectedBuilderTests
     {
         await using var store = new RecordingStoreAdapter();
         await using var transport = new RecordingTransportAdapter();
-        using ManualResetEventSlim recoverEntered = new();
+        TaskCompletionSource recoverEntered = new(TaskCreationOptions.RunContinuationsAsynchronously);
         using ManualResetEventSlim releaseRecover = new();
         var recoverTokenCanBeCanceled = true;
         store.BeforeRecoverWithToken = cancellationToken =>
         {
-            recoverEntered.Set();
+            _ = recoverEntered.TrySetResult();
             if (!releaseRecover.Wait(GuardTimeout, CancellationToken.None))
             {
                 throw new TimeoutException(RecoveryReleaseTimeoutMessage);
@@ -122,7 +122,7 @@ public sealed partial class OccasionallyConnectedBuilderTests
         Task? stopTask = null;
         try
         {
-            await Assert.That(recoverEntered.Wait(GuardTimeout)).IsTrue();
+            await recoverEntered.Task.WaitAsync(GuardTimeout);
             stopTask = context.StopAsync(CancellationToken.None).AsTask();
             await Assert.That(stopTask.IsCompleted).IsFalse();
             releaseRecover.Set();
@@ -158,12 +158,12 @@ public sealed partial class OccasionallyConnectedBuilderTests
     {
         await using var store = new RecordingStoreAdapter();
         await using var transport = new RecordingTransportAdapter();
-        using ManualResetEventSlim recoverEntered = new();
+        TaskCompletionSource recoverEntered = new(TaskCreationOptions.RunContinuationsAsynchronously);
         using ManualResetEventSlim releaseRecover = new();
         var failure = new InvalidOperationException("late recover failed");
         store.BeforeRecover = () =>
         {
-            recoverEntered.Set();
+            _ = recoverEntered.TrySetResult();
             if (!releaseRecover.Wait(GuardTimeout, CancellationToken.None))
             {
                 throw new TimeoutException(RecoveryReleaseTimeoutMessage);
@@ -176,7 +176,7 @@ public sealed partial class OccasionallyConnectedBuilderTests
         _ = context.GetOrCreateStream(CreateDefinition(AlternateBuilderStream));
         try
         {
-            await Assert.That(recoverEntered.Wait(GuardTimeout)).IsTrue();
+            await recoverEntered.Task.WaitAsync(GuardTimeout);
             var stopTask = context.StopAsync(CancellationToken.None).AsTask();
             releaseRecover.Set();
 
@@ -197,12 +197,12 @@ public sealed partial class OccasionallyConnectedBuilderTests
     {
         await using var store = new RecordingStoreAdapter();
         await using var transport = new RecordingTransportAdapter();
-        using ManualResetEventSlim recoverEntered = new();
+        TaskCompletionSource recoverEntered = new(TaskCreationOptions.RunContinuationsAsynchronously);
         using ManualResetEventSlim releaseRecover = new();
         var failure = new OperationCanceledException("late recover canceled by store", CancellationToken.None);
         store.BeforeRecover = () =>
         {
-            recoverEntered.Set();
+            _ = recoverEntered.TrySetResult();
             if (!releaseRecover.Wait(GuardTimeout, CancellationToken.None))
             {
                 throw new TimeoutException(RecoveryReleaseTimeoutMessage);
@@ -218,7 +218,7 @@ public sealed partial class OccasionallyConnectedBuilderTests
         {
             var faults = new FaultObserver();
             using var faultSubscription = stream.Faults.Subscribe(faults);
-            await Assert.That(recoverEntered.Wait(GuardTimeout)).IsTrue();
+            await recoverEntered.Task.WaitAsync(GuardTimeout);
             stopTask = context.StopAsync(CancellationToken.None).AsTask();
             releaseRecover.Set();
 

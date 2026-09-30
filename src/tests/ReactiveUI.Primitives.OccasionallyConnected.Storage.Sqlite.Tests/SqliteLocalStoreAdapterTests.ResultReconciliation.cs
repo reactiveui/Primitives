@@ -627,20 +627,25 @@ public sealed partial class SqliteLocalStoreAdapterTests
             CancellationToken.None);
         var lease = await ReadSingleLeaseAsync(adapter, new(Stream, FirstAttempt, NormalWorkerBytes, TimeSpan.FromMinutes(1)));
         var result = new RemoteSyncResult(lease.LeaseId, [new(operation.OperationId, OperationResultKind.Rejected, ResultRejectedReason, null)], null, null);
-        using var entered = new ManualResetEventSlim();
+        var entered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         using var release = new ManualResetEventSlim();
         var mutations = new ResultMutationList(
             () =>
         {
-            entered.Set();
-            _ = release.Wait(GuardTimeout);
+            _ = entered.TrySetResult();
+            release.Wait();
             return 1;
         },
             static () => CreateSnapshotMutation(1, ResultAuthoritativeInitialText));
-        var commit = Task.Run(async () => await adapter.ApplySyncResultAsync(lease.LeaseId, result, mutations, CancellationToken.None));
+        var commit = Task.Factory.StartNew(
+            ApplyCapturedResultAsync,
+            (adapter, lease.LeaseId, result, (IReadOnlyList<SnapshotMutation>)mutations),
+            CancellationToken.None,
+            TaskCreationOptions.DenyChildAttach | TaskCreationOptions.LongRunning,
+            TaskScheduler.Default).Unwrap();
         try
         {
-            await Assert.That(entered.Wait(GuardTimeout)).IsTrue();
+            await entered.Task.WaitAsync(GuardTimeout);
             var status = await adapter.GetOperationStatusAsync(operation.OperationId, CancellationToken.None).AsTask().WaitAsync(GuardTimeout);
             await Assert.That(status?.State).IsEqualTo(SyncOperationState.QueuedForUpload);
             var competing = new ResultMutationList(1, static () => CreateSnapshotMutation(1));
@@ -652,7 +657,7 @@ public sealed partial class SqliteLocalStoreAdapterTests
         finally
         {
             release.Set();
-            _ = await commit.WaitAsync(GuardTimeout);
+            await commit.WaitAsync(GuardTimeout);
         }
     }
 
@@ -662,6 +667,16 @@ public sealed partial class SqliteLocalStoreAdapterTests
     /// <returns>The mutation.</returns>
     private static SnapshotMutation CreateSnapshotMutation(long expectedRevision, string payloadText) =>
         new(Stream, CreatePayload(payloadText), FormatVersion: 1, expectedRevision);
+
+    /// <summary>Runs a captured result mutation on the dedicated capture thread.</summary>
+    /// <param name="state">The adapter and result data captured by the test.</param>
+    /// <returns>The asynchronous result application.</returns>
+    private static Task ApplyCapturedResultAsync(object? state)
+    {
+        var (adapter, leaseId, result, mutations) =
+            ((SqliteLocalStoreAdapter, Guid, RemoteSyncResult, IReadOnlyList<SnapshotMutation>))state!;
+        return adapter.ApplySyncResultAsync(leaseId, result, mutations, CancellationToken.None).AsTask();
+    }
 
     /// <summary>Reads payload text from a nullable payload.</summary>
     /// <param name="payload">The payload.</param>
