@@ -160,7 +160,7 @@ public sealed partial class OccasionallyConnectedBuilderTests
     {
         await using var store = CreatePublicAdmissionStore("oc-public-dispose-");
         await using var transport = new RecordingTransportAdapter();
-        var context = CreatePublicAdmissionBuilder(store, transport, new PaddedCounterPayloadSerializer(), CreateSingleOperationOutbox(1)).Build();
+        await using var context = CreatePublicAdmissionBuilder(store, transport, new PaddedCounterPayloadSerializer(), CreateSingleOperationOutbox(1)).Build();
         var stream = context.GetOrCreateStream(CreateDefinition());
         var block = CreatePublicPublishOptions(BufferStrategy.Block, durable: true);
         _ = await stream.PublishAsync(new(1), block, CancellationToken.None).AsTask().WaitAsync(GuardTimeout);

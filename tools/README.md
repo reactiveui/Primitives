@@ -17,6 +17,9 @@ dotnet run --project tools/OccasionallyConnected.Ci/OccasionallyConnected.Ci.csp
 
 Coverage checks the complete OccasionallyConnected test suite list on net8.0,
 net9.0, net10.0, or net11.0. Each adapter runs only on its supported frameworks.
+The runtime and SQLite suites share CPU-sized test budgets within each host.
+This bounds competing database fixtures. Each test still runs its own concurrent
+operations and keeps its original assertions and deadlines.
 To check existing Cobertura reports without running tests, use `coverage` with
 repeated `--report-path <file>` and `--package-name <name>` options instead.
 The package command also accepts `--sample-target-frameworks <tfm,tfm>`,
