@@ -58,7 +58,7 @@ public sealed partial class OccasionallyConnectedBuilderTests
     /// <summary>The content type written by public admission payloads.</summary>
     private const string PaddedContentType = "text/padded";
 
-    /// <summary>Creates an initialized-on-build SQLite store in a fresh test directory.</summary>
+    /// <summary>Creates an uninitialized SQLite store in a fresh test directory.</summary>
     /// <param name="prefix">The test directory prefix.</param>
     /// <returns>The SQLite store.</returns>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]

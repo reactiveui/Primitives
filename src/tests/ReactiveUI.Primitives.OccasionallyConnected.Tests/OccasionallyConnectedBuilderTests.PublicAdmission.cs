@@ -52,6 +52,9 @@ public sealed partial class OccasionallyConnectedBuilderTests
         var stream = context.GetOrCreateStream(CreateDefinition());
         var options = CreatePublicPublishOptions(strategy, durable);
 
+        var coordinator = (IOccasionallyConnectedStreamCoordinator)context.SyncEngine;
+        _ = await coordinator.EnsureSubscriptionIdAsync(Stream, null, CancellationToken.None);
+        await Assert.That(transport.ConnectCalls).IsEqualTo(0);
         var first = await stream.PublishAsync(new(HalfOutboxPayloadDelta), options, CancellationToken.None).AsTask().WaitAsync(GuardTimeout);
         var failure = await Assert.ThrowsExactlyAsync<QueueCapacityExceededException>(
             () => stream.PublishAsync(new(HalfOutboxPayloadDelta), options, CancellationToken.None).AsTask().WaitAsync(GuardTimeout));
@@ -74,6 +77,9 @@ public sealed partial class OccasionallyConnectedBuilderTests
         var stream = context.GetOrCreateStream(CreateDefinition());
         var options = CreatePublicPublishOptions(BufferStrategy.DropOldest, durable: false);
 
+        var coordinator = (IOccasionallyConnectedStreamCoordinator)context.SyncEngine;
+        _ = await coordinator.EnsureSubscriptionIdAsync(Stream, null, CancellationToken.None);
+        await Assert.That(transport.ConnectCalls).IsEqualTo(0);
         var first = await stream.PublishAsync(new(HalfOutboxPayloadDelta), options, CancellationToken.None).AsTask().WaitAsync(GuardTimeout);
         var second = await stream.PublishAsync(new(HalfOutboxPayloadDelta), options, CancellationToken.None).AsTask().WaitAsync(GuardTimeout);
 

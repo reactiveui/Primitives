@@ -338,7 +338,8 @@ public sealed partial class SyncEngineTests
         await DriveUploadDwellWithTraceAsync(clock, store, session, faults, operationStates: null);
         await WaitForUploadConditionWithTraceAsync(
             () => store.RetryStates.TryGetValue(operation.OperationId, out var state)
-                && state.TransientAttemptCount == ExpectedSingleOperation,
+                && state.TransientAttemptCount == ExpectedSingleOperation
+                && clock.HasTimerDueIn(retryDelay),
             store,
             session,
             faults,
