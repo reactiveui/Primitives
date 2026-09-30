@@ -92,6 +92,7 @@ internal sealed partial class InMemoryLocalStoreAdapter
             SnapshotMutation = snapshotMutation;
             Receipt = receipt;
             Status = status;
+            OutboxEncodedBytes = checked(OperationCapacityBytes(operation) + MetadataCapacity(operation.Metadata).EncodedBytes);
         }
 
         /// <summary>Gets or sets the upload attempt count.</summary>
@@ -105,6 +106,9 @@ internal sealed partial class InMemoryLocalStoreAdapter
 
         /// <summary>Gets the operation.</summary>
         internal SyncOperation Operation { get; }
+
+        /// <summary>Gets the immutable operation envelope and metadata byte charge.</summary>
+        internal long OutboxEncodedBytes { get; }
 
         /// <summary>Gets the original local commit receipt.</summary>
         internal LocalCommitResult Receipt { get; }

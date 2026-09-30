@@ -22,6 +22,9 @@ public sealed partial class InMemoryLocalStoreAdapterTests
     /// <summary>The legacy store byte budget for the default outbox count test.</summary>
     private const long LargeStoreEncodedBytes = 67_108_864;
 
+    /// <summary>The first operation payload text.</summary>
+    private const string FirstPayloadText = "first";
+
     /// <summary>The second operation payload text.</summary>
     private const string SecondPayloadText = "second";
 
@@ -163,7 +166,7 @@ public sealed partial class InMemoryLocalStoreAdapterTests
         var cumulativeBudget = singleOperationBudget with { MaxBytes = (encodedBytes * DoubleOperationCapacity) - 1 };
         await using var cumulativeStore = await CreateInitializedOutboxBoundedStoreAsync(cumulativeBudget);
         var cumulativeSubscription = await cumulativeStore.GetOrCreateSubscriptionIdAsync(Stream, SubscriptionId.New(), CancellationToken.None);
-        var firstSnapshot = CreateSnapshotMutation(expectedRevision: 0, "first");
+        var firstSnapshot = CreateSnapshotMutation(expectedRevision: 0, FirstPayloadText);
         _ = await cumulativeStore.CommitLocalOperationAsync(
             firstOperation,
             firstSnapshot,
@@ -188,6 +191,52 @@ public sealed partial class InMemoryLocalStoreAdapterTests
         await Assert.That(cumulativeRecovery.Snapshot?.State.Payload.ToArray().SequenceEqual(firstSnapshot.State.Payload.ToArray())).IsTrue();
     }
 
+    /// <summary>Verifies cached byte admission owns Unicode metadata and releases only terminal operation charges.</summary>
+    /// <returns>The asynchronous test.</returns>
+    [Test]
+    public async Task PendingOutboxByteCapacityOwnsMetadataAndReleasesTerminalCharge()
+    {
+        var metadata = new Dictionary<string, string> { ["clé"] = "🙂" };
+        var first = CreateOperation(FirstClientSequence, "é") with { Metadata = metadata };
+        var second = CreateOperation(SecondClientSequence, "second");
+        var third = CreateOperation(ThirdClientSequence, "é") with { Metadata = first.Metadata };
+        var encodedBytes = GetOutboxOperationBytes(first) + GetOutboxOperationBytes(second);
+        var outbox = new OutboxOptions { MaxOperations = OutboxCapacityOperationLimit, MaxBytes = encodedBytes, MaximumBlockedPublishers = 1 };
+        await using var store = await CreateInitializedOutboxBoundedStoreAsync(outbox);
+        var subscription = await store.GetOrCreateSubscriptionIdAsync(Stream, SubscriptionId.New(), CancellationToken.None);
+        var firstSnapshot = CreateSnapshotMutation(expectedRevision: 0, FirstPayloadText);
+        var firstReceipt = await store.CommitLocalOperationAsync(first, firstSnapshot, CancellationToken.None);
+        metadata.Clear();
+        metadata["padding"] = new('m', OutboxCapacityMetadataLength);
+        var duplicate = await store.CommitLocalOperationAsync(first, firstSnapshot, CancellationToken.None);
+        _ = await store.CommitLocalOperationAsync(second, CreateSnapshotMutation(expectedRevision: 1, "second"), CancellationToken.None);
+
+        Func<Task> overflow = async () => await store.CommitLocalOperationAsync(
+            third,
+            CreateSnapshotMutation(expectedRevision: 2, "third"),
+            CancellationToken.None);
+        await Assert.That(overflow).ThrowsExactly<QueueCapacityExceededException>();
+        var full = await store.RecoverStreamAsync(Stream, subscription, CancellationToken.None);
+        await Assert.That(duplicate).IsEqualTo(firstReceipt);
+        await Assert.That(first.Metadata.Count).IsEqualTo(1);
+        await Assert.That(first.Metadata["clé"]).IsEqualTo("🙂");
+        await Assert.That(full.PendingOperations.Count).IsEqualTo(DoubleOperationCapacity);
+        await Assert.That(full.NextClientSequence).IsEqualTo(ThirdClientSequence);
+        await Assert.That(full.Snapshot?.Revision).IsEqualTo((long)DoubleOperationCapacity);
+
+        var lease = RequireBatch(await LeaseSingleBatchAsync(store, new(Stream, 1, DefaultLeaseBytes, TimeSpan.FromMinutes(1))));
+        await store.ApplySyncResultAsync(
+            lease.LeaseId,
+            new(lease.LeaseId, [new(first.OperationId, OperationResultKind.Accepted, null, ServerVersion)], null, null),
+            CancellationToken.None);
+        _ = await store.CommitLocalOperationAsync(third, CreateSnapshotMutation(expectedRevision: 2, "third"), CancellationToken.None);
+        var admitted = await store.RecoverStreamAsync(Stream, subscription, CancellationToken.None);
+        await Assert.That(admitted.PendingOperations.Count).IsEqualTo(DoubleOperationCapacity);
+        await Assert.That(admitted.PendingOperations[0].OperationId).IsEqualTo(second.OperationId);
+        await Assert.That(admitted.PendingOperations[1].OperationId).IsEqualTo(third.OperationId);
+        await Assert.That(admitted.NextClientSequence).IsEqualTo(ThirdClientSequence + 1);
+    }
+
     /// <summary>Verifies terminal upload results release pending outbox capacity for later local commits.</summary>
     /// <returns>The asynchronous test.</returns>
     [Test]
@@ -196,7 +245,7 @@ public sealed partial class InMemoryLocalStoreAdapterTests
         var outbox = new OutboxOptions { MaxOperations = 1, MaxBytes = OutboxCapacityBytes, MaximumBlockedPublishers = 1 };
         await using var store = await CreateInitializedOutboxBoundedStoreAsync(outbox);
         var subscription = await store.GetOrCreateSubscriptionIdAsync(Stream, SubscriptionId.New(), CancellationToken.None);
-        var first = await CommitOperationAsync(store, Stream, FirstClientSequence, "first");
+        var first = await CommitOperationAsync(store, Stream, FirstClientSequence, FirstPayloadText);
         var lease = RequireBatch(await LeaseSingleBatchAsync(store, new(Stream, 1, DefaultLeaseBytes, TimeSpan.FromMinutes(1))));
         await store.ApplySyncResultAsync(
             lease.LeaseId,

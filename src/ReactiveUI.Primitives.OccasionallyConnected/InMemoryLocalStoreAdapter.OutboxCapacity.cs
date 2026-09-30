@@ -44,9 +44,7 @@ internal sealed partial class InMemoryLocalStoreAdapter
             }
 
             unresolvedCount++;
-            unresolvedBytes = checked(unresolvedBytes
-                + OperationCapacityBytes(record.Operation)
-                + MetadataCapacity(record.Operation.Metadata).EncodedBytes);
+            unresolvedBytes = checked(unresolvedBytes + record.OutboxEncodedBytes);
         }
 
         if (unresolvedCount < options.MaxOperations && candidateBytes <= options.MaxBytes - unresolvedBytes)
