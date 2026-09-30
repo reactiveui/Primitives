@@ -10,7 +10,7 @@ namespace ReactiveUI.Primitives.OccasionallyConnected.Tests;
 
 /// <summary>Tests for the OccasionallyConnected coverage gate.</summary>
 [NotInParallel]
-public sealed class CoverageTests
+public sealed partial class CoverageTests
 {
     /// <summary>The package name passed to the coverage gate.</summary>
     private const string PackageName = "ReactiveUI.Primitives.OccasionallyConnected";
@@ -915,17 +915,6 @@ public sealed class CoverageTests
         return new(exitCode, output + error);
     }
 
-    /// <summary>Waits for the CLI process and returns its exit code.</summary>
-    /// <param name="process">The owned CLI process.</param>
-    /// <param name="cancellationToken">The cancellation token used for the timeout.</param>
-    /// <returns>The CLI process exit code.</returns>
-    /// <exception cref="OperationCanceledException">Thrown when the process wait is canceled.</exception>
-    private static async Task<int> WaitForScriptExitAsync(Process process, CancellationToken cancellationToken)
-    {
-        await process.WaitForExitAsync(cancellationToken).ConfigureAwait(false);
-        return process.ExitCode;
-    }
-
     /// <summary>Stops an owned CLI process after timeout and observes redirected output drains.</summary>
     /// <param name="process">The owned CLI process.</param>
     /// <param name="outputTask">The standard output drain task.</param>
@@ -946,13 +935,6 @@ public sealed class CoverageTests
         _ = await outputTask.WaitAsync(cleanupTimeout, CancellationToken.None).ConfigureAwait(false);
         _ = await errorTask.WaitAsync(cleanupTimeout, CancellationToken.None).ConfigureAwait(false);
     }
-
-    /// <summary>Reads a redirected text stream without linking it to the process timeout.</summary>
-    /// <param name="reader">The text reader to drain.</param>
-    /// <returns>The drained text.</returns>
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static Task<string> ReadToEndAsync(TextReader reader) =>
-        reader.ReadToEndAsync();
 
     /// <summary>Adds a report and package pair to the CLI arguments.</summary>
     /// <param name="startInfo">The process start information.</param>

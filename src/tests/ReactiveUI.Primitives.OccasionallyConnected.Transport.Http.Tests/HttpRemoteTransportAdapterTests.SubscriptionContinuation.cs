@@ -31,6 +31,7 @@ public sealed partial class HttpRemoteTransportAdapterTests
     public async Task SubscribeAsyncDisposalFailureIsSharedAfterCancellationCallbackThrows(int target)
     {
         var entered = CreateCompletionSource();
+        var released = CreateCompletionSource();
         var handler = new RecordingHttpHandler(async (request, cancellationToken) =>
         {
             if (request.RequestUri?.AbsolutePath == ConnectRoute)
@@ -38,9 +39,12 @@ public sealed partial class HttpRemoteTransportAdapterTests
                 return CreateProtocolResponse(HttpStatusCode.OK, ConnectResponseJson);
             }
 
+            await using var releaseRegistration = cancellationToken.UnsafeRegister(
+                static state => _ = ((TaskCompletionSource<object?>)state!).TrySetResult(null),
+                released);
             await using var registration = cancellationToken.Register(static () => throw new InvalidOperationException("Cancellation callback failed."));
             _ = entered.TrySetResult(null);
-            await Task.Delay(Timeout.InfiniteTimeSpan, cancellationToken);
+            await released.Task;
             return CreateProtocolResponse(HttpStatusCode.OK, SubscribeResponseJson());
         });
         using var httpClient = CreateHttpClient(handler);
