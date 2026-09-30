@@ -22,6 +22,31 @@ public sealed partial class OccasionallyConnectedStreamTests
     /// <summary>The notification byte capacity used when retaining a bounded diagnostic fault.</summary>
     private const int DiagnosticNotificationCapacityBytes = 2048;
 
+    /// <summary>Verifies typed stream initialization completes before startup activates remote work.</summary>
+    /// <returns>The asynchronous assertion operation.</returns>
+    [Test]
+    public async Task StartAsyncInitializesBeforeActivatingRemoteWork()
+    {
+        await using var store = await CreateInitializedStoreAsync();
+        TaskCompletionSource identityEntered = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        TaskCompletionSource releaseIdentity = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        TaskCompletionSource startEntered = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        var coordinator = new RecordingCoordinator(store) { IdentityEntered = identityEntered, ReleaseIdentity = releaseIdentity, StartEntered = startEntered };
+        await using var stream = CreateStream(store, coordinator);
+
+        var start = stream.StartAsync(CancellationToken.None).AsTask();
+        await identityEntered.Task;
+
+        await Assert.That(coordinator.StartCalls).IsEqualTo(0);
+        await Assert.That(startEntered.Task.IsCompleted).IsFalse();
+
+        releaseIdentity.SetResult();
+        await start;
+
+        await startEntered.Task;
+        await Assert.That(coordinator.StartCalls).IsEqualTo(1);
+    }
+
     /// <summary>Verifies concurrent starts share the same pending lifecycle failure.</summary>
     /// <returns>A task that completes when the test finishes.</returns>
     [Test]

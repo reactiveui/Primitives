@@ -109,7 +109,7 @@ internal sealed partial class OccasionallyConnectedStream<TState, TInput> :
         _syncStates = new(options.NotificationScheduler, ReportObserverFault);
         _operationStates = new(options.NotificationScheduler, ReportObserverFault);
         _inputProducer = options.InputProducer ?? CreateInputProducer();
-        _participantRegistration = options.Coordinator.RegisterParticipant(this);
+        _participantRegistration = options.Coordinator.RegisterParticipant(this, startRemoteActive: false);
     }
 
     /// <inheritdoc />
@@ -526,8 +526,8 @@ internal sealed partial class OccasionallyConnectedStream<TState, TInput> :
 
             if (shouldBeStarted)
             {
-                await _options.Coordinator.StartStreamAsync(StreamId, CancellationToken.None).ConfigureAwait(false);
                 _ = await _workLane.EnqueueAsync(token => EnsureInitializedCoreAsync(token), CancellationToken.None).ConfigureAwait(false);
+                await _options.Coordinator.StartStreamAsync(StreamId, CancellationToken.None).ConfigureAwait(false);
                 lock (_gate)
                 {
                     _started = true;

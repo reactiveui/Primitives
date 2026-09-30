@@ -30,6 +30,30 @@ public sealed partial class SyncEngineTests
         await engine.StopAsync(CancellationToken.None);
     }
 
+    /// <summary>Verifies a deferred registration waits for stream initialization to activate remote receive work.</summary>
+    /// <returns>The assertion task.</returns>
+    [Test]
+    public async Task DeferredStreamRegistrationWaitsForExplicitStartBeforeReceiving()
+    {
+        var session = new ReceiveSession();
+        var transport = new RecordingTransport { SessionOverride = session };
+        await using var engine = CreateEngine(transport: transport);
+        using var registration = engine.RegisterParticipant(
+            new RecordingParticipant { ReceiveSubscription = new(Stream, Subscription, Cursor: null, StartPosition.Latest) },
+            startRemoteActive: false);
+
+        await engine.StartAsync(CancellationToken.None);
+
+        await Assert.That(session.SubscribeEntered.Task.IsCompleted).IsFalse();
+        await Assert.That(session.SubscribeRequests.Count).IsEqualTo(0);
+
+        await engine.StartStreamAsync(Stream, CancellationToken.None);
+        await session.SubscribeEntered.Task.WaitAsync(GuardTimeout);
+
+        await Assert.That(session.SubscribeRequests.Count).IsEqualTo(ExpectedSingleOperation);
+        await engine.StopAsync(CancellationToken.None);
+    }
+
     /// <summary>Verifies a stream stopped before the global engine starts stays parked until the stream is explicitly resumed.</summary>
     /// <returns>The assertion task.</returns>
     [Test]

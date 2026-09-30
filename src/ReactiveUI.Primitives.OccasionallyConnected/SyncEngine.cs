@@ -2,6 +2,8 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Runtime.CompilerServices;
+
 #if REACTIVE_SHIM
 namespace ReactiveUI.Primitives.OccasionallyConnected.Reactive;
 #else
@@ -364,7 +366,12 @@ internal sealed partial class SyncEngine : ISyncEngine, IOccasionallyConnectedSt
     }
 
     /// <inheritdoc/>
-    public IDisposable RegisterParticipant(IOccasionallyConnectedStreamParticipant participant)
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public IDisposable RegisterParticipant(IOccasionallyConnectedStreamParticipant participant) =>
+        RegisterParticipant(participant, startRemoteActive: true);
+
+    /// <inheritdoc/>
+    public IDisposable RegisterParticipant(IOccasionallyConnectedStreamParticipant participant, bool startRemoteActive)
     {
         ArgumentExceptionHelper.ThrowIfNull(participant);
 
@@ -381,7 +388,7 @@ internal sealed partial class SyncEngine : ISyncEngine, IOccasionallyConnectedSt
                 throw new InvalidOperationException("A synchronization participant is already registered for the stream.");
             }
 
-            var registration = new ParticipantRegistration(this, participant);
+            var registration = new ParticipantRegistration(this, participant, startRemoteActive);
             _participants.Add(participant.StreamId, registration);
             _capacitySignals.Add(participant.StreamId, new(_capacityWaiterBudget));
             _scheduler.Register(new(participant.StreamId, Weight: 1));

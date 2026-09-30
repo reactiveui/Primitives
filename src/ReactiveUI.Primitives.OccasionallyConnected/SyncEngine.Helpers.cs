@@ -17,7 +17,11 @@ internal sealed partial class SyncEngine
     /// <summary>Stores one participant registration.</summary>
     /// <param name="owner">The owning synchronization engine.</param>
     /// <param name="participant">The registered stream participant.</param>
-    private sealed class ParticipantRegistration(SyncEngine owner, IOccasionallyConnectedStreamParticipant participant) : IDisposable
+    /// <param name="remoteActive">Whether the registration starts with remote work active.</param>
+    private sealed class ParticipantRegistration(
+        SyncEngine owner,
+        IOccasionallyConnectedStreamParticipant participant,
+        bool remoteActive) : IDisposable
     {
         /// <summary>Protects receive cancellation ownership flags.</summary>
         private readonly Lock _receiveGate = new();
@@ -50,7 +54,7 @@ internal sealed partial class SyncEngine
         internal IOccasionallyConnectedStreamParticipant Participant { get; } = participant;
 
         /// <summary>Gets or sets a value indicating whether remote work is active for this stream.</summary>
-        internal bool RemoteActive { get; set; } = true;
+        internal bool RemoteActive { get; set; } = remoteActive;
 
         /// <summary>Gets or sets the currently tracked receive pump task.</summary>
         internal Task? ReceiveTask { get; set; }

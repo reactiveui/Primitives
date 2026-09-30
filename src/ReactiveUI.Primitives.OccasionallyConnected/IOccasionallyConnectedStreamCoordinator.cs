@@ -16,6 +16,13 @@ internal interface IOccasionallyConnectedStreamCoordinator
     /// <returns>The registration handle.</returns>
     IDisposable RegisterParticipant(IOccasionallyConnectedStreamParticipant participant);
 
+    /// <summary>Registers a stream participant without performing I/O and optionally defers remote activation.</summary>
+    /// <param name="participant">The stream participant.</param>
+    /// <param name="startRemoteActive">Whether remote work starts as soon as the engine is running.</param>
+    /// <returns>The registration handle.</returns>
+    IDisposable RegisterParticipant(IOccasionallyConnectedStreamParticipant participant, bool startRemoteActive) =>
+        RegisterParticipant(participant);
+
     /// <summary>Gets or creates the durable subscription identity after context-owned store initialization.</summary>
     /// <param name="streamId">The stream identity.</param>
     /// <param name="preferredId">The optional caller-supplied subscription identity.</param>
