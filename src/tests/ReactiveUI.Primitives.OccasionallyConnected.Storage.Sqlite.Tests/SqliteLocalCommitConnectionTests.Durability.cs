@@ -18,7 +18,9 @@ public sealed partial class SqliteLocalCommitConnectionTests
 
     /// <summary>Verifies WAL durability waits for an in-flight writer after startup selects short lock polling.</summary>
     /// <returns>A task that represents the asynchronous test.</returns>
+    /// <remarks>Isolates the real writer deadline from unrelated database flushes and coverage instrumentation.</remarks>
     [Test]
+    [NotInParallel]
     public async Task WhenDurabilitySeesStartupWriter_ThenItRetriesPastTheCommandTimeout()
     {
         using var database = TempDatabase.Create();
