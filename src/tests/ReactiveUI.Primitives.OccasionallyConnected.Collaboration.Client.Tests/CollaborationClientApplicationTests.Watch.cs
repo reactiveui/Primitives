@@ -44,6 +44,7 @@ public sealed partial class CollaborationClientApplicationTests
         var watch = CollaborationClientApplication.RunAsync(command, output, cancellation.Token);
         try
         {
+            await output.WaitForInitialActivityAsync(WaitTimeout).ConfigureAwait(false);
             await using var publisher = await OpenClientAsync(boundUri, lease.ClientBPath, TokenB, ClientB)
                 .ConfigureAwait(false);
             await publisher.StartAsync(CancellationToken.None).ConfigureAwait(false);
@@ -96,6 +97,9 @@ public sealed partial class CollaborationClientApplicationTests
         /// <summary>Completes when the requested activity line is printed.</summary>
         private readonly TaskCompletionSource<string> _activity = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
+        /// <summary>Completes when watch has initialized its local activity observation.</summary>
+        private readonly TaskCompletionSource<bool> _initialActivity = new(TaskCreationOptions.RunContinuationsAsynchronously);
+
         /// <summary>Initializes a new instance of the <see cref="ActivitySignalWriter"/> class.</summary>
         /// <param name="status">The expected status.</param>
         internal ActivitySignalWriter(string status)
@@ -108,6 +112,11 @@ public sealed partial class CollaborationClientApplicationTests
         public override void WriteLine(string? value)
         {
             base.WriteLine(value);
+            if (value is not null && value.Contains(" | ", StringComparison.Ordinal))
+            {
+                _ = _initialActivity.TrySetResult(true);
+            }
+
             if (value is not null && value.StartsWith(_statusPrefix, StringComparison.Ordinal))
             {
                 _ = _activity.TrySetResult(value);
@@ -119,5 +128,11 @@ public sealed partial class CollaborationClientApplicationTests
         /// <returns>The printed line.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         internal Task<string> WaitForActivityAsync(TimeSpan timeout) => _activity.Task.WaitAsync(timeout);
+
+        /// <summary>Waits for watch initialization before publishing the remote update under test.</summary>
+        /// <param name="timeout">The finite test timeout.</param>
+        /// <returns>The initialization task.</returns>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        internal Task<bool> WaitForInitialActivityAsync(TimeSpan timeout) => _initialActivity.Task.WaitAsync(timeout);
     }
 }

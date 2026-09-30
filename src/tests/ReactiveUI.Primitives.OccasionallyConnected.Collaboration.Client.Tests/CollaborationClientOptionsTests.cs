@@ -9,6 +9,19 @@ namespace ReactiveUI.Primitives.OccasionallyConnected.Collaboration.Client.Tests
 /// <summary>Tests client option boundaries before opening any transport or store.</summary>
 public sealed class CollaborationClientOptionsTests
 {
+    /// <summary>The implementation default durable outbox operation capacity.</summary>
+    private const int DefaultOutboxOperations = 10_000;
+
+    /// <summary>Verifies client options retain the documented default durable outbox capacity.</summary>
+    /// <returns>The assertion task.</returns>
+    [Test]
+    public async Task DefaultOutboxRetainsDefaultOperationCapacity()
+    {
+        CollaborationClientOptions options = new() { ServerUri = new("http://127.0.0.1:5088"), DatabasePath = "client.db", Token = "token-a", ClientId = "client-a" };
+
+        await Assert.That(options.Outbox.MaxOperations).IsEqualTo(DefaultOutboxOperations);
+    }
+
     /// <summary>Verifies invalid endpoints and resource limits fail before allocation.</summary>
     /// <returns>The assertion task.</returns>
     [Test]
@@ -27,6 +40,10 @@ public sealed class CollaborationClientOptionsTests
         _ = await Assert.ThrowsAsync<ArgumentOutOfRangeException>(() => ValidateAsync(valid with
         {
             MaximumTransportBytes = 0,
+        }));
+        _ = await Assert.ThrowsAsync<ArgumentNullException>(() => ValidateAsync(valid with
+        {
+            Outbox = null!,
         }));
     }
 

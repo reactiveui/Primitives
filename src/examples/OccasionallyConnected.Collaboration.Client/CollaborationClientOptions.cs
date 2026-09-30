@@ -37,6 +37,9 @@ internal sealed record CollaborationClientOptions
     /// <summary>Gets a value indicating whether the context should start when opened.</summary>
     public bool AutoStart { get; init; } = true;
 
+    /// <summary>Gets the durable outbox limits for this client.</summary>
+    public OutboxOptions Outbox { get; init; } = OccasionallyConnectedOptions.Default.Outbox;
+
     /// <summary>Gets the finite wait used by command-line operations.</summary>
     public TimeSpan WaitTimeout { get; init; } = TimeSpan.FromSeconds(DefaultWaitSeconds);
 
@@ -49,6 +52,7 @@ internal sealed record CollaborationClientOptions
     internal void Validate()
     {
         ArgumentNullException.ThrowIfNull(ServerUri);
+        ArgumentNullException.ThrowIfNull(Outbox);
         if (!ServerUri.IsAbsoluteUri)
         {
             throw new ArgumentException("ServerUri must be absolute.", nameof(ServerUri));

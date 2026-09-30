@@ -46,7 +46,7 @@ internal static class CollaborationClientApplication
                 .UseTransport(transport)
                 .UseSerializer(ActivityPayloadSerializer.Instance)
                 .UseStoreIdentity(options.StoreIdentity)
-                .UseOptions(OccasionallyConnectedOptions.Default with { AutoStart = options.AutoStart })
+                .UseOptions(OccasionallyConnectedOptions.Default with { AutoStart = options.AutoStart, Outbox = options.Outbox })
                 .Build();
             var activity = context.GetOrCreateStream(CreateActivityDefinition());
             return new(context, activity, httpClient);
@@ -155,6 +155,21 @@ internal static class CollaborationClientApplication
         await WriteFaultSummaryAsync(output, diagnostics).ConfigureAwait(false);
     }
 
+    /// <summary>Arms the activity confirmation before synchronization can publish a newer activity view.</summary>
+    /// <param name="latest">The activity observer that retains the current local view.</param>
+    /// <param name="operationId">The operation that must be confirmed.</param>
+    /// <param name="cancellationToken">The token that ends the confirmation wait.</param>
+    /// <returns>The matching accepted activity view.</returns>
+    internal static Task<ActivityView> BeginPublishConfirmationWait(
+        LatestActivityObserver latest,
+        OperationId operationId,
+        CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(latest);
+        var expectedOperationId = operationId.Value.ToString("N");
+        return latest.WaitForAsync(value => IsAcceptedView(value, expectedOperationId), cancellationToken);
+    }
+
     /// <summary>Runs a publish command and writes bounded diagnostics.</summary>
     /// <param name="session">The client session.</param>
     /// <param name="command">The publish command.</param>
@@ -185,28 +200,46 @@ internal static class CollaborationClientApplication
             return 0;
         }
 
+        using var confirmationCancellation = CancellationTokenSource.CreateLinkedTokenSource(linked.Token);
+        var confirmation = BeginPublishConfirmationWait(latest, receipt.OperationId, confirmationCancellation.Token);
         await session.StartAsync(linked.Token).ConfigureAwait(false);
         var terminal = await diagnostics.WaitForTerminalOperationAsync(linked.Token).ConfigureAwait(false);
         var exitCode = terminal.Status is { } status ? GetPublishExitCode(status.State) : 1;
         if (terminal.Status is { State: SyncOperationState.Synchronized } synchronized)
         {
-            var expectedOperationId = receipt.OperationId.Value.ToString("N");
-            var view = await latest.WaitForAsync(value => IsAcceptedView(value, expectedOperationId), linked.Token)
-                .ConfigureAwait(false);
+            var view = await confirmation.ConfigureAwait(false);
             await WriteViewAsync(output, view).ConfigureAwait(false);
             await WriteOperationSummaryAsync(output, synchronized).ConfigureAwait(false);
         }
         else if (terminal.Status is { } terminalStatus)
         {
+            await confirmationCancellation.CancelAsync().ConfigureAwait(false);
+            await IgnoreCanceledConfirmationAsync(confirmation).ConfigureAwait(false);
             await WriteOperationSummaryAsync(output, terminalStatus).ConfigureAwait(false);
         }
         else
         {
+            await confirmationCancellation.CancelAsync().ConfigureAwait(false);
+            await IgnoreCanceledConfirmationAsync(confirmation).ConfigureAwait(false);
             await output.WriteLineAsync($"operation: {receipt.OperationId.Value:N} Faulted".AsMemory(), cancellationToken).ConfigureAwait(false);
         }
 
         await WriteDiagnosticsSummaryAsync(output, diagnostics).ConfigureAwait(false);
         return exitCode;
+    }
+
+    /// <summary>Observes a canceled confirmation wait before the publish command returns another terminal result.</summary>
+    /// <param name="confirmation">The confirmation task.</param>
+    /// <returns>The observation task.</returns>
+    private static async Task IgnoreCanceledConfirmationAsync(Task<ActivityView> confirmation)
+    {
+        try
+        {
+            _ = await confirmation.ConfigureAwait(false);
+        }
+        catch (OperationCanceledException)
+        {
+        }
     }
 
     /// <summary>Creates the activity stream definition.</summary>

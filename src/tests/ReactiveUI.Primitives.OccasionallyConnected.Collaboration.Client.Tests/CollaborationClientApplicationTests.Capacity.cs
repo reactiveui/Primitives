@@ -19,6 +19,9 @@ public sealed partial class CollaborationClientApplicationTests
     /// <summary>The prefix used by capacity-fill statuses.</summary>
     private const string CapacityStatusPrefix = "capacity-";
 
+    /// <summary>The explicit durable operation capacity used to exercise the admission boundary.</summary>
+    private const int CapacityOperations = 3;
+
     /// <summary>The bounded delay used to prove an at-capacity publish is blocked before cancellation.</summary>
     private const int CapacityPendingProbeMilliseconds = 100;
 
@@ -29,20 +32,21 @@ public sealed partial class CollaborationClientApplicationTests
     {
         using var lease = new CollaborationClientDatabaseLease();
         var serverUri = new Uri("http://127.0.0.1:0");
-        var capacity = GetExpectedDurableOutboxCapacity();
+        var outbox = CreateCapacityOutboxOptions();
+        var capacity = outbox.MaxOperations;
         SubscriptionId subscriptionId;
-        await using (var client = await OpenClientAsync(serverUri, lease.ClientAPath, TokenA, ClientA)
+        await using (var client = await OpenCapacityClientAsync(serverUri, lease.ClientAPath, outbox)
                          .ConfigureAwait(false))
         {
             subscriptionId = await FillOfflineOutboxToCapacityAsync(client, capacity).ConfigureAwait(false);
         }
 
-        var before = await ReadActualClientOutboxAsync(lease.ClientAPath, subscriptionId).ConfigureAwait(false);
+        var before = await ReadActualClientOutboxAsync(lease.ClientAPath, subscriptionId, outbox).ConfigureAwait(false);
         await AssertOutboxAtCapacityAsync(before, subscriptionId, capacity).ConfigureAwait(false);
 
         CapacityCompletionProof? completion = null;
         var localCanceledCount = 0;
-        await using (var client = await OpenClientAsync(serverUri, lease.ClientAPath, TokenA, ClientA)
+        await using (var client = await OpenCapacityClientAsync(serverUri, lease.ClientAPath, outbox)
                          .ConfigureAwait(false))
         {
             using var telemetry = new ActivityTelemetry(client.Activity);
@@ -68,7 +72,7 @@ public sealed partial class CollaborationClientApplicationTests
             await AssertNoTerminalStreamFailuresAsync(telemetry).ConfigureAwait(false);
         }
 
-        var after = await ReadActualClientOutboxAsync(lease.ClientAPath, subscriptionId).ConfigureAwait(false);
+        var after = await ReadActualClientOutboxAsync(lease.ClientAPath, subscriptionId, outbox).ConfigureAwait(false);
         var completionContext = CreateCompletedCapacityPublishContext(completion, before, after);
         await AssertOutboxUnchangedAsync(before, after, completionContext).ConfigureAwait(false);
         await Assert.That(localCanceledCount).IsEqualTo(0).Because(completionContext);
@@ -164,13 +168,18 @@ public sealed partial class CollaborationClientApplicationTests
     /// <summary>Reads the actual client outbox from the public SQLite adapter.</summary>
     /// <param name="databasePath">The client database path.</param>
     /// <param name="subscriptionId">The expected durable subscription id.</param>
+    /// <param name="outbox">The durable outbox configuration bound to the client database.</param>
     /// <returns>The recovered outbox proof.</returns>
     private static async Task<OutboxProof> ReadActualClientOutboxAsync(
         string databasePath,
-        SubscriptionId subscriptionId)
+        SubscriptionId subscriptionId,
+        OutboxOptions outbox)
     {
         await using var store = new SqliteLocalStoreAdapter(databasePath);
-        await store.InitializeAsync(CreateStoreInitialization(ClientA), CancellationToken.None).ConfigureAwait(false);
+        await store.InitializeAsync(
+                CreateStoreInitialization(ClientA) with { Outbox = outbox },
+                CancellationToken.None)
+            .ConfigureAwait(false);
         var recovered = await store
             .RecoverStreamAsync(ActivityContracts.StreamId, subscriptionId, CancellationToken.None)
             .ConfigureAwait(false);
@@ -296,11 +305,23 @@ public sealed partial class CollaborationClientApplicationTests
         await Assert.That(after.Payload.Span.SequenceEqual(before.Payload.Span)).IsTrue();
     }
 
-    /// <summary>Gets the durable outbox capacity used by the collaboration application builder.</summary>
-    /// <returns>The public durable outbox capacity.</returns>
+    /// <summary>Creates the small explicit outbox limit used to exercise the full admission boundary.</summary>
+    /// <returns>The durable outbox configuration.</returns>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static int GetExpectedDurableOutboxCapacity() =>
-        OccasionallyConnectedOptions.Default.Outbox.MaxOperations;
+    private static OutboxOptions CreateCapacityOutboxOptions() => new() { MaxOperations = CapacityOperations };
+
+    /// <summary>Opens one stopped client configured with the capacity test outbox limit.</summary>
+    /// <param name="serverUri">The offline endpoint.</param>
+    /// <param name="databasePath">The client database path.</param>
+    /// <param name="outbox">The explicit durable outbox configuration.</param>
+    /// <returns>The opened client.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static ValueTask<CollaborationClientSession> OpenCapacityClientAsync(
+        Uri serverUri,
+        string databasePath,
+        OutboxOptions outbox) =>
+        CollaborationClientApplication.OpenAsync(
+            CreateClientOptions(serverUri, databasePath, TokenA, ClientA) with { AutoStart = false, Outbox = outbox });
 
     /// <summary>Creates a capacity-fill update.</summary>
     /// <param name="index">The fill index.</param>
