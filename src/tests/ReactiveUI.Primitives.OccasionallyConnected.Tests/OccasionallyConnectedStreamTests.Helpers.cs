@@ -296,8 +296,9 @@ public sealed partial class OccasionallyConnectedStreamTests
         public TaskCompletionSource? ReleaseCapacityWait { get; init; }
 
         /// <inheritdoc />
-        public IDisposable RegisterParticipant(IOccasionallyConnectedStreamParticipant participant)
-            => RegisterParticipant(participant, startRemoteActive: true);
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public IDisposable RegisterParticipant(IOccasionallyConnectedStreamParticipant participant) =>
+            RegisterParticipant(participant, startRemoteActive: true);
 
         /// <inheritdoc />
         public IDisposable RegisterParticipant(IOccasionallyConnectedStreamParticipant participant, bool startRemoteActive)
