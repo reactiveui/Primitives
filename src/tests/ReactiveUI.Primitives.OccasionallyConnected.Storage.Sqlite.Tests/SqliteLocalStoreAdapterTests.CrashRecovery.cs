@@ -662,6 +662,7 @@ public sealed partial class SqliteLocalStoreAdapterTests
             $"ExitedBeforeStop: {output.ExitedBeforeStop.ToString(CultureInfo.InvariantCulture)}",
             $"KilledByParent: {output.KilledByParent.ToString(CultureInfo.InvariantCulture)}",
             $"ExitCode: {output.ExitCode.ToString(CultureInfo.InvariantCulture)}",
+            $"TerminationSignal: {output.TerminationSignal ?? "(none reported)"}",
             "StandardOutput:",
             output.StandardOutput,
             "StandardError:",

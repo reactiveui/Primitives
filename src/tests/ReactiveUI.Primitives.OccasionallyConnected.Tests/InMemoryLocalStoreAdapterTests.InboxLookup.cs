@@ -56,7 +56,16 @@ public sealed partial class InMemoryLocalStoreAdapterTests
             release.Wait();
         };
         var candidates = new ChangingEventIdList(1, false) { OnRead = blockCapture };
-        var lookup = Task.Run(async () => await store.GetUnappliedEventIdsAsync(Stream, candidates, CancellationToken.None));
+        var lookup = Task.Factory.StartNew(
+            static state =>
+            {
+                var (captureStore, captureCandidates) = ((InMemoryLocalStoreAdapter, ChangingEventIdList))state!;
+                return captureStore.GetUnappliedEventIdsAsync(Stream, captureCandidates, CancellationToken.None).AsTask();
+            },
+            (store, candidates),
+            CancellationToken.None,
+            TaskCreationOptions.LongRunning,
+            TaskScheduler.Default).Unwrap();
         try
         {
             await entered.Task.WaitAsync(TimeSpan.FromSeconds(TimeoutSeconds));

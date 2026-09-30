@@ -240,14 +240,23 @@ public sealed partial class SqliteLocalStoreAdapterTests
         if (!exitedBeforeStop)
         {
             child.Kill(entireProcessTree: true);
-            await child.WaitForExitAsync().WaitAsync(ChildExitTimeout);
         }
 
+#if NET11_0_OR_GREATER
+        var exitStatus = await child.WaitForExitStatusAsync(CancellationToken.None).WaitAsync(ChildExitTimeout);
+        var exitCode = exitStatus.ExitCode;
+        var terminationSignal = exitStatus.Signal?.ToString();
+#else
+        await child.WaitForExitAsync().WaitAsync(ChildExitTimeout);
+        var exitCode = child.ExitCode;
+        const string? terminationSignal = null;
+#endif
         return new(
             child.HasExited,
             exitedBeforeStop,
             !exitedBeforeStop,
-            child.ExitCode,
+            exitCode,
+            terminationSignal,
             await standardOutput.WaitAsync(GuardTimeout),
             await standardError.WaitAsync(GuardTimeout));
     }
@@ -264,6 +273,7 @@ public sealed partial class SqliteLocalStoreAdapterTests
             $"ExitedBeforeStop: {output.ExitedBeforeStop.ToString(CultureInfo.InvariantCulture)}",
             $"KilledByParent: {output.KilledByParent.ToString(CultureInfo.InvariantCulture)}",
             $"ExitCode: {output.ExitCode.ToString(CultureInfo.InvariantCulture)}",
+            $"TerminationSignal: {output.TerminationSignal ?? "(none reported)"}",
             "StandardOutput:",
             output.StandardOutput,
             "StandardError:",
@@ -336,6 +346,7 @@ public sealed partial class SqliteLocalStoreAdapterTests
     /// <param name="ExitedBeforeStop">Whether the child had exited before parent cleanup.</param>
     /// <param name="KilledByParent">Whether parent cleanup requested process termination.</param>
     /// <param name="ExitCode">The exit code after the child was drained.</param>
+    /// <param name="TerminationSignal">The termination signal when reported by the process API.</param>
     /// <param name="StandardOutput">The child process standard output.</param>
     /// <param name="StandardError">The child process standard error.</param>
     private sealed record CrashReceiptChildOutput(
@@ -343,6 +354,7 @@ public sealed partial class SqliteLocalStoreAdapterTests
         bool ExitedBeforeStop,
         bool KilledByParent,
         int ExitCode,
+        string? TerminationSignal,
         string StandardOutput,
         string StandardError);
 
