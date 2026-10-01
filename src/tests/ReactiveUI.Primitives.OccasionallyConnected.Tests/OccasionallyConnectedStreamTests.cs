@@ -140,6 +140,7 @@ public sealed partial class OccasionallyConnectedStreamTests
     /// <param name="explicitPublishOptions">Whether the caller explicitly selects blocking admission.</param>
     /// <returns>A task that completes when the test finishes.</returns>
     [Test]
+    [NotInParallel]
     [Arguments(false)]
     [Arguments(true)]
     public async Task PublishAsyncWaitsForCapacityReleaseBeforeRetryingFullLane(bool explicitPublishOptions)
@@ -364,6 +365,7 @@ public sealed partial class OccasionallyConnectedStreamTests
     /// <summary>Verifies facade disposal waits for accepted durable input before lane close.</summary>
     /// <returns>A task that completes when the test finishes.</returns>
     [Test]
+    [NotInParallel]
     public async Task DisposeAsyncWaitsForAcceptedDurablePublishBeforeClosingLane()
     {
         await using var store = await CreateInitializedStoreAsync();

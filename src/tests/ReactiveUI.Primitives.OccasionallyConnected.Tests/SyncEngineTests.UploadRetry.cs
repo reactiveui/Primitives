@@ -595,6 +595,12 @@ public sealed partial class SyncEngineTests
         await Assert.That(store.ReleaseLeaseCalls).IsEqualTo(ExpectedSingleOperation);
         await Assert.That(faults.Values.Count).IsEqualTo(0);
 
+        await WaitForUploadConditionWithTraceAsync(
+            () => clock.HasTimerDueIn(retryDelay),
+            store,
+            session,
+            faults,
+            operationStates: null);
         clock.Advance(retryDelay);
         await WaitForUploadConditionWithTraceAsync(
             () => faults.Values.Count == ExpectedSingleOperation,
