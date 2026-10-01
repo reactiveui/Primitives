@@ -63,10 +63,29 @@ public sealed partial class SqliteLocalCommitConnectionTests
         await InsertStartupLockAsync(writer, transaction);
 
         SqliteLocalCommitConnection.ConfigureLockPolling(durability);
-        using var cancellation = new CancellationTokenSource(DurabilityCancellationDelay);
-        Action configure = () => SqliteLocalCommitConnection.ConfigureDurabilityAfterOwnershipValidation(durability, cancellation.Token);
+        using var cancellation = new CancellationTokenSource();
+        using var configureEntered = new ManualResetEventSlim();
+        var cancel = Task.Factory.StartNew(
+            CancelDurabilityOnDedicatedThread,
+            (cancellation, configureEntered),
+            CancellationToken.None,
+            TaskCreationOptions.LongRunning | TaskCreationOptions.DenyChildAttach,
+            TaskScheduler.Default);
+        Action configure = () =>
+        {
+            configureEntered.Set();
+            SqliteLocalCommitConnection.ConfigureDurabilityAfterOwnershipValidation(durability, cancellation.Token);
+        };
 
-        await Assert.That(configure).ThrowsExactly<OperationCanceledException>();
+        try
+        {
+            await Assert.That(configure).ThrowsExactly<OperationCanceledException>();
+        }
+        finally
+        {
+            configureEntered.Set();
+            await cancel;
+        }
     }
 
     /// <summary>Verifies durability verification failures are not retried as writer lock contention.</summary>
@@ -80,6 +99,16 @@ public sealed partial class SqliteLocalCommitConnectionTests
         Action configure = () => SqliteLocalCommitConnection.ConfigureDurabilityAfterOwnershipValidation(connection, CancellationToken.None);
 
         await Assert.That(configure).ThrowsExactly<InvalidOperationException>();
+    }
+
+    /// <summary>Cancels the synchronous lock wait independently of test-runner timer scheduling.</summary>
+    /// <param name="state">The cancellation source and durability-entry signal.</param>
+    private static void CancelDurabilityOnDedicatedThread(object? state)
+    {
+        var (cancellation, entered) = ((CancellationTokenSource, ManualResetEventSlim))state!;
+        entered.Wait();
+        Thread.Sleep(DurabilityCancellationDelay);
+        cancellation.Cancel();
     }
 
     /// <summary>Runs the blocking durability retry without occupying a test-runner worker.</summary>
