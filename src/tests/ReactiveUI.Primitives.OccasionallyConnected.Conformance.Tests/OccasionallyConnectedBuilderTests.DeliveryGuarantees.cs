@@ -4,6 +4,7 @@
 
 using System.Runtime.CompilerServices;
 using ReactiveUI.Primitives.OccasionallyConnected.Storage.Sqlite;
+using TUnit.Core.Helpers;
 
 namespace ReactiveUI.Primitives.OccasionallyConnected.Conformance.Tests;
 
@@ -11,6 +12,8 @@ namespace ReactiveUI.Primitives.OccasionallyConnected.Conformance.Tests;
 /// End-to-end delivery-guarantee tests for contexts built by <see cref="OccasionallyConnectedBuilder"/> over a SQLite store,
 /// a real transport and a SQLite <see cref="Server.ServerStreamHub"/> that loses committed push responses on request.
 /// </summary>
+/// <remarks>Bounds competing real client/server database fixtures while preserving each test's fault interleavings.</remarks>
+[ParallelLimiter<ProcessorCountParallelLimit>]
 public sealed partial class OccasionallyConnectedBuilderTests
 {
     /// <summary>The number of fake-time steps pumped after a terminal outcome to prove no resend follows.</summary>

@@ -97,7 +97,7 @@ public sealed partial class FileSystemLocalStoreAdapterTests
             var stream = new StreamId("sensor/lease-renewal");
             var initialization = new LocalStoreInitialization(TestClientId, 1, false);
             var leaseId = Guid.Empty;
-            await using (var adapter = new FileSystemLocalStoreAdapter(directory))
+            await using (var adapter = new FileSystemLocalStoreAdapter(directory, TestTimeProvider))
             {
                 await adapter.InitializeAsync(initialization, CancellationToken.None);
                 await adapter.GetOrCreateSubscriptionIdAsync(stream, null, CancellationToken.None);
@@ -118,9 +118,8 @@ public sealed partial class FileSystemLocalStoreAdapterTests
                 await adapter.RenewLeaseAsync(leaseId, TimeSpan.FromMinutes(1), CancellationToken.None);
             }
 
-            await Task.Delay(OriginalLeaseExpiryDelay);
-
-            await using var reopened = new FileSystemLocalStoreAdapter(directory);
+            var reopenedClock = new FixedTimeProvider(TestTimeProvider.GetUtcNow().Add(OriginalLeaseExpiryDelay));
+            await using var reopened = new FileSystemLocalStoreAdapter(directory, reopenedClock);
             await reopened.InitializeAsync(initialization, CancellationToken.None);
             await using var batches = reopened.LeasePendingOperationsAsync(
                 new(stream, NextOperationSequence, StandardLeaseByteLimit, TimeSpan.FromMinutes(1)),
