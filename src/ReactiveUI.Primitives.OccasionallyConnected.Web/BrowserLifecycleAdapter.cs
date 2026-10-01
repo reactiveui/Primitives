@@ -235,7 +235,7 @@ public sealed class BrowserLifecycleAdapter : IAsyncDisposable
     /// <returns>The worker task.</returns>
     private async Task ProcessAsync()
     {
-        await foreach (var state in _updates.Reader.ReadAllAsync().ConfigureAwait(false))
+        await foreach (var state in _updates.Reader.ReadAllAsync(CancellationToken.None).ConfigureAwait(false))
         {
             var operation = CancellationTokenSource.CreateLinkedTokenSource(_lifetime.Token);
             bool stale;
@@ -353,7 +353,7 @@ public sealed class BrowserLifecycleAdapter : IAsyncDisposable
 
         _ = _updates.Writer.TryComplete();
         await _worker.ConfigureAwait(false);
-        await _initialization.WaitAsync().ConfigureAwait(false);
+        await _initialization.WaitAsync(CancellationToken.None).ConfigureAwait(false);
         try
         {
             try

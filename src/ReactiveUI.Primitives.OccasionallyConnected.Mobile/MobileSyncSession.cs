@@ -204,7 +204,7 @@ public sealed class MobileSyncSession : IAsyncDisposable
             return;
         }
 
-        _transition = Task.Run(ReconcileAsync);
+        _transition = Task.Run(ReconcileAsync, CancellationToken.None);
         _ = ObserveAsync(_transition);
     }
 

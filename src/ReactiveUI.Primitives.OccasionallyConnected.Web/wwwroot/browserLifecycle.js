@@ -13,23 +13,32 @@ export function observe(id, receiver) {
     let frozen = false;
     const listeners = [];
 
-    async function notify() {
+    function notify() {
         dirty = true;
-        if (inFlight || disposed) return;
+        startDelivery();
+    }
+
+    function startDelivery() {
+        if (inFlight || disposed || !dirty) return;
+        dirty = false;
         inFlight = true;
+        void deliver();
+    }
+
+    async function deliver() {
         try {
-            while (dirty && !disposed) {
-                dirty = false;
-                await receiver.invokeMethodAsync(
-                    "OnBrowserStateChangedAsync",
-                    navigator.onLine === true,
-                    departed || frozen || document.visibilityState !== "visible");
-            }
+            await receiver.invokeMethodAsync(
+                "OnBrowserStateChangedAsync",
+                navigator.onLine === true,
+                departed || frozen || document.visibilityState !== "visible");
         } catch {
             // A disconnected circuit cannot receive hints. A later event can retry.
-        } finally {
             inFlight = false;
+            return;
         }
+
+        inFlight = false;
+        startDelivery();
     }
 
     function listen(target, name, handler) {

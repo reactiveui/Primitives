@@ -26,6 +26,8 @@ The required feature matrix still verifies the other frameworks.
 Sonar passes `--no-build` to reuse its successful Release build.
 Use this option only after building the requested test framework.
 The gate still requires every suite and a fresh coverage report from each suite.
+Sonar still collects feature reports when another suite fails.
+A failed test still fails the job.
 The runtime and SQLite suites share CPU-sized test budgets within each host.
 This bounds competing database fixtures. Each test still runs its own concurrent
 operations and keeps its original assertions and deadlines.
