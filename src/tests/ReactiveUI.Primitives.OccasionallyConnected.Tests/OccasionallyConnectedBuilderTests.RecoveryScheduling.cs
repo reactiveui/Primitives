@@ -306,7 +306,9 @@ public sealed partial class OccasionallyConnectedBuilderTests
 
     /// <summary>Verifies recovered pending work initialized before context start is deferred until the context starts.</summary>
     /// <returns>A task representing the assertions.</returns>
+    /// <remarks>Isolates virtual-clock upload and durable acknowledgement commits from unrelated synchronous database fixtures.</remarks>
     [Test]
+    [NotInParallel]
     public async Task StreamStartedBeforeContextDefersRecoveredOutboxUntilContextStart()
     {
         var databasePath = Path.Combine(SqliteTestDirectory.Create("oc-context-recovered-deferred-").FullName, RecoveredUploadDatabaseFileName);
