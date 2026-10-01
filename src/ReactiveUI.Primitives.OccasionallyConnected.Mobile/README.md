@@ -12,7 +12,9 @@ Do not use the neutral target's default Essentials services. They throw when the
 
 Windows builds include Android and Windows heads by default. macOS builds include iOS and Mac Catalyst.
 The dedicated Mobile CI workflow builds those heads on their supported hosts.
-Its macOS job also packs all four native heads with the neutral .NET 10 library into one package.
+Its Windows job builds Windows and Android assets. Its macOS job builds Android, iOS and Mac Catalyst assets.
+The composition job combines those unsigned assets and symbols into one package.
+Every input must have the same package version and source commit.
 CI checks the native API baselines and reads the actual package libraries to check `MauiMobileServices`.
 Use the `mobile-complete-native-package` artifact for publication.
 The release workflow replaces its Windows-built Mobile package with this complete artifact.

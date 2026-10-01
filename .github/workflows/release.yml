@@ -43,6 +43,11 @@ jobs:
     needs: [check-occasionally-connected-packages, check-occasionally-connected-aot, scan-occasionally-connected]
     uses: reactiveui/actions-common/.github/workflows/workflow-common-release.yml@main
     with:
+      dotnetVersions: |
+        8.0.x
+        9.0.x
+        10.0.x
+        11.0.x
       solutionFile: ReactiveUI.Primitives.slnf
       msbuildSolutionFile: ReactiveUI.Primitives.Uno.slnf
       installWorkloads: true

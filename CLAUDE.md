@@ -174,7 +174,8 @@ Each gate uses separate `bin` and `obj` subdirectories so normal builds cannot r
 The gate rejects missing packages, missing local dependencies, preview assets, and preview dependencies in a stable package.
 CI runs both stable and prerelease package gates. It does not change the .NET 11 test matrix.
 
-The release workflow builds the complete Mobile package on macOS at the exact release version and source commit.
+The release workflow builds Mobile assets on Windows and macOS at the exact release version and source commit.
+It combines the matching unsigned host artifacts into one complete package before signing.
 That package includes .NET 10 Android, Windows, iOS, and Mac Catalyst assets.
 The workflow replaces the Windows-only Mobile package in the unsigned feed before signing the full release.
 It checks all four native heads, dependencies, symbols, and source commit before signing.

@@ -39,9 +39,9 @@ jobs:
             apple: ''
             name: windows-android
           - os: macos-latest
-            heads: 'net10.0-android;net10.0-ios;net10.0-maccatalyst;net10.0-windows10.0.19041.0'
+            heads: 'net10.0-android;net10.0-ios;net10.0-maccatalyst'
             apple: 'net10.0-ios;net10.0-maccatalyst'
-            name: complete-native-package
+            name: apple-android
     runs-on: ${{ matrix.os }}
     timeout-minutes: 90
     env:
@@ -143,4 +143,41 @@ jobs:
         with:
           name: mobile-${{ matrix.name }}
           path: artifacts/mobile-native
+          if-no-files-found: error
+
+  complete-native-package:
+    needs: native-mobile
+    runs-on: ubuntu-latest
+    env:
+      MOBILE_PACKAGE_VERSION: ${{ inputs.packageVersion || format('0.1.0-mobile.{0}', github.run_id) }}
+    steps:
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5
+        with:
+          ref: ${{ inputs.sourceRef || github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6
+        with:
+          dotnet-version: |
+            8.0.x
+            10.0.x
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
+        with:
+          name: mobile-windows-android
+          path: artifacts/mobile-windows
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
+        with:
+          name: mobile-apple-android
+          path: artifacts/mobile-apple
+      - name: Compose and verify all native assets before release signing
+        shell: bash
+        run: |
+          commit="$(git rev-parse HEAD)"
+          dotnet run --project tools/OccasionallyConnected.Ci/OccasionallyConnected.Ci.csproj -- merge-mobile \
+            artifacts/mobile-windows artifacts/mobile-apple artifacts/mobile-complete "$MOBILE_PACKAGE_VERSION" "$commit"
+          dotnet run tools/OccasionallyConnectedPackageInspector.cs -- verify-native \
+            --feed artifacts/mobile-complete --version "$MOBILE_PACKAGE_VERSION" --commit "$commit"
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: mobile-complete-native-package
+          path: artifacts/mobile-complete
           if-no-files-found: error

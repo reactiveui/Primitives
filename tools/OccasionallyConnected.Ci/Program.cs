@@ -11,7 +11,7 @@ if (!string.IsNullOrWhiteSpace(cultureName))
 
 if (args.Length == 0)
 {
-    await Console.Error.WriteLineAsync("Usage: occasionally-connected-ci <coverage|packages|supply-chain|mutation|aot> [options]");
+    await Console.Error.WriteLineAsync("Usage: occasionally-connected-ci <coverage|packages|supply-chain|mutation|aot|merge-mobile> [options]");
     return 2;
 }
 
@@ -25,6 +25,7 @@ try
         "supply-chain" => await SupplyChain.Run(options),
         "mutation" => Mutation.Run(options),
         "aot" => Aot.Run(options),
+        "merge-mobile" => MobileNativePackage.Run(options),
         _ => UnknownCommand(args[0]),
     };
 }
