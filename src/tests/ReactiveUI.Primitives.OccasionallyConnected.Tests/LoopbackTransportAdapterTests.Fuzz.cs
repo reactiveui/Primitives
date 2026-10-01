@@ -83,6 +83,7 @@ public sealed partial class LoopbackTransportAdapterTests
     /// </summary>
     /// <returns>The asynchronous test operation.</returns>
     [Test]
+    [NotInParallel]
     public async Task FuzzedSyncBatchIsAppliedOnceOrRejectedBeforeHub()
     {
         var hub = new RecordingHub { ApplyHandler = static (batch, _, _) => ValueTask.FromResult(new ServerSyncResult(CreateAcceptedResult(batch), [])) };
@@ -109,6 +110,7 @@ public sealed partial class LoopbackTransportAdapterTests
     /// </summary>
     /// <returns>The asynchronous test operation.</returns>
     [Test]
+    [NotInParallel]
     public async Task FuzzedReceiveAcknowledgementIsForwardedOnceOrRejectedBeforeHub()
     {
         var hub = new RecordingHub();
@@ -136,6 +138,7 @@ public sealed partial class LoopbackTransportAdapterTests
     /// </summary>
     /// <returns>The asynchronous test operation.</returns>
     [Test]
+    [NotInParallel]
     public async Task FuzzedRemoteEventBatchIsDeliveredOrRejectedWithTypedFailure()
     {
         RemoteEventBatch[] current = [CreateReceiveBatch(CreateRemoteEvent())];

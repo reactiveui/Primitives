@@ -14,10 +14,13 @@ using ReactiveUI.Primitives.OccasionallyConnected;
 using ReactiveUI.Primitives.OccasionallyConnected.Collaboration.Client;
 using ReactiveUI.Primitives.OccasionallyConnected.Collaboration.Server;
 using ReactiveUI.Primitives.OccasionallyConnected.Transport.Http;
+using TUnit.Core.Helpers;
 
 namespace ReactiveUI.Primitives.OccasionallyConnected.Collaboration.Client.Tests;
 
 /// <summary>Tests for <see cref="CollaborationClientApplication"/>.</summary>
+/// <remarks>Bounds competing real HTTP servers and SQLite clients without limiting operations within a test.</remarks>
+[ParallelLimiter<ProcessorCountParallelLimit>]
 public sealed partial class CollaborationClientApplicationTests
 {
     /// <summary>The token for client A.</summary>

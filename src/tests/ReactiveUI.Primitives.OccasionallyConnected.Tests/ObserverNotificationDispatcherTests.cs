@@ -456,11 +456,21 @@ public sealed partial class ObserverNotificationDispatcherTests
         _ = dispatcher.Subscribe(observer, new(TwoItems, TwoBytes, ObserverNotificationOverflowMode.CoalesceLatest));
 
         _ = dispatcher.PublishLatest(FirstValue, OneByte);
-        var drain = Task.Run(scheduler.RunOne);
-        await observer.Entered.Task.WaitAsync(GuardTimeout);
+        var drain = Task.Factory.StartNew(
+            scheduler.RunOne,
+            CancellationToken.None,
+            TaskCreationOptions.LongRunning,
+            TaskScheduler.Default);
+        try
+        {
+            await observer.Entered.Task.WaitAsync(GuardTimeout);
+            dispatcher.Dispose();
+        }
+        finally
+        {
+            observer.Release();
+        }
 
-        dispatcher.Dispose();
-        observer.Release();
         await drain.WaitAsync(GuardTimeout);
 
         await Assert.That(observer.Values).Count().IsEqualTo(OneItem);
