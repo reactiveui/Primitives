@@ -874,18 +874,14 @@ public sealed partial class CoverageTests
         }
 
         var repositoryRoot = FindRepositoryRoot();
-        var projectPath = Path.Combine(repositoryRoot, "tools", "OccasionallyConnected.Ci", "OccasionallyConnected.Ci.csproj");
+        var cliAssembly = Path.Combine(AppContext.BaseDirectory, "OccasionallyConnected.Ci.dll");
         var startInfo = new ProcessStartInfo { FileName = "dotnet", WorkingDirectory = repositoryRoot, RedirectStandardError = true, RedirectStandardOutput = true, UseShellExecute = false, };
         if (cultureName is not null)
         {
             startInfo.Environment["OC_CULTURE"] = cultureName;
         }
 
-        startInfo.ArgumentList.Add("run");
-        startInfo.ArgumentList.Add("--no-build");
-        startInfo.ArgumentList.Add("--project");
-        startInfo.ArgumentList.Add(projectPath);
-        startInfo.ArgumentList.Add("--");
+        startInfo.ArgumentList.Add(cliAssembly);
         startInfo.ArgumentList.Add("coverage");
         AddReportArguments(startInfo, reportPath, packageName);
         if (additionalReportPath is not null)
