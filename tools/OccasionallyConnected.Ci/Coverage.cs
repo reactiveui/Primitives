@@ -116,8 +116,15 @@ public static partial class Coverage
     /// <c>--report-path</c>/<c>--package-name</c> pairs for standalone validation of existing reports.
     /// </param>
     /// <returns>0 on success; 1 when a gate step fails.</returns>
-    public static int Run(string[] args)
+    public static int Run(string[] args) => Run(args, Console.Error);
+
+    /// <summary>Runs the gate with a caller-owned error writer.</summary>
+    /// <param name="args">The command-line arguments.</param>
+    /// <param name="error">The error writer.</param>
+    /// <returns>0 on success; 1 when a gate step fails.</returns>
+    internal static int Run(string[] args, TextWriter error)
     {
+        ArgumentNullException.ThrowIfNull(error);
         try
         {
             var options = ParseArguments(args);
@@ -134,7 +141,7 @@ public static partial class Coverage
         }
         catch (CoverageGateException ex)
         {
-            Console.Error.WriteLine(ex.Message);
+            error.WriteLine(ex.Message);
             return 1;
         }
     }
@@ -181,17 +188,20 @@ public static partial class Coverage
                 continue;
             }
 
-            Console.WriteLine($"Building {name} ({options.Framework})");
-            // Analyzer compliance is checked by the package gate; coverage builds focus on compiling and running the test suites.
-            var buildExitCode = RunProcess(
-                "dotnet", src,
-                "build", projectFile, "-c", "Release", "-f", options.Framework!, "--disable-build-servers", "-m:1",
-                "-p:LangVersion=preview",
-                "-p:RunAnalyzers=false",
-                "-p:AndroidPrimitivesTargetFrameworks=", "-p:ApplePrimitivesTargetFrameworks=");
-            if (buildExitCode != 0)
+            if (!options.NoBuild)
             {
-                throw new CoverageGateException($"Build failed: {name}");
+                Console.WriteLine($"Building {name} ({options.Framework})");
+                // Analyzer compliance is checked by the package gate; coverage builds focus on compiling and running the test suites.
+                var buildExitCode = RunProcess(
+                    "dotnet", src,
+                    "build", projectFile, "-c", "Release", "-f", options.Framework!, "--disable-build-servers", "-m:1",
+                    "-p:LangVersion=preview",
+                    "-p:RunAnalyzers=false",
+                    "-p:AndroidPrimitivesTargetFrameworks=", "-p:ApplePrimitivesTargetFrameworks=");
+                if (buildExitCode != 0)
+                {
+                    throw new CoverageGateException($"Build failed: {name}");
+                }
             }
 
             var testAssembly = Path.Combine(projectDirectory, "bin", "Release", options.Framework!, $"{name}.dll");
@@ -323,6 +333,7 @@ public static partial class Coverage
         string? runId = null;
         string? runAttempt = null;
         string? runnerOs = null;
+        var noBuild = false;
         var reportPaths = new List<string>();
         var packageNames = new List<string>();
 
@@ -353,6 +364,9 @@ public static partial class Coverage
                 case "--runner-os":
                     runnerOs = Next(name);
                     break;
+                case "--no-build":
+                    noBuild = true;
+                    break;
                 case "--report-path":
                     reportPaths.Add(Next(name));
                     break;
@@ -364,8 +378,13 @@ public static partial class Coverage
             }
         }
 
-        var hasCiArgument = framework is not null || runId is not null || runAttempt is not null || runnerOs is not null;
+        var hasCiArgument = noBuild || framework is not null || runId is not null || runAttempt is not null || runnerOs is not null;
         var hasStandaloneArgument = reportPaths.Count > 0 || packageNames.Count > 0;
+
+        if (noBuild && hasStandaloneArgument)
+        {
+            throw new CoverageGateException("--no-build is only supported for a full CI invocation.");
+        }
 
         if (hasCiArgument && hasStandaloneArgument)
         {
@@ -415,7 +434,7 @@ public static partial class Coverage
                 throw new CoverageGateException("Invalid CI run id, attempt, or runner OS.");
             }
 
-            return new ParsedOptions(InvocationMode.Ci, framework, runId, runAttempt, runnerOs, [], []);
+            return new ParsedOptions(InvocationMode.Ci, framework, runId, runAttempt, runnerOs, [], [], noBuild);
         }
 
         if (hasStandaloneArgument)
@@ -426,7 +445,7 @@ public static partial class Coverage
                     "Standalone coverage validation requires at least one --report-path and at least one --package-name.");
             }
 
-            return new ParsedOptions(InvocationMode.Standalone, null, null, null, null, reportPaths, packageNames);
+            return new ParsedOptions(InvocationMode.Standalone, null, null, null, null, reportPaths, packageNames, false);
         }
 
         throw new CoverageGateException(
@@ -1055,7 +1074,8 @@ public static partial class Coverage
         string? RunAttempt,
         string? RunnerOs,
         List<string> ReportPaths,
-        List<string> PackageNames);
+        List<string> PackageNames,
+        bool NoBuild);
 
     private sealed class CoverageGateException : Exception
     {

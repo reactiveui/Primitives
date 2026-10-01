@@ -23,6 +23,9 @@ This split avoids repeating the feature matrix within one test-run deadline.
 Sonar builds every target. It runs the other suites on every supported target.
 It runs all feature suites on .NET 10 and imports their reports for source coverage.
 The required feature matrix still verifies the other frameworks.
+Sonar passes `--no-build` to reuse its successful Release build.
+Use this option only after building the requested test framework.
+The gate still requires every suite and a fresh coverage report from each suite.
 The runtime and SQLite suites share CPU-sized test budgets within each host.
 This bounds competing database fixtures. Each test still runs its own concurrent
 operations and keeps its original assertions and deadlines.

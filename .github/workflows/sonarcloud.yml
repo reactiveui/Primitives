@@ -31,7 +31,6 @@ jobs:
             (github.event_name != 'pull_request' ||
             github.event.pull_request.head.repo.full_name == github.repository)
         runs-on: windows-latest
-        timeout-minutes: 60
         env:
             DOTNET_CLI_WORKLOAD_UPDATE_NOTIFY_DISABLE: 1
             SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
@@ -89,7 +88,7 @@ jobs:
             # Run all feature suites once here to collect complete source coverage for Sonar.
             - name: Verify complete feature coverage
               shell: bash
-              run: dotnet run --project tools/OccasionallyConnected.Ci/OccasionallyConnected.Ci.csproj -- coverage --framework net10.0 --run-id "$GITHUB_RUN_ID" --run-attempt "$GITHUB_RUN_ATTEMPT" --runner-os "$RUNNER_OS"
+              run: dotnet run --project tools/OccasionallyConnected.Ci/OccasionallyConnected.Ci.csproj -- coverage --no-build --framework net10.0 --run-id "$GITHUB_RUN_ID" --run-attempt "$GITHUB_RUN_ATTEMPT" --runner-os "$RUNNER_OS"
             - name: SonarCloud end
               if: always()
               uses: reactiveui/actions-common/.github/actions/sonarcloud@main
