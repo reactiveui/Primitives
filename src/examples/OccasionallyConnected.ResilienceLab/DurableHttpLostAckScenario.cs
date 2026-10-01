@@ -204,6 +204,26 @@ internal static partial class DurableHttpLostAckScenario
         }
     }
 
+    /// <summary>Drives pending receive timers while awaiting a bounded scenario proof.</summary>
+    /// <param name="observation">The proof task.</param>
+    /// <param name="clock">The shared manual clock.</param>
+    /// <param name="cancellationToken">The whole-scenario cancellation token.</param>
+    /// <returns>The observation task.</returns>
+    internal static async Task AdvanceClockUntilObservedAsync(
+        Task observation,
+        MutableTimeProvider clock,
+        CancellationToken cancellationToken)
+    {
+        while (!observation.IsCompleted)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            clock.Advance(RetryDelay);
+            _ = await Task.WhenAny(observation, Task.Delay(ProofPollMilliseconds, cancellationToken)).ConfigureAwait(false);
+        }
+
+        await observation.ConfigureAwait(false);
+    }
+
     /// <summary>Runs the writer crash/reopen workflow and an independent observer client.</summary>
     /// <param name="writerStorePath">The writer store path.</param>
     /// <param name="observerStorePath">The observer store path.</param>
@@ -225,7 +245,7 @@ internal static partial class DurableHttpLostAckScenario
         var afterFirstClose = await ReadWriterStoreProofAsync(writerStorePath, clock, first.Receipt.OperationId, cancellationToken).ConfigureAwait(false);
         first = first with { BeforeRestart = afterFirstClose };
         var second = await ReopenAndRetryAsync(writerStorePath, host, clock, first, cancellationToken).ConfigureAwait(false);
-        var observerCounter = await WaitForObserverConvergenceAsync(observer, cancellationToken).ConfigureAwait(false);
+        var observerCounter = await WaitForObserverConvergenceAsync(observer, clock, cancellationToken).ConfigureAwait(false);
         await observer.Context.StopAsync(cancellationToken).ConfigureAwait(false);
         var observerProof = new ObserverProof(
             observer.ConnectedStream.SubscriptionId,
@@ -362,14 +382,19 @@ internal static partial class DurableHttpLostAckScenario
 
     /// <summary>Waits for observer B to receive the remote effect and converge to counter 1.</summary>
     /// <param name="observer">The observer.</param>
+    /// <param name="clock">The clock that drives receive retries.</param>
     /// <param name="cancellationToken">The cancellation token.</param>
     /// <returns>The result.</returns>
     private static async ValueTask<long> WaitForObserverConvergenceAsync(
         ClientSession observer,
+        MutableTimeProvider clock,
         CancellationToken cancellationToken)
     {
-        await observer.Telemetry.WaitForRemoteCountAsync(1, cancellationToken).ConfigureAwait(false);
-        return await observer.Telemetry.WaitForLocalCounterAsync(1, cancellationToken).ConfigureAwait(false);
+        var remote = observer.Telemetry.WaitForRemoteCountAsync(1, cancellationToken).AsTask();
+        await AdvanceClockUntilObservedAsync(remote, clock, cancellationToken).ConfigureAwait(false);
+        var local = observer.Telemetry.WaitForLocalCounterAsync(1, cancellationToken).AsTask();
+        await AdvanceClockUntilObservedAsync(local, clock, cancellationToken).ConfigureAwait(false);
+        return await local.ConfigureAwait(false);
     }
 
     /// <summary>Cleans up scenario resources after success or failure.</summary>
