@@ -19,7 +19,9 @@ public sealed partial class OccasionallyConnectedBuilderTests
     /// selected candidate to admit a durable publication.
     /// </summary>
     /// <returns>A task representing the assertions.</returns>
+    /// <remarks>Isolates synchronous durable store commits from unrelated database fixtures.</remarks>
     [Test]
+    [NotInParallel]
     public async Task PublicCustomPolicyEvictsSelectedNonDurableCandidate()
     {
         var policy = new ScriptedOverflowPolicy(static context => BufferOverflowDecision.Evict(context.Candidates[^1].OperationId));
@@ -100,7 +102,9 @@ public sealed partial class OccasionallyConnectedBuilderTests
 
     /// <summary>Verifies selections of durable, unknown, or leased operations are policy errors that evict nothing.</summary>
     /// <returns>A task representing the assertions.</returns>
+    /// <remarks>Isolates synchronous durable store commits from unrelated database fixtures.</remarks>
     [Test]
+    [NotInParallel]
     public async Task PublicCustomPolicyRejectsIneligibleSelections()
     {
         OperationId? selection = null;
@@ -148,7 +152,9 @@ public sealed partial class OccasionallyConnectedBuilderTests
 
     /// <summary>Verifies a throwing policy fails the publication and preserves the committed outbox.</summary>
     /// <returns>A task representing the assertions.</returns>
+    /// <remarks>Isolates synchronous durable store commits from unrelated database fixtures.</remarks>
     [Test]
+    [NotInParallel]
     public async Task PublicCustomPolicyFailurePreservesPendingOperations()
     {
         var policy = new ScriptedOverflowPolicy(static _ => throw new InvalidOperationException("Policy failure."));
