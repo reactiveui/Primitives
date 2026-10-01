@@ -31,6 +31,7 @@ A failed test still fails the job.
 The runtime and SQLite suites share CPU-sized test budgets within each host.
 This bounds competing database fixtures. Each test still runs its own concurrent
 operations and keeps its original assertions and deadlines.
+Producer crash tests and strict admission guards run apart from other database fixtures.
 To check existing Cobertura reports without running tests, use `coverage` with
 repeated `--report-path <file>` and `--package-name <name>` options instead.
 The package command also accepts `--sample-target-frameworks <tfm,tfm>`,

@@ -63,6 +63,7 @@ public sealed partial class OccasionallyConnectedBuilderTests
     /// <summary>Verifies DropOldest skips durable operations and fails when every pending operation is durable.</summary>
     /// <returns>A task representing the assertions.</returns>
     [Test]
+    [NotInParallel]
     public async Task PublicDropOldestNeverEvictsDurableOperations()
     {
         await using var store = CreatePublicAdmissionStore("oc-overflow-durable-");

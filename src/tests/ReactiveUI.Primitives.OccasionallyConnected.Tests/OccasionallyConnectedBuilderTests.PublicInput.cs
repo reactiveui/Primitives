@@ -35,6 +35,7 @@ public sealed partial class OccasionallyConnectedBuilderTests
     /// <param name="strategy">The supported observer strategy.</param>
     /// <returns>A task representing the assertions.</returns>
     [Test]
+    [NotInParallel]
     [Arguments(BufferStrategy.Reject)]
     [Arguments(BufferStrategy.DropOldest)]
     [Arguments(BufferStrategy.DropNewest)]

@@ -43,7 +43,7 @@ public sealed partial class OccasionallyConnectedBuilderTests
     /// <param name="strategy">The outbox strategy.</param>
     /// <returns>A task that completes after SQLite is reopened.</returns>
     [Test]
-    [NotInParallel("oc-producer-crash")]
+    [NotInParallel]
     [Arguments(BufferStrategy.Reject)]
     [Arguments(BufferStrategy.DropNewest)]
     [Arguments(BufferStrategy.DropOldest)]
@@ -57,7 +57,7 @@ public sealed partial class OccasionallyConnectedBuilderTests
     /// <param name="strategy">The outbox strategy.</param>
     /// <returns>A task that completes after SQLite is reopened.</returns>
     [Test]
-    [NotInParallel("oc-producer-crash")]
+    [NotInParallel]
     [Arguments(BufferStrategy.Reject)]
     [Arguments(BufferStrategy.DropNewest)]
     [Arguments(BufferStrategy.DropOldest)]
@@ -70,7 +70,7 @@ public sealed partial class OccasionallyConnectedBuilderTests
     /// <param name="strategy">The input queue strategy.</param>
     /// <returns>A task that completes after SQLite is reopened.</returns>
     [Test]
-    [NotInParallel("oc-producer-crash")]
+    [NotInParallel]
     [Arguments(BufferStrategy.Reject)]
     [Arguments(BufferStrategy.DropNewest)]
     [Arguments(BufferStrategy.DropOldest)]
