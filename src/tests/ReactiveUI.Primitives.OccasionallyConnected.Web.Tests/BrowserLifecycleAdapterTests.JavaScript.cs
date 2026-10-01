@@ -16,6 +16,7 @@ public sealed partial class BrowserLifecycleAdapterTests
     /// <summary>Checks all browser event mappings, bounded delivery, recovery, and listener removal.</summary>
     /// <returns>The test task.</returns>
     /// <exception cref="InvalidOperationException">Node could not be started.</exception>
+    /// <exception cref="TimeoutException">Node did not exit within the bounded test deadline.</exception>
     [Test]
     [NotInParallel]
     public async Task JavaScriptListenersAreBoundedAndRemoved()
@@ -25,12 +26,19 @@ public sealed partial class BrowserLifecycleAdapterTests
         startInfo.ArgumentList.Add(Path.Combine(AppContext.BaseDirectory, "browserLifecycleTests.mjs"));
         using var process = Process.Start(startInfo) ?? throw new InvalidOperationException("Node did not start.");
         using var timeout = new CancellationTokenSource(JavaScriptTimeoutMilliseconds);
-        var output = process.StandardOutput.ReadToEndAsync(timeout.Token);
-        var error = process.StandardError.ReadToEndAsync(timeout.Token);
+        var output = process.StandardOutput.ReadToEndAsync();
+        var error = process.StandardError.ReadToEndAsync();
         int exitCode;
         try
         {
             exitCode = await WaitForJavaScriptExitAsync(process, timeout.Token);
+        }
+        catch (OperationCanceledException exception) when (timeout.IsCancellationRequested)
+        {
+            throw new TimeoutException(
+                $"Node did not exit within {JavaScriptTimeoutMilliseconds}ms. "
+                + $"HasExited={process.HasExited}; stdout={output.Status}; stderr={error.Status}.",
+                exception);
         }
         finally
         {
@@ -38,6 +46,8 @@ public sealed partial class BrowserLifecycleAdapterTests
             {
                 process.Kill(entireProcessTree: true);
             }
+
+            await Task.WhenAll(output, error).WaitAsync(TimeSpan.FromMilliseconds(JavaScriptTimeoutMilliseconds));
         }
 
         await Assert.That(exitCode).IsEqualTo(0);
