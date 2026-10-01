@@ -17,6 +17,7 @@ public sealed partial class BrowserLifecycleAdapterTests
     /// <returns>The test task.</returns>
     /// <exception cref="InvalidOperationException">Node could not be started.</exception>
     [Test]
+    [NotInParallel]
     public async Task JavaScriptListenersAreBoundedAndRemoved()
     {
         var startInfo = new ProcessStartInfo("node")
