@@ -26,7 +26,11 @@ public enum LocalStoreCapabilities
     /// <summary>The store coordinates safe access across processes.</summary>
     MultiProcessCoordination = 1 << 4,
 
-    /// <summary>The store supports authenticated encryption at rest.</summary>
+    /// <summary>The store supports confidentiality and authentication of protected records at rest.</summary>
+    /// <remarks>
+    /// This flag does not establish freshness of a database backup or authenticate the absence of deleted records.
+    /// Detecting malicious rollback or deletion requires an independently protected checkpoint outside the store.
+    /// </remarks>
     AuthenticatedEncryptionAtRest = 1 << 5,
 
     /// <summary>The store persists acknowledged local operation and snapshot commits across process restarts.</summary>

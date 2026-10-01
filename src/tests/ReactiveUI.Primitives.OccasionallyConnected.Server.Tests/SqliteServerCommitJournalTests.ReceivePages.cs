@@ -7,6 +7,31 @@ namespace ReactiveUI.Primitives.OccasionallyConnected.Server.Tests;
 /// <summary>Tests receive paging for <see cref="SqliteServerCommitJournal"/>.</summary>
 public sealed partial class SqliteServerCommitJournalTests
 {
+    /// <summary>Verifies receive expiry survives reopen without discarding durable operation replay proofs.</summary>
+    /// <returns>The asynchronous test operation.</returns>
+    [Test]
+    public async Task ReceiveHistoryExpiryPreservesOperationReplayAfterReopen()
+    {
+        using var database = new TemporaryDatabase();
+        var clock = new ManualTimeProvider(Start);
+        var options = new ServerCommitJournalOptions
+        { TimeProvider = clock, OperationRetention = TimeSpan.FromDays(1), ReceiveHistoryRetention = TimeSpan.FromTicks(SingleEntryCount) };
+        var key = OperationKey(FirstOperationSeed);
+        using (var journal = new SqliteServerCommitJournal(database.Path, options))
+        {
+            _ = journal.TryCommit(Plan(0, State(FirstVersion), Stamp(key), Entry(key, OperationResultKind.Accepted, FirstOperationSeed)));
+        }
+
+        clock.SetUtcNow(Start.AddTicks(DoubleEntryCount));
+        using var reopened = new SqliteServerCommitJournal(database.Path, options);
+        var page = reopened.ReadReceivePage(new(StreamKey(), null, SingleEntryCount, DefaultMaximumEvents, DefaultMaximumLogicalBytes));
+        var replay = reopened.Read(StreamKey(), [key]);
+
+        await Assert.That(page.Status).IsEqualTo(ServerReceivePageStatus.RetentionGap);
+        await Assert.That(replay.Entries.Count).IsEqualTo(SingleEntryCount);
+        await Assert.That(replay.Entries[0].OperationKey).IsEqualTo(key);
+    }
+
     /// <summary>Verifies SQLite receive paging survives reopen and keeps zero-event groups ordered.</summary>
     /// <returns>The asynchronous test operation.</returns>
     /// <exception cref="InvalidOperationException">The expected receive page is missing.</exception>

@@ -86,12 +86,11 @@ public static partial class Aot
         Console.WriteLine($"Artifacts: {artifactsPath}");
 
         // The AOT consumer targets net10.0; platform workloads are unrelated to its local package feed.
-        var packProperties = new[]
-        {
+        string[] packProperties =
+        [
             "-p:LangVersion=preview",
-            "-p:AndroidPrimitivesTargetFrameworks=",
-            "-p:ApplePrimitivesTargetFrameworks=",
-        };
+            .. OccasionallyConnectedPackageSet.NeutralFrameworkProperties,
+        ];
         foreach (var project in DependencyProjects.Concat(OccasionallyConnectedProjects))
         {
             Console.WriteLine($"Packing {project}");

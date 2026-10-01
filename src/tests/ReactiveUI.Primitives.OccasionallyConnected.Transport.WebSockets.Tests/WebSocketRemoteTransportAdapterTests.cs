@@ -15,7 +15,7 @@ using ReactiveUI.Primitives.OccasionallyConnected.Transport.WebSockets;
 namespace ReactiveUI.Primitives.OccasionallyConnected.Transport.WebSockets.Tests;
 
 /// <summary>Tests the WebSocket remote transport adapter.</summary>
-public sealed class WebSocketRemoteTransportAdapterTests
+public sealed partial class WebSocketRemoteTransportAdapterTests
 {
     /// <summary>The connect request message type.</summary>
     private const string ConnectMessageType = "connect";

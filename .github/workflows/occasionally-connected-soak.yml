@@ -49,6 +49,7 @@ jobs:
           --framework net10.0
           -p:AndroidPrimitivesTargetFrameworks=
           -p:ApplePrimitivesTargetFrameworks=
+          -p:MobilePlatformTargetFrameworks=
           --
           --treenode-filter "/*/*/*/OfflineOutboxSoakRecoversDrainsAndCompacts"
       - name: Soak slow observers and reconnect
@@ -60,6 +61,7 @@ jobs:
           --framework net10.0
           -p:AndroidPrimitivesTargetFrameworks=
           -p:ApplePrimitivesTargetFrameworks=
+          -p:MobilePlatformTargetFrameworks=
           --
           --treenode-filter "/*/*/*/SlowObserverStormDisconnectsAndResubscribeRecovers"
 
@@ -90,5 +92,6 @@ jobs:
           --framework net10.0
           -p:AndroidPrimitivesTargetFrameworks=
           -p:ApplePrimitivesTargetFrameworks=
+          -p:MobilePlatformTargetFrameworks=
           --
           --treenode-filter "/*/*/*/DurableOutboxPerformanceStaysWithinReleaseBudgets"

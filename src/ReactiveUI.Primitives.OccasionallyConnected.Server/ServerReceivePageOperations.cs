@@ -21,6 +21,29 @@ internal static class ServerReceivePageOperations
     /// <summary>The logical nullable marker byte count.</summary>
     private const long NullableMarkerByteCount = 1;
 
+    /// <summary>Separates subscriber history expiry from retained operation replay proofs.</summary>
+    /// <param name="stream">The retained stream.</param>
+    /// <param name="options">The journal retention options.</param>
+    /// <param name="utcNow">The journal clock.</param>
+    internal static void ExpireReceiveHistory(ServerCommitStreamRecord? stream, ServerCommitJournalOptions options, DateTimeOffset utcNow)
+    {
+        if (stream is null || options.ReceiveHistoryRetention is not { } retention)
+        {
+            return;
+        }
+
+        for (var index = stream.Groups.Count - 1; index >= 0; index--)
+        {
+            if (utcNow - stream.Groups[index].Entry.CommittedAtUtc <= retention)
+            {
+                continue;
+            }
+
+            stream.Groups.RemoveAt(index);
+            stream.HasReceiveHistoryGap = true;
+        }
+    }
+
     /// <summary>Builds a receive page for a stream record.</summary>
     /// <param name="request">The page request.</param>
     /// <param name="stream">The retained stream, if any.</param>

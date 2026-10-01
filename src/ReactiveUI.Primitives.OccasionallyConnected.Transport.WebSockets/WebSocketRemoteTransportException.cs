@@ -8,7 +8,7 @@ namespace ReactiveUI.Primitives.OccasionallyConnected.Transport.WebSockets;
 
 /// <summary>Describes a protocol or transport failure reported by the WebSocket adapter.</summary>
 [DebuggerDisplay("{Code}: {Message}")]
-public sealed class WebSocketRemoteTransportException : Exception
+public sealed class WebSocketRemoteTransportException : Exception, IRemoteTransportFailure
 {
     /// <summary>The fallback code for exceptions without a protocol-specific code.</summary>
     private const string DefaultErrorCode = "transport-error";
@@ -49,4 +49,15 @@ public sealed class WebSocketRemoteTransportException : Exception
 
     /// <summary>Gets the stable protocol failure code.</summary>
     public string Code { get; }
+
+    /// <inheritdoc />
+    public RetryFailure RetryFailure => new(Code switch
+    {
+        "closed" or "transport-error" => RetryFailureKind.AmbiguousTransportOutcome,
+        "subscription-overflow" => RetryFailureKind.Transient,
+        "message-too-large" => RetryFailureKind.PayloadTooLarge,
+        "authentication" => RetryFailureKind.Authentication,
+        "authorization" => RetryFailureKind.AuthorizationDenied,
+        _ => RetryFailureKind.ValidationRejected,
+    });
 }

@@ -1593,6 +1593,9 @@ public record CrdtDotElement : System.IEquatable<ReactiveUI.Primitives.Occasiona
 public static class CrdtFunctions
 {
     [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+    public static ReactiveUI.Primitives.OccasionallyConnected.Crdt.CrdtState CheckpointORSet(ReactiveUI.Primitives.OccasionallyConnected.Crdt.CrdtState state, System.Collections.Generic.IReadOnlyDictionary<string, long> observedPrefixes) { }
+    public static ReactiveUI.Primitives.OccasionallyConnected.Crdt.CrdtState CheckpointORSet(ReactiveUI.Primitives.OccasionallyConnected.Crdt.CrdtState state, System.Collections.Generic.IReadOnlyDictionary<string, long> observedPrefixes, ReactiveUI.Primitives.OccasionallyConnected.Crdt.CrdtBounds bounds) { }
+    [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
     public static ReactiveUI.Primitives.OccasionallyConnected.Crdt.CrdtState ApplyLocal(ReactiveUI.Primitives.OccasionallyConnected.Crdt.CrdtState state, ReactiveUI.Primitives.OccasionallyConnected.Crdt.CrdtInput input, string authenticatedClientId, long clientSequence) { }
     public static ReactiveUI.Primitives.OccasionallyConnected.Crdt.CrdtState ApplyLocal(ReactiveUI.Primitives.OccasionallyConnected.Crdt.CrdtState state, ReactiveUI.Primitives.OccasionallyConnected.Crdt.CrdtInput input, string authenticatedClientId, long clientSequence, ReactiveUI.Primitives.OccasionallyConnected.Crdt.CrdtBounds bounds) { }
     public static int CompareWriteStamps(ReactiveUI.Primitives.OccasionallyConnected.ConflictWriteStamp? left, ReactiveUI.Primitives.OccasionallyConnected.ConflictWriteStamp? right) { }
@@ -1667,6 +1670,7 @@ public record CrdtState : System.IEquatable<ReactiveUI.Primitives.OccasionallyCo
     public System.Collections.Generic.IReadOnlyDictionary<string, long> GCounterComponents { get; init; }
     public required ReactiveUI.Primitives.OccasionallyConnected.Crdt.CrdtKind Kind { get; init; }
     public System.Collections.Generic.IReadOnlyDictionary<string, long> PNCounterNegativeComponents { get; init; }
+    public System.Collections.Generic.IReadOnlyDictionary<string, long> ORSetFrontier { get; init; }
     public System.Collections.Generic.IReadOnlyDictionary<string, long> PNCounterPositiveComponents { get; init; }
     public ReactiveUI.Primitives.OccasionallyConnected.ConflictWriteStamp? RegisterStamp { get; init; }
     public System.ReadOnlyMemory<byte> RegisterValue { get; init; }

@@ -119,6 +119,7 @@ public record ServerCommitJournalLimits : System.IEquatable<ReactiveUI.Primitive
     public int MaximumSubscriptionOffers { get; init; }
     public int MaximumSubscriptions { get; init; }
     public System.TimeSpan OperationRetention { get; init; }
+    public System.TimeSpan? ReceiveHistoryRetention { get; init; }
     public System.TimeSpan SubscriptionRetention { get; init; }
 }
 [System.Diagnostics.DebuggerDisplay("{Streams.Count}")]

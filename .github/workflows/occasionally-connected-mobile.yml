@@ -1,0 +1,117 @@
+name: OccasionallyConnected native Mobile package
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'src/ReactiveUI.Primitives.OccasionallyConnected*/**'
+      - 'src/tests/ReactiveUI.Primitives.OccasionallyConnected.Mobile.Tests/**'
+      - 'src/tests/ReactiveUI.Primitives.OccasionallyConnected.Storage.Sqlite.Tests/**'
+      - 'src/Directory.*'
+      - '.github/workflows/occasionally-connected-mobile.yml'
+  workflow_dispatch:
+  workflow_call:
+    inputs:
+      sourceRef:
+        type: string
+        required: false
+        default: ''
+      packageVersion:
+        type: string
+        required: false
+        default: ''
+
+permissions:
+  contents: read
+
+concurrency:
+  group: occasionally-connected-mobile-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  native-mobile:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            heads: 'net10.0-android;net10.0-windows10.0.19041.0'
+            apple: ''
+            name: windows-android
+          - os: macos-latest
+            heads: 'net10.0-android;net10.0-ios;net10.0-maccatalyst;net10.0-windows10.0.19041.0'
+            apple: 'net10.0-ios;net10.0-maccatalyst'
+            name: complete-native-package
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 90
+    env:
+      MOBILE_PACKAGE_VERSION: ${{ inputs.packageVersion || format('0.1.0-mobile.{0}', github.run_id) }}
+    steps:
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5
+        with:
+          ref: ${{ inputs.sourceRef || github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6
+        with:
+          dotnet-version: '10.0.x'
+      - name: Select the supported SDK for native workloads and builds
+        shell: pwsh
+        working-directory: src
+        run: |
+          $installed = @(dotnet --list-sdks | Where-Object { $_ -match '^10\.\d+\.\d+ \[' })
+          if ($LASTEXITCODE -ne 0 -or $installed.Count -eq 0) { throw 'A stable .NET 10 SDK is required.' }
+          $version = ($installed[-1] -split ' ')[0]
+          $configuration = Get-Content global.json -Raw | ConvertFrom-Json -AsHashtable
+          $configuration['sdk']['version'] = $version
+          $configuration['sdk']['allowPrerelease'] = $false
+          $configuration['sdk']['rollForward'] = 'disable'
+          $configuration | ConvertTo-Json -Depth 8 | Set-Content global.json -Encoding utf8NoBOM
+          $actual = dotnet --version
+          if ($LASTEXITCODE -ne 0 -or $actual.Trim() -ne $version) { throw 'The native job selected the wrong SDK.' }
+      - name: Install supported native workloads
+        shell: pwsh
+        working-directory: src
+        run: dotnet workload install maui
+      - name: Build and pack real native libraries with API checks
+        shell: pwsh
+        working-directory: src
+        env:
+          MOBILE_HEADS: ${{ matrix.heads }}
+          APPLE_HEADS: ${{ matrix.apple }}
+        run: |
+          $project = Join-Path $PWD 'ReactiveUI.Primitives.OccasionallyConnected.Mobile/ReactiveUI.Primitives.OccasionallyConnected.Mobile.csproj'
+          $heads = $env:MOBILE_HEADS.Replace(';', '%3B')
+          $apple = $env:APPLE_HEADS.Replace(';', '%3B')
+          $output = Join-Path $PWD '../artifacts/mobile-native'
+          dotnet pack $project -c Release -o $output `
+            "-p:MobilePlatformTargetFrameworks=$heads" "-p:ApplePrimitivesTargetFrameworks=$apple" `
+            -p:AndroidPrimitivesTargetFrameworks=net10.0-android -p:NetTargetFrameworks=net10.0 `
+            -p:MauiTargetFrameworks=net10.0 "-p:MinVerVersionOverride=$env:MOBILE_PACKAGE_VERSION"
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Test installation recovery, path aliases, and packed native API assets
+        shell: pwsh
+        working-directory: src
+        env:
+          RXUI_MOBILE_NATIVE_HEADS: ${{ matrix.heads }}
+        run: |
+          $env:RXUI_MOBILE_NATIVE_PACKAGE = (Get-ChildItem '../artifacts/mobile-native' -Filter '*.nupkg').FullName
+          $env:RXUI_MOBILE_PACKAGE_VERSION = $env:MOBILE_PACKAGE_VERSION
+          $env:RXUI_MOBILE_PACKAGE_COMMIT = git rev-parse HEAD
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          dotnet test --project (Join-Path $PWD 'tests/ReactiveUI.Primitives.OccasionallyConnected.Mobile.Tests/ReactiveUI.Primitives.OccasionallyConnected.Mobile.Tests.csproj') `
+            -c Release --framework net10.0 -p:NetTargetFrameworks=net10.0 -p:MauiTargetFrameworks=net10.0 `
+            -p:MauiTestTargetFrameworks=net10.0 -p:MobilePlatformTargetFrameworks= `
+            -p:AndroidPrimitivesTargetFrameworks= -p:ApplePrimitivesTargetFrameworks=
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          dotnet test --project (Join-Path $PWD 'tests/ReactiveUI.Primitives.OccasionallyConnected.Storage.Sqlite.Tests/ReactiveUI.Primitives.OccasionallyConnected.Storage.Sqlite.Tests.csproj') `
+            -c Release --framework net10.0 -p:NetTargetFrameworks=net10.0 `
+            -p:AndroidPrimitivesTargetFrameworks= -p:ApplePrimitivesTargetFrameworks= `
+            -- --treenode-filter '/*/*/SqliteLocalStoreAdapterTests/*Ownership*'
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Retain native package and symbols
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: mobile-${{ matrix.name }}
+          path: artifacts/mobile-native
+          if-no-files-found: error

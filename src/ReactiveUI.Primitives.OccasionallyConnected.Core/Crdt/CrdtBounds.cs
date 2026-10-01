@@ -15,7 +15,7 @@ public sealed record CrdtBounds
     internal const int MaximumOwnedRetainedDots = 16_384;
 
     /// <summary>The absolute maximum active element count copied from caller-owned data.</summary>
-    internal const int MaximumOwnedElements = 4096;
+    internal const int MaximumOwnedElements = MaximumOwnedRetainedDots;
 
     /// <summary>The absolute maximum element bytes copied from caller-owned data.</summary>
     internal const int MaximumOwnedElementBytes = 16 * Kibibyte;

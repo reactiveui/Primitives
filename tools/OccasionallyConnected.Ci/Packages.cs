@@ -114,6 +114,10 @@ public static partial class Packages
         Directory.CreateDirectory(logs);
 
         var results = new List<GateResult>();
+        var releaseFilter = CreateReleaseFilter(src, Path.Combine(artifactsPath, "release.slnf"));
+        var packageFrameworks = version.Contains('-', StringComparison.Ordinal)
+            ? LibraryTargetFrameworks
+            : LibraryTargetFrameworks.Where(tfm => tfm != "net11.0").ToArray();
 
         var (commitExitCode, commitOutput) = RunProcess("git", ["-C", repoRoot, "rev-parse", "HEAD"], repoRoot);
         var commit = commitExitCode == 0 ? (commitOutput.FirstOrDefault() ?? string.Empty).Trim() : string.Empty;
@@ -123,34 +127,38 @@ public static partial class Packages
         }
 
         // The clean consumer exercises desktop targets; platform workloads are not needed to pack its local feed.
-        var packProperties = new[]
-        {
+        string[] packProperties =
+        [
             "-c", "Release", "-nologo", $"-p:MinVerVersionOverride={version}", "-p:ContinuousIntegrationBuild=true",
             "-p:LangVersion=preview",
-            "-p:AndroidPrimitivesTargetFrameworks=", "-p:ApplePrimitivesTargetFrameworks=",
-        };
+            .. OccasionallyConnectedPackageSet.NeutralFrameworkProperties,
+            "-p:RestoreForce=true",
+        ];
         Console.WriteLine($"Version {version}, commit {commit}, SDK {sdkVersionText}");
         Console.WriteLine($"Artifacts: {artifactsPath}");
 
-        // 1. Pack everything into the local feed.
-        var packFailed = false;
-        foreach (var project in DependencyProjects.Concat(OccasionallyConnectedProjects))
+        RunResult BuildAndPackReleaseFilter(string prefix, string output)
         {
-            var run = InvokeDotnet(src, logs, $"pack-{project}", [.. new[] { "pack", $"{project}/{project}.csproj", "-o", feed }, .. packProperties]);
-            if (run.ExitCode != 0)
-            {
-                AddResult(results, "pack", "FAIL", $"{project} (exit {run.ExitCode})");
-                ShowTail(run);
-                packFailed = true;
-            }
+            var build = InvokeDotnet(
+                src, logs, $"{prefix}-build-release-filter",
+                ["build", releaseFilter, "--no-incremental", .. packProperties]);
+            return build.ExitCode == 0
+                ? InvokeDotnet(src, logs, $"{prefix}-pack-release-filter",
+                    ["pack", releaseFilter, "--no-build", "-o", output, .. packProperties])
+                : build;
         }
 
-        if (packFailed)
+        // Rebuild the same complete graph in both rounds so compiler references cannot come from another version.
+        var releasePack = BuildAndPackReleaseFilter("first", feed);
+        if (releasePack.ExitCode != 0)
         {
+            AddResult(results, "pack", "FAIL", $"release filter (exit {releasePack.ExitCode})");
+            ShowTail(releasePack);
             PrintResultsTable(results);
             return 1;
         }
 
+        ValidateReleasePackages(feed, version);
         var packageCount = Directory.GetFiles(feed, "*.nupkg").Length;
         AddResult(results, "pack", "PASS", $"{packageCount} packages at {version} in {feed}");
 
@@ -181,29 +189,20 @@ public static partial class Packages
             }
         }
 
-        // 2. Deterministic package comparison: rebuild the OC projects from scratch and pack them again.
+        // 2. Deterministic package comparison: rebuild the complete release graph and pack it again.
         if (skipDeterminism)
         {
             AddResult(results, "deterministic-packages", "SKIP", "skipped by --skip-determinism");
         }
         else
         {
-            var rebuildFailed = false;
-            foreach (var project in OccasionallyConnectedProjects)
+            var secondReleasePack = BuildAndPackReleaseFilter("second", secondPack);
+            if (secondReleasePack.ExitCode != 0)
             {
-                var build = InvokeDotnet(src, logs, $"rebuild-{project}", [.. new[] { "build", $"{project}/{project}.csproj", "--no-dependencies", "--no-incremental" }, .. packProperties]);
-                var pack = build.ExitCode == 0
-                    ? InvokeDotnet(src, logs, $"repack-{project}", [.. new[] { "pack", $"{project}/{project}.csproj", "--no-build", "-o", secondPack }, .. packProperties])
-                    : build;
-                if (pack.ExitCode != 0)
-                {
-                    AddResult(results, "deterministic-packages", "FAIL", $"second build of {project} failed");
-                    ShowTail(pack);
-                    rebuildFailed = true;
-                }
+                AddResult(results, "deterministic-packages", "FAIL", "second release filter build or pack failed");
+                ShowTail(secondReleasePack);
             }
-
-            if (!rebuildFailed)
+            else
             {
                 InvokeInspector("deterministic-packages", ["compare", "--left", feed, "--right", secondPack, "--version", version, "--packages", string.Join(',', OccasionallyConnectedProjects)]);
             }
@@ -219,17 +218,17 @@ public static partial class Packages
                     or "ReactiveUI.Primitives.OccasionallyConnected.Storage.BliteDb"));
         InvokeInspector(
             "symbols-sourcelink-tfms",
-            ["verify", "--feed", feed, "--version", version, "--packages", string.Join(',', fullFrameworkPackages), "--tfms", string.Join(',', LibraryTargetFrameworks), "--commit", commit]);
+            ["verify", "--feed", feed, "--version", version, "--packages", string.Join(',', fullFrameworkPackages), "--tfms", string.Join(',', packageFrameworks), "--commit", commit]);
         InvokeInspector(
             "symbols-sourcelink-websockets",
             ["verify", "--feed", feed, "--version", version, "--packages",
                 string.Join(',', OccasionallyConnectedPackageSet.WebSockets, "ReactiveUI.Primitives.OccasionallyConnected.SignalR", "ReactiveUI.Primitives.OccasionallyConnected.Storage.BliteDb"),
-                "--tfms", "net8.0,net9.0,net10.0,net11.0", "--commit", commit]);
+                "--tfms", string.Join(',', packageFrameworks.Where(tfm => tfm.StartsWith("net", StringComparison.Ordinal) && tfm.Contains('.', StringComparison.Ordinal))), "--commit", commit]);
         InvokeInspector(
             "symbols-sourcelink-platform-compositions",
             ["verify", "--feed", feed, "--version", version, "--packages",
                 "ReactiveUI.Primitives.OccasionallyConnected.Web,ReactiveUI.Primitives.OccasionallyConnected.Mobile,ReactiveUI.Primitives.OccasionallyConnected.Storage.IndexedDB",
-                "--tfms", "net10.0,net11.0", "--commit", commit]);
+                "--tfms", string.Join(',', packageFrameworks.Where(tfm => tfm is "net10.0" or "net11.0")), "--commit", commit]);
 
         var sampleProject = "OccasionallyConnected.PackedSample.csproj";
         var sampleProperties = new[]

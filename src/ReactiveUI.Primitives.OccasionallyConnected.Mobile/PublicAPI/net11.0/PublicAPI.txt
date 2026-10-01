@@ -45,7 +45,6 @@ public sealed class MobileSqliteStorage : System.IAsyncDisposable
     public ReactiveUI.Primitives.OccasionallyConnected.ClientIdentity Identity { get; }
     public ReactiveUI.Primitives.OccasionallyConnected.Mobile.MobileSecureState Keys { get; }
     public ReactiveUI.Primitives.OccasionallyConnected.Storage.Sqlite.SqliteLocalStoreAdapter Store { get; }
-    [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
     public System.Threading.Tasks.ValueTask DisposeAsync() { }
     public static System.Threading.Tasks.ValueTask<ReactiveUI.Primitives.OccasionallyConnected.Mobile.MobileSqliteStorage> CreateAsync(Microsoft.Maui.Storage.ISecureStorage secureStorage, Microsoft.Maui.Storage.IFileSystem fileSystem, string fileName, string secureStorageKey, ReactiveUI.Primitives.OccasionallyConnected.Storage.Sqlite.SqliteLocalStoreAdapterOptions options, System.Threading.CancellationToken cancellationToken) { }
 }

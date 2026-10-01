@@ -2,15 +2,41 @@
 
 Server-side stream and conflict-resolution primitives for authenticated synchronization. The package includes an in-memory or SQLite-backed stream hub, conflict resolvers, server domain handlers, and durable journal support.
 
+## Offline retention
+
+The default journal retains terminal operation results for 30 days.
+Configure `ServerCommitJournalLimits.OperationRetention` for your expected offline interval.
+Finite row and byte limits still apply. The server rejects new work at capacity instead of dropping unexpired proofs.
+Set `ReceiveHistoryRetention` to a shorter interval when subscribers should recover from a snapshot instead.
+This expires subscriber history without deleting operation replay proofs.
+Event data inside a retained operation response remains until operation expiry, so replay results stay identical.
+Receive history cannot outlive operation retention.
+
+Exactly-once means exactly-once effect within the negotiated deduplication window.
+Deduplication means recognizing an operation that the server has already applied.
+The engine persists the first-attempt time before sending.
+After that window expires, the default policy stops the operation as `GuaranteeExpired` before another send.
+A restart does not reset that time. An operation never sent before can still start its first attempt after a long offline interval.
+`FallbackToAtLeastOnce` is an explicit opt-in that can permit duplicate effects after expiry.
+Applications must reconcile expired operations instead of assuming they were delivered.
+At-least-once delivery requires application idempotency once the server has discarded its replay proof.
+
 ## Install
 
 ```bash
 dotnet add package ReactiveUI.Primitives.OccasionallyConnected.Server
 ```
 
-The package targets `net8.0`, `net9.0`, `net10.0`, `net11.0`, `net462`, `net472`, `net48`, and `net481`.
+Source builds target `net8.0`, `net9.0`, `net10.0`, `net11.0`, `net462`, `net472`, `net48`, and `net481`.
 It depends on the core contracts, `SQLitePCLRaw.core`, and `SQLite3MC.PCLRaw.bundle`.
 The bundle supplies the SQLite3 Multiple Ciphers native library. Do not add another SQLite native bundle.
+
+## Release assets
+
+A package asset is a library built for one target framework.
+Stable package versions omit .NET 11 preview assets and their dependency groups.
+A .NET 11 app that installs a stable version uses the compatible .NET 10 asset.
+Prerelease versions include .NET 11 preview assets from the source targets you build.
 
 ## Use
 

@@ -148,6 +148,37 @@ dotnet test "tests/ReactiveUI.Primitives.Async.Tests/ReactiveUI.Primitives.Async
 - New target frameworks require a corresponding baseline directory.
 - For an intentional API change, review the affected signatures and update the corresponding framework baselines.
 
+### Stable and prerelease packages
+
+Builds and tests keep all target frameworks, including .NET 11 preview targets.
+Stable packages omit .NET 11 assets and dependency groups. Prerelease packages include them.
+`SelectStablePackageFrameworks` runs after NuGet reads the target frameworks.
+It runs MinVer first so it uses the final package version, not the default version from project evaluation.
+NuGet also reads dependency and framework-reference groups from the restore file.
+The pack target gives NuGet a copy without .NET 11 groups. It leaves the build and test restore file unchanged.
+The same rule applies to desktop and native target frameworks.
+Stable packages keep the supported .NET 10 native assets.
+
+Neutral validation clears `AndroidPrimitivesTargetFrameworks`, `ApplePrimitivesTargetFrameworks`,
+and `MobilePlatformTargetFrameworks` with explicit command-line properties.
+Coverage, package, AOT, mutation, and supply-chain commands share this scope.
+They do not need MAUI workloads. They keep the net11 neutral build and test legs.
+Do not apply these empty overrides to native package builds or the release asset feed.
+
+The package gate reads `ReactiveUI.Primitives.slnf` and checks that it lists every OccasionallyConnected
+production package and its local dependencies. It packs those projects together through a solution filter.
+This production-only view skips unrelated UI adapters and tests. The release workflow still packs the full filter.
+The gate rebuilds the whole production dependency graph before each pack.
+Both determinism rounds use the same graph so compiler references come from the same package version.
+The gate rejects missing packages, missing local dependencies, preview assets, and preview dependencies in a stable package.
+CI runs both stable and prerelease package gates. It does not change the .NET 11 test matrix.
+
+The release workflow builds the complete Mobile package on macOS at the exact release version and source commit.
+That package includes .NET 10 Android, Windows, iOS, and Mac Catalyst assets.
+The workflow replaces the Windows-only Mobile package in the unsigned feed before signing the full release.
+It checks all four native heads, dependencies, symbols, and source commit before signing.
+The complete Mobile package and its matching symbol package ship together.
+
 ---
 
 ## Platform Notes

@@ -16,6 +16,28 @@ public sealed partial class InMemoryServerCommitJournalTests
     /// <summary>The second deterministic subscription.</summary>
     private static readonly SubscriptionId SecondSubscription = new(new Guid("10000000-0000-0000-0000-000000000002"));
 
+    /// <summary>Verifies existing subscriptions cannot bypass a separately expired receive window.</summary>
+    /// <returns>The asynchronous test operation.</returns>
+    [Test]
+    public async Task ExistingSubscriptionOffersRespectReceiveHistoryExpiry()
+    {
+        var clock = new ManualTimeProvider(Start);
+        var journal = new InMemoryServerCommitJournal(
+            new() { TimeProvider = clock, OperationRetention = TimeSpan.FromDays(1), ReceiveHistoryRetention = TimeSpan.FromTicks(SingleEntryCount) });
+        var key = OperationKey(FirstOperationSeed);
+        _ = journal.TryCommit(Plan(0, State(FirstVersion), Stamp(key), Entry(key, OperationResultKind.Accepted, FirstOperationSeed)));
+        var identity = SubscriptionIdentity(FirstSubscription);
+        var registration = new ServerSubscriptionRegistrationRequest(identity, StartPosition.FromSequence(0));
+        _ = journal.RegisterSubscription(registration);
+        clock.SetUtcNow(Start.AddTicks(DoubleEntryCount));
+        _ = journal.RegisterSubscription(registration);
+
+        var page = journal.OfferReceivePage(new(identity, null, SingleEntryCount, DefaultMaximumEvents, DefaultMaximumLogicalBytes));
+
+        await Assert.That(page.Status).IsEqualTo(ServerReceivePageStatus.RetentionGap);
+        await Assert.That(journal.Read(StreamKey(), [key]).Entries.Count).IsEqualTo(SingleEntryCount);
+    }
+
     /// <summary>Verifies the retention timestamp participates in admission before a binding is retained.</summary>
     /// <returns>The asynchronous test operation.</returns>
     [Test]

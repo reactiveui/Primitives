@@ -25,6 +25,9 @@ public static partial class CrdtCodec
     /// <summary>The supported payload version.</summary>
     private const byte Version = 1;
 
+    /// <summary>The state payload version carrying OR-set checkpoint knowledge.</summary>
+    private const byte CheckpointVersion = 2;
+
     /// <summary>The payload discriminator for state.</summary>
     private const byte StatePayload = 1;
 
@@ -63,15 +66,8 @@ public static partial class CrdtCodec
     {
         CrdtFunctions.ValidateState(state, bounds);
         Writer writer = new(bounds);
-        writer.WriteHeader(StatePayload);
-        writer.WriteByte((byte)state.Kind);
-        writer.WriteComponents(state.GCounterComponents);
-        writer.WriteComponents(state.PNCounterPositiveComponents);
-        writer.WriteComponents(state.PNCounterNegativeComponents);
-        writer.WriteDotElements(state.DotBindings);
-        writer.WriteDotElements(state.Tombstones);
-        writer.WriteBytes(state.RegisterValueSpan);
-        writer.WriteStamp(state.RegisterStamp);
+        writer.WriteHeader(StatePayload, state.ORSetFrontier.Count != 0);
+        writer.WriteStateBody(state);
         return writer.ToArray();
     }
 
@@ -115,7 +111,7 @@ public static partial class CrdtCodec
     {
         ValidateInput(input, bounds);
         Writer writer = new(bounds);
-        writer.WriteHeader(InputPayload);
+        writer.WriteHeader(InputPayload, input.State is { ORSetFrontier.Count: > 0 });
         writer.WriteInput(input);
         return writer.ToArray();
     }

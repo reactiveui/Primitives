@@ -7,6 +7,34 @@ namespace ReactiveUI.Primitives.OccasionallyConnected.Server.Tests;
 /// <summary>Tests for <see cref="ServerCommitJournalOptions"/>.</summary>
 public sealed class ServerCommitJournalOptionsTests
 {
+    /// <summary>The offline retention period provided by the default server journal.</summary>
+    private const int DefaultRetentionDays = 30;
+
+    /// <summary>Verifies public and internal defaults retain offline operations for the same finite interval.</summary>
+    /// <returns>The asynchronous assertion operation.</returns>
+    [Test]
+    public async Task DefaultsRetainOfflineOperationsForThirtyDays()
+    {
+        var options = new ServerCommitJournalOptions();
+        var limits = new ServerCommitJournalLimits();
+
+        options.Validate();
+        await Assert.That(options.OperationRetention).IsEqualTo(TimeSpan.FromDays(DefaultRetentionDays));
+        await Assert.That(limits.OperationRetention).IsEqualTo(options.OperationRetention);
+    }
+
+    /// <summary>Verifies receive expiry is finite and cannot exceed retained operation proofs.</summary>
+    /// <returns>The asynchronous assertion operation.</returns>
+    [Test]
+    public async Task ReceiveHistoryRetentionRejectsUnsupportedWindows()
+    {
+        var zero = new ServerCommitJournalOptions { ReceiveHistoryRetention = TimeSpan.Zero };
+        var excessive = new ServerCommitJournalOptions { ReceiveHistoryRetention = TimeSpan.MaxValue };
+
+        await Assert.That(zero.Validate).ThrowsExactly<ArgumentOutOfRangeException>();
+        await Assert.That(excessive.Validate).ThrowsExactly<ArgumentOutOfRangeException>();
+    }
+
     /// <summary>Verifies invalid logical byte limits are rejected.</summary>
     /// <returns>The asynchronous assertion operation.</returns>
     [Test]

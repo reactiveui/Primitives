@@ -152,6 +152,7 @@ jobs:
           --framework net10.0
           -p:AndroidPrimitivesTargetFrameworks=
           -p:ApplePrimitivesTargetFrameworks=
+          -p:MobilePlatformTargetFrameworks=
           --
           --treenode-filter "/*/${{ matrix.namespace }}/${{ matrix.class }}/${{ matrix.test }}"
           --minimum-expected-tests 1

@@ -194,10 +194,12 @@ public static partial class Coverage
                 // Analyzer compliance is checked by the package gate; coverage builds focus on compiling and running the test suites.
                 var buildExitCode = RunProcess(
                     "dotnet", src,
-                    "build", projectFile, "-c", "Release", "-f", options.Framework!, "--disable-build-servers", "-m:1",
-                    "-p:LangVersion=preview",
-                    "-p:RunAnalyzers=false",
-                    "-p:AndroidPrimitivesTargetFrameworks=", "-p:ApplePrimitivesTargetFrameworks=");
+                    [
+                        "build", projectFile, "-c", "Release", "-f", options.Framework!, "--disable-build-servers", "-m:1",
+                        "-p:LangVersion=preview",
+                        "-p:RunAnalyzers=false",
+                        .. OccasionallyConnectedPackageSet.NeutralFrameworkProperties,
+                    ]);
                 if (buildExitCode != 0)
                 {
                     throw new CoverageGateException($"Build failed: {name}");
@@ -252,12 +254,12 @@ public static partial class Coverage
                     RedirectStandardError = true,
                 },
             };
-            foreach (var argument in new[]
+            string[] arguments =
             {
                 "msbuild", Path.GetFullPath(projectFile), "-nologo", "-nodeReuse:false",
                 "-getProperty:TargetFramework,TargetFrameworks",
-                "-p:AndroidPrimitivesTargetFrameworks=", "-p:ApplePrimitivesTargetFrameworks=",
-            })
+            };
+            foreach (var argument in arguments.Concat(OccasionallyConnectedPackageSet.NeutralFrameworkProperties))
             {
                 process.StartInfo.ArgumentList.Add(argument);
             }

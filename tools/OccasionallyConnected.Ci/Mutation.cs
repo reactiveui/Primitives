@@ -235,12 +235,12 @@ public static partial class Mutation
         var projectFile = Path.Combine(projectDirectory, campaign.TestProject + ".csproj");
         var assembly = Path.Combine(projectDirectory, "bin", "Release", "net10.0", campaign.TestProject + ".dll");
         var filter = $"/*/*/{campaign.TestClass}/*";
-        var buildArguments = new[]
-        {
+        string[] buildArguments =
+        [
             "build", projectFile, "-c", "Release", "-f", "net10.0", "--disable-build-servers", "-m:1",
             "-p:MinVerSkip=true", "-p:Version=0.1.0", "-p:LangVersion=preview",
-            "-p:AndroidPrimitivesTargetFrameworks=", "-p:ApplePrimitivesTargetFrameworks=",
-        };
+            .. OccasionallyConnectedPackageSet.NeutralFrameworkProperties,
+        ];
 
         var baselineBuildLog = Path.Combine(reports, $"{campaign.Name}-baseline-build.log");
         var baselineTestLog = Path.Combine(reports, $"{campaign.Name}-baseline-test.log");

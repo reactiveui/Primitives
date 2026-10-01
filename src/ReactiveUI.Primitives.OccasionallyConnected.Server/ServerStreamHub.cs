@@ -225,6 +225,7 @@ public sealed partial class ServerStreamHub : IServerStreamHub, IServerSnapshotR
             MaximumSubscriptions = limits.MaximumSubscriptions,
             MaximumSubscriptionOffers = limits.MaximumSubscriptionOffers,
             OperationRetention = limits.OperationRetention,
+            ReceiveHistoryRetention = limits.ReceiveHistoryRetention,
             SubscriptionRetention = limits.SubscriptionRetention,
             TimeProvider = options.TimeProvider,
         };

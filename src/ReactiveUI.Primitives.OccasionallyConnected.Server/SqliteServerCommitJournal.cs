@@ -408,11 +408,13 @@ internal sealed partial class SqliteServerCommitJournal : IServerCommitJournal, 
     {
         ThrowIfDisposed();
         ArgumentExceptionHelper.ThrowIfNull(request);
+        var observedUtc = _options.TimeProvider.GetUtcNow();
         using var connection = OpenConnection();
         using var transaction = connection.BeginTransaction(deferred: true);
         ValidateExistingSchema(connection, transaction);
         ValidateReadCapacity(connection, transaction);
         var stream = ReadStreamRecord(connection, transaction, request.StreamKey);
+        ServerReceivePageOperations.ExpireReceiveHistory(stream, _options, observedUtc);
         var result = ServerReceivePageOperations.Create(request, stream);
         transaction.Commit();
         return result;
@@ -461,6 +463,7 @@ internal sealed partial class SqliteServerCommitJournal : IServerCommitJournal, 
         ValidateReadCapacity(connection, transaction);
         var record = ReadRegisteredSubscription(connection, transaction, request.Identity);
         var stream = ReadStreamRecord(connection, transaction, request.Identity.StreamKey);
+        ServerReceivePageOperations.ExpireReceiveHistory(stream, _options, observedUtc);
         var initialRead = ResolveInitialReadCursor(connection, transaction, record, request.Cursor, stream, observedUtc);
         if (!initialRead.HasReadCursor)
         {

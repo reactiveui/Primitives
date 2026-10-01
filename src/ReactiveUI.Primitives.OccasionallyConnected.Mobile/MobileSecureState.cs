@@ -136,6 +136,35 @@ public sealed class MobileSecureState : ILocalStoreKeyProvider
         }
     }
 
+    /// <summary>Provisions a fresh identity for a database with no previous durable sequence state.</summary>
+    /// <param name="storage">The secure storage service.</param>
+    /// <param name="storageKey">The secure entry name.</param>
+    /// <param name="cancellationToken">The admission cancellation token.</param>
+    /// <returns>The new installation's key provider.</returns>
+    internal static async ValueTask<MobileSecureState> CreateInstallationAsync(
+        ISecureStorage storage,
+        string storageKey,
+        CancellationToken cancellationToken)
+    {
+        var entries = Entries.GetValue(storage, static _ => new(StringComparer.Ordinal));
+        var previous = entries.GetOrAdd(storageKey, static _ => new());
+        await previous.Gate.WaitAsync(cancellationToken).ConfigureAwait(false);
+        try
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            var snapshot = CreateSnapshot(true);
+            await storage.SetAsync(storageKey, snapshot.Encode()).ConfigureAwait(false);
+            var entry = new MobileSecureEntry();
+            entry.Publish(snapshot);
+            entries[storageKey] = entry;
+            return new(storage, storageKey, entry);
+        }
+        finally
+        {
+            _ = previous.Gate.Release();
+        }
+    }
+
     /// <summary>Creates state only when the host allows first-time provisioning.</summary>
     /// <param name="allowCreate">Whether creation is allowed.</param>
     /// <returns>A new secure snapshot.</returns>
@@ -144,7 +173,10 @@ public sealed class MobileSecureState : ILocalStoreKeyProvider
     {
         if (!allowCreate)
         {
-            throw new InvalidOperationException("Secure state is missing for an existing database.");
+            throw new InvalidOperationException(
+                "Secure state is missing for an existing database. Restore its original secure identity and complete key ring "
+                + "from a trusted backup. If the keys are lost, preserve or quarantine the database and explicitly re-enroll "
+                + "with a new database and identity; pending encrypted operations cannot be recovered.");
         }
 
         var key = LocalStoreKey.CreateRandom(Guid.NewGuid().ToString("N"));

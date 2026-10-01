@@ -9,7 +9,7 @@ using System.Text;
 namespace ReactiveUI.Primitives.OccasionallyConnected.Crdt;
 
 /// <summary>Provides pure CRDT validation, projection, merge, and value helpers.</summary>
-public static class CrdtFunctions
+public static partial class CrdtFunctions
 {
     /// <summary>The unsupported kind error message.</summary>
     private const string UnsupportedKindMessage = "The CRDT kind is not supported.";
@@ -159,6 +159,7 @@ public static class CrdtFunctions
         ValidateDotElements(state.DotBindings, bounds, bounds.MaximumDotBindings);
         ValidateDotElements(state.Tombstones, bounds, bounds.MaximumTombstones);
         ValidateNoCrossRebind(state.DotBindings, state.Tombstones);
+        ValidateFrontier(state.ORSetFrontier, bounds);
         ValidateWriteStamp(state.RegisterStamp, bounds);
         if (state.RegisterValueLength > bounds.MaximumRegisterBytes)
         {
@@ -166,7 +167,7 @@ public static class CrdtFunctions
         }
 
         ValidateClosedStateShape(state);
-        _ = GetValue(state);
+        ValidateDerivedValue(state, bounds);
     }
 
     /// <summary>Compares two LWW register stamps using canonical server write ordering.</summary>
@@ -337,6 +338,11 @@ public static class CrdtFunctions
         ValidateKind(state, CrdtKind.ORSet, bounds);
         ValidateElementLength(mutation.ByteLength, bounds);
         var dot = new CrdtDot { ClientId = clientId, ClientSequence = sequence };
+        if (IsCovered(state.ORSetFrontier, dot) && !IndexBindings(state.DotBindings).ContainsKey(dot))
+        {
+            return state;
+        }
+
         List<CrdtDotElement> bindings = [with(capacity: state.DotBindings.Count + 1)];
         AddRange(bindings, state.DotBindings);
         var incoming = new CrdtDotElement { Dot = dot, Element = mutation.Bytes };
@@ -356,16 +362,15 @@ public static class CrdtFunctions
     {
         ValidateKind(state, CrdtKind.ORSet, bounds);
         ValidateElementLength(mutation.ByteLength, bounds);
-        List<CrdtDotElement> tombstones = [with(capacity: state.Tombstones.Count + mutation.ObservedDots.Count)];
-        AddRange(tombstones, state.Tombstones);
+        var tombstones = IndexBindings(state.Tombstones);
         for (var index = 0; index < mutation.ObservedDots.Count; index++)
         {
             var dot = mutation.ObservedDots[index];
             var candidate = new CrdtDotElement { Dot = dot, Element = mutation.Bytes };
-            AddOrValidateSameBinding(tombstones, candidate);
+            AddIndexedBinding(tombstones, candidate);
         }
 
-        var next = state with { Tombstones = tombstones };
+        var next = CreateORSetState(IndexBindings(state.DotBindings), tombstones, state.ORSetFrontier);
         ValidateState(next, bounds);
         return next;
     }
@@ -421,13 +426,16 @@ public static class CrdtFunctions
     /// <exception cref="InvalidOperationException">Thrown when the CRDT data is invalid.</exception>
     private static CrdtState MergeORSet(CrdtState left, CrdtState right, CrdtBounds bounds)
     {
-        List<CrdtDotElement> bindings = [with(capacity: left.DotBindings.Count + right.DotBindings.Count)];
-        List<CrdtDotElement> tombstones = [with(capacity: left.Tombstones.Count + right.Tombstones.Count)];
-        AddRange(bindings, left.DotBindings);
-        AddRange(tombstones, left.Tombstones);
-        AddMergedDotElements(bindings, right.DotBindings);
-        AddMergedDotElements(tombstones, right.Tombstones);
-        var state = new CrdtState { Kind = CrdtKind.ORSet, DotBindings = bindings, Tombstones = tombstones };
+        var bindings = MergeActiveBindings(left, right);
+        var tombstones = IndexBindings(left.Tombstones);
+        foreach (var tombstone in right.Tombstones)
+        {
+            AddIndexedBinding(tombstones, tombstone);
+        }
+
+        ValidateNoCrossRebind(SnapshotBindings(bindings), SnapshotBindings(tombstones));
+        var frontier = MergeComponents(left.ORSetFrontier, right.ORSetFrontier);
+        var state = CreateORSetState(bindings, tombstones, frontier);
         ValidateState(state, bounds);
         return state;
     }
@@ -440,8 +448,20 @@ public static class CrdtFunctions
     /// <exception cref="InvalidOperationException">Thrown when the CRDT data is invalid.</exception>
     private static CrdtState MergeLwwRegister(CrdtState left, CrdtState right, CrdtBounds bounds)
     {
-        var winner = CompareWriteStamps(left.RegisterStamp, right.RegisterStamp) >= 0 ? left : right;
-        var state = new CrdtState { Kind = CrdtKind.LwwRegister, RegisterValue = winner.RegisterValue, RegisterStamp = winner.RegisterStamp };
+        var order = CompareWriteStamps(left.RegisterStamp, right.RegisterStamp);
+        if (order == 0)
+        {
+            order = CompareBytes(left.RegisterValueSpan, right.RegisterValueSpan);
+        }
+
+        var winner = order >= 0 ? left : right;
+        var stamp = winner.RegisterStamp;
+        if (stamp is not null)
+        {
+            stamp = stamp with { CommittedAtUtc = stamp.CommittedAtUtc.ToUniversalTime() };
+        }
+
+        var state = new CrdtState { Kind = CrdtKind.LwwRegister, RegisterValue = winner.RegisterValue, RegisterStamp = stamp };
         ValidateState(state, bounds);
         return state;
     }
@@ -453,18 +473,19 @@ public static class CrdtFunctions
     private static ReadOnlyCollection<ReadOnlyMemory<byte>> GetActiveElements(CrdtState state)
     {
         List<ReadOnlyMemory<byte>> elements = [];
-        for (var index = 0; index < state.DotBindings.Count; index++)
+        var active = GetSortedActiveBindings(state);
+        CrdtDotElement? previous = null;
+        foreach (var binding in active)
         {
-            var binding = state.DotBindings[index];
-            if (ContainsDotElement(state.Tombstones, binding) || ContainsBytes(elements, binding.ElementSpan))
+            if (previous is not null && BytesEqual(previous.ElementSpan, binding.ElementSpan))
             {
                 continue;
             }
 
             elements.Add(binding.ElementSpan.ToArray());
+            previous = binding;
         }
 
-        elements.Sort(CompareMemory);
         return new(elements);
     }
 
@@ -631,6 +652,7 @@ public static class CrdtFunctions
         {
             case CrdtKind.GCounter:
             {
+                EnsureEmpty(state.ORSetFrontier);
                 EnsureEmpty(state.PNCounterPositiveComponents);
                 EnsureEmpty(state.PNCounterNegativeComponents);
                 EnsureEmpty(state.DotBindings);
@@ -641,6 +663,7 @@ public static class CrdtFunctions
 
             case CrdtKind.PNCounter:
             {
+                EnsureEmpty(state.ORSetFrontier);
                 EnsureEmpty(state.GCounterComponents);
                 EnsureEmpty(state.DotBindings);
                 EnsureEmpty(state.Tombstones);
@@ -659,6 +682,7 @@ public static class CrdtFunctions
 
             case CrdtKind.LwwRegister:
             {
+                EnsureEmpty(state.ORSetFrontier);
                 EnsureEmpty(state.GCounterComponents);
                 EnsureEmpty(state.PNCounterPositiveComponents);
                 EnsureEmpty(state.PNCounterNegativeComponents);
@@ -720,16 +744,12 @@ public static class CrdtFunctions
     /// <exception cref="InvalidOperationException">Thrown when a dot is rebound.</exception>
     private static void ValidateNoCrossRebind(IReadOnlyList<CrdtDotElement> bindings, IReadOnlyList<CrdtDotElement> tombstones)
     {
-        for (var bindingIndex = 0; bindingIndex < bindings.Count; bindingIndex++)
+        var indexed = IndexBindings(tombstones);
+        foreach (var binding in bindings)
         {
-            var binding = bindings[bindingIndex];
-            for (var tombstoneIndex = 0; tombstoneIndex < tombstones.Count; tombstoneIndex++)
+            if (indexed.TryGetValue(binding.Dot, out var tombstone) && !BytesEqual(binding.ElementSpan, tombstone.ElementSpan))
             {
-                var tombstone = tombstones[tombstoneIndex];
-                if (CompareDots(binding.Dot, tombstone.Dot) == 0 && !BytesEqual(binding.ElementSpan, tombstone.ElementSpan))
-                {
-                    throw new InvalidOperationException(DotRebindMessage);
-                }
+                throw new InvalidOperationException(DotRebindMessage);
             }
         }
     }
@@ -746,18 +766,6 @@ public static class CrdtFunctions
         }
 
         throw new InvalidOperationException("A CRDT element exceeds configured bounds.");
-    }
-
-    /// <summary>Adds dot elements while keeping dot rebinding impossible.</summary>
-    /// <param name="target">The target.</param>
-    /// <param name="source">The source.</param>
-    /// <exception cref="InvalidOperationException">Thrown when the CRDT data is invalid.</exception>
-    private static void AddMergedDotElements(List<CrdtDotElement> target, IReadOnlyList<CrdtDotElement> source)
-    {
-        for (var index = 0; index < source.Count; index++)
-        {
-            AddOrValidateSameBinding(target, source[index]);
-        }
     }
 
     /// <summary>Adds existing dot elements to a mutable list.</summary>
@@ -797,56 +805,12 @@ public static class CrdtFunctions
         target.Add(incoming);
     }
 
-    /// <summary>Determines whether a dot element list contains an exact dot and element match.</summary>
-    /// <param name="elements">The elements.</param>
-    /// <param name="value">The value.</param>
-    /// <returns>The result.</returns>
-    /// <exception cref="InvalidOperationException">Thrown when the CRDT data is invalid.</exception>
-    private static bool ContainsDotElement(IReadOnlyList<CrdtDotElement> elements, CrdtDotElement value)
-    {
-        for (var index = 0; index < elements.Count; index++)
-        {
-            var element = elements[index];
-            if (CompareDots(element.Dot, value.Dot) == 0 && BytesEqual(element.ElementSpan, value.ElementSpan))
-            {
-                return true;
-            }
-        }
-
-        return false;
-    }
-
-    /// <summary>Determines whether a mutable element list contains the supplied bytes.</summary>
-    /// <param name="elements">The elements.</param>
-    /// <param name="value">The value.</param>
-    /// <returns>The result.</returns>
-    /// <exception cref="InvalidOperationException">Thrown when the CRDT data is invalid.</exception>
-    private static bool ContainsBytes(List<ReadOnlyMemory<byte>> elements, ReadOnlySpan<byte> value)
-    {
-        for (var index = 0; index < elements.Count; index++)
-        {
-            if (BytesEqual(elements[index].Span, value))
-            {
-                return true;
-            }
-        }
-
-        return false;
-    }
-
     /// <summary>Compares two dots.</summary>
     /// <param name="left">The left.</param>
     /// <param name="right">The right.</param>
     /// <returns>The result.</returns>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static int CompareDots(CrdtDot left, CrdtDot right) => left.CompareTo(right);
-
-    /// <summary>Compares two byte memory values.</summary>
-    /// <param name="left">The left.</param>
-    /// <param name="right">The right.</param>
-    /// <returns>The result.</returns>
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static int CompareMemory(ReadOnlyMemory<byte> left, ReadOnlyMemory<byte> right) => CompareBytes(left.Span, right.Span);
 
     /// <summary>Compares two byte spans lexicographically.</summary>
     /// <param name="left">The left.</param>

@@ -30,6 +30,26 @@ public sealed partial class InMemoryServerCommitJournalTests
     /// <summary>The expected probe-page failure message.</summary>
     private const string MissingProbeBatchMessage = "The probe page did not return a batch.";
 
+    /// <summary>Verifies subscriber history can expire without losing idempotency replay responses.</summary>
+    /// <returns>The asynchronous test operation.</returns>
+    [Test]
+    public async Task ReceiveHistoryExpiryPreservesOperationReplay()
+    {
+        var clock = new ManualTimeProvider(Start);
+        var journal = new InMemoryServerCommitJournal(
+            new() { TimeProvider = clock, OperationRetention = TimeSpan.FromDays(1), ReceiveHistoryRetention = TimeSpan.FromTicks(SingleEntryCount) });
+        var key = OperationKey(FirstOperationSeed);
+        _ = journal.TryCommit(Plan(0, State(FirstVersion), Stamp(key), Entry(key, OperationResultKind.Accepted, FirstOperationSeed)));
+        clock.SetUtcNow(Start.AddTicks(DoubleEntryCount));
+
+        var page = journal.ReadReceivePage(new(StreamKey(), null, SingleEntryCount, DefaultMaximumEvents, DefaultMaximumLogicalBytes));
+        var replay = journal.Read(StreamKey(), [key]);
+
+        await Assert.That(page.Status).IsEqualTo(ServerReceivePageStatus.RetentionGap);
+        await Assert.That(replay.Entries.Count).IsEqualTo(SingleEntryCount);
+        await Assert.That(replay.Entries[0].OperationKey).IsEqualTo(key);
+    }
+
     /// <summary>Verifies receive paging returns complete operation groups, including zero-event acceptances.</summary>
     /// <returns>The asynchronous test operation.</returns>
     /// <exception cref="InvalidOperationException">The expected receive page is missing.</exception>

@@ -7,7 +7,7 @@ using ReactiveUI.Primitives.OccasionallyConnected.Crdt;
 namespace ReactiveUI.Primitives.OccasionallyConnected.Tests;
 
 /// <summary>Tests the public pure CRDT mutation boundary.</summary>
-public sealed class CrdtFunctionsTests
+public sealed partial class CrdtFunctionsTests
 {
     /// <summary>The test client identifier.</summary>
     private const string ClientId = "client";

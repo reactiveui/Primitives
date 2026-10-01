@@ -4,7 +4,6 @@
 
 using System.Buffers;
 using System.Diagnostics;
-using System.Runtime.CompilerServices;
 using Microsoft.Maui.Storage;
 using ReactiveUI.Primitives.OccasionallyConnected.Storage.Sqlite;
 
@@ -21,15 +20,20 @@ public sealed class MobileSqliteStorage : IAsyncDisposable
     /// <summary>Rejects path separators across supported host platforms.</summary>
     private static readonly SearchValues<char> PathSeparators = SearchValues.Create("/\\:");
 
+    /// <summary>Serializes secure provisioning for this database throughout the bundle lifetime.</summary>
+    private readonly FileStream _installation;
+
     /// <summary>Initializes a new instance of the <see cref="MobileSqliteStorage"/> class.</summary>
     /// <param name="databasePath">The app-data database path.</param>
     /// <param name="keys">The loaded secure state.</param>
     /// <param name="store">The owned SQLite adapter.</param>
-    private MobileSqliteStorage(string databasePath, MobileSecureState keys, SqliteLocalStoreAdapter store)
+    /// <param name="installation">The exclusive installation handle.</param>
+    private MobileSqliteStorage(string databasePath, MobileSecureState keys, SqliteLocalStoreAdapter store, FileStream installation)
     {
         DatabasePath = databasePath;
         Keys = keys;
         Store = store;
+        _installation = installation;
     }
 
     /// <summary>Gets the absolute SQLite database path in the platform app-data directory.</summary>
@@ -83,19 +87,37 @@ public sealed class MobileSqliteStorage : IAsyncDisposable
 
         cancellationToken.ThrowIfCancellationRequested();
         directory = Path.GetFullPath(directory);
-        var path = Path.Combine(directory, fileName);
-        var keys = await MobileSecureState.OpenAsync(
-            secureStorage,
-            secureStorageKey,
-            !File.Exists(path),
-            cancellationToken).ConfigureAwait(false);
-        cancellationToken.ThrowIfCancellationRequested();
         _ = Directory.CreateDirectory(directory);
-        var adapter = new SqliteLocalStoreAdapter(path, options with { KeyProvider = keys });
-        return new(path, keys, adapter);
+        directory = MobileInstallation.ResolveDirectory(new(directory));
+        var path = Path.Combine(directory, fileName);
+        var installation = MobileInstallation.Acquire(path);
+        try
+        {
+            var keys = await MobileInstallation.OpenAsync(
+                secureStorage,
+                secureStorageKey,
+                path,
+                cancellationToken).ConfigureAwait(false);
+            var adapter = new SqliteLocalStoreAdapter(path, options with { KeyProvider = keys });
+            return new(path, keys, adapter, installation);
+        }
+        catch
+        {
+            await installation.DisposeAsync().ConfigureAwait(false);
+            throw;
+        }
     }
 
     /// <inheritdoc/>
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public ValueTask DisposeAsync() => Store.DisposeAsync();
+    public async ValueTask DisposeAsync()
+    {
+        try
+        {
+            await Store.DisposeAsync().ConfigureAwait(false);
+        }
+        finally
+        {
+            await _installation.DisposeAsync().ConfigureAwait(false);
+        }
+    }
 }

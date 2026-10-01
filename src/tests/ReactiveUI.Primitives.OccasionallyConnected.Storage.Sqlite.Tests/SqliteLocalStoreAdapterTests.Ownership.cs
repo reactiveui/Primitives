@@ -205,6 +205,22 @@ public sealed partial class SqliteLocalStoreAdapterTests
         await Assert.That(reject).ThrowsExactly<NotSupportedException>();
     }
 
+    /// <summary>Verifies nested mount roots win over the local root without matching a sibling name prefix.</summary>
+    /// <returns>A task that represents the asynchronous test.</returns>
+    [Test]
+    public async Task WhenDatabaseIsUnderNestedMount_ThenOwnershipSelectsMostSpecificFilesystem()
+    {
+        var root = Path.GetPathRoot(Path.GetFullPath("."))!;
+        var mount = Path.Combine(root, "network-mount");
+        var nested = Path.Combine(mount, "nested");
+        var database = Path.Combine(nested, "client.db");
+        var selected = SqliteSingleWriterOwnership.SelectMountRoot(database, root, mount);
+        selected = SqliteSingleWriterOwnership.SelectMountRoot(database, selected, nested);
+        await Assert.That(selected).IsEqualTo(nested);
+        var sibling = Path.Combine(root, "network-mount-other", "client.db");
+        await Assert.That(SqliteSingleWriterOwnership.SelectMountRoot(sibling, root, mount)).IsEqualTo(root);
+    }
+
     /// <summary>Verifies ownership creates a missing parent directory before opening the sidecar.</summary>
     /// <returns>A task that represents the asynchronous test.</returns>
     [Test]
@@ -261,10 +277,10 @@ public sealed partial class SqliteLocalStoreAdapterTests
         await Assert.That(File.Exists(database.Path)).IsFalse();
     }
 
-    /// <summary>Verifies reparse-point parent paths are rejected before ownership claims a writer.</summary>
+    /// <summary>Verifies directory aliases share exclusive ownership with the physical database path.</summary>
     /// <returns>A task that represents the asynchronous test.</returns>
     [Test]
-    public async Task WhenDatabaseParentIsReparsePoint_ThenOwnershipRejectsIt()
+    public async Task WhenDatabaseParentIsReparsePoint_ThenAliasesShareOwnership()
     {
         var root = System.IO.Path.Combine(TempDatabase.GetTemporaryDirectory(), OwnershipTempRootName, Guid.NewGuid().ToString("N"));
         var targetDirectory = System.IO.Path.Combine(root, "target");
@@ -275,11 +291,11 @@ public sealed partial class SqliteLocalStoreAdapterTests
             CreateDirectorySymbolicLinkOrThrow(linkDirectory, targetDirectory);
 
             await using var adapter = CreateAdapter(System.IO.Path.Combine(linkDirectory, RelativeDatabaseFileName));
-            Func<Task> initialize = () => adapter.InitializeAsync(new(StoreIdentity, SchemaVersion, false), CancellationToken.None).AsTask();
-
-            var exception = await Assert.ThrowsExactlyAsync<NotSupportedException>(initialize);
-
-            await Assert.That(exception?.Message).Contains("reparse-point directories");
+            await adapter.InitializeAsync(new(StoreIdentity, SchemaVersion, false), CancellationToken.None);
+            await using var physical = CreateAdapter(System.IO.Path.Combine(targetDirectory, RelativeDatabaseFileName));
+            Func<Task> initialize = () => physical.InitializeAsync(new(StoreIdentity, SchemaVersion, false), CancellationToken.None).AsTask();
+            await Assert.That(initialize).ThrowsExactly<InvalidOperationException>();
+            await Assert.That(File.Exists(System.IO.Path.Combine(targetDirectory, RelativeDatabaseFileName))).IsTrue();
         }
         finally
         {
@@ -287,6 +303,51 @@ public sealed partial class SqliteLocalStoreAdapterTests
             {
                 Directory.Delete(root, true);
             }
+        }
+    }
+
+    /// <summary>Verifies retargeting an alias after construction cannot redirect the database or writer handle.</summary>
+    /// <returns>A task that represents the asynchronous test.</returns>
+    [Test]
+    public async Task WhenDirectoryAliasRetargetsAfterConstruction_ThenOwnershipAndDatabaseStayAtOriginalPath()
+    {
+        var root = Path.Combine(AppContext.BaseDirectory, OwnershipTempRootName, Guid.NewGuid().ToString("N"));
+        var original = Path.Combine(root, "original");
+        var redirected = Path.Combine(root, "redirected");
+        var alias = Path.Combine(root, "alias");
+        var originalDatabase = Path.Combine(original, RelativeDatabaseFileName);
+        var redirectedDatabase = Path.Combine(redirected, RelativeDatabaseFileName);
+        _ = Directory.CreateDirectory(original);
+        _ = Directory.CreateDirectory(redirected);
+        try
+        {
+            await CreateDirectoryAliasAsync(alias, original);
+            await using var constructed = CreateAdapter(Path.Combine(alias, RelativeDatabaseFileName));
+            Directory.Delete(alias);
+            await CreateDirectoryAliasAsync(alias, redirected);
+            await constructed.InitializeAsync(new(StoreIdentity, SchemaVersion, false), CancellationToken.None);
+            await Assert.That(File.Exists(originalDatabase)).IsTrue();
+            await Assert.That(File.Exists($"{originalDatabase}.rxui-owner")).IsTrue();
+            await Assert.That(File.Exists(redirectedDatabase)).IsFalse();
+            await Assert.That(File.Exists($"{redirectedDatabase}.rxui-owner")).IsFalse();
+            await using var conflicting = CreateAdapter(originalDatabase);
+            Func<Task> initialize = () => conflicting.InitializeAsync(
+                new(StoreIdentity, SchemaVersion, false),
+                CancellationToken.None).AsTask();
+            await Assert.That(initialize).ThrowsExactly<InvalidOperationException>();
+            await using var currentAlias = CreateAdapter(Path.Combine(alias, RelativeDatabaseFileName));
+            await currentAlias.InitializeAsync(new(StoreIdentity, SchemaVersion, false), CancellationToken.None);
+            await Assert.That(File.Exists(redirectedDatabase)).IsTrue();
+            await Assert.That(File.Exists($"{redirectedDatabase}.rxui-owner")).IsTrue();
+        }
+        finally
+        {
+            if (Directory.Exists(alias))
+            {
+                Directory.Delete(alias);
+            }
+
+            Directory.Delete(root, true);
         }
     }
 
@@ -524,6 +585,32 @@ public sealed partial class SqliteLocalStoreAdapterTests
         catch (IOException exception) when ((exception.HResult & 0xffff) == SymbolicLinkPrivilegeNotHeldErrorCode)
         {
             Skip.Test($"The current host does not grant the privilege required for directory symbolic links: {exception.Message}");
+        }
+    }
+
+    /// <summary>Creates a directory alias, using a Windows junction when symbolic-link privilege is unavailable.</summary>
+    /// <param name="alias">The alias path.</param>
+    /// <param name="target">The physical target directory.</param>
+    /// <returns>The alias creation completion.</returns>
+    private static async Task CreateDirectoryAliasAsync(string alias, string target)
+    {
+        try
+        {
+            _ = Directory.CreateSymbolicLink(alias, target);
+        }
+        catch (IOException exception) when ((exception.HResult & 0xffff) == SymbolicLinkPrivilegeNotHeldErrorCode)
+        {
+            var start = new ProcessStartInfo("powershell.exe") { UseShellExecute = false, CreateNoWindow = true };
+            start.ArgumentList.Add("-NoProfile");
+            start.ArgumentList.Add("-Command");
+            start.ArgumentList.Add(
+                "New-Item -ItemType Junction -Path $env:RXUI_ALIAS_PATH -Target $env:RXUI_ALIAS_TARGET | Out-Null");
+            start.Environment["RXUI_ALIAS_PATH"] = alias;
+            start.Environment["RXUI_ALIAS_TARGET"] = target;
+            using var process = Process.Start(start);
+            await Assert.That(process).IsNotNull();
+            await process!.WaitForExitAsync();
+            await Assert.That(process.ExitCode).IsEqualTo(0);
         }
     }
 

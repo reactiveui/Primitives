@@ -10,6 +10,32 @@ namespace ReactiveUI.Primitives.OccasionallyConnected.Tests;
 /// <content>Tests evaluated framework discovery for the coverage gate.</content>
 public sealed partial class CoverageTests
 {
+    /// <summary>The neutral framework used by discovery assertions.</summary>
+    private const string NeutralFramework = "net10.0";
+
+    /// <summary>Verifies neutral discovery overrides native defaults but keeps the net11 test leg.</summary>
+    /// <returns>The assertion task.</returns>
+    [Test]
+    public async Task FrameworkDiscoveryDisablesNativeMobileDefaults()
+    {
+        using var directory = TestDirectory.Create();
+        var project = Path.Combine(directory.Path, "Mobile.csproj");
+        await File.WriteAllTextAsync(
+            project,
+            """
+            <Project>
+              <PropertyGroup>
+                <MobilePlatformTargetFrameworks Condition="'$(MobilePlatformTargetFrameworks)' == ''">net10.0-android</MobilePlatformTargetFrameworks>
+                <TargetFrameworks>net10.0;net11.0;$(MobilePlatformTargetFrameworks)</TargetFrameworks>
+              </PropertyGroup>
+            </Project>
+            """);
+
+        await Assert.That(CiCoverage.TargetsFramework(project, NeutralFramework)).IsTrue();
+        await Assert.That(CiCoverage.TargetsFramework(project, "net11.0")).IsTrue();
+        await Assert.That(CiCoverage.TargetsFramework(project, "net10.0-android")).IsFalse();
+    }
+
     /// <summary>Verifies conditional assignments do not admit inactive platform frameworks.</summary>
     /// <returns>The assertion task.</returns>
     [Test]
@@ -29,7 +55,7 @@ public sealed partial class CoverageTests
             </Project>
             """);
 
-        await Assert.That(CiCoverage.TargetsFramework(project, "net10.0")).IsTrue();
+        await Assert.That(CiCoverage.TargetsFramework(project, NeutralFramework)).IsTrue();
         await Assert.That(CiCoverage.TargetsFramework(project, "net8.0")).IsFalse();
     }
 
@@ -64,7 +90,7 @@ public sealed partial class CoverageTests
         var project = Path.Combine(directory.Path, "Single.csproj");
         await File.WriteAllTextAsync(project, "<Project><PropertyGroup><TargetFramework>net10.0</TargetFramework></PropertyGroup></Project>");
 
-        await Assert.That(CiCoverage.TargetsFramework(project, "net10.0")).IsTrue();
+        await Assert.That(CiCoverage.TargetsFramework(project, NeutralFramework)).IsTrue();
         await Assert.That(CiCoverage.TargetsFramework(project, "net10.0-android")).IsFalse();
     }
 }

@@ -345,6 +345,12 @@ A target framework (TFM) is the .NET version and platform a build targets, such 
 list: `net8.0`, `net9.0`, `net10.0`, `net11.0`, `net462`, `net472`, `net48` and `net481`. The repository calls that list
 `$(LibraryTargetFrameworks)` and sets it in `src/Directory.Build.props`.
 
+The list below describes source builds and tests. A package asset is a library built for one target framework.
+Stable package versions omit .NET 11 preview assets and their dependency groups.
+A .NET 11 app that installs a stable OccasionallyConnected package uses its compatible .NET 10 asset.
+Prerelease package versions include the .NET 11 preview assets from the source targets you build.
+Source builds and tests still include .NET 11.
+
 | Package | Target frameworks |
 |---------|-------------------|
 | `ReactiveUI.Disposables`, `ReactiveUI.Primitives.Core`, `ReactiveUI.Primitives.Async.Core`, `ReactiveUI.Primitives.Async`, `ReactiveUI.Primitives.Async.Reactive` | The shared list above. |

@@ -8,7 +8,14 @@ Host lifecycle and health-check integration for an OccasionallyConnected client.
 dotnet add package ReactiveUI.Primitives.OccasionallyConnected.Hosting
 ```
 
-The package targets `net8.0`, `net9.0`, `net10.0`, `net11.0`, `net462`, `net472`, `net48`, and `net481`. It depends on the dependency-injection integration and Microsoft.Extensions hosting and health-check abstractions.
+Source builds target `net8.0`, `net9.0`, `net10.0`, `net11.0`, `net462`, `net472`, `net48`, and `net481`. The package depends on the dependency-injection integration and Microsoft.Extensions hosting and health-check abstractions.
+
+## Release assets
+
+A package asset is a library built for one target framework.
+Stable package versions omit .NET 11 preview assets and their dependency groups.
+A .NET 11 app that installs a stable version uses the compatible .NET 10 asset.
+Prerelease versions include .NET 11 preview assets from the source targets you build.
 
 ## Use
 

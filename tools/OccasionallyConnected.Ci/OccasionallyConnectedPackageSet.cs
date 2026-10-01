@@ -4,6 +4,13 @@ internal static class OccasionallyConnectedPackageSet
 {
     internal const string WebSockets = "ReactiveUI.Primitives.OccasionallyConnected.Transport.WebSockets";
 
+    internal static readonly string[] NeutralFrameworkProperties =
+    [
+        "-p:AndroidPrimitivesTargetFrameworks=",
+        "-p:ApplePrimitivesTargetFrameworks=",
+        "-p:MobilePlatformTargetFrameworks=",
+    ];
+
     internal static readonly string[] Dependencies =
     [
         "ReactiveUI.Disposables",

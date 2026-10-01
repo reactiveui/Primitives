@@ -4,6 +4,13 @@ This package connects the sync engine to an ASP.NET Core SignalR hub.
 It includes a real .NET client and server endpoint composition.
 The engine decides when to reconnect. The adapter never enables automatic or stateful reconnect.
 
+## Release assets
+
+A package asset is a library built for one target framework.
+Stable package versions omit .NET 11 preview assets and their dependency groups.
+A .NET 11 app that installs a stable version uses the compatible .NET 10 asset.
+Prerelease versions include .NET 11 preview assets from the source targets you build.
+
 ## Server
 
 1. Register your `IServerStreamHub` and its authorization policies.

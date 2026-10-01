@@ -59,11 +59,14 @@ public static partial class SupplyChain
                 var name = projects[index];
                 var projectFile = projectFiles[index];
                 Console.WriteLine($"Packing {name}");
-                await RunCommand("dotnet", src, null, "pack", projectFile, "-c", "Release", "-o", drop,
+                await RunCommand("dotnet", src, null,
+                [
+                    "pack", projectFile, "-c", "Release", "-o", drop,
                     $"-p:MinVerVersionOverride={version}", "-p:ContinuousIntegrationBuild=true",
                     "-p:LangVersion=preview",
-                    "--disable-build-servers", "-m:1", "-p:AndroidPrimitivesTargetFrameworks=",
-                    "-p:ApplePrimitivesTargetFrameworks=");
+                    "--disable-build-servers", "-m:1",
+                    .. OccasionallyConnectedPackageSet.NeutralFrameworkProperties,
+                ]);
 
                 var packageFile = Path.Combine(drop, $"{name}.{version}.nupkg");
                 if (!File.Exists(packageFile))

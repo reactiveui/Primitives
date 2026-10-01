@@ -31,13 +31,15 @@ internal sealed class SqliteSingleWriterOwnership : IDisposable
         SqliteLocalCommitValidation.ThrowIfBlank(databasePath, nameof(databasePath), "The SQLite database path cannot be empty.");
         SqliteLocalCommitValidation.ThrowIfUnsupportedPath(databasePath);
         ThrowIfUnsupportedRoot(databasePath);
-        ThrowIfExistingReparsePoint(databasePath);
-        ThrowIfExistingReparsePoint(databasePath + OwnershipSuffix);
-
+        databasePath = ResolveDatabasePath(databasePath);
         var directory = Path.GetDirectoryName(databasePath);
         ArgumentExceptionHelper.ThrowIfNull(directory);
-
         _ = Directory.CreateDirectory(directory);
+        ThrowIfUnsupportedRoot(databasePath);
+        ThrowIfExistingReparsePoint(databasePath);
+        ThrowIfExistingReparsePoint(databasePath + OwnershipSuffix);
+        ThrowIfExistingReparsePoint($"{databasePath}-wal");
+        ThrowIfExistingReparsePoint($"{databasePath}-shm");
         try
         {
             var stream = new FileStream(databasePath + OwnershipSuffix, FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.None);
@@ -51,6 +53,41 @@ internal sealed class SqliteSingleWriterOwnership : IDisposable
         {
             throw new InvalidOperationException("The SQLite local store writer ownership handle could not be acquired.", exception);
         }
+    }
+
+    /// <summary>Captures a physical directory path without following a final database file link.</summary>
+    /// <param name="databasePath">The supplied database path.</param>
+    /// <returns>The full database path with existing directory aliases resolved.</returns>
+    /// <remarks>Unsupported directory aliases remain unchanged until Acquire rejects them during initialization.</remarks>
+    internal static string NormalizeDatabasePath(string databasePath)
+    {
+        try
+        {
+            return ResolveDatabasePath(databasePath);
+        }
+        catch (NotSupportedException)
+        {
+            return Path.GetFullPath(databasePath);
+        }
+    }
+
+    /// <summary>Selects the longest mounted filesystem root containing a database.</summary>
+    /// <param name="databasePath">The full database path.</param>
+    /// <param name="selected">The current mount root.</param>
+    /// <param name="candidate">The candidate mount root.</param>
+    /// <returns>The mount root for the most specific filesystem.</returns>
+    internal static string SelectMountRoot(string databasePath, string selected, string candidate)
+    {
+        if (candidate.Length <= selected.Length)
+        {
+            return selected;
+        }
+
+        var comparison = Path.DirectorySeparatorChar == '\\' ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal;
+        var boundary = candidate.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar) + Path.DirectorySeparatorChar;
+        return string.Equals(databasePath, candidate, comparison) || databasePath.StartsWith(boundary, comparison)
+            ? candidate
+            : selected;
     }
 
     /// <summary>Rejects drive types that cannot make a local sidecar ownership claim.</summary>
@@ -79,8 +116,13 @@ internal sealed class SqliteSingleWriterOwnership : IDisposable
 
         var root = Path.GetPathRoot(databasePath);
         ArgumentExceptionHelper.ThrowIfNull(root);
-        var drive = new DriveInfo(root);
-        ThrowIfUnsupportedDriveType(drive.DriveType);
+        var selected = root;
+        foreach (var mounted in DriveInfo.GetDrives())
+        {
+            selected = SelectMountRoot(databasePath, selected, mounted.Name);
+        }
+
+        ThrowIfUnsupportedDriveType(new DriveInfo(selected).DriveType);
     }
 
     /// <summary>Rejects existing reparse points that could give the same database more than one sidecar path.</summary>
@@ -88,18 +130,8 @@ internal sealed class SqliteSingleWriterOwnership : IDisposable
     /// <exception cref="NotSupportedException">An existing path segment is a reparse point.</exception>
     private static void ThrowIfExistingReparsePoint(string databasePath)
     {
-        var directory = Path.GetDirectoryName(databasePath);
-        if (!string.IsNullOrEmpty(directory))
-        {
-            ThrowIfExistingDirectoryReparsePoint(new(directory));
-        }
-
-        if (!File.Exists(databasePath))
-        {
-            return;
-        }
-
-        if ((File.GetAttributes(databasePath) & FileAttributes.ReparsePoint) == 0)
+        var attributes = ReadExistingAttributes(databasePath);
+        if (attributes is null || (attributes.Value & FileAttributes.ReparsePoint) == 0)
         {
             return;
         }
@@ -107,26 +139,63 @@ internal sealed class SqliteSingleWriterOwnership : IDisposable
         throw new NotSupportedException("SQLite single-writer ownership is not supported for reparse-point database files.");
     }
 
-    /// <summary>Rejects existing reparse-point directories in a parent chain.</summary>
-    /// <param name="directory">The directory to inspect.</param>
-    /// <exception cref="NotSupportedException">An existing directory is a reparse point.</exception>
-    private static void ThrowIfExistingDirectoryReparsePoint(DirectoryInfo directory)
+    /// <summary>Resolves directory aliases without deferring unsupported-path failures.</summary>
+    /// <param name="databasePath">The supplied database path.</param>
+    /// <returns>The captured database path.</returns>
+    private static string ResolveDatabasePath(string databasePath)
     {
-        if (directory.Parent is not null)
+        if (databasePath.StartsWith(@"\\", StringComparison.Ordinal) || databasePath.StartsWith("//", StringComparison.Ordinal))
         {
-            ThrowIfExistingDirectoryReparsePoint(directory.Parent);
+            return databasePath;
         }
 
-        if (!directory.Exists)
+        var fullPath = Path.GetFullPath(databasePath);
+        var directory = Path.GetDirectoryName(fullPath);
+        ArgumentExceptionHelper.ThrowIfNull(directory);
+        return Path.Combine(ResolveDirectory(new(directory)), Path.GetFileName(fullPath));
+    }
+
+    /// <summary>Resolves directory aliases so all names for a database use the same ownership sidecar.</summary>
+    /// <param name="directory">The directory to inspect.</param>
+    /// <returns>The physical directory path.</returns>
+    /// <exception cref="NotSupportedException">A directory alias cannot be resolved.</exception>
+    private static string ResolveDirectory(DirectoryInfo directory)
+    {
+        var path = directory.Parent is null
+            ? directory.FullName
+            : Path.Combine(ResolveDirectory(directory.Parent), directory.Name);
+        var attributes = ReadExistingAttributes(path);
+        if (attributes is null || (attributes.Value & FileAttributes.ReparsePoint) == 0)
         {
-            return;
+            return path;
         }
 
-        if ((directory.Attributes & FileAttributes.ReparsePoint) == 0)
-        {
-            return;
-        }
+#if NETFRAMEWORK
+        throw new NotSupportedException("Directory aliases require a modern .NET target for safe SQLite path normalization.");
+#else
+        var physical = new DirectoryInfo(path);
+        var target = physical.ResolveLinkTarget(true) as DirectoryInfo
+            ?? throw new NotSupportedException("The SQLite directory alias cannot be resolved to a real directory.");
+        return ResolveDirectory(target);
+#endif
+    }
 
-        throw new NotSupportedException("SQLite single-writer ownership is not supported through reparse-point directories.");
+    /// <summary>Reads path attributes while treating an absent path as a normal creation case.</summary>
+    /// <param name="path">The path to inspect.</param>
+    /// <returns>The existing attributes, or null when the path has not been created.</returns>
+    private static FileAttributes? ReadExistingAttributes(string path)
+    {
+        try
+        {
+            return File.GetAttributes(path);
+        }
+        catch (FileNotFoundException)
+        {
+            return null;
+        }
+        catch (DirectoryNotFoundException)
+        {
+            return null;
+        }
     }
 }

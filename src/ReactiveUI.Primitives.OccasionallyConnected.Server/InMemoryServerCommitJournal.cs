@@ -214,9 +214,11 @@ internal sealed class InMemoryServerCommitJournal : IServerCommitJournal, IServe
     internal ServerReceivePageResult ReadReceivePage(ServerReceivePageRequest request)
     {
         ArgumentExceptionHelper.ThrowIfNull(request);
+        var observedUtc = _options.TimeProvider.GetUtcNow();
         lock (_gate)
         {
             _ = _streams.TryGetValue(request.StreamKey, out var stream);
+            ServerReceivePageOperations.ExpireReceiveHistory(stream, _options, observedUtc);
             return ServerReceivePageOperations.Create(request, stream);
         }
     }
@@ -662,6 +664,7 @@ internal sealed class InMemoryServerCommitJournal : IServerCommitJournal, IServe
         }
 
         _ = _streams.TryGetValue(request.Identity.StreamKey, out var stream);
+        ServerReceivePageOperations.ExpireReceiveHistory(stream, _options, observedUtc);
         var anchor = ServerSubscriptionStartPositionOperations.CaptureInitialAnchor(request.Identity.StreamKey, request.StartPosition, stream);
         var logicalBytes = ServerSubscriptionJournalOperations.GetSubscriptionBytes(request.Identity, request.StartPosition, anchor.Cursor);
         if (!HasSubscriptionCapacity(1, 0, logicalBytes))
@@ -695,6 +698,7 @@ internal sealed class InMemoryServerCommitJournal : IServerCommitJournal, IServe
     {
         var record = ReadRegisteredSubscription(request.Identity);
         _ = _streams.TryGetValue(request.Identity.StreamKey, out var stream);
+        ServerReceivePageOperations.ExpireReceiveHistory(stream, _options, observedUtc);
         if (!TryResolveInitialReadCursor(record, request.Cursor, stream, observedUtc, out var readCursor, out var pendingResult))
         {
             return pendingResult;

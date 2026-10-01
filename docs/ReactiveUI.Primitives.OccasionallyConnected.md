@@ -1023,6 +1023,7 @@ On `StartAsync`, the engine:
 
 - Outbox terminal records, inbox deduplication entries, snapshots, dead letters, and server idempotency records have separate retention policies.
 - The exactly-once-effect window is the minimum of client inbox and server idempotency retention.
+- The owned server journal defaults to 30 days of operation retention. `ReceiveHistoryRetention` can shorten the subscriber replay window without removing operation deduplication proofs. Expired receive history reports a gap and requires snapshot recovery. Event data inside original operation responses remains retained so duplicate responses stay identical.
 - Compaction MUST be transactional, cancellable, and safe to restart. It MUST NOT remove operations needed to rebuild the current snapshot or resolve pending conflicts.
 - Disk-pressure thresholds trigger diagnostics before hard capacity is reached. The default high-water mark is 80%; at the critical threshold, durable writes reject rather than silently drop.
 
@@ -1079,7 +1080,7 @@ Operations carry `BaseVersion`. The server compares it with the current aggregat
 ### 11.2 Built-in strategies
 
 - `LastWriterWinsResolver`: uses the server commit time and a deterministic tie-breaker `(serverTime, clientId, operationId)`. Client clocks MUST NOT decide the winner.
-- `CrdtResolver`: supports explicitly registered CRDT types such as grow-only counters, PN-counters, observed-remove sets, and last-writer registers. CRDT metadata is versioned and compacted safely.
+- `CrdtResolver`: supports explicitly registered CRDT types such as grow-only counters, PN-counters, observed-remove sets, and last-writer registers. Equal register stamps use a deterministic bytewise tie-break. OR-set reclamation requires an explicit `CrdtFunctions.CheckpointORSet` call with fully applied per-client stream prefixes. Persist and synchronize its active bindings and permanent `ORSetFrontier` together. This prevents delayed replicas from restoring removed dots. Checkpoint payloads use binary version two. Existing states without checkpoints retain version-one bytes. Upgrade all readers before sharing checkpoints. See the Core package README for checkpoint rules and limits.
 - `CustomDomainResolver`: application-supplied deterministic pure logic registered per contract/stream pattern.
 
 ### 11.3 Client reconciliation
@@ -1113,6 +1114,7 @@ Storage contents, transport input, cursors, metadata, and serialized payloads ar
 - An unkeyed payload hash detects accidental corruption only. When the configured threat model includes local-store modification, the selected store MUST advertise `AuthenticatedEncryptionAtRest` and protect every outbox, inbox, snapshot, cursor, quarantine, and dead-letter record with AEAD or a keyed MAC/signature. Authentication failure quarantines the record, emits a security fault, and fails the affected stream closed; the engine never applies or uploads it.
 - File adapters canonicalize and validate paths beneath a configured root. SQL adapters use parameters exclusively.
 - Encryption at rest is an adapter capability. Keys come from platform secure storage or `IEncryptionKeyProvider`, carry key IDs, support rotation, and are never logged.
+- `AuthenticatedEncryptionAtRest` authenticates protected record contents. It does not establish database freshness or prove that every historical record is still present. A threat model that includes malicious deletion or whole-file rollback MUST use an independently protected external checkpoint. Record authentication alone is not sufficient for that threat model.
 - Local erase supports tenant/stream-scoped cryptographic or physical deletion subject to platform limits.
 
 ### 12.3 Logging and telemetry
@@ -1290,7 +1292,14 @@ Storage and transport package names describe mechanisms; Web, Mobile, and IoT ar
 
 ### 15.2 Target frameworks
 
-Core library projects follow the parent family and target `net8.0`, `net9.0`, `net10.0`, `net11.0`, `net462`, `net472`, `net48`, and `net481` where their dependencies permit. Compatibility assets use centrally managed `Microsoft.Bcl.AsyncInterfaces`, `Microsoft.Bcl.TimeProvider`, `System.Threading.Channels`, and `System.Text.Json` packages where required. Adapter projects may target a narrower platform-specific set and MUST document it in package metadata.
+Core library source builds follow the parent family and target `net8.0`, `net9.0`, `net10.0`, `net11.0`, `net462`, `net472`, `net48`, and `net481` where their dependencies permit. Compatibility assets use centrally managed `Microsoft.Bcl.AsyncInterfaces`, `Microsoft.Bcl.TimeProvider`, `System.Threading.Channels`, and `System.Text.Json` packages where required. Adapter projects may target a narrower platform-specific set and MUST document it in package metadata.
+
+A package asset is a library built for one target framework.
+Stable package versions omit all .NET 11 preview assets and their dependency groups.
+This rule covers neutral and native .NET 11 targets.
+A .NET 11 app that installs a stable package uses its compatible .NET 10 asset.
+Prerelease package versions include the .NET 11 preview assets from the source targets you build.
+Source builds and tests keep the .NET 11 targets.
 
 All targets enable nullable reference types. Modern targets enable trimming and NativeAOT compatibility analysis. Reflection-free serializers are required for AOT scenarios.
 

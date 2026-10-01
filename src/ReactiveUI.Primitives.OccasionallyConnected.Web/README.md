@@ -13,6 +13,13 @@ The caller owns the context and store. The adapter stops the context on disposal
 Do not give another service control of the same context's start and stop lifecycle.
 Use `ReactiveUI.Primitives.OccasionallyConnected` for the context implementation.
 
+## Release assets
+
+A package asset is a library built for one target framework.
+Stable package versions omit .NET 11 preview assets and their dependency groups.
+A .NET 11 app that installs a stable version uses the compatible .NET 10 asset.
+Prerelease versions include .NET 11 preview assets from the source targets you build.
+
 ## Network hints
 
 `ConnectivityHint` reports `Unknown`, `Unavailable`, or `PossiblyAvailable`.

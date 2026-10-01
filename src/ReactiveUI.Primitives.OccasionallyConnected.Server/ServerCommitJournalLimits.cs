@@ -29,8 +29,8 @@ public sealed record ServerCommitJournalLimits
     /// <summary>The default maximum retained subscription offer count.</summary>
     private const int DefaultMaximumSubscriptionOffers = 8_192;
 
-    /// <summary>The default operation retention duration in minutes.</summary>
-    private const int DefaultOperationRetentionMinutes = 5;
+    /// <summary>The default operation retention duration in days.</summary>
+    private const int DefaultOperationRetentionDays = 30;
 
     /// <summary>The default subscription binding retention duration in minutes.</summary>
     private const int DefaultSubscriptionRetentionMinutes = 30;
@@ -66,7 +66,14 @@ public sealed record ServerCommitJournalLimits
     public int MaximumSubscriptionOffers { get; init; } = DefaultMaximumSubscriptionOffers;
 
     /// <summary>Gets the finite terminal operation retention interval.</summary>
-    public TimeSpan OperationRetention { get; init; } = TimeSpan.FromMinutes(DefaultOperationRetentionMinutes);
+    public TimeSpan OperationRetention { get; init; } = TimeSpan.FromDays(DefaultOperationRetentionDays);
+
+    /// <summary>Gets an optional shorter receive-history window, independent of operation deduplication.</summary>
+    /// <remarks>
+    /// A null value uses <see cref="OperationRetention"/>. Retained operation responses may still contain event data
+    /// after this window; subscribers receive a retention gap and recover a snapshot rather than replay those events.
+    /// </remarks>
+    public TimeSpan? ReceiveHistoryRetention { get; init; }
 
     /// <summary>Gets the finite subscription binding retention interval.</summary>
     public TimeSpan SubscriptionRetention { get; init; } = TimeSpan.FromMinutes(DefaultSubscriptionRetentionMinutes);

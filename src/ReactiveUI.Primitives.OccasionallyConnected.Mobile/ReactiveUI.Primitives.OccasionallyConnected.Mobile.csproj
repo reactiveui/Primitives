@@ -1,5 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
+    <MobilePlatformTargetFrameworks Condition="'$(MobilePlatformTargetFrameworks)' == '' and $([MSBuild]::IsOsPlatform('Windows'))">net10.0-android;net10.0-windows10.0.19041.0</MobilePlatformTargetFrameworks>
+    <MobilePlatformTargetFrameworks Condition="'$(MobilePlatformTargetFrameworks)' == '' and $([MSBuild]::IsOsPlatform('OSX'))">net10.0-ios;net10.0-maccatalyst</MobilePlatformTargetFrameworks>
     <TargetFrameworks>$(MauiTargetFrameworks)</TargetFrameworks>
     <TargetFrameworks Condition="'$(MobilePlatformTargetFrameworks)' != ''">$(TargetFrameworks);$([MSBuild]::Unescape('$(MobilePlatformTargetFrameworks)'))</TargetFrameworks>
     <PackageDescription>Mobile lifecycle, secure identity and encryption keys, and SQLite composition for occasionally connected streams.</PackageDescription>

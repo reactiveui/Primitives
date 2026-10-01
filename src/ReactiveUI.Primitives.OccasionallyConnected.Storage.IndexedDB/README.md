@@ -7,6 +7,13 @@ It is for browser-hosted apps, such as Blazor WebAssembly. The adapter uses
 `IJSRuntime` and a JavaScript module that ships with the package. It does not
 touch the local file system or native libraries.
 
+## Release assets
+
+A package asset is a library built for one target framework.
+Stable package versions omit .NET 11 preview assets and their dependency groups.
+A .NET 11 app that installs a stable version uses the compatible .NET 10 asset.
+Prerelease versions include .NET 11 preview assets from the source targets you build.
+
 ## What it stores
 
 The adapter keeps one durable JSON document per initialized store identity. That

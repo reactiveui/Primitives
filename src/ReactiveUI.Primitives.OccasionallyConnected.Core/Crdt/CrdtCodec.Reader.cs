@@ -27,6 +27,9 @@ public static partial class CrdtCodec
         /// <summary>The current read offset.</summary>
         private int _offset;
 
+        /// <summary>The decoded payload version.</summary>
+        private byte _version;
+
         /// <summary>Initializes a new instance of the <see cref="Reader"/> class.</summary>
         /// <param name="payload">The payload.</param>
         /// <param name="bounds">The bounds.</param>
@@ -54,7 +57,8 @@ public static partial class CrdtCodec
                 throw new InvalidOperationException("The CRDT payload magic is invalid.");
             }
 
-            if (ReadByte() != Version)
+            _version = ReadByte();
+            if (_version is not (Version or CheckpointVersion))
             {
                 throw new InvalidOperationException("The CRDT payload version is not supported.");
             }
@@ -75,6 +79,11 @@ public static partial class CrdtCodec
             var kind = (CrdtInputKind)ReadByte();
             if (kind == CrdtInputKind.Mutation)
             {
+                if (_version == CheckpointVersion)
+                {
+                    throw new InvalidOperationException("Checkpoint payloads require an authoritative OR-set state.");
+                }
+
                 return CrdtInput.ForMutation(ReadMutation());
             }
 
@@ -102,6 +111,7 @@ public static partial class CrdtCodec
                 Tombstones = ReadDotElements(_bounds.MaximumTombstones),
                 RegisterValue = ReadBytes(_bounds.MaximumRegisterBytes),
                 RegisterStamp = ReadStamp(),
+                ORSetFrontier = _version == CheckpointVersion ? ReadComponents() : new Dictionary<string, long>(),
             };
         }
 

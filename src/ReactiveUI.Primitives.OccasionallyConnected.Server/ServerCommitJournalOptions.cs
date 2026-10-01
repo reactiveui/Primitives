@@ -38,8 +38,8 @@ internal sealed class ServerCommitJournalOptions
     /// <summary>The default retained offered cursor count.</summary>
     private const int DefaultMaximumSubscriptionOffers = 8192;
 
-    /// <summary>The default terminal operation retention in minutes.</summary>
-    private const int DefaultOperationRetentionMinutes = 5;
+    /// <summary>The default terminal operation retention in days.</summary>
+    private const int DefaultOperationRetentionDays = 30;
 
     /// <summary>The default subscription binding retention in minutes.</summary>
     private const int DefaultSubscriptionRetentionMinutes = 30;
@@ -69,7 +69,10 @@ internal sealed class ServerCommitJournalOptions
     internal int MaximumSubscriptionOffers { get; init; } = DefaultMaximumSubscriptionOffers;
 
     /// <summary>Gets the finite terminal operation retention interval.</summary>
-    internal TimeSpan OperationRetention { get; init; } = TimeSpan.FromMinutes(DefaultOperationRetentionMinutes);
+    internal TimeSpan OperationRetention { get; init; } = TimeSpan.FromDays(DefaultOperationRetentionDays);
+
+    /// <summary>Gets an optional shorter receive-history window.</summary>
+    internal TimeSpan? ReceiveHistoryRetention { get; init; }
 
     /// <summary>Gets the finite subscription binding retention interval.</summary>
     internal TimeSpan SubscriptionRetention { get; init; } = TimeSpan.FromMinutes(DefaultSubscriptionRetentionMinutes);
@@ -92,6 +95,15 @@ internal sealed class ServerCommitJournalOptions
         ArgumentOutOfRangeExceptionHelper.ThrowIfNegativeOrZero(MaximumSubscriptions);
         ArgumentOutOfRangeExceptionHelper.ThrowIfNegativeOrZero(MaximumSubscriptionOffers);
         ThrowIfInvalidRetention(OperationRetention, nameof(OperationRetention), "Operation retention must be positive and finite.");
+        if (ReceiveHistoryRetention is { } receiveRetention)
+        {
+            ThrowIfInvalidRetention(receiveRetention, nameof(ReceiveHistoryRetention), "Receive history retention must be positive and finite.");
+            if (receiveRetention > OperationRetention)
+            {
+                throw new ArgumentOutOfRangeException(nameof(ReceiveHistoryRetention), receiveRetention, "Receive history cannot outlive its retained operation responses.");
+            }
+        }
+
         ThrowIfInvalidRetention(SubscriptionRetention, nameof(SubscriptionRetention), "Subscription retention must be positive and finite.");
     }
 

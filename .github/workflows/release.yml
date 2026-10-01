@@ -54,18 +54,91 @@ jobs:
       CERTUM_OTP_URI: ${{ secrets.CERTUM_OTP_URI }}
       CERTUM_CERT_FINGERPRINT: ${{ secrets.CERTUM_CERT_FINGERPRINT }}
 
-  publish-nuget:
+  build-native-mobile:
     needs: release
+    uses: ./.github/workflows/occasionally-connected-mobile.yml
+    with:
+      sourceRef: ${{ needs.release.outputs.sourceSha }}
+      packageVersion: ${{ needs.release.outputs.semver2 }}
+
+  sign-complete-release:
+    needs: [release, build-native-mobile]
+    runs-on: ubuntu-latest
+    environment:
+      name: release
+    permissions:
+      contents: read
+      packages: read
+    container:
+      image: ghcr.io/reactiveui/certum-signer:latest@sha256:7a77f04d311a937d1a724058a845dc09107bd79937281d86a43238c3e677413b
+      credentials:
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+    env:
+      CERTUM_USER_ID: ${{ secrets.CERTUM_USER_ID }}
+      CERTUM_OTP_URI: ${{ secrets.CERTUM_OTP_URI }}
+      CERTUM_CERT_FINGERPRINT: ${{ secrets.CERTUM_CERT_FINGERPRINT }}
+      MOBILE_VERSION: ${{ needs.release.outputs.semver2 }}
+    steps:
+      - name: Checkout release source for package inspection
+        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+        with:
+          ref: ${{ needs.release.outputs.sourceSha }}
+          persist-credentials: false
+
+      - name: Download unsigned release packages
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
+        with:
+          name: unsigned-nuget
+          path: signed-complete
+
+      - name: Download complete native Mobile package
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
+        with:
+          name: mobile-complete-native-package
+          path: complete-mobile
+
+      - name: Stage and verify complete native assets before signing
+        shell: bash
+        env:
+          RELEASE_SHA: ${{ needs.release.outputs.sourceSha }}
+        run: |
+          name="ReactiveUI.Primitives.OccasionallyConnected.Mobile.${MOBILE_VERSION}"
+          test -f "signed-complete/${name}.nupkg"
+          test -f "complete-mobile/${name}.nupkg"
+          test -f "complete-mobile/${name}.snupkg"
+          mv -- "complete-mobile/${name}.nupkg" "signed-complete/${name}.nupkg"
+          mv -- "complete-mobile/${name}.snupkg" "signed-complete/${name}.snupkg"
+          dotnet run tools/OccasionallyConnectedPackageInspector.cs -- verify-native \
+            --feed signed-complete --version "$MOBILE_VERSION" --commit "$RELEASE_SHA"
+
+      - name: Sign the complete release package set
+        uses: reactiveui/actions-common/.github/actions/certum-sign@main
+        with:
+          packages-glob: 'signed-complete/*.nupkg'
+          timestamp-url: 'http://time.certum.pl'
+
+      - name: Upload signed complete release packages
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: signed-release-complete
+          path: |
+            signed-complete/*.nupkg
+            signed-complete/*.snupkg
+          if-no-files-found: error
+
+  publish-nuget:
+    needs: [release, sign-complete-release]
     runs-on: ubuntu-latest
     environment:
       name: release
     permissions:
       id-token: write
     steps:
-      - name: Download signed packages
+      - name: Download signed complete release packages
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
         with:
-          name: signed-nuget
+          name: signed-release-complete
 
       - name: Setup .NET
         uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6

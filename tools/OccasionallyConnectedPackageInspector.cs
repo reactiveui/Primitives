@@ -11,6 +11,8 @@
 //           Checks lib/<tfm> folders, the .snupkg, portable PDB identity, deterministic paths and Source Link.
 //   compare --left <dir> --right <dir> --version <v> --packages <id,...>
 //           Compares two packs of the same packages entry by entry.
+//   verify-native --feed <dir> --version <v> --commit <sha>
+//           Requires all four net10 Mobile native heads, neutral net10, symbols and matching Source Link.
 // Every result line starts with PASS, FAIL or INFO. The exit code is 0 only when no line is FAIL.
 
 using System.IO.Compression;
@@ -41,12 +43,54 @@ switch (mode)
         }
 
         break;
+    case "verify-native":
+        failures += VerifyNative(options["feed"], options["version"], options["commit"]);
+        break;
     default:
-        Console.WriteLine("FAIL usage: verify|compare --option value ...");
+        Console.WriteLine("FAIL usage: verify|compare|verify-native --option value ...");
         return 2;
 }
 
 return failures == 0 ? 0 : 1;
+
+static int VerifyNative(string feed, string version, string commit)
+{
+    const string id = "ReactiveUI.Primitives.OccasionallyConnected.Mobile";
+    string[] heads = ["net10.0-android", "net10.0-windows", "net10.0-ios", "net10.0-maccatalyst"];
+    var path = Path.Combine(feed, $"{id}.{version}.nupkg");
+    if (!File.Exists(path))
+    {
+        return Report(false, "native-package", id, $"missing {path}");
+    }
+
+    using var package = ZipFile.OpenRead(path);
+    var tfms = package.Entries
+        .Where(entry => entry.FullName.StartsWith("lib/", StringComparison.Ordinal)
+            && entry.FullName.EndsWith($"/{id}.dll", StringComparison.Ordinal))
+        .Select(entry => entry.FullName.Split('/')[1])
+        .ToArray();
+    var failures = Report(
+        tfms.Contains("net10.0", StringComparer.Ordinal)
+        && tfms.Length == heads.Length + 1
+        && heads.All(head => tfms.Any(tfm => tfm.StartsWith(head, StringComparison.Ordinal)))
+        && tfms.All(tfm => tfm == "net10.0" || heads.Any(head => tfm.StartsWith(head, StringComparison.Ordinal))),
+        "complete-native-tfms", id, $"actual=[{string.Join(",", tfms)}]");
+    using var manifestStream = package.Entries.Single(entry => entry.FullName.EndsWith(".nuspec", StringComparison.Ordinal)).Open();
+    var manifest = XDocument.Load(manifestStream);
+    failures += Report(
+        manifest.Descendants().Single(element => element.Name.LocalName == "id").Value == id
+        && manifest.Descendants().Single(element => element.Name.LocalName == "version").Value == version,
+        "native-package-identity", id, version);
+    if (!version.Contains('-', StringComparison.Ordinal))
+    {
+        failures += Report(
+            !manifest.Descendants().Where(element => element.Name.LocalName == "dependency")
+                .Any(element => element.Attribute("version")?.Value.Contains('-', StringComparison.Ordinal) ?? false),
+            "stable-native-dependencies", id, "no prerelease dependency versions");
+    }
+
+    return failures + Verify(feed, id, version, tfms, commit);
+}
 
 static int Verify(string feed, string id, string version, string[] tfms, string commit)
 {

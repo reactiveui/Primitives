@@ -10,8 +10,15 @@ remote inbox entries, and dead letters in one BLite database file.
 dotnet add package ReactiveUI.Primitives.OccasionallyConnected.Storage.BliteDb
 ```
 
-The package targets `net8.0`, `net9.0`, `net10.0`, and `net11.0`. It depends on
+Source builds target `net8.0`, `net9.0`, `net10.0`, and `net11.0`. The package depends on
 the core occasionally connected contracts and the `BLite` package.
+
+## Release assets
+
+A package asset is a library built for one target framework.
+Stable package versions omit .NET 11 preview assets and their dependency groups.
+A .NET 11 app that installs a stable version uses the compatible .NET 10 asset.
+Prerelease versions include .NET 11 preview assets from the source targets you build.
 
 ## Use
 

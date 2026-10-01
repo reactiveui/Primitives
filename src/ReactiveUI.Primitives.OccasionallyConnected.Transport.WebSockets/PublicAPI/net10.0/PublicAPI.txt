@@ -10,7 +10,7 @@ public sealed class WebSocketRemoteTransportAdapter : ReactiveUI.Primitives.Occa
     public System.Threading.Tasks.ValueTask DisposeAsync() { }
 }
 [System.Diagnostics.DebuggerDisplay("{Code}: {Message}")]
-public sealed class WebSocketRemoteTransportException : System.Exception
+public sealed class WebSocketRemoteTransportException : System.Exception, ReactiveUI.Primitives.OccasionallyConnected.IRemoteTransportFailure
 {
     public WebSocketRemoteTransportException() { }
     public WebSocketRemoteTransportException(string message) { }
@@ -18,6 +18,7 @@ public sealed class WebSocketRemoteTransportException : System.Exception
     public WebSocketRemoteTransportException(string code, string message) { }
     public WebSocketRemoteTransportException(string code, string message, System.Exception innerException) { }
     public string Code { get; }
+    public ReactiveUI.Primitives.OccasionallyConnected.RetryFailure RetryFailure { get; }
 }
 [System.Diagnostics.DebuggerDisplay("{Endpoint}")]
 public record WebSocketRemoteTransportOptions : System.IEquatable<ReactiveUI.Primitives.OccasionallyConnected.Transport.WebSockets.WebSocketRemoteTransportOptions>
@@ -25,5 +26,6 @@ public record WebSocketRemoteTransportOptions : System.IEquatable<ReactiveUI.Pri
     public required System.Uri Endpoint { get; init; }
     public int MaximumMessageBytes { get; init; }
     public int ReceiveBufferBytes { get; init; }
+    public int MaximumBufferedSubscriptionBytes { get; init; }
     public void Validate() { }
 }

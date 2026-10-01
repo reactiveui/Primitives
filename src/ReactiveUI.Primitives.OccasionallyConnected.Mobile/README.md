@@ -5,17 +5,53 @@ It reuses the core engine and SQLite adapter. It does not implement another engi
 
 ## Target frameworks
 
-The standard build targets .NET 10 and .NET 11, like the MAUI adapter in this repository.
-The .NET 11 and MAUI 11 references are prerelease.
+The package includes neutral .NET targets and supported .NET 10 native heads.
 These targets expose MAUI interfaces but do not contain an OS implementation of Essentials.
 Pass the platform app's `ISecureStorage`, `IFileSystem` and `IConnectivity` services to the adapters.
 Do not use the neutral target's default Essentials services. They throw when the platform is unsupported.
 
-To build native convenience entry points, set `MobilePlatformTargetFrameworks` to your supported MAUI heads.
-For example, add `net10.0-android` or `net10.0-windows10.0.19041.0`.
+Windows builds include Android and Windows heads by default. macOS builds include iOS and Mac Catalyst.
+The dedicated Mobile CI workflow builds those heads on their supported hosts.
+Its macOS job also packs all four native heads with the neutral .NET 10 library into one package.
+CI checks the native API baselines and reads the actual package libraries to check `MauiMobileServices`.
+Use the `mobile-complete-native-package` artifact for publication.
+The release workflow replaces its Windows-built Mobile package with this complete artifact.
+It checks all four heads, the release version, commit, and symbols before signing and publication.
+Release workflows can supply `sourceRef` and `packageVersion` when calling this workflow.
+The workflow does not publish packages by itself.
 The matching platform SDK, MAUI workload and native SQLite assets must be available.
-Platform builds add `MauiMobileServices`, which uses `SecureStorage.Default`,
+The native CI job selects a stable .NET 10 SDK before it installs workloads or builds.
+Native builds add `MauiMobileServices`, which uses `SecureStorage.Default`,
 `FileSystem.Current` and `Connectivity.Current`. Apple heads require their supported build host.
+You do not need to set a build property when consuming a native package.
+For a neutral-only source build, pass `-p:MobilePlatformTargetFrameworks=` to MSBuild.
+Source builds keep the neutral .NET 10 and .NET 11 preview targets.
+A package asset is a library built for one target framework.
+Stable package versions omit all .NET 11 preview assets and their dependency groups.
+A .NET 11 app that installs a stable version uses the compatible .NET 10 asset.
+Prerelease versions include .NET 11 preview assets from the source targets you build.
+Override `MobilePlatformTargetFrameworks` to build native preview heads with their matching workloads.
+The native package workflow builds supported .NET 10 heads. The shared CI test matrix still includes .NET 11.
+CI builds libraries and runs host-based tests. It does not run a device app or prove device permissions work.
+
+### Neutral validation without native workloads
+
+Disable native heads explicitly when you run desktop tests or validation tools.
+Disabling the Primitives Android and Apple targets does not disable Mobile's native targets.
+Use all three properties when you run a neutral test from `src`:
+
+```powershell
+dotnet test --project tests\ReactiveUI.Primitives.OccasionallyConnected.Mobile.Tests\ReactiveUI.Primitives.OccasionallyConnected.Mobile.Tests.csproj `
+    -c Release --framework net10.0 `
+    -p:AndroidPrimitivesTargetFrameworks= `
+    -p:ApplePrimitivesTargetFrameworks= `
+    -p:MobilePlatformTargetFrameworks=
+```
+
+The feature coverage, package, AOT, supply-chain, and mutation CLI gates pass these neutral properties.
+They do not require MAUI workloads.
+The dedicated native job does not use this opt-out when it builds the release package.
+Release publication still requires its complete four-head Mobile artifact.
 
 ## Lifecycle
 
@@ -66,6 +102,44 @@ Secure storage may be locked, unavailable, reset, or restored separately from SQ
 This package does not promise hardware-backed keys or recovery after lost keys.
 Do not remove or rename the secure entry while the database exists.
 Keep tenant routing separate from the device ID. The ID is not authentication.
+
+### Reinstall and backup recovery
+
+The SQLite bundle binds its secure identity to a non-secret `.rxui-installation` file beside the database.
+Keep the database and this marker together. Use one secure entry name per database.
+The bundle holds a separate exclusive installation handle until disposal.
+This prevents another factory call from changing keys before SQLite initialization.
+A cancelled factory call may still create the marker and database after a secure write succeeds.
+Retry with the same services and file name to reopen that identity.
+
+When the database is absent, the bundle creates a new random identity and key.
+It does not reuse keychain state retained after an uninstall.
+The new identity prevents a reset client sequence from reusing old operation IDs or shared set element tags.
+Deleting only the database also starts a new identity. The bundle reserves the new database file before it returns.
+If recovery sidecars remain without the database, the bundle stops and preserves the original keys.
+An existing database without a marker fails before provisioning changes.
+Restore its original marker, database and secure key ring together.
+
+When you restore a database, restore its marker and original secure identity with the complete key ring.
+An existing database with missing keys fails with recovery instructions. A mismatched marker also fails.
+The bundle never deletes encrypted data, resets an existing identity, or substitutes plaintext storage.
+If the original keys are available, restore them through your trusted platform backup process.
+Check the restored database's freshness before resuming the client.
+If the keys are lost, keep the database or move it aside before re-enrolling with a new database and entry.
+You cannot recover its pending encrypted operations without those keys.
+Do not treat a fresh server download as recovery of unsent local work.
+
+A matching marker and key ring do not prove that the database is the latest copy.
+A valid older backup can pass these checks and restart at an older client sequence.
+Your host needs a trusted checkpoint to resume that identity after a backup restore.
+A checkpoint records the latest accepted state outside SQLite.
+Check the restored state against that checkpoint before resuming.
+If you cannot prove that the restored state is current, keep it aside and re-enroll with a new database and identity.
+The bundle does not perform this freshness check for you.
+
+Android Auto Backup does not preserve the Keystore key used by secure storage.
+Exclude the SQLite database, its sidecars, and installation marker unless your app can restore the original keys securely.
+Test that policy in your own app on a real device.
 
 ## SQLite app data
 

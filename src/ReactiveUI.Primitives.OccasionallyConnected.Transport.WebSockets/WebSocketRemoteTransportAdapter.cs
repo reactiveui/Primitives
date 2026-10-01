@@ -55,16 +55,25 @@ public sealed class WebSocketRemoteTransportAdapter : IRemoteTransportAdapter
         cancellationToken.ThrowIfCancellationRequested();
 
         var socket = new ClientWebSocket();
+        WebSocketRemoteTransportSession? session = null;
         try
         {
             await socket.ConnectAsync(_options.Endpoint, cancellationToken).ConfigureAwait(false);
-            var session = new WebSocketRemoteTransportSession(socket, _options);
+            session = new(socket, _options);
             await session.HandshakeAsync(request, cancellationToken).ConfigureAwait(false);
             return session;
         }
         catch
         {
-            socket.Dispose();
+            if (session is not null)
+            {
+                await session.DisposeAsync().ConfigureAwait(false);
+            }
+            else
+            {
+                socket.Dispose();
+            }
+
             throw;
         }
     }
@@ -79,9 +88,6 @@ public sealed class WebSocketRemoteTransportAdapter : IRemoteTransportAdapter
     /// <summary>Manages a connected WebSocket protocol session.</summary>
     internal sealed class WebSocketRemoteTransportSession : IRemoteTransportSession
     {
-        /// <summary>The bounded number of event batches held for a subscription.</summary>
-        private const int SubscriptionCapacity = 64;
-
         /// <summary>The protocol code used for malformed responses.</summary>
         private const string ProtocolErrorCode = "protocol-error";
 
@@ -104,10 +110,26 @@ public sealed class WebSocketRemoteTransportAdapter : IRemoteTransportAdapter
         private readonly ConcurrentDictionary<Guid, TaskCompletionSource<WebSocketProtocol.Frame>> _pending = new();
 
         /// <summary>Tracks active stream subscriptions.</summary>
-        private readonly ConcurrentDictionary<SubscriptionId, Channel<RemoteEventBatch>> _subscriptions = new();
+        private readonly ConcurrentDictionary<SubscriptionId, Subscription> _subscriptions = new();
+
+        /// <summary>Serializes admission with terminal failure publication.</summary>
+#if NET9_0_OR_GREATER
+        private readonly Lock _stateGate = new();
+#else
+        private readonly object _stateGate = new();
+#endif
+
+        /// <summary>Signals that admitted requests have released send resources.</summary>
+        private readonly TaskCompletionSource _requestsDrained = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
         /// <summary>The background frame receive loop.</summary>
         private readonly Task _receiveLoop;
+
+        /// <summary>The first terminal failure, reused by all requests.</summary>
+        private Exception? _terminalFailure;
+
+        /// <summary>The number of admitted requests still using session resources.</summary>
+        private int _activeRequests;
 
         /// <summary>Tracks whether this session has been disposed.</summary>
         private int _disposed;
@@ -140,7 +162,7 @@ public sealed class WebSocketRemoteTransportAdapter : IRemoteTransportAdapter
             CancellationToken cancellationToken)
         {
             ArgumentNullException.ThrowIfNull(request);
-            ObjectDisposedException.ThrowIf(Volatile.Read(ref _disposed) != 0, this);
+            ThrowIfTerminal();
             cancellationToken.ThrowIfCancellationRequested();
             return SubscribeCoreAsync(request, cancellationToken);
         }
@@ -161,43 +183,41 @@ public sealed class WebSocketRemoteTransportAdapter : IRemoteTransportAdapter
                 return;
             }
 
+            SetTerminalFailure(new ObjectDisposedException(nameof(WebSocketRemoteTransportSession)));
             await _shutdown.CancelAsync().ConfigureAwait(false);
-            foreach (var entry in _subscriptions)
-            {
-                _ = entry.Value.Writer.TryComplete();
-            }
-
-            foreach (var entry in _pending)
-            {
-                _ = entry.Value.TrySetException(new ObjectDisposedException(nameof(WebSocketRemoteTransportSession)));
-            }
 
             // Cancellation can abort a managed WebSocket while its ReceiveAsync call unwinds. Wait for that sole
             // receiver before inspecting state or beginning a close handshake, because concurrent receive and close
             // operations are not supported by all WebSocket implementations.
             await _receiveLoop.ConfigureAwait(false);
+            await _requestsDrained.Task.ConfigureAwait(false);
 
-            if (_socket.State is WebSocketState.Open or WebSocketState.CloseReceived)
+            try
             {
-                using var closeTimeout = new CancellationTokenSource(CloseTimeout);
-                try
+                if (_socket.State is WebSocketState.Open or WebSocketState.CloseReceived)
                 {
-                    await _socket.CloseAsync(
-                        WebSocketCloseStatus.NormalClosure,
-                        "disposed",
-                        closeTimeout.Token).ConfigureAwait(false);
-                }
-                catch (WebSocketException)
-                {
-                }
-                catch (OperationCanceledException) when (closeTimeout.IsCancellationRequested)
-                {
+                    using var closeTimeout = new CancellationTokenSource(CloseTimeout);
+                    try
+                    {
+                        await _socket.CloseAsync(
+                            WebSocketCloseStatus.NormalClosure,
+                            "disposed",
+                            closeTimeout.Token).ConfigureAwait(false);
+                    }
+                    catch (WebSocketException)
+                    {
+                    }
+                    catch (OperationCanceledException) when (closeTimeout.IsCancellationRequested)
+                    {
+                    }
                 }
             }
-
-            _socket.Dispose();
-            _sendGate.Dispose();
-            _shutdown.Dispose();
+            finally
+            {
+                _socket.Dispose();
+                _sendGate.Dispose();
+                _shutdown.Dispose();
+            }
         }
 
         /// <summary>Negotiates the connection and protocol version.</summary>
@@ -271,25 +291,32 @@ public sealed class WebSocketRemoteTransportAdapter : IRemoteTransportAdapter
             RemoteSubscribeRequest request,
             [System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken cancellationToken)
         {
-            var channel = Channel.CreateBounded<RemoteEventBatch>(
-                new BoundedChannelOptions(SubscriptionCapacity) { FullMode = BoundedChannelFullMode.Wait, SingleReader = true, SingleWriter = false, });
-            if (!_subscriptions.TryAdd(request.SubscriptionId, channel))
+            var subscription = new Subscription(_options.MaximumBufferedSubscriptionBytes);
+            lock (_stateGate)
             {
-                throw new InvalidOperationException("The subscription is already active.");
+                ThrowIfTerminal();
+                if (!_subscriptions.TryAdd(request.SubscriptionId, subscription))
+                {
+                    throw new InvalidOperationException("The subscription is already active.");
+                }
             }
 
             try
             {
                 var frame = await RequestAsync("subscribe", request, cancellationToken).ConfigureAwait(false);
                 ValidateResponseType(frame, "subscribeResponse");
-                await foreach (var batch in channel.Reader.ReadAllAsync(cancellationToken).ConfigureAwait(false))
+                while (await subscription.Reader.WaitToReadAsync(cancellationToken).ConfigureAwait(false))
                 {
-                    yield return batch;
+                    while (subscription.TryRead(out var batch))
+                    {
+                        yield return batch!;
+                    }
                 }
             }
             finally
             {
                 _ = _subscriptions.TryRemove(request.SubscriptionId, out _);
+                subscription.Complete(new OperationCanceledException("The subscription ended."));
             }
         }
 
@@ -307,18 +334,42 @@ public sealed class WebSocketRemoteTransportAdapter : IRemoteTransportAdapter
             TBody body,
             CancellationToken cancellationToken)
         {
-            ObjectDisposedException.ThrowIf(Volatile.Read(ref _disposed) != 0, this);
+            ThrowIfTerminal();
             cancellationToken.ThrowIfCancellationRequested();
             var messageId = Guid.NewGuid();
             var completion = new TaskCompletionSource<WebSocketProtocol.Frame>(TaskCreationOptions.RunContinuationsAsynchronously);
-            if (!_pending.TryAdd(messageId, completion))
+            lock (_stateGate)
             {
-                throw new InvalidOperationException("The protocol message identifier collided.");
+                ThrowIfTerminal();
+                if (!_pending.TryAdd(messageId, completion))
+                {
+                    throw new InvalidOperationException("The protocol message identifier collided.");
+                }
+
+                _activeRequests++;
             }
 
             try
             {
-                await SendAsync(WebSocketProtocol.Serialize(messageType, messageId, null, body), cancellationToken).ConfigureAwait(false);
+                using var sendCancellation = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, _shutdown.Token);
+                try
+                {
+                    await SendAsync(WebSocketProtocol.Serialize(messageType, messageId, null, body), sendCancellation.Token).ConfigureAwait(false);
+                }
+                catch (OperationCanceledException) when (_shutdown.IsCancellationRequested)
+                {
+                    // The terminal completion below carries the original receiver failure.
+                }
+                catch (WebSocketException exception)
+                {
+                    SetTerminalFailure(new WebSocketRemoteTransportException("transport-error", exception.Message, exception));
+                    await _shutdown.CancelAsync().ConfigureAwait(false);
+                }
+                catch (Exception) when (Volatile.Read(ref _terminalFailure) is not null)
+                {
+                    // Observe the pending task so the same first failure wins send/receive races.
+                }
+
                 await using var registration = cancellationToken.UnsafeRegister(
                     static state =>
                     {
@@ -332,6 +383,14 @@ public sealed class WebSocketRemoteTransportAdapter : IRemoteTransportAdapter
             finally
             {
                 _ = _pending.TryRemove(messageId, out _);
+                lock (_stateGate)
+                {
+                    _activeRequests--;
+                    if (_activeRequests == 0 && _terminalFailure is not null)
+                    {
+                        _ = _requestsDrained.TrySetResult();
+                    }
+                }
             }
         }
 
@@ -344,6 +403,7 @@ public sealed class WebSocketRemoteTransportAdapter : IRemoteTransportAdapter
             await _sendGate.WaitAsync(cancellationToken).ConfigureAwait(false);
             try
             {
+                ThrowIfTerminal();
                 await _socket.SendAsync(bytes, WebSocketMessageType.Text, true, cancellationToken).ConfigureAwait(false);
             }
             finally
@@ -361,8 +421,8 @@ public sealed class WebSocketRemoteTransportAdapter : IRemoteTransportAdapter
             {
                 while (!_shutdown.IsCancellationRequested)
                 {
-                    var frame = await ReceiveFrameAsync(buffer).ConfigureAwait(false);
-                    await DispatchFrameAsync(frame).ConfigureAwait(false);
+                    var (frame, bytes) = await ReceiveFrameAsync(buffer).ConfigureAwait(false);
+                    DispatchFrame(frame, bytes);
                 }
             }
             catch (OperationCanceledException) when (_shutdown.IsCancellationRequested)
@@ -370,15 +430,10 @@ public sealed class WebSocketRemoteTransportAdapter : IRemoteTransportAdapter
             }
             catch (Exception exception)
             {
-                foreach (var entry in _pending)
-                {
-                    _ = entry.Value.TrySetException(exception);
-                }
-
-                foreach (var entry in _subscriptions)
-                {
-                    _ = entry.Value.Writer.TryComplete(exception);
-                }
+                SetTerminalFailure(exception is WebSocketRemoteTransportException
+                    ? exception
+                    : new WebSocketRemoteTransportException("transport-error", exception.Message, exception));
+                await _shutdown.CancelAsync().ConfigureAwait(false);
             }
         }
 
@@ -386,7 +441,7 @@ public sealed class WebSocketRemoteTransportAdapter : IRemoteTransportAdapter
         /// <param name="buffer">The bounded receive buffer.</param>
         /// <returns>The parsed frame.</returns>
         /// <exception cref="WebSocketRemoteTransportException">The peer closes the socket or sends an oversized message.</exception>
-        private async Task<WebSocketProtocol.Frame> ReceiveFrameAsync(byte[] buffer)
+        private async Task<(WebSocketProtocol.Frame Frame, int Bytes)> ReceiveFrameAsync(byte[] buffer)
         {
             await using var message = new MemoryStream();
             WebSocketReceiveResult result;
@@ -413,13 +468,13 @@ public sealed class WebSocketRemoteTransportAdapter : IRemoteTransportAdapter
                 throw new WebSocketRemoteTransportException("closed", "The remote WebSocket closed the session.");
             }
 
-            return WebSocketProtocol.Parse(message.ToArray(), _options.MaximumMessageBytes);
+            return (WebSocketProtocol.Parse(message.ToArray(), _options.MaximumMessageBytes), (int)message.Length);
         }
 
         /// <summary>Routes a parsed frame to its pending request or subscription.</summary>
         /// <param name="frame">The received frame.</param>
-        /// <returns>A task that completes when the frame has been dispatched.</returns>
-        private async Task DispatchFrameAsync(WebSocketProtocol.Frame frame)
+        /// <param name="bytes">The complete frame size in wire bytes.</param>
+        private void DispatchFrame(WebSocketProtocol.Frame frame, int bytes)
         {
             if (frame.MessageType == "error")
             {
@@ -433,13 +488,51 @@ public sealed class WebSocketRemoteTransportAdapter : IRemoteTransportAdapter
                 var eventEnvelope = DeserializeBody<EventEnvelope>(frame);
                 if (_subscriptions.TryGetValue(eventEnvelope.SubscriptionId, out var subscription))
                 {
-                    await subscription.Writer.WriteAsync(eventEnvelope.Batch, _shutdown.Token).ConfigureAwait(false);
+                    subscription.TryWrite(eventEnvelope.Batch, bytes);
                 }
 
                 return;
             }
 
             CompletePending(frame.CorrelationId ?? frame.MessageId, frame);
+        }
+
+        /// <summary>Rejects calls after the first terminal failure.</summary>
+        private void ThrowIfTerminal()
+        {
+            if (Volatile.Read(ref _terminalFailure) is { } failure)
+            {
+                throw failure;
+            }
+        }
+
+        /// <summary>Atomically closes admission and faults every admitted operation.</summary>
+        /// <param name="failure">The first terminal failure.</param>
+        private void SetTerminalFailure(Exception failure)
+        {
+            lock (_stateGate)
+            {
+                if (_terminalFailure is not null)
+                {
+                    return;
+                }
+
+                Volatile.Write(ref _terminalFailure, failure);
+                foreach (var entry in _pending)
+                {
+                    _ = entry.Value.TrySetException(failure);
+                }
+
+                foreach (var entry in _subscriptions)
+                {
+                    entry.Value.Complete(failure);
+                }
+
+                if (_activeRequests == 0)
+                {
+                    _ = _requestsDrained.TrySetResult();
+                }
+            }
         }
 
         /// <summary>Completes a request waiting for a response frame.</summary>
@@ -456,6 +549,98 @@ public sealed class WebSocketRemoteTransportAdapter : IRemoteTransportAdapter
                 else
                 {
                     _ = pending.TrySetResult((WebSocketProtocol.Frame)result);
+                }
+            }
+        }
+
+        /// <summary>Bounds one event lane without blocking the shared receiver.</summary>
+        /// <param name="maximumBytes">The maximum queued wire bytes.</param>
+        private sealed class Subscription(int maximumBytes)
+        {
+            /// <summary>The bounded number of event batches held for a subscription.</summary>
+            private const int SubscriptionCapacity = 64;
+
+            /// <summary>The count-bounded event lane.</summary>
+            private readonly Channel<(RemoteEventBatch Batch, int Bytes)> _channel =
+                Channel.CreateBounded<(RemoteEventBatch Batch, int Bytes)>(
+                    new BoundedChannelOptions(SubscriptionCapacity) { FullMode = BoundedChannelFullMode.Wait });
+
+            /// <summary>Serializes byte accounting and failure with reads.</summary>
+#if NET9_0_OR_GREATER
+            private readonly Lock _gate = new();
+#else
+            private readonly object _gate = new();
+#endif
+
+            /// <summary>The queued wire bytes.</summary>
+            private long _bytes;
+
+            /// <summary>The first failure of this lane.</summary>
+            private Exception? _failure;
+
+            /// <summary>Gets the reader used to await event availability.</summary>
+            internal ChannelReader<(RemoteEventBatch Batch, int Bytes)> Reader => _channel.Reader;
+
+            /// <summary>Queues a batch or faults this subscription when either bound is reached.</summary>
+            /// <param name="batch">The received batch.</param>
+            /// <param name="bytes">The wire bytes retained by the batch.</param>
+            internal void TryWrite(RemoteEventBatch batch, int bytes)
+            {
+                lock (_gate)
+                {
+                    if (_failure is not null)
+                    {
+                        return;
+                    }
+
+                    if (_bytes + bytes > maximumBytes || !_channel.Writer.TryWrite((batch, bytes)))
+                    {
+                        Complete(new WebSocketRemoteTransportException(
+                            "subscription-overflow",
+                            "The subscription buffer is full. Resume from the last durably acknowledged cursor."));
+                        return;
+                    }
+
+                    _bytes += bytes;
+                }
+            }
+
+            /// <summary>Reads a batch while releasing its byte reservation.</summary>
+            /// <param name="batch">The next batch.</param>
+            /// <returns>Whether a batch was read.</returns>
+            internal bool TryRead(out RemoteEventBatch? batch)
+            {
+                lock (_gate)
+                {
+                    if (_failure is not null)
+                    {
+                        throw _failure;
+                    }
+
+                    if (_channel.Reader.TryRead(out var item))
+                    {
+                        _bytes -= item.Bytes;
+                        batch = item.Batch;
+                        return true;
+                    }
+
+                    batch = null;
+                    return false;
+                }
+            }
+
+            /// <summary>Closes this lane and releases undelivered batches without acknowledging them.</summary>
+            /// <param name="failure">The lane failure.</param>
+            internal void Complete(Exception failure)
+            {
+                lock (_gate)
+                {
+                    _failure ??= failure;
+                    _ = _channel.Writer.TryComplete(_failure);
+                    while (_channel.Reader.TryRead(out var item))
+                    {
+                        _bytes -= item.Bytes;
+                    }
                 }
             }
         }

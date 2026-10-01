@@ -8,6 +8,7 @@ on:
       - 'src/ReactiveUI.Primitives*/**'
       - 'src/ReactiveUI.Disposables/**'
       - 'src/Directory.*'
+      - 'src/ReactiveUI.Primitives.slnf'
       - 'samples/OccasionallyConnected.PackedSample/**'
       - 'tools/OccasionallyConnected.Ci/**'
       - 'tools/OccasionallyConnectedPackageInspector.cs'
@@ -42,9 +43,12 @@ jobs:
             9.0.x
             10.0.x
             11.0.x
-      - name: Verify package determinism, metadata, and clean consumer
+      - name: Verify stable release filter, dependencies, metadata, and clean consumer
         shell: bash
-        run: dotnet run --project tools/OccasionallyConnected.Ci/OccasionallyConnected.Ci.csproj -- packages --version "0.1.0-ocpkg.${{ github.run_id }}.${{ github.run_attempt }}" --skip-aot
+        run: dotnet run --project tools/OccasionallyConnected.Ci/OccasionallyConnected.Ci.csproj -- packages --version "0.1.0" --artifacts-path artifacts/oc-packages/stable --skip-aot
+      - name: Verify prerelease determinism, metadata, and clean consumer including net11
+        shell: bash
+        run: dotnet run --project tools/OccasionallyConnected.Ci/OccasionallyConnected.Ci.csproj -- packages --version "0.1.0-ocpkg.${{ github.run_id }}.${{ github.run_attempt }}" --artifacts-path artifacts/oc-packages/prerelease --skip-aot
       - name: Retain package gate evidence
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2

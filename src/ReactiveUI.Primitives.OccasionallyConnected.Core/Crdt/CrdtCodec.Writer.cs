@@ -39,14 +39,15 @@ public static partial class CrdtCodec
 
         /// <summary>Writes the CRDT header.</summary>
         /// <param name="payloadType">The payloadType.</param>
+        /// <param name="checkpoint">Whether the state contains checkpoint knowledge.</param>
         /// <exception cref="InvalidOperationException">Thrown when the CRDT data is invalid.</exception>
-        internal void WriteHeader(byte payloadType)
+        internal void WriteHeader(byte payloadType, bool checkpoint)
         {
             WriteByte(Magic0);
             WriteByte(Magic1);
             WriteByte(Magic2);
             WriteByte(Magic3);
-            WriteByte(Version);
+            WriteByte(checkpoint ? CheckpointVersion : Version);
             WriteByte(payloadType);
         }
 
@@ -82,6 +83,10 @@ public static partial class CrdtCodec
             WriteDotElements(state.Tombstones);
             WriteBytes(state.RegisterValueSpan);
             WriteStamp(state.RegisterStamp);
+            if (state.ORSetFrontier.Count != 0)
+            {
+                WriteComponents(state.ORSetFrontier);
+            }
         }
 
         /// <summary>Writes a mutation body.</summary>

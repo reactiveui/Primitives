@@ -58,6 +58,14 @@ public sealed record CrdtState
         init => field = CrdtCopy.DotElementList(value);
     } = Array.Empty<CrdtDotElement>();
 
+    /// <summary>Gets checkpointed, fully observed per-client sequence prefixes for this OR-set stream.</summary>
+    /// <remarks>A missing binding at or below its client's prefix is removed. Never discard or decrease this knowledge.</remarks>
+    public IReadOnlyDictionary<string, long> ORSetFrontier
+    {
+        get;
+        init => field = CrdtCopy.StringLongDictionary(value);
+    } = CrdtCopy.StringLongDictionary(new Dictionary<string, long>());
+
     /// <summary>Gets the LWW register bytes.</summary>
     public ReadOnlyMemory<byte> RegisterValue
     {

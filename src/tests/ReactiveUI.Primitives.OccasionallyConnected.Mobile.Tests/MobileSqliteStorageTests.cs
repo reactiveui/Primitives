@@ -10,7 +10,7 @@ using ReactiveUI.Primitives.OccasionallyConnected.Storage.Sqlite;
 namespace ReactiveUI.Primitives.OccasionallyConnected.Mobile.Tests;
 
 /// <summary>Tests real SQLite composition through secure storage and app-data abstractions.</summary>
-public sealed class MobileSqliteStorageTests
+public sealed partial class MobileSqliteStorageTests
 {
     /// <summary>The core store identity.</summary>
     private const string StoreName = "mobile";

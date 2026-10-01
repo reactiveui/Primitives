@@ -25,6 +25,9 @@ public sealed record WebSocketRemoteTransportOptions
     /// <summary>Gets or initializes the receive buffer size.</summary>
     public int ReceiveBufferBytes { get; init; } = 16_384;
 
+    /// <summary>Gets or initializes the maximum queued wire bytes per subscription.</summary>
+    public int MaximumBufferedSubscriptionBytes { get; init; } = 4_194_304;
+
     /// <summary>Validates the options.</summary>
     /// <exception cref="ArgumentException">The endpoint does not use <c>ws</c> or <c>wss</c>.</exception>
     /// <exception cref="ArgumentOutOfRangeException">A configured size limit is invalid.</exception>
@@ -43,6 +46,11 @@ public sealed record WebSocketRemoteTransportOptions
         if (ReceiveBufferBytes < MinimumConfiguredBytes || ReceiveBufferBytes > MaximumMessageBytes)
         {
             throw new ArgumentOutOfRangeException(nameof(ReceiveBufferBytes));
+        }
+
+        if (MaximumBufferedSubscriptionBytes < MinimumConfiguredBytes || MaximumBufferedSubscriptionBytes > MaximumConfiguredMessageBytes)
+        {
+            throw new ArgumentOutOfRangeException(nameof(MaximumBufferedSubscriptionBytes));
         }
     }
 }
