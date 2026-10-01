@@ -38,6 +38,13 @@
     <AllowedOutputExtensionsInPackageBuildOutputFolder>$(AllowedOutputExtensionsInPackageBuildOutputFolder);.pdb</AllowedOutputExtensionsInPackageBuildOutputFolder>
   </PropertyGroup>
 
+  <PropertyGroup Condition="'$(OccasionallyConnectedPackageBuildId)' != ''">
+    <BaseIntermediateOutputPath>obj\package-validation\$(OccasionallyConnectedPackageBuildId)\</BaseIntermediateOutputPath>
+    <BaseOutputPath>bin\package-validation\$(OccasionallyConnectedPackageBuildId)\</BaseOutputPath>
+    <CompilerGeneratedFilesOutputPath>$(MSBuildProjectDirectory)\$(BaseIntermediateOutputPath)Generated</CompilerGeneratedFilesOutputPath>
+    <DefaultItemExcludes>$(DefaultItemExcludes);bin\**;obj\**</DefaultItemExcludes>
+  </PropertyGroup>
+
   <!-- Target Framework Monikers. EnableWindowsTargeting lets the netfx/Windows legs build anywhere. -->
   <PropertyGroup>
     <NetTargetFrameworks>net8.0;net9.0;net10.0;net11.0</NetTargetFrameworks>

@@ -364,6 +364,10 @@ public sealed partial class OccasionallyConnectedBuilderTests
                     fixture.ReopenedClock,
                     fixture.RecoveredRetry.RetryState.DueUtc.GetValueOrDefault(),
                     fixture.MaximumDwellTime));
+            var pushed = await AdvanceRecoveredUploadUntilFirstPushAsync(
+                fixture.ReopenedClock,
+                fixture.ReopenedTransport,
+                fixture.MaximumDwellTime);
             await AwaitRecoveredUploadSynchronizedAsync(
                 fixture.ReopenedContext,
                 fixture.ReopenedStore,
@@ -373,7 +377,6 @@ public sealed partial class OccasionallyConnectedBuilderTests
                 fixture.Faults,
                 fixture.OperationStates);
             await triggerTask.WaitAsync(GuardTimeout);
-            var pushed = await fixture.ReopenedTransport.Pushed.Task.WaitAsync(GuardTimeout);
 
             await Assert.That(pushed.Operations.Count).IsEqualTo(RecoveredUploadMixedPriorityBatchCount);
             await Assert.That(pushed.Operations[0].OperationId).IsEqualTo(fixture.RecoveredRetry.Receipt.OperationId);
@@ -609,12 +612,14 @@ public sealed partial class OccasionallyConnectedBuilderTests
     /// <summary>Advances each observed upload wake until the first recovered batch is pushed.</summary>
     /// <param name="clock">The fake clock that records upload wakes.</param>
     /// <param name="transport">The recording transport.</param>
+    /// <param name="maximumDwellTime">The optional configured batching dwell time.</param>
     /// <returns>The first pushed batch.</returns>
     private static async Task<SyncBatch> AdvanceRecoveredUploadUntilFirstPushAsync(
         RecoveredUploadTimeProvider clock,
-        RecoveredUploadTransportAdapter transport)
+        RecoveredUploadTransportAdapter transport,
+        TimeSpan? maximumDwellTime = null)
     {
-        var dwell = OccasionallyConnectedOptions.Default.Batching.MaximumDwellTime;
+        var dwell = maximumDwellTime ?? OccasionallyConnectedOptions.Default.Batching.MaximumDwellTime;
         for (var attempt = 0; attempt < RecoveredUploadPriorityStreamCount; attempt++)
         {
             var observedWakeCount = clock.UploadWakeTimerCount;

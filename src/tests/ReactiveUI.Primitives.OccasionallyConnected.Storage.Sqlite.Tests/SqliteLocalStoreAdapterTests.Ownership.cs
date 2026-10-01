@@ -46,6 +46,33 @@ public sealed partial class SqliteLocalStoreAdapterTests
     /// <summary>The alternate store identity used by reinitialization tests.</summary>
     private const string OwnershipSecondaryStoreIdentity = "client-beta";
 
+    /// <summary>The independent owners used to exercise concurrent mount discovery.</summary>
+    private const int ConcurrentOwnershipCount = 4;
+
+    /// <summary>Verifies independent database initialization safely shares native filesystem discovery.</summary>
+    /// <returns>The asynchronous assertion task.</returns>
+    [Test]
+    public async Task ConcurrentOwnershipDiscoveryInitializesIndependentDatabases()
+    {
+        using var database = TempDatabase.Create();
+        var tasks = new Task[ConcurrentOwnershipCount];
+        for (var index = 0; index < tasks.Length; index++)
+        {
+            var path = $"{database.Path}.{index.ToString(CultureInfo.InvariantCulture)}";
+            tasks[index] = Task.Run(
+                async () =>
+                {
+                    await using var adapter = CreateAdapter(path);
+                    await adapter.InitializeAsync(new(StoreIdentity, SchemaVersion, false), CancellationToken.None);
+                    var subscription = await adapter.GetOrCreateSubscriptionIdAsync(Stream, null, CancellationToken.None);
+                    await Assert.That(subscription.Value).IsNotEqualTo(Guid.Empty);
+                },
+                CancellationToken.None);
+        }
+
+        await Task.WhenAll(tasks).WaitAsync(GuardTimeout);
+    }
+
     /// <summary>Verifies one process can have only one initialized writer for an adapter without multi-process coordination.</summary>
     /// <returns>A task that represents the asynchronous test.</returns>
     [Test]
@@ -609,8 +636,15 @@ public sealed partial class SqliteLocalStoreAdapterTests
             start.Environment["RXUI_ALIAS_TARGET"] = target;
             using var process = Process.Start(start);
             await Assert.That(process).IsNotNull();
+#if NET11_0_OR_GREATER
+            var status = await process!.WaitForExitStatusAsync();
+            await Assert.That(status.Canceled).IsFalse();
+            await Assert.That(status.Signal).IsNull();
+            await Assert.That(status.ExitCode).IsEqualTo(0);
+#else
             await process!.WaitForExitAsync();
             await Assert.That(process.ExitCode).IsEqualTo(0);
+#endif
         }
     }
 

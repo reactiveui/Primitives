@@ -379,6 +379,9 @@ public sealed partial class SyncEngineTests
         /// <summary>Gets or sets the one-based send attempt to pause before completing network I/O.</summary>
         public int PauseBeforeSendNumber { get; init; }
 
+        /// <summary>Gets whether a paused irreversible send completes despite later caller cancellation.</summary>
+        public bool CompletePausedSendAfterCancellation { get; init; }
+
         /// <summary>Gets the signal set when the configured send attempt is paused.</summary>
         public TaskCompletionSource PausedSendEntered { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
@@ -497,14 +500,13 @@ public sealed partial class SyncEngineTests
             public async ValueTask<RemoteSyncResult> SendAsync(CancellationToken cancellationToken)
             {
                 cancellationToken.ThrowIfCancellationRequested();
-                if (owner.PauseBeforeSendNumber > 0 && owner.SentBatches.Count + 1 == owner.PauseBeforeSendNumber)
+                var recorded = await PauseSendAsync(cancellationToken).ConfigureAwait(false);
+                if (!recorded)
                 {
-                    _ = owner.PausedSendEntered.TrySetResult();
-                    await owner._releasePausedSend.Task.WaitAsync(cancellationToken).ConfigureAwait(false);
+                    owner.SentBatches.Add(Batch);
+                    owner.OnSend?.Invoke();
                 }
 
-                owner.SentBatches.Add(Batch);
-                owner.OnSend?.Invoke();
                 if (owner.SendFailures.TryDequeue(out var queuedFailure) && queuedFailure is not null)
                 {
                     throw queuedFailure;
@@ -521,6 +523,29 @@ public sealed partial class SyncEngineTests
             /// <inheritdoc/>
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             public ValueTask DisposeAsync() => default;
+
+            /// <summary>Pauses before a response, optionally retaining an already irreversible send.</summary>
+            /// <param name="cancellationToken">The send cancellation token.</param>
+            /// <returns>Whether the send was recorded before the pause.</returns>
+            private async ValueTask<bool> PauseSendAsync(CancellationToken cancellationToken)
+            {
+                if (owner.PauseBeforeSendNumber <= 0 || owner.SentBatches.Count + 1 != owner.PauseBeforeSendNumber)
+                {
+                    return false;
+                }
+
+                var recorded = owner.CompletePausedSendAfterCancellation;
+                if (recorded)
+                {
+                    owner.SentBatches.Add(Batch);
+                    owner.OnSend?.Invoke();
+                }
+
+                _ = owner.PausedSendEntered.TrySetResult();
+                var waitToken = recorded ? CancellationToken.None : cancellationToken;
+                await owner._releasePausedSend.Task.WaitAsync(waitToken).ConfigureAwait(false);
+                return recorded;
+            }
         }
     }
 }

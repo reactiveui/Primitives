@@ -170,6 +170,7 @@ production package and its local dependencies. It packs those projects together 
 This production-only view skips unrelated UI adapters and tests. The release workflow still packs the full filter.
 The gate rebuilds the whole production dependency graph before each pack.
 Both determinism rounds use the same graph so compiler references come from the same package version.
+Each gate uses separate `bin` and `obj` subdirectories so normal builds cannot replace its compiler references.
 The gate rejects missing packages, missing local dependencies, preview assets, and preview dependencies in a stable package.
 CI runs both stable and prerelease package gates. It does not change the .NET 11 test matrix.
 

@@ -131,6 +131,7 @@ public static partial class Packages
         [
             "-c", "Release", "-nologo", $"-p:MinVerVersionOverride={version}", "-p:ContinuousIntegrationBuild=true",
             "-p:LangVersion=preview",
+            $"-p:OccasionallyConnectedPackageBuildId={Guid.NewGuid():N}",
             .. OccasionallyConnectedPackageSet.NeutralFrameworkProperties,
             "-p:RestoreForce=true",
         ];

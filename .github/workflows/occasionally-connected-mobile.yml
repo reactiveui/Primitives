@@ -55,59 +55,88 @@ jobs:
         with:
           dotnet-version: '10.0.x'
       - name: Select the supported SDK for native workloads and builds
-        shell: pwsh
-        working-directory: src
+        shell: bash
         run: |
-          $installed = @(dotnet --list-sdks | Where-Object { $_ -match '^10\.\d+\.\d+ \[' })
-          if ($LASTEXITCODE -ne 0 -or $installed.Count -eq 0) { throw 'A stable .NET 10 SDK is required.' }
-          $version = ($installed[-1] -split ' ')[0]
-          $configuration = Get-Content global.json -Raw | ConvertFrom-Json -AsHashtable
-          $configuration['sdk']['version'] = $version
-          $configuration['sdk']['allowPrerelease'] = $false
-          $configuration['sdk']['rollForward'] = 'disable'
-          $configuration | ConvertTo-Json -Depth 8 | Set-Content global.json -Encoding utf8NoBOM
-          $actual = dotnet --version
-          if ($LASTEXITCODE -ne 0 -or $actual.Trim() -ne $version) { throw 'The native job selected the wrong SDK.' }
+          cd "$RUNNER_TEMP" && dotnet run - -- "$GITHUB_WORKSPACE/src" <<'CS'
+          #:property TargetFramework=net10.0
+          using System.Diagnostics;
+          using System.Text.Json;
+          using System.Text.Json.Nodes;
+
+          var source = args.Single();
+          var installed = await RunAsync("--list-sdks", source);
+          var versions = installed.Split('\n')
+              .Select(static line => line.Split(' ')[0])
+              .Where(static value => value.StartsWith("10.", StringComparison.Ordinal) && Version.TryParse(value, out _))
+              .OrderBy(static value => Version.Parse(value)).ToArray();
+          if (versions.Length == 0) throw new InvalidOperationException("A stable .NET 10 SDK is required.");
+          var version = versions[^1];
+          var path = Path.Combine(source, "global.json");
+          var configuration = JsonNode.Parse(await File.ReadAllTextAsync(path))
+              ?? throw new InvalidOperationException("The SDK configuration is empty.");
+          var sdk = configuration["sdk"]?.AsObject()
+              ?? throw new InvalidOperationException("The SDK configuration is missing.");
+          sdk["version"] = version;
+          sdk["allowPrerelease"] = false;
+          sdk["rollForward"] = "disable";
+          await File.WriteAllTextAsync(path, configuration.ToJsonString(new JsonSerializerOptions { WriteIndented = true }));
+          if ((await RunAsync("--version", source)).Trim() != version)
+              throw new InvalidOperationException("The native job selected the wrong SDK.");
+
+          static async Task<string> RunAsync(string argument, string directory)
+          {
+              var start = new ProcessStartInfo("dotnet", argument)
+              {
+                  WorkingDirectory = directory,
+                  UseShellExecute = false,
+                  RedirectStandardOutput = true,
+                  RedirectStandardError = true,
+              };
+              using var process = Process.Start(start) ?? throw new InvalidOperationException("The SDK probe did not start.");
+              var output = process.StandardOutput.ReadToEndAsync();
+              var error = process.StandardError.ReadToEndAsync();
+              await process.WaitForExitAsync();
+              if (process.ExitCode != 0) throw new InvalidOperationException(await error);
+              return await output;
+          }
+          CS
       - name: Install supported native workloads
-        shell: pwsh
+        shell: bash
         working-directory: src
         run: dotnet workload install maui
       - name: Build and pack real native libraries with API checks
-        shell: pwsh
+        shell: bash
         working-directory: src
         env:
           MOBILE_HEADS: ${{ matrix.heads }}
           APPLE_HEADS: ${{ matrix.apple }}
         run: |
-          $project = Join-Path $PWD 'ReactiveUI.Primitives.OccasionallyConnected.Mobile/ReactiveUI.Primitives.OccasionallyConnected.Mobile.csproj'
-          $heads = $env:MOBILE_HEADS.Replace(';', '%3B')
-          $apple = $env:APPLE_HEADS.Replace(';', '%3B')
-          $output = Join-Path $PWD '../artifacts/mobile-native'
-          dotnet pack $project -c Release -o $output `
-            "-p:MobilePlatformTargetFrameworks=$heads" "-p:ApplePrimitivesTargetFrameworks=$apple" `
-            -p:AndroidPrimitivesTargetFrameworks=net10.0-android -p:NetTargetFrameworks=net10.0 `
-            -p:MauiTargetFrameworks=net10.0 "-p:MinVerVersionOverride=$env:MOBILE_PACKAGE_VERSION"
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          dotnet pack ReactiveUI.Primitives.OccasionallyConnected.Mobile/ReactiveUI.Primitives.OccasionallyConnected.Mobile.csproj \
+            -c Release -o ../artifacts/mobile-native \
+            "-p:MobilePlatformTargetFrameworks=${MOBILE_HEADS//;/%3B}" "-p:ApplePrimitivesTargetFrameworks=${APPLE_HEADS//;/%3B}" \
+            -p:AndroidPrimitivesTargetFrameworks=net10.0-android -p:NetTargetFrameworks=net10.0 \
+            -p:MauiTargetFrameworks=net10.0 -p:LangVersion=preview "-p:MinVerVersionOverride=$MOBILE_PACKAGE_VERSION"
       - name: Test installation recovery, path aliases, and packed native API assets
-        shell: pwsh
+        shell: bash
         working-directory: src
         env:
           RXUI_MOBILE_NATIVE_HEADS: ${{ matrix.heads }}
         run: |
-          $env:RXUI_MOBILE_NATIVE_PACKAGE = (Get-ChildItem '../artifacts/mobile-native' -Filter '*.nupkg').FullName
-          $env:RXUI_MOBILE_PACKAGE_VERSION = $env:MOBILE_PACKAGE_VERSION
-          $env:RXUI_MOBILE_PACKAGE_COMMIT = git rev-parse HEAD
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          dotnet test --project (Join-Path $PWD 'tests/ReactiveUI.Primitives.OccasionallyConnected.Mobile.Tests/ReactiveUI.Primitives.OccasionallyConnected.Mobile.Tests.csproj') `
-            -c Release --framework net10.0 -p:NetTargetFrameworks=net10.0 -p:MauiTargetFrameworks=net10.0 `
-            -p:MauiTestTargetFrameworks=net10.0 -p:MobilePlatformTargetFrameworks= `
+          packages=(../artifacts/mobile-native/*.nupkg)
+          [[ ${#packages[@]} -eq 1 && -f "${packages[0]}" ]] || { echo 'Expected one native Mobile package.' >&2; exit 1; }
+          package="$(cd ../artifacts/mobile-native && pwd)/$(basename "${packages[0]}")"
+          if [[ "$RUNNER_OS" == Windows ]]; then package="$(cygpath -w "$package")"; fi
+          export RXUI_MOBILE_NATIVE_PACKAGE="$package"
+          export RXUI_MOBILE_PACKAGE_VERSION="$MOBILE_PACKAGE_VERSION"
+          export RXUI_MOBILE_PACKAGE_COMMIT="$(git rev-parse HEAD)"
+          dotnet test --project "$PWD/tests/ReactiveUI.Primitives.OccasionallyConnected.Mobile.Tests/ReactiveUI.Primitives.OccasionallyConnected.Mobile.Tests.csproj" \
+            -c Release --framework net10.0 -p:NetTargetFrameworks=net10.0 -p:MauiTargetFrameworks=net10.0 \
+            -p:MauiTestTargetFrameworks=net10.0 -p:MobilePlatformTargetFrameworks= -p:LangVersion=preview \
             -p:AndroidPrimitivesTargetFrameworks= -p:ApplePrimitivesTargetFrameworks=
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          dotnet test --project (Join-Path $PWD 'tests/ReactiveUI.Primitives.OccasionallyConnected.Storage.Sqlite.Tests/ReactiveUI.Primitives.OccasionallyConnected.Storage.Sqlite.Tests.csproj') `
-            -c Release --framework net10.0 -p:NetTargetFrameworks=net10.0 `
-            -p:AndroidPrimitivesTargetFrameworks= -p:ApplePrimitivesTargetFrameworks= `
+          dotnet test --project "$PWD/tests/ReactiveUI.Primitives.OccasionallyConnected.Storage.Sqlite.Tests/ReactiveUI.Primitives.OccasionallyConnected.Storage.Sqlite.Tests.csproj" \
+            -c Release --framework net10.0 -p:NetTargetFrameworks=net10.0 -p:LangVersion=preview \
+            -p:AndroidPrimitivesTargetFrameworks= -p:ApplePrimitivesTargetFrameworks= \
             -- --treenode-filter '/*/*/SqliteLocalStoreAdapterTests/*Ownership*'
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
       - name: Retain native package and symbols
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4

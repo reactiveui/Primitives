@@ -939,6 +939,7 @@ public sealed partial class SyncEngineTests
         {
             NegotiatedCapabilities = CreateBatchPushCapabilities(ExpectedSingleOperation, PreparedUploadBytes),
             PauseBeforeSendNumber = ExpectedSingleOperation,
+            CompletePausedSendAfterCancellation = true,
         };
         var second = first;
         var transport = new RecordingTransport { SessionOverride = first };

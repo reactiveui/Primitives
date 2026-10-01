@@ -246,8 +246,15 @@ public sealed partial class MobileSqliteStorageTests
             start.Environment["RXUI_ALIAS_TARGET"] = physical;
             using var process = Process.Start(start);
             await Assert.That(process).IsNotNull();
+#if NET11_0_OR_GREATER
+            var status = await process!.WaitForExitStatusAsync();
+            await Assert.That(status.Canceled).IsFalse();
+            await Assert.That(status.Signal).IsNull();
+            await Assert.That(status.ExitCode).IsEqualTo(0);
+#else
             await process!.WaitForExitAsync();
             await Assert.That(process.ExitCode).IsEqualTo(0);
+#endif
         }
     }
 }

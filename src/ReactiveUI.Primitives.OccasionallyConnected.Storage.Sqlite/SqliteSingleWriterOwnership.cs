@@ -10,6 +10,9 @@ internal sealed class SqliteSingleWriterOwnership : IDisposable
     /// <summary>The suffix used for sidecar ownership handles.</summary>
     private const string OwnershipSuffix = ".rxui-owner";
 
+    /// <summary>Serializes mount enumeration because older macOS runtimes use a shared native mount buffer.</summary>
+    private static readonly Lock MountEnumerationGate = new();
+
     /// <summary>The exclusive sidecar handle.</summary>
     private readonly FileStream _stream;
 
@@ -117,9 +120,12 @@ internal sealed class SqliteSingleWriterOwnership : IDisposable
         var root = Path.GetPathRoot(databasePath);
         ArgumentExceptionHelper.ThrowIfNull(root);
         var selected = root;
-        foreach (var mounted in DriveInfo.GetDrives())
+        lock (MountEnumerationGate)
         {
-            selected = SelectMountRoot(databasePath, selected, mounted.Name);
+            foreach (var mounted in DriveInfo.GetDrives())
+            {
+                selected = SelectMountRoot(databasePath, selected, mounted.Name);
+            }
         }
 
         ThrowIfUnsupportedDriveType(new DriveInfo(selected).DriveType);
