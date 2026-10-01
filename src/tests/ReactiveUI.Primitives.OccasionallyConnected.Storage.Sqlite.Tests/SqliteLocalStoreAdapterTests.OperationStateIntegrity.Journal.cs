@@ -58,15 +58,15 @@ public sealed partial class SqliteLocalStoreAdapterTests
     {
         using var database = TempDatabase.Create();
         _ = await SeedEncryptedDatabaseAsync(database.Path);
-        await using (var connection = OpenRawConnection(database.Path))
-        await using (var command = connection.CreateCommand())
+        using (var connection = OpenRawConnection(database.Path))
+        using (var command = connection.CreateStatement())
         {
-            command.CommandText = """
+            command.SetSql("""
                 PRAGMA foreign_keys = OFF;
                 DELETE FROM oc_outbox_operation_states
                 WHERE operation_id = (SELECT operation_id FROM oc_outbox WHERE client_sequence = 2);
-                """;
-            _ = await command.ExecuteNonQueryAsync();
+                """);
+            _ = command.Execute();
         }
 
         await AssertEncryptedOpenFailsAuthenticationAsync(database.Path);
@@ -79,11 +79,11 @@ public sealed partial class SqliteLocalStoreAdapterTests
     {
         using var database = TempDatabase.Create();
         _ = await SeedEncryptedDatabaseAsync(database.Path);
-        await using (var connection = OpenRawConnection(database.Path))
-        await using (var command = connection.CreateCommand())
+        using (var connection = OpenRawConnection(database.Path))
+        using (var command = connection.CreateStatement())
         {
-            command.CommandText = "DELETE FROM oc_metadata WHERE key = 'rxui.localstore.operation_state_manifest';";
-            _ = await command.ExecuteNonQueryAsync();
+            command.SetSql("DELETE FROM oc_metadata WHERE key = 'rxui.localstore.operation_state_manifest';");
+            _ = command.Execute();
         }
 
         await AssertEncryptedOpenFailsAuthenticationAsync(database.Path);

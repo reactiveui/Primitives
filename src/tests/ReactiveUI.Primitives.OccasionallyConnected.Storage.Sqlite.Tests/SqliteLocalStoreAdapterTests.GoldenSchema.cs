@@ -5,8 +5,8 @@
 using System.Globalization;
 using System.Runtime.CompilerServices;
 using System.Text;
-using Microsoft.Data.Sqlite;
 using ReactiveUI.Primitives.OccasionallyConnected;
+using ReactiveUI.Primitives.OccasionallyConnected.Sqlite;
 using ReactiveUI.Primitives.OccasionallyConnected.Storage.Sqlite;
 
 namespace ReactiveUI.Primitives.OccasionallyConnected.Storage.Sqlite.Tests;
@@ -318,15 +318,15 @@ public sealed partial class SqliteLocalStoreAdapterTests
     /// <summary>Appends every schema object in a stable order.</summary>
     /// <param name="connection">The open connection.</param>
     /// <param name="builder">The destination.</param>
-    private static void AppendGoldenSchemaObjects(SqliteConnection connection, StringBuilder builder)
+    private static void AppendGoldenSchemaObjects(SqliteDatabase connection, StringBuilder builder)
     {
-        using var command = connection.CreateCommand();
-        command.CommandText = """
+        using var command = connection.CreateStatement();
+        command.SetSql("""
             SELECT type, name, sql FROM sqlite_master
             WHERE sql IS NOT NULL AND name NOT LIKE 'sqlite_%'
             ORDER BY CASE type WHEN 'table' THEN 0 ELSE 1 END, name;
-            """;
-        using var reader = command.ExecuteReader();
+            """);
+        using var reader = command.Query();
         while (reader.Read())
         {
             var sql = reader.GetString(SchemaSqlColumn).Replace("\r\n", "\n", StringComparison.Ordinal).Trim();
@@ -338,11 +338,11 @@ public sealed partial class SqliteLocalStoreAdapterTests
     /// <summary>Appends every table row as an insert statement.</summary>
     /// <param name="connection">The open connection.</param>
     /// <param name="builder">The destination.</param>
-    private static void AppendGoldenRows(SqliteConnection connection, StringBuilder builder)
+    private static void AppendGoldenRows(SqliteDatabase connection, StringBuilder builder)
     {
-        using var command = connection.CreateCommand();
-        command.CommandText = GoldenRowsQuery;
-        using var reader = command.ExecuteReader();
+        using var command = connection.CreateStatement();
+        command.SetSql(GoldenRowsQuery);
+        using var reader = command.Query();
         do
         {
             while (reader.Read())
@@ -357,7 +357,7 @@ public sealed partial class SqliteLocalStoreAdapterTests
                 _ = builder.Append(')').Append(';').Append('\n');
             }
         }
-        while (reader.NextResult());
+        while (reader.MoveNextResult());
     }
 
     /// <summary>Formats one SQLite value as a SQL literal.</summary>
@@ -377,21 +377,21 @@ public sealed partial class SqliteLocalStoreAdapterTests
     /// <summary>Reads the SQLite user version as invariant text.</summary>
     /// <param name="connection">The open connection.</param>
     /// <returns>The user version text.</returns>
-    private static string ReadGoldenUserVersion(SqliteConnection connection)
+    private static string ReadGoldenUserVersion(SqliteDatabase connection)
     {
-        using var command = connection.CreateCommand();
-        command.CommandText = UserVersionQuery;
-        return Convert.ToString(command.ExecuteScalar(), CultureInfo.InvariantCulture) ?? string.Empty;
+        using var command = connection.CreateStatement();
+        command.SetSql(UserVersionQuery);
+        return Convert.ToString(command.Scalar(), CultureInfo.InvariantCulture) ?? string.Empty;
     }
 
     /// <summary>Reads the store schema version metadata.</summary>
     /// <param name="connection">The open connection.</param>
     /// <returns>The schema version text.</returns>
-    private static string ReadGoldenSchemaVersion(SqliteConnection connection)
+    private static string ReadGoldenSchemaVersion(SqliteDatabase connection)
     {
-        using var command = connection.CreateCommand();
-        command.CommandText = "SELECT value FROM oc_metadata WHERE key = 'schema_version';";
-        return Convert.ToString(command.ExecuteScalar(), CultureInfo.InvariantCulture) ?? string.Empty;
+        using var command = connection.CreateStatement();
+        command.SetSql("SELECT value FROM oc_metadata WHERE key = 'schema_version';");
+        return Convert.ToString(command.Scalar(), CultureInfo.InvariantCulture) ?? string.Empty;
     }
 
     /// <summary>Copies the retained database into a test database path.</summary>
@@ -405,8 +405,8 @@ public sealed partial class SqliteLocalStoreAdapterTests
     private static void SetGoldenFutureUserVersion(string path)
     {
         using var connection = OpenRawConnection(path);
-        using var command = connection.CreateCommand();
-        command.CommandText = GoldenFutureUserVersionStatement;
-        _ = command.ExecuteNonQuery();
+        using var command = connection.CreateStatement();
+        command.SetSql(GoldenFutureUserVersionStatement);
+        _ = command.Execute();
     }
 }

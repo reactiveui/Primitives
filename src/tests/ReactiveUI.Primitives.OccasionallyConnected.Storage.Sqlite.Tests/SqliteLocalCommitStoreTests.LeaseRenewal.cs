@@ -22,18 +22,18 @@ public sealed partial class SqliteLocalCommitStoreTests
         using var store = CreateInitializedStore(database.Path);
         _ = CommitOperation(store, Stream, clientSequence: 1, OperationPayloadText);
         var lease = RequireBatch(await LeaseSingleBatch(store, new(Stream, 1, DefaultLeaseBytes, TimeSpan.FromMinutes(1))));
-        await using var connection = OpenRawConnection(database.Path);
-        await using var command = connection.CreateCommand();
+        using var connection = OpenRawConnection(database.Path);
+        using var command = connection.CreateStatement();
         if (renew)
         {
-            command.CommandText = "CREATE TRIGGER reject_renew BEFORE UPDATE ON oc_outbox_leases BEGIN SELECT RAISE(IGNORE); END;";
+            command.SetSql("CREATE TRIGGER reject_renew BEFORE UPDATE ON oc_outbox_leases BEGIN SELECT RAISE(IGNORE); END;");
         }
         else
         {
-            command.CommandText = "CREATE TRIGGER reject_release BEFORE DELETE ON oc_outbox_leases BEGIN SELECT RAISE(IGNORE); END;";
+            command.SetSql("CREATE TRIGGER reject_release BEFORE DELETE ON oc_outbox_leases BEGIN SELECT RAISE(IGNORE); END;");
         }
 
-        _ = await command.ExecuteNonQueryAsync();
+        _ = command.Execute();
 
         await Assert.That(async () =>
         {
@@ -58,10 +58,10 @@ public sealed partial class SqliteLocalCommitStoreTests
         using var store = CreateInitializedStore(database.Path);
         _ = CommitOperation(store, Stream, clientSequence: 1, OperationPayloadText);
         _ = RequireBatch(await LeaseSingleBatch(store, new(Stream, 1, DefaultLeaseBytes, TimeSpan.FromMinutes(1))));
-        await using var connection = OpenRawConnection(database.Path);
-        await using var command = connection.CreateCommand();
-        command.CommandText = "UPDATE oc_outbox_leases SET lease_id = 'invalid';";
-        _ = await command.ExecuteNonQueryAsync();
+        using var connection = OpenRawConnection(database.Path);
+        using var command = connection.CreateStatement();
+        command.SetSql("UPDATE oc_outbox_leases SET lease_id = 'invalid';");
+        _ = command.Execute();
 
         await Assert.That(() => LeaseSingleBatch(store, new(Stream, 1, DefaultLeaseBytes, TimeSpan.FromMinutes(1))))
             .ThrowsExactly<InvalidOperationException>();
@@ -78,12 +78,12 @@ public sealed partial class SqliteLocalCommitStoreTests
         var operation = CommitOperation(store, Stream, clientSequence: 1, "a");
         _ = CommitOperation(store, Stream, clientSequence: SecondClientSequence, "b");
         var lease = RequireBatch(await LeaseSingleBatch(store, new(Stream, TwoOperations, DefaultLeaseBytes, TimeSpan.FromMinutes(1))));
-        await using var connection = OpenRawConnection(database.Path);
-        await using var command = connection.CreateCommand();
-        command.CommandText = "UPDATE oc_outbox_leases SET lease_expires_at_utc = $expiry WHERE operation_id = $operationId;";
-        _ = command.Parameters.AddWithValue("$expiry", DateTimeOffset.UnixEpoch.ToString("O", CultureInfo.InvariantCulture));
-        _ = command.Parameters.AddWithValue("$operationId", operation.OperationId.Value.ToString("D"));
-        _ = await command.ExecuteNonQueryAsync();
+        using var connection = OpenRawConnection(database.Path);
+        using var command = connection.CreateStatement();
+        command.SetSql("UPDATE oc_outbox_leases SET lease_expires_at_utc = $expiry WHERE operation_id = $operationId;");
+        _ = command.Bind("$expiry", DateTimeOffset.UnixEpoch.ToString("O", CultureInfo.InvariantCulture));
+        _ = command.Bind("$operationId", operation.OperationId.Value.ToString("D"));
+        _ = command.Execute();
 
         await Assert.That(async () => await store.RenewLeaseAsync(lease.LeaseId, TimeSpan.FromMinutes(1), CancellationToken.None))
             .ThrowsExactly<InvalidOperationException>();

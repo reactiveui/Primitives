@@ -6,7 +6,7 @@
 
 using System.Globalization;
 using System.Runtime.CompilerServices;
-using Microsoft.Data.Sqlite;
+using ReactiveUI.Primitives.OccasionallyConnected.Sqlite;
 
 namespace ReactiveUI.Primitives.OccasionallyConnected.Server;
 
@@ -19,7 +19,7 @@ internal sealed partial class SqliteServerCommitJournal
     /// <param name="streamId">The stream id.</param>
     /// <param name="columns">The state columns.</param>
     /// <returns>The state or null.</returns>
-    private static ServerState? ReadNullableState(SqliteDataReader reader, StreamId streamId, StateColumns columns)
+    private static ServerState? ReadNullableState(SqliteRows reader, StreamId streamId, StateColumns columns)
     {
         const string Message = "The SQLite server journal state is invalid.";
         if (reader.IsDBNull(columns.VersionIndex))
@@ -38,7 +38,7 @@ internal sealed partial class SqliteServerCommitJournal
     /// <param name="reader">The reader.</param>
     /// <param name="columns">The payload columns.</param>
     /// <returns>The payload or null.</returns>
-    private static PayloadEnvelope? ReadNullablePayload(SqliteDataReader reader, PayloadColumns columns)
+    private static PayloadEnvelope? ReadNullablePayload(SqliteRows reader, PayloadColumns columns)
     {
         if (!reader.IsDBNull(columns.ContractIndex))
         {
@@ -54,7 +54,7 @@ internal sealed partial class SqliteServerCommitJournal
     /// <param name="columns">The payload columns.</param>
     /// <returns>The payload.</returns>
     /// <exception cref="InvalidOperationException">Thrown when stored SQLite data is invalid.</exception>
-    private static PayloadEnvelope ReadPayload(SqliteDataReader reader, PayloadColumns columns) =>
+    private static PayloadEnvelope ReadPayload(SqliteRows reader, PayloadColumns columns) =>
         new(
             ReadString(reader, columns.ContractIndex, "The SQLite server journal payload contract is invalid."),
             ReadPositiveInt(reader, columns.SchemaIndex, "The SQLite server journal payload schema is invalid."),
@@ -68,7 +68,7 @@ internal sealed partial class SqliteServerCommitJournal
     /// <param name="clientIndex">The client index.</param>
     /// <param name="operationIndex">The operation index.</param>
     /// <returns>The write stamp or null.</returns>
-    private static ServerWriteStamp? ReadNullableWriteStamp(SqliteDataReader reader, int committedAtIndex, int clientIndex, int operationIndex)
+    private static ServerWriteStamp? ReadNullableWriteStamp(SqliteRows reader, int committedAtIndex, int clientIndex, int operationIndex)
     {
         const string Message = "The SQLite server journal write stamp is invalid.";
         if (reader.IsDBNull(committedAtIndex))
@@ -88,7 +88,7 @@ internal sealed partial class SqliteServerCommitJournal
     /// <param name="clientIndex">The client index.</param>
     /// <param name="operationIndex">The operation index.</param>
     /// <returns>The origin or null.</returns>
-    private static RemoteEventOrigin? ReadNullableOrigin(SqliteDataReader reader, int clientIndex, int operationIndex)
+    private static RemoteEventOrigin? ReadNullableOrigin(SqliteRows reader, int clientIndex, int operationIndex)
     {
         const string Message = "The SQLite server journal origin is invalid.";
         if (reader.IsDBNull(clientIndex))
@@ -106,7 +106,7 @@ internal sealed partial class SqliteServerCommitJournal
     /// <param name="reader">The reader.</param>
     /// <param name="index">The column index.</param>
     /// <returns>The operation id or null.</returns>
-    private static OperationId? ReadNullableOperationId(SqliteDataReader reader, int index) =>
+    private static OperationId? ReadNullableOperationId(SqliteRows reader, int index) =>
         reader.IsDBNull(index) ? null : new(ReadGuid(reader, index, "The SQLite server journal operation id is invalid."));
 
     /// <summary>Reads an operation key.</summary>
@@ -115,7 +115,7 @@ internal sealed partial class SqliteServerCommitJournal
     /// <param name="operationIndex">The operation index.</param>
     /// <returns>The operation key.</returns>
     /// <exception cref="InvalidOperationException">Thrown when stored SQLite data is invalid.</exception>
-    private static ServerOperationKey ReadOperationKey(SqliteDataReader reader, int clientIndex, int operationIndex) =>
+    private static ServerOperationKey ReadOperationKey(SqliteRows reader, int clientIndex, int operationIndex) =>
         new(
             ReadValidatedText(reader, clientIndex, "The SQLite server journal client is invalid."),
             new(ReadGuid(reader, operationIndex, "The SQLite server journal operation id is invalid.")));
@@ -125,7 +125,7 @@ internal sealed partial class SqliteServerCommitJournal
     /// <param name="index">The column index.</param>
     /// <returns>The operation result kind.</returns>
     /// <exception cref="InvalidOperationException">Thrown when stored SQLite data is invalid.</exception>
-    private static OperationResultKind ReadResultKind(SqliteDataReader reader, int index)
+    private static OperationResultKind ReadResultKind(SqliteRows reader, int index)
     {
         var kind = (OperationResultKind)ReadInt(reader, index, "The SQLite server journal result kind is invalid.");
         return kind is OperationResultKind.Accepted or OperationResultKind.Conflict or OperationResultKind.Rejected
@@ -137,92 +137,90 @@ internal sealed partial class SqliteServerCommitJournal
     /// <param name="command">The command.</param>
     /// <param name="state">The state.</param>
     /// <param name="stateBytes">The state bytes.</param>
-    private static void AddNullableStateParameters(SqliteCommand command, ServerState? state, long stateBytes)
+    private static void AddNullableStateParameters(SqliteStatement command, ServerState? state, long stateBytes)
     {
         if (state is null)
         {
-            _ = command.Parameters.AddWithValue("$stateVersion", DBNull.Value);
+            _ = command.Bind("$stateVersion", DBNull.Value);
             AddNullablePayloadParameters(command, "state", null);
-            _ = command.Parameters.AddWithValue("$stateBytes", 0);
+            _ = command.Bind("$stateBytes", 0);
             return;
         }
 
-        _ = command.Parameters.AddWithValue("$stateVersion", state.Version);
+        _ = command.Bind("$stateVersion", state.Version);
         AddPayloadParameters(command, "state", state.State);
-        _ = command.Parameters.AddWithValue("$stateBytes", stateBytes);
+        _ = command.Bind("$stateBytes", stateBytes);
     }
 
     /// <summary>Adds nullable write stamp parameters.</summary>
     /// <param name="command">The command.</param>
     /// <param name="writeStamp">The stamp.</param>
-    private static void AddNullableWriteStampParameters(SqliteCommand command, ServerWriteStamp? writeStamp)
+    private static void AddNullableWriteStampParameters(SqliteStatement command, ServerWriteStamp? writeStamp)
     {
-        _ = command.Parameters.AddWithValue("$writeStampCommittedAtUtc", writeStamp.HasValue ? FormatDateTimeOffset(writeStamp.Value.CommittedAtUtc) : DBNull.Value);
-        _ = command.Parameters.AddWithValue("$writeStampClientId", writeStamp.HasValue ? writeStamp.Value.ClientId : DBNull.Value);
-        _ = command.Parameters.AddWithValue("$writeStampOperationId", writeStamp.HasValue ? writeStamp.Value.OperationId.Value.ToString("D") : DBNull.Value);
+        _ = command.Bind("$writeStampCommittedAtUtc", writeStamp.HasValue ? FormatDateTimeOffset(writeStamp.Value.CommittedAtUtc) : DBNull.Value);
+        _ = command.Bind("$writeStampClientId", writeStamp.HasValue ? writeStamp.Value.ClientId : DBNull.Value);
+        _ = command.Bind("$writeStampOperationId", writeStamp.HasValue ? writeStamp.Value.OperationId.Value.ToString("D") : DBNull.Value);
     }
 
     /// <summary>Adds stream parameters.</summary>
     /// <param name="command">The command.</param>
     /// <param name="streamKey">The stream key.</param>
-    private static void AddStreamParameters(SqliteCommand command, ServerStreamKey streamKey)
+    private static void AddStreamParameters(SqliteStatement command, ServerStreamKey streamKey)
     {
-        _ = command.Parameters.AddWithValue("$tenantId", streamKey.TenantId);
-        _ = command.Parameters.AddWithValue("$streamId", streamKey.StreamId.Value);
+        _ = command.Bind("$tenantId", streamKey.TenantId);
+        _ = command.Bind("$streamId", streamKey.StreamId.Value);
     }
 
     /// <summary>Adds operation parameters.</summary>
     /// <param name="command">The command.</param>
     /// <param name="operationKey">The operation key.</param>
-    private static void AddOperationParameters(SqliteCommand command, ServerOperationKey operationKey)
+    private static void AddOperationParameters(SqliteStatement command, ServerOperationKey operationKey)
     {
-        _ = command.Parameters.AddWithValue("$clientId", operationKey.ClientId);
-        _ = command.Parameters.AddWithValue("$operationId", operationKey.OperationId.Value.ToString("D"));
+        _ = command.Bind("$clientId", operationKey.ClientId);
+        _ = command.Bind("$operationId", operationKey.OperationId.Value.ToString("D"));
     }
 
     /// <summary>Adds fingerprint parameter.</summary>
     /// <param name="command">The command.</param>
     /// <param name="fingerprint">The fingerprint.</param>
-    private static void AddFingerprintParameter(SqliteCommand command, ServerCommitFingerprint fingerprint)
-    {
-        _ = command.Parameters.Add("$fingerprint", SqliteType.Blob);
-        command.Parameters["$fingerprint"].Value = fingerprint.ToArray();
-    }
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static void AddFingerprintParameter(SqliteStatement command, ServerCommitFingerprint fingerprint) =>
+        _ = command.Bind("$fingerprint", fingerprint.ToArray());
 
     /// <summary>Adds payload parameters.</summary>
     /// <param name="command">The command.</param>
     /// <param name="payload">The payload.</param>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static void AddPayloadParameters(SqliteCommand command, PayloadEnvelope payload) => AddPayloadParameters(command, string.Empty, payload);
+    private static void AddPayloadParameters(SqliteStatement command, PayloadEnvelope payload) => AddPayloadParameters(command, string.Empty, payload);
 
     /// <summary>Adds payload parameters with a name prefix.</summary>
     /// <param name="command">The command.</param>
     /// <param name="prefix">The parameter prefix.</param>
     /// <param name="payload">The payload.</param>
-    private static void AddPayloadParameters(SqliteCommand command, string prefix, PayloadEnvelope payload)
+    private static void AddPayloadParameters(SqliteStatement command, string prefix, PayloadEnvelope payload)
     {
         var name = GetPayloadParameterName(prefix, PayloadSuffix);
-        _ = command.Parameters.AddWithValue(GetPayloadParameterName(prefix, PayloadContractIdSuffix), payload.ContractId);
-        _ = command.Parameters.AddWithValue(GetPayloadParameterName(prefix, PayloadSchemaVersionSuffix), payload.SchemaVersion);
-        _ = command.Parameters.AddWithValue(GetPayloadParameterName(prefix, PayloadContentTypeSuffix), payload.ContentType);
-        _ = command.Parameters.Add(name, SqliteType.Blob);
-        command.Parameters[name].Value = payload.Payload.ToArray();
-        _ = command.Parameters.AddWithValue(GetPayloadParameterName(prefix, PayloadHashSuffix), payload.PayloadHash);
+        _ = command.Bind(GetPayloadParameterName(prefix, PayloadContractIdSuffix), payload.ContractId);
+        _ = command.Bind(GetPayloadParameterName(prefix, PayloadSchemaVersionSuffix), payload.SchemaVersion);
+        _ = command.Bind(GetPayloadParameterName(prefix, PayloadContentTypeSuffix), payload.ContentType);
+
+        _ = command.Bind(name, payload.Payload.ToArray());
+        _ = command.Bind(GetPayloadParameterName(prefix, PayloadHashSuffix), payload.PayloadHash);
     }
 
     /// <summary>Adds nullable payload parameters with a name prefix.</summary>
     /// <param name="command">The command.</param>
     /// <param name="prefix">The parameter prefix.</param>
     /// <param name="payload">The payload.</param>
-    private static void AddNullablePayloadParameters(SqliteCommand command, string prefix, PayloadEnvelope? payload)
+    private static void AddNullablePayloadParameters(SqliteStatement command, string prefix, PayloadEnvelope? payload)
     {
         if (payload is null)
         {
-            _ = command.Parameters.AddWithValue(GetPayloadParameterName(prefix, PayloadContractIdSuffix), DBNull.Value);
-            _ = command.Parameters.AddWithValue(GetPayloadParameterName(prefix, PayloadSchemaVersionSuffix), DBNull.Value);
-            _ = command.Parameters.AddWithValue(GetPayloadParameterName(prefix, PayloadContentTypeSuffix), DBNull.Value);
-            _ = command.Parameters.AddWithValue(GetPayloadParameterName(prefix, PayloadSuffix), DBNull.Value);
-            _ = command.Parameters.AddWithValue(GetPayloadParameterName(prefix, PayloadHashSuffix), DBNull.Value);
+            _ = command.Bind(GetPayloadParameterName(prefix, PayloadContractIdSuffix), DBNull.Value);
+            _ = command.Bind(GetPayloadParameterName(prefix, PayloadSchemaVersionSuffix), DBNull.Value);
+            _ = command.Bind(GetPayloadParameterName(prefix, PayloadContentTypeSuffix), DBNull.Value);
+            _ = command.Bind(GetPayloadParameterName(prefix, PayloadSuffix), DBNull.Value);
+            _ = command.Bind(GetPayloadParameterName(prefix, PayloadHashSuffix), DBNull.Value);
             return;
         }
 
@@ -243,7 +241,7 @@ internal sealed partial class SqliteServerCommitJournal
     /// <returns>The string.</returns>
     /// <exception cref="InvalidOperationException">Thrown when stored SQLite data is invalid.</exception>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static string ReadString(SqliteDataReader reader, int index, string message) =>
+    private static string ReadString(SqliteRows reader, int index, string message) =>
         ReadStorage<string>(reader.GetValue(index), message);
 
     /// <summary>Reads and validates a stored server journal identifier-like text column.</summary>
@@ -252,7 +250,7 @@ internal sealed partial class SqliteServerCommitJournal
     /// <param name="message">The failure message.</param>
     /// <returns>The validated text.</returns>
     /// <exception cref="InvalidOperationException">Thrown when stored SQLite data is invalid.</exception>
-    private static string ReadValidatedText(SqliteDataReader reader, int index, string message)
+    private static string ReadValidatedText(SqliteRows reader, int index, string message)
     {
         var text = ReadString(reader, index, message);
         try
@@ -272,7 +270,7 @@ internal sealed partial class SqliteServerCommitJournal
     /// <param name="message">The failure message.</param>
     /// <returns>The validated cursor.</returns>
     /// <exception cref="InvalidOperationException">Thrown when stored SQLite data is invalid.</exception>
-    private static string ReadCursor(SqliteDataReader reader, int index, string message)
+    private static string ReadCursor(SqliteRows reader, int index, string message)
     {
         var cursor = ReadString(reader, index, message);
         try
@@ -291,7 +289,7 @@ internal sealed partial class SqliteServerCommitJournal
     /// <param name="index">The index.</param>
     /// <param name="message">The failure message.</param>
     /// <returns>The string or null.</returns>
-    private static string? ReadNullableString(SqliteDataReader reader, int index, string message) =>
+    private static string? ReadNullableString(SqliteRows reader, int index, string message) =>
         reader.IsDBNull(index) ? null : ReadString(reader, index, message);
 
     /// <summary>Reads and validates a nullable stored cursor column.</summary>
@@ -299,7 +297,7 @@ internal sealed partial class SqliteServerCommitJournal
     /// <param name="index">The index.</param>
     /// <param name="message">The failure message.</param>
     /// <returns>The cursor or null.</returns>
-    private static string? ReadNullableCursor(SqliteDataReader reader, int index, string message) =>
+    private static string? ReadNullableCursor(SqliteRows reader, int index, string message) =>
         reader.IsDBNull(index) ? null : ReadCursor(reader, index, message);
 
     /// <summary>Reads a byte array column.</summary>
@@ -308,7 +306,7 @@ internal sealed partial class SqliteServerCommitJournal
     /// <param name="message">The failure message.</param>
     /// <returns>The bytes.</returns>
     /// <exception cref="InvalidOperationException">Thrown when stored SQLite data is invalid.</exception>
-    private static byte[] ReadBytes(SqliteDataReader reader, int index, string message) =>
+    private static byte[] ReadBytes(SqliteRows reader, int index, string message) =>
         !reader.IsDBNull(index) && reader.GetValue(index) is byte[] bytes
             ? bytes
             : throw new InvalidOperationException(message);
@@ -318,7 +316,7 @@ internal sealed partial class SqliteServerCommitJournal
     /// <param name="index">The index.</param>
     /// <returns>The fingerprint bytes.</returns>
     /// <exception cref="InvalidOperationException">Thrown when stored SQLite data is invalid.</exception>
-    private static byte[] ReadFingerprint(SqliteDataReader reader, int index)
+    private static byte[] ReadFingerprint(SqliteRows reader, int index)
     {
         var bytes = ReadBytes(reader, index, "The SQLite server journal fingerprint is invalid.");
         return bytes.Length == ServerCommitFingerprint.Length
@@ -332,7 +330,7 @@ internal sealed partial class SqliteServerCommitJournal
     /// <param name="message">The failure message.</param>
     /// <returns>The integer.</returns>
     /// <exception cref="InvalidOperationException">Thrown when stored SQLite data is invalid.</exception>
-    private static int ReadInt(SqliteDataReader reader, int index, string message)
+    private static int ReadInt(SqliteRows reader, int index, string message)
     {
         var value = ReadLong(reader, index, message);
         ThrowIfFalse(value >= int.MinValue, message);
@@ -346,7 +344,7 @@ internal sealed partial class SqliteServerCommitJournal
     /// <param name="message">The failure message.</param>
     /// <returns>The integer.</returns>
     /// <exception cref="InvalidOperationException">Thrown when stored SQLite data is invalid.</exception>
-    private static int ReadPositiveInt(SqliteDataReader reader, int index, string message)
+    private static int ReadPositiveInt(SqliteRows reader, int index, string message)
     {
         var value = ReadInt(reader, index, message);
         return value > 0 ? value : throw new InvalidOperationException(message);
@@ -359,7 +357,7 @@ internal sealed partial class SqliteServerCommitJournal
     /// <returns>The long value.</returns>
     /// <exception cref="InvalidOperationException">Thrown when stored SQLite data is invalid.</exception>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static long ReadNonNegativeLong(SqliteDataReader reader, int index, string message) =>
+    private static long ReadNonNegativeLong(SqliteRows reader, int index, string message) =>
         ReadNonNegativeLong(ReadLong(reader, index, message), message);
 
     /// <summary>Reads a non-negative long scalar.</summary>
@@ -379,7 +377,7 @@ internal sealed partial class SqliteServerCommitJournal
     /// <param name="index">The index.</param>
     /// <param name="message">The failure message.</param>
     /// <returns>The long value or null.</returns>
-    private static long? ReadNullableNonNegativeLong(SqliteDataReader reader, int index, string message) =>
+    private static long? ReadNullableNonNegativeLong(SqliteRows reader, int index, string message) =>
         reader.IsDBNull(index) ? null : ReadNonNegativeLong(reader, index, message);
 
     /// <summary>Reads a stored boolean column encoded as 0 or 1.</summary>
@@ -388,7 +386,7 @@ internal sealed partial class SqliteServerCommitJournal
     /// <param name="message">The failure message.</param>
     /// <returns>The boolean value.</returns>
     /// <exception cref="InvalidOperationException">Thrown when stored SQLite data is invalid.</exception>
-    private static bool ReadBoolean(SqliteDataReader reader, int index, string message)
+    private static bool ReadBoolean(SqliteRows reader, int index, string message)
     {
         var value = ReadLong(reader, index, message);
         return value switch
@@ -406,7 +404,7 @@ internal sealed partial class SqliteServerCommitJournal
     /// <returns>The long value.</returns>
     /// <exception cref="InvalidOperationException">Thrown when stored SQLite data is invalid.</exception>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static long ReadLong(SqliteDataReader reader, int index, string message) =>
+    private static long ReadLong(SqliteRows reader, int index, string message) =>
         ReadStorage<long>(reader.GetValue(index), message);
 
     /// <summary>Reads a non-empty GUID column.</summary>
@@ -415,7 +413,7 @@ internal sealed partial class SqliteServerCommitJournal
     /// <param name="message">The failure message.</param>
     /// <returns>The GUID value.</returns>
     /// <exception cref="InvalidOperationException">Thrown when stored SQLite data is invalid.</exception>
-    private static Guid ReadGuid(SqliteDataReader reader, int index, string message)
+    private static Guid ReadGuid(SqliteRows reader, int index, string message)
     {
         var text = ReadString(reader, index, message);
         return Guid.TryParse(text, out var value) && value != Guid.Empty ? value : throw new InvalidOperationException(message);
@@ -427,7 +425,7 @@ internal sealed partial class SqliteServerCommitJournal
     /// <param name="message">The failure message.</param>
     /// <returns>The stream identifier.</returns>
     /// <exception cref="InvalidOperationException">Thrown when stored SQLite data is invalid.</exception>
-    private static StreamId ReadStreamId(SqliteDataReader reader, int index, string message)
+    private static StreamId ReadStreamId(SqliteRows reader, int index, string message)
     {
         var text = ReadString(reader, index, message);
         try
@@ -447,7 +445,7 @@ internal sealed partial class SqliteServerCommitJournal
     /// <returns>The date-time offset.</returns>
     /// <exception cref="InvalidOperationException">Thrown when stored SQLite data is invalid.</exception>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static DateTimeOffset ReadDateTimeOffset(SqliteDataReader reader, int index, string message) =>
+    private static DateTimeOffset ReadDateTimeOffset(SqliteRows reader, int index, string message) =>
         ParseDateTimeOffset(ReadString(reader, index, message), message);
 
     /// <summary>Parses a stored date-time offset.</summary>
@@ -501,7 +499,7 @@ internal sealed partial class SqliteServerCommitJournal
     /// <param name="message">The failure message.</param>
     /// <exception cref="InvalidOperationException">Thrown when stored SQLite data is invalid.</exception>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static void EnsurePayloadColumnsNull(SqliteDataReader reader, PayloadColumns columns, string message) =>
+    private static void EnsurePayloadColumnsNull(SqliteRows reader, PayloadColumns columns, string message) =>
         EnsureColumnsNull(reader, message, columns.ContractIndex, columns.SchemaIndex, columns.ContentTypeIndex, columns.PayloadIndex, columns.HashIndex);
 
     /// <summary>Verifies that unused optional columns are null.</summary>
@@ -509,7 +507,7 @@ internal sealed partial class SqliteServerCommitJournal
     /// <param name="message">The failure message.</param>
     /// <param name="indexes">The column indexes.</param>
     /// <exception cref="InvalidOperationException">Thrown when stored SQLite data is invalid.</exception>
-    private static void EnsureColumnsNull(SqliteDataReader reader, string message, params int[] indexes)
+    private static void EnsureColumnsNull(SqliteRows reader, string message, params int[] indexes)
     {
         for (var index = 0; index < indexes.Length; index++)
         {

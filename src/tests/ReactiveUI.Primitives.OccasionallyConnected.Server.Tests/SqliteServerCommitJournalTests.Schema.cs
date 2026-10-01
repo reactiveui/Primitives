@@ -23,14 +23,14 @@ public sealed partial class SqliteServerCommitJournalTests
 
         await Assert.That(ReadUserVersion(database.Path)).IsEqualTo(1);
         await Assert.That(ReadSchemaMetadataVersion(database.Path)).IsEqualTo("1");
-        await using (var connection = OpenRawConnection(database.Path))
-        await using (var command = connection.CreateCommand())
+        using (var connection = OpenRawConnection(database.Path))
+        using (var command = connection.CreateStatement())
         {
-            command.CommandText = "PRAGMA table_info(oc_server_journal_streams);";
+            command.SetSql("PRAGMA table_info(oc_server_journal_streams);");
             await Assert.That(await ContainsColumnAsync(command, "last_group_sequence")).IsTrue();
-            command.CommandText = "PRAGMA table_info(oc_server_journal_subscriptions);";
+            command.SetSql("PRAGMA table_info(oc_server_journal_subscriptions);");
             await Assert.That(await ContainsColumnAsync(command, "generation")).IsTrue();
-            command.CommandText = "PRAGMA table_info(oc_server_journal_subscription_offers);";
+            command.SetSql("PRAGMA table_info(oc_server_journal_subscription_offers);");
             await Assert.That(await ContainsColumnAsync(command, "snapshot_format_version")).IsTrue();
         }
 
@@ -50,11 +50,11 @@ public sealed partial class SqliteServerCommitJournalTests
             _ = journal.TryCommit(Plan(0, State(FirstVersion), Stamp(key), Entry(key, OperationResultKind.Accepted, FirstOperationSeed)));
         }
 
-        await using (var connection = OpenRawConnection(database.Path))
-        await using (var command = connection.CreateCommand())
+        using (var connection = OpenRawConnection(database.Path))
+        using (var command = connection.CreateStatement())
         {
-            command.CommandText = "PRAGMA user_version = 2;";
-            _ = await command.ExecuteNonQueryAsync();
+            command.SetSql("PRAGMA user_version = 2;");
+            _ = command.Execute();
         }
 
         await Assert.That(() => CreateJournal(database.Path)).ThrowsExactly<InvalidOperationException>();
@@ -69,19 +69,19 @@ public sealed partial class SqliteServerCommitJournalTests
     private static string? ReadSchemaMetadataVersion(string path)
     {
         using var connection = OpenRawConnection(path);
-        using var command = connection.CreateCommand();
-        command.CommandText = "SELECT value FROM oc_server_journal_metadata WHERE key = 'schema_version';";
-        return command.ExecuteScalar() as string;
+        using var command = connection.CreateStatement();
+        command.SetSql("SELECT value FROM oc_server_journal_metadata WHERE key = 'schema_version';");
+        return command.Scalar() as string;
     }
 
     /// <summary>Checks whether the selected owned table contains one required column.</summary>
     /// <param name="command">The table-info query.</param>
     /// <param name="column">The required column name.</param>
     /// <returns>Whether the column exists.</returns>
-    private static async Task<bool> ContainsColumnAsync(Microsoft.Data.Sqlite.SqliteCommand command, string column)
+    private static async Task<bool> ContainsColumnAsync(ReactiveUI.Primitives.OccasionallyConnected.Sqlite.SqliteStatement command, string column)
     {
-        await using var reader = await command.ExecuteReaderAsync();
-        while (await reader.ReadAsync())
+        using var reader = command.Query();
+        while (reader.Read())
         {
             if (string.Equals(reader.GetString(1), column, StringComparison.Ordinal))
             {
@@ -98,8 +98,8 @@ public sealed partial class SqliteServerCommitJournalTests
     private static long CountLedgerRows(string path)
     {
         using var connection = OpenRawConnection(path);
-        using var command = connection.CreateCommand();
-        command.CommandText = "SELECT COUNT(*) FROM oc_server_journal_ledger;";
-        return Convert.ToInt64(command.ExecuteScalar(), System.Globalization.CultureInfo.InvariantCulture);
+        using var command = connection.CreateStatement();
+        command.SetSql("SELECT COUNT(*) FROM oc_server_journal_ledger;");
+        return Convert.ToInt64(command.Scalar(), System.Globalization.CultureInfo.InvariantCulture);
     }
 }

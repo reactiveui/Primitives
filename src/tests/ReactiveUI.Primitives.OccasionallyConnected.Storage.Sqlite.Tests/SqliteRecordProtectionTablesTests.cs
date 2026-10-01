@@ -2,7 +2,7 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
-using Microsoft.Data.Sqlite;
+using ReactiveUI.Primitives.OccasionallyConnected.Sqlite;
 using ReactiveUI.Primitives.OccasionallyConnected.Storage.Sqlite;
 
 namespace ReactiveUI.Primitives.OccasionallyConnected.Storage.Sqlite.Tests;
@@ -40,14 +40,12 @@ public sealed class SqliteRecordProtectionTablesTests
             (SqliteProtectedTableKind.DeadLetters, "$attemptCount", (long)int.MaxValue + 1),
         };
 
-        var connectionString = new SqliteConnectionStringBuilder { DataSource = ":memory:" }.ToString();
-        await using var connection = new SqliteConnection(connectionString);
-        await connection.OpenAsync();
+        using var connection = new SqliteDatabase(":memory:");
 
         foreach (var testCase in cases)
         {
-            await using var command = connection.CreateCommand();
-            command.CommandText = """
+            using var command = connection.CreateStatement();
+            command.SetSql("""
                 SELECT $operationId AS operation_id, $streamId AS stream_id,
                        $clientSequence AS client_sequence, $operationType AS operation_type,
                        $payloadContract AS payload_contract_id, $payloadSchema AS payload_schema_version,
@@ -55,25 +53,25 @@ public sealed class SqliteRecordProtectionTablesTests
                        $formatVersion AS format_version, $revision AS revision,
                        $eventId AS event_id, $quarantineId AS quarantine_id,
                        $attemptCount AS attempt_count, $changedAt AS changed_at_utc;
-                """;
-            _ = command.Parameters.AddWithValue("$operationId", ValidId);
-            _ = command.Parameters.AddWithValue(StreamIdParameter, "stream/a");
-            _ = command.Parameters.AddWithValue("$clientSequence", 1L);
-            _ = command.Parameters.AddWithValue("$operationType", 1L);
-            _ = command.Parameters.AddWithValue("$payloadContract", "contract");
-            _ = command.Parameters.AddWithValue(PayloadSchemaParameter, 1L);
-            _ = command.Parameters.AddWithValue("$payloadContentType", "application/json");
-            _ = command.Parameters.AddWithValue("$key", "metadata-key");
-            _ = command.Parameters.AddWithValue("$formatVersion", 1L);
-            _ = command.Parameters.AddWithValue("$revision", 1L);
-            _ = command.Parameters.AddWithValue("$eventId", ValidId);
-            _ = command.Parameters.AddWithValue("$quarantineId", ValidId);
-            _ = command.Parameters.AddWithValue("$attemptCount", 1L);
-            _ = command.Parameters.AddWithValue("$changedAt", "2026-01-01T00:00:00Z");
-            command.Parameters[testCase.Parameter].Value = testCase.Value;
+                """);
+            _ = command.Bind("$operationId", ValidId);
+            _ = command.Bind(StreamIdParameter, "stream/a");
+            _ = command.Bind("$clientSequence", 1L);
+            _ = command.Bind("$operationType", 1L);
+            _ = command.Bind("$payloadContract", "contract");
+            _ = command.Bind(PayloadSchemaParameter, 1L);
+            _ = command.Bind("$payloadContentType", "application/json");
+            _ = command.Bind("$key", "metadata-key");
+            _ = command.Bind("$formatVersion", 1L);
+            _ = command.Bind("$revision", 1L);
+            _ = command.Bind("$eventId", ValidId);
+            _ = command.Bind("$quarantineId", ValidId);
+            _ = command.Bind("$attemptCount", 1L);
+            _ = command.Bind("$changedAt", "2026-01-01T00:00:00Z");
+            _ = command.Bind(testCase.Parameter, testCase.Value);
 
-            await using var reader = await command.ExecuteReaderAsync();
-            _ = await reader.ReadAsync();
+            using var reader = command.Query();
+            _ = reader.Read();
             var table = SqliteRecordProtectionTables.All.Single(candidate => candidate.Kind == testCase.Kind);
             var values = new List<SqliteProtectedValue>();
 

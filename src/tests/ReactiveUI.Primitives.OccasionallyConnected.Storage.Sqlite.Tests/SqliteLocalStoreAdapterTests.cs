@@ -3,8 +3,8 @@
 // See the LICENSE file in the project root for full license information.
 
 using System.Runtime.CompilerServices;
-using Microsoft.Data.Sqlite;
 using ReactiveUI.Primitives.OccasionallyConnected;
+using ReactiveUI.Primitives.OccasionallyConnected.Sqlite;
 using ReactiveUI.Primitives.OccasionallyConnected.Storage.Sqlite;
 
 namespace ReactiveUI.Primitives.OccasionallyConnected.Storage.Sqlite.Tests;
@@ -356,8 +356,8 @@ public sealed partial class SqliteLocalStoreAdapterTests
         await adapter.InitializeAsync(new(StoreIdentity, SchemaVersion, false), CancellationToken.None);
         _ = await adapter.GetOrCreateSubscriptionIdAsync(Stream, null, CancellationToken.None);
         var operation = CreateOperation(FirstClientSequence);
-        await using var blocker = OpenRawConnection(database.Path);
-        await using var transaction = (SqliteTransaction)await blocker.BeginTransactionAsync();
+        using var blocker = OpenRawConnection(database.Path);
+        using var transaction = blocker.BeginTransaction();
         InsertBlockingIdentity(blocker, transaction);
         var commitTask = adapter.CommitLocalOperationAsync(operation, CreateSnapshotMutation(expectedRevision: 0), CancellationToken.None).AsTask();
         var originalEventId = Guid.NewGuid();
@@ -365,7 +365,7 @@ public sealed partial class SqliteLocalStoreAdapterTests
 
         var unappliedTask = adapter.GetUnappliedEventIdsAsync(Stream, eventIds, CancellationToken.None).AsTask();
         eventIds[0] = Guid.Empty;
-        await transaction.RollbackAsync();
+        transaction.Rollback();
         _ = await commitTask.WaitAsync(GuardTimeout);
         var unapplied = await unappliedTask.WaitAsync(GuardTimeout);
 
@@ -539,20 +539,20 @@ public sealed partial class SqliteLocalStoreAdapterTests
     /// <summary>Inserts a row to hold a writer lock.</summary>
     /// <param name="connection">The connection.</param>
     /// <param name="transaction">The transaction.</param>
-    private static void InsertBlockingIdentity(SqliteConnection connection, SqliteTransaction transaction)
+    private static void InsertBlockingIdentity(SqliteDatabase connection, SqliteTransaction transaction)
     {
-        using var command = connection.CreateCommand();
-        command.Transaction = transaction;
-        command.CommandText = """
+        using var command = connection.CreateStatement();
+        command.UseTransaction(transaction);
+        command.SetSql("""
             INSERT INTO oc_subscription_identities
                 (store_identity, stream_id, subscription_id)
             VALUES
                 ($storeIdentity, $streamId, $subscriptionId);
-            """;
-        _ = command.Parameters.AddWithValue(StoreIdentityParameter, StoreIdentity);
-        _ = command.Parameters.AddWithValue(StreamIdParameter, "sensor/held-lock");
-        _ = command.Parameters.AddWithValue("$subscriptionId", SubscriptionId.New().Value.ToString("D"));
-        _ = command.ExecuteNonQuery();
+            """);
+        _ = command.Bind(StoreIdentityParameter, StoreIdentity);
+        _ = command.Bind(StreamIdParameter, "sensor/held-lock");
+        _ = command.Bind("$subscriptionId", SubscriptionId.New().Value.ToString("D"));
+        _ = command.Execute();
     }
 
     /// <summary>Reads the SQLite user version from the database.</summary>
@@ -562,9 +562,9 @@ public sealed partial class SqliteLocalStoreAdapterTests
     private static long ReadUserVersion(string path)
     {
         using var connection = OpenRawConnection(path);
-        using var command = connection.CreateCommand();
-        command.CommandText = "PRAGMA user_version;";
-        return command.ExecuteScalar() is long value
+        using var command = connection.CreateStatement();
+        command.SetSql("PRAGMA user_version;");
+        return command.Scalar() is long value
             ? value
             : throw new InvalidOperationException("SQLite user_version returned an unexpected value.");
     }
@@ -572,11 +572,10 @@ public sealed partial class SqliteLocalStoreAdapterTests
     /// <summary>Opens a raw SQLite connection with pooling disabled.</summary>
     /// <param name="path">The SQLite database path.</param>
     /// <returns>The open connection.</returns>
-    private static SqliteConnection OpenRawConnection(string path)
+    private static SqliteDatabase OpenRawConnection(string path)
     {
-        var connectionString = new SqliteConnectionStringBuilder { DataSource = path, Pooling = false }.ToString();
-        var connection = new SqliteConnection(connectionString);
-        connection.Open();
+        var connection = new SqliteDatabase(path);
+
         return connection;
     }
 

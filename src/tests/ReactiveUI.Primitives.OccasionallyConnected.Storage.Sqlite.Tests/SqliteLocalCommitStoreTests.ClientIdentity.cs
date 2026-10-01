@@ -63,11 +63,11 @@ public sealed partial class SqliteLocalCommitStoreTests
             bound.Initialize(new(StoreIdentity, SchemaVersion, false) { ClientId = FirstBindingClientId }, CancellationToken.None);
         }
 
-        await using (var connection = OpenRawConnection(database.Path))
-        await using (var command = connection.CreateCommand())
+        using (var connection = OpenRawConnection(database.Path))
+        using (var command = connection.CreateStatement())
         {
-            command.CommandText = "UPDATE oc_metadata SET value = X'00' WHERE key LIKE 'rxui.localstore.client_id:%';";
-            await Assert.That(command.ExecuteNonQueryAsync()).IsEqualTo(1);
+            command.SetSql("UPDATE oc_metadata SET value = X'00' WHERE key LIKE 'rxui.localstore.client_id:%';");
+            await Assert.That(command.Execute()).IsEqualTo(1);
         }
 
         using var unbound = new SqliteLocalCommitStore(database.Path);

@@ -5,8 +5,8 @@
 using System.Runtime.CompilerServices;
 using System.Security.Cryptography;
 using System.Text;
-using Microsoft.Data.Sqlite;
 using ReactiveUI.Primitives.OccasionallyConnected;
+using ReactiveUI.Primitives.OccasionallyConnected.Sqlite;
 
 namespace ReactiveUI.Primitives.OccasionallyConnected.Storage.Sqlite;
 
@@ -20,7 +20,7 @@ internal static partial class SqliteLocalCommitSql
     /// <param name="storeIdentity">The store identity.</param>
     /// <param name="snapshotMutation">The snapshot mutation.</param>
     private static void UpsertSnapshotAuthoritativeState(
-        SqliteConnection connection,
+        SqliteDatabase connection,
         SqliteTransaction transaction,
         string storeIdentity,
         SnapshotMutation snapshotMutation)
@@ -30,9 +30,9 @@ internal static partial class SqliteLocalCommitSql
             return;
         }
 
-        using var command = connection.CreateCommand();
-        command.Transaction = transaction;
-        command.CommandText = """
+        using var command = connection.CreateStatement();
+        command.UseTransaction(transaction);
+        command.SetSql("""
             INSERT INTO oc_snapshot_authoritative_states
                 (store_identity, stream_id, payload_contract_id, payload_schema_version, payload_content_type, payload, payload_hash)
             VALUES
@@ -43,13 +43,13 @@ internal static partial class SqliteLocalCommitSql
                 payload_content_type = excluded.payload_content_type,
                 payload = excluded.payload,
                 payload_hash = excluded.payload_hash;
-            """;
+            """);
         AddStreamParameters(command, storeIdentity, snapshotMutation.StreamId);
         AddPayloadParameters(
             command,
             snapshotMutation.AuthoritativeState,
             SqliteRecordContext.SnapshotAuthoritativeState(snapshotMutation.StreamId));
-        _ = command.ExecuteNonQuery();
+        _ = command.Execute();
     }
 
     /// <summary>Determines whether a stored fingerprint matches the requested canonical intent.</summary>
@@ -72,7 +72,7 @@ internal static partial class SqliteLocalCommitSql
     /// <returns>Whether the original authoritative mutation matches.</returns>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static bool HasSameOriginalAuthoritativeMutation(
-        SqliteConnection connection,
+        SqliteDatabase connection,
         SqliteTransaction transaction,
         string storeIdentity,
         OperationId operationId,
@@ -90,15 +90,15 @@ internal static partial class SqliteLocalCommitSql
     /// <param name="maximumPayloadBytes">The maximum payload bytes this adapter can materialize.</param>
     /// <returns>The original authoritative mutation, or null when absent.</returns>
     private static PayloadEnvelope? ReadOutboxAuthoritativeMutation(
-        SqliteConnection connection,
+        SqliteDatabase connection,
         SqliteTransaction transaction,
         string storeIdentity,
         OperationId operationId,
         long maximumPayloadBytes)
     {
-        using var command = connection.CreateCommand();
-        command.Transaction = transaction;
-        command.CommandText = """
+        using var command = connection.CreateStatement();
+        command.UseTransaction(transaction);
+        command.SetSql("""
             SELECT payload_contract_id, payload_schema_version, payload_content_type, payload, payload_hash, rowid,
                    typeof(payload_contract_id), length(CAST(payload_contract_id AS BLOB)), IFNULL(substr(CAST(payload_contract_id AS BLOB), 1, 4100), x''),
                    typeof(payload_schema_version), payload_schema_version,
@@ -107,10 +107,10 @@ internal static partial class SqliteLocalCommitSql
                    typeof(payload_hash), length(CAST(payload_hash AS BLOB)), IFNULL(substr(CAST(payload_hash AS BLOB), 1, 4100), x'')
             FROM oc_outbox_authoritative_mutations
             WHERE store_identity = $storeIdentity AND operation_id = $operationId;
-            """;
-        _ = command.Parameters.AddWithValue(StoreIdentityParameter, storeIdentity);
-        _ = command.Parameters.AddWithValue(OperationIdParameter, operationId.Value.ToString("D"));
-        using var reader = command.ExecuteReader();
+            """);
+        _ = command.Bind(StoreIdentityParameter, storeIdentity);
+        _ = command.Bind(OperationIdParameter, operationId.Value.ToString("D"));
+        using var reader = command.Query();
         const int RowIdIndex = 5;
         const int EvidenceIndex = 6;
         return reader.Read()
@@ -171,8 +171,8 @@ internal static partial class SqliteLocalCommitSql
     /// <param name="maximumPayloadBytes">The maximum payload bytes this adapter can materialize.</param>
     /// <returns>The validated payload.</returns>
     private static PayloadEnvelope ReadAuthoritativePayload(
-        SqliteConnection connection,
-        SqliteDataReader reader,
+        SqliteDatabase connection,
+        SqliteRows reader,
         SqlitePayloadColumns columns,
         long maximumPayloadBytes)
     {
@@ -189,15 +189,15 @@ internal static partial class SqliteLocalCommitSql
     /// <param name="maximumPayloadBytes">The maximum payload bytes this adapter can materialize.</param>
     /// <returns>The authoritative payload, or null when unknown.</returns>
     private static PayloadEnvelope? ReadSnapshotAuthoritativeState(
-        SqliteConnection connection,
+        SqliteDatabase connection,
         SqliteTransaction transaction,
         string storeIdentity,
         StreamId streamId,
         long maximumPayloadBytes)
     {
-        using var command = connection.CreateCommand();
-        command.Transaction = transaction;
-        command.CommandText = """
+        using var command = connection.CreateStatement();
+        command.UseTransaction(transaction);
+        command.SetSql("""
             SELECT payload_contract_id, payload_schema_version, payload_content_type, payload, payload_hash, rowid,
                    typeof(payload_contract_id), length(CAST(payload_contract_id AS BLOB)), IFNULL(substr(CAST(payload_contract_id AS BLOB), 1, 4100), x''),
                    typeof(payload_schema_version), payload_schema_version,
@@ -206,9 +206,9 @@ internal static partial class SqliteLocalCommitSql
                    typeof(payload_hash), length(CAST(payload_hash AS BLOB)), IFNULL(substr(CAST(payload_hash AS BLOB), 1, 4100), x'')
             FROM oc_snapshot_authoritative_states
             WHERE store_identity = $storeIdentity AND stream_id = $streamId;
-        """;
+        """);
         AddStreamParameters(command, storeIdentity, streamId);
-        using var reader = command.ExecuteReader();
+        using var reader = command.Query();
         const int RowIdIndex = 5;
         const int EvidenceIndex = 6;
         return reader.Read()

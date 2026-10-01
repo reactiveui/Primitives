@@ -434,13 +434,13 @@ public sealed partial class SqliteServerCommitJournalTests
     private static void MoveFirstEventSequenceForwardWithoutGap(string path)
     {
         using var connection = OpenRawConnection(path);
-        using var command = connection.CreateCommand();
-        command.CommandText = """
+        using var command = connection.CreateStatement();
+        command.SetSql("""
             DELETE FROM oc_server_journal_event_metadata;
             UPDATE oc_server_journal_events SET event_sequence = 2;
             UPDATE oc_server_journal_streams SET last_event_sequence = 2, receive_history_incomplete = 0;
-            """;
-        _ = command.ExecuteNonQuery();
+            """);
+        _ = command.Execute();
     }
 
     /// <summary>Moves the first durable event sequence forward and sets the gap marker.</summary>
@@ -448,13 +448,13 @@ public sealed partial class SqliteServerCommitJournalTests
     private static void MoveFirstEventSequenceForwardWithGap(string path)
     {
         using var connection = OpenRawConnection(path);
-        using var command = connection.CreateCommand();
-        command.CommandText = """
+        using var command = connection.CreateStatement();
+        command.SetSql("""
             DELETE FROM oc_server_journal_event_metadata;
             UPDATE oc_server_journal_events SET event_sequence = 2;
             UPDATE oc_server_journal_streams SET last_event_sequence = 2, receive_history_incomplete = 1;
-            """;
-        _ = command.ExecuteNonQuery();
+            """);
+        _ = command.Execute();
     }
 
     /// <summary>Deletes an interior durable group while marking receive history incomplete.</summary>
@@ -462,12 +462,12 @@ public sealed partial class SqliteServerCommitJournalTests
     private static void DeleteMiddleGroupAndMarkReceiveGap(string path)
     {
         using var connection = OpenRawConnection(path);
-        using var command = connection.CreateCommand();
-        command.CommandText = """
+        using var command = connection.CreateStatement();
+        command.SetSql("""
             DELETE FROM oc_server_journal_ledger WHERE group_sequence = 2;
             UPDATE oc_server_journal_streams SET receive_history_incomplete = 1;
-            """;
-        _ = command.ExecuteNonQuery();
+            """);
+        _ = command.Execute();
     }
 
     /// <summary>Corrupts the persisted initial start-position discriminator.</summary>
@@ -475,9 +475,9 @@ public sealed partial class SqliteServerCommitJournalTests
     private static void CorruptInitialPositionKind(string path)
     {
         using var connection = OpenRawConnection(path);
-        using var command = connection.CreateCommand();
-        command.CommandText = "UPDATE oc_server_journal_subscriptions SET initial_position_kind = 99;";
-        _ = command.ExecuteNonQuery();
+        using var command = connection.CreateStatement();
+        command.SetSql("UPDATE oc_server_journal_subscriptions SET initial_position_kind = 99;");
+        _ = command.Execute();
     }
 
     /// <summary>Deletes durable event rows while marking receive history incomplete.</summary>
@@ -485,13 +485,13 @@ public sealed partial class SqliteServerCommitJournalTests
     private static void DeleteEventsAndMarkReceiveGap(string path)
     {
         using var connection = OpenRawConnection(path);
-        using var command = connection.CreateCommand();
-        command.CommandText = """
+        using var command = connection.CreateStatement();
+        command.SetSql("""
             DELETE FROM oc_server_journal_event_metadata;
             DELETE FROM oc_server_journal_events;
             UPDATE oc_server_journal_streams SET receive_history_incomplete = 1;
-            """;
-        _ = command.ExecuteNonQuery();
+            """);
+        _ = command.Execute();
     }
 
     /// <summary>Creates a trigger that removes a subscription before its deferred anchor update applies.</summary>
@@ -499,14 +499,14 @@ public sealed partial class SqliteServerCommitJournalTests
     private static void CreateDeleteInitialAnchorUpdateTrigger(string path)
     {
         using var connection = OpenRawConnection(path);
-        using var command = connection.CreateCommand();
-        command.CommandText = """
+        using var command = connection.CreateStatement();
+        command.SetSql("""
             CREATE TRIGGER delete_initial_anchor_update
             BEFORE UPDATE OF initial_anchor_resolved ON oc_server_journal_subscriptions
             BEGIN
                 DELETE FROM oc_server_journal_subscriptions WHERE subscription_id = OLD.subscription_id;
             END;
-            """;
-        _ = command.ExecuteNonQuery();
+            """);
+        _ = command.Execute();
     }
 }

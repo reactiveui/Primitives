@@ -5,7 +5,7 @@
 using System.Collections;
 using System.Globalization;
 using System.Runtime.CompilerServices;
-using Microsoft.Data.Sqlite;
+using ReactiveUI.Primitives.OccasionallyConnected.Sqlite;
 using TUnit.Core.Helpers;
 
 namespace ReactiveUI.Primitives.OccasionallyConnected.Server.Tests;
@@ -388,7 +388,7 @@ public sealed partial class SqliteServerCommitJournalTests
 
         await Assert.That(static () => new SqliteServerCommitJournal(string.Empty)).ThrowsExactly<ArgumentException>();
         await Assert.That(static () => new SqliteServerCommitJournal(":memory:")).ThrowsExactly<ArgumentException>();
-        await Assert.That(() => new SqliteServerCommitJournal(directoryPath)).ThrowsExactly<SqliteException>();
+        await Assert.That(() => new SqliteServerCommitJournal(directoryPath)).ThrowsExactly<SqliteDatabaseException>();
     }
 
     /// <summary>Verifies unsupported SQLite user versions are rejected independently from local store schema versions.</summary>
@@ -625,18 +625,18 @@ public sealed partial class SqliteServerCommitJournalTests
     public async Task CorruptSchemaFailsWithoutDestructiveReset()
     {
         using var database = new TemporaryDatabase();
-        await using (var connection = OpenRawConnection(database.Path))
+        using (var connection = OpenRawConnection(database.Path))
         {
-            await using var command = connection.CreateCommand();
-            command.CommandText = "CREATE TABLE oc_server_journal_streams (tenant_id TEXT NOT NULL); PRAGMA user_version = 1;";
-            _ = await command.ExecuteNonQueryAsync();
+            using var command = connection.CreateStatement();
+            command.SetSql("CREATE TABLE oc_server_journal_streams (tenant_id TEXT NOT NULL); PRAGMA user_version = 1;");
+            _ = command.Execute();
         }
 
         await Assert.That(() => CreateJournal(database.Path)).ThrowsExactly<InvalidOperationException>();
-        await using var verify = OpenRawConnection(database.Path);
-        await using var count = verify.CreateCommand();
-        count.CommandText = "SELECT COUNT(*) FROM sqlite_master WHERE type = 'table' AND name = 'oc_server_journal_streams';";
-        await Assert.That(await count.ExecuteScalarAsync()).IsEqualTo(1L);
+        using var verify = OpenRawConnection(database.Path);
+        using var count = verify.CreateStatement();
+        count.SetSql("SELECT COUNT(*) FROM sqlite_master WHERE type = 'table' AND name = 'oc_server_journal_streams';");
+        await Assert.That(count.Scalar()).IsEqualTo(1L);
     }
 
     /// <summary>Checks whether payload byte sequences are identical.</summary>
@@ -767,9 +767,9 @@ public sealed partial class SqliteServerCommitJournalTests
     private static void WriteUnsupportedUserVersion(string path)
     {
         using var connection = OpenRawConnection(path);
-        using var command = connection.CreateCommand();
-        command.CommandText = "PRAGMA user_version = 6;";
-        _ = command.ExecuteNonQuery();
+        using var command = connection.CreateStatement();
+        command.SetSql("PRAGMA user_version = 6;");
+        _ = command.Execute();
     }
 
     /// <summary>Writes an unsupported metadata schema version.</summary>
@@ -777,9 +777,9 @@ public sealed partial class SqliteServerCommitJournalTests
     private static void WriteUnsupportedMetadataSchemaVersion(string path)
     {
         using var connection = OpenRawConnection(path);
-        using var command = connection.CreateCommand();
-        command.CommandText = "UPDATE oc_server_journal_metadata SET value = '6' WHERE key = 'schema_version';";
-        _ = command.ExecuteNonQuery();
+        using var command = connection.CreateStatement();
+        command.SetSql("UPDATE oc_server_journal_metadata SET value = '6' WHERE key = 'schema_version';");
+        _ = command.Execute();
     }
 
     /// <summary>Deletes the schema metadata version row.</summary>
@@ -787,9 +787,9 @@ public sealed partial class SqliteServerCommitJournalTests
     private static void DeleteMetadataSchemaVersion(string path)
     {
         using var connection = OpenRawConnection(path);
-        using var command = connection.CreateCommand();
-        command.CommandText = "DELETE FROM oc_server_journal_metadata WHERE key = 'schema_version';";
-        _ = command.ExecuteNonQuery();
+        using var command = connection.CreateStatement();
+        command.SetSql("DELETE FROM oc_server_journal_metadata WHERE key = 'schema_version';");
+        _ = command.Execute();
     }
 
     /// <summary>Creates a partial owned table set.</summary>
@@ -797,16 +797,16 @@ public sealed partial class SqliteServerCommitJournalTests
     private static void CreateMissingOwnedTableSchema(string path)
     {
         using var connection = OpenRawConnection(path);
-        using var command = connection.CreateCommand();
-        command.CommandText = """
+        using var command = connection.CreateStatement();
+        command.SetSql("""
             PRAGMA user_version = 1;
             CREATE TABLE oc_server_journal_conflicts (id INTEGER NOT NULL);
             CREATE TABLE oc_server_journal_event_metadata (id INTEGER NOT NULL);
             CREATE TABLE oc_server_journal_events (id INTEGER NOT NULL);
             CREATE TABLE oc_server_journal_ledger (id INTEGER NOT NULL);
             CREATE TABLE oc_server_journal_metadata (id INTEGER NOT NULL);
-            """;
-        _ = command.ExecuteNonQuery();
+            """);
+        _ = command.Execute();
     }
 
     /// <summary>Adds an unexpected column to an owned table.</summary>
@@ -815,9 +815,9 @@ public sealed partial class SqliteServerCommitJournalTests
     {
         using var journal = CreateJournal(path);
         using var connection = OpenRawConnection(path);
-        using var command = connection.CreateCommand();
-        command.CommandText = "ALTER TABLE oc_server_journal_streams ADD COLUMN unexpected TEXT NULL;";
-        _ = command.ExecuteNonQuery();
+        using var command = connection.CreateStatement();
+        command.SetSql("ALTER TABLE oc_server_journal_streams ADD COLUMN unexpected TEXT NULL;");
+        _ = command.Execute();
     }
 
     /// <summary>Creates a trigger that removes a stream before it can be updated.</summary>
@@ -825,15 +825,15 @@ public sealed partial class SqliteServerCommitJournalTests
     private static void CreateDeleteStreamBeforeUpdateTrigger(string path)
     {
         using var connection = OpenRawConnection(path);
-        using var command = connection.CreateCommand();
-        command.CommandText = """
+        using var command = connection.CreateStatement();
+        command.SetSql("""
             CREATE TRIGGER oc_server_journal_delete_stream_before_update
             BEFORE UPDATE ON oc_server_journal_streams
             BEGIN
                 DELETE FROM oc_server_journal_streams WHERE tenant_id = OLD.tenant_id AND stream_id = OLD.stream_id;
             END;
-            """;
-        _ = command.ExecuteNonQuery();
+            """);
+        _ = command.Execute();
     }
 
     /// <summary>Creates a trigger that removes metadata before it can be updated.</summary>
@@ -841,25 +841,24 @@ public sealed partial class SqliteServerCommitJournalTests
     private static void CreateDeleteMetadataBeforeUpdateTrigger(string path)
     {
         using var connection = OpenRawConnection(path);
-        using var command = connection.CreateCommand();
-        command.CommandText = """
+        using var command = connection.CreateStatement();
+        command.SetSql("""
             CREATE TRIGGER oc_server_journal_delete_metadata_before_update
             BEFORE UPDATE ON oc_server_journal_metadata
             BEGIN
                 DELETE FROM oc_server_journal_metadata WHERE key = OLD.key;
             END;
-            """;
-        _ = command.ExecuteNonQuery();
+            """);
+        _ = command.Execute();
     }
 
     /// <summary>Opens a raw SQLite connection for schema assertions.</summary>
     /// <param name="path">The database path.</param>
     /// <returns>The open connection.</returns>
-    private static SqliteConnection OpenRawConnection(string path)
+    private static SqliteDatabase OpenRawConnection(string path)
     {
-        var connectionString = new SqliteConnectionStringBuilder { DataSource = path, Pooling = false }.ToString();
-        var connection = new SqliteConnection(connectionString);
-        connection.Open();
+        var connection = new SqliteDatabase(path);
+
         return connection;
     }
 

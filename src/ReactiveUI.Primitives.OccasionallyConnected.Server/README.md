@@ -8,7 +8,9 @@ Server-side stream and conflict-resolution primitives for authenticated synchron
 dotnet add package ReactiveUI.Primitives.OccasionallyConnected.Server
 ```
 
-The package targets `net8.0`, `net9.0`, `net10.0`, `net11.0`, `net462`, `net472`, `net48`, and `net481`. It depends on `ReactiveUI.Primitives.OccasionallyConnected.Core`, `Microsoft.Data.Sqlite.Core`, and the SQLite3 Multiple Ciphers native bundle (`SQLite3MC.PCLRaw.bundle`).
+The package targets `net8.0`, `net9.0`, `net10.0`, `net11.0`, `net462`, `net472`, `net48`, and `net481`.
+It depends on the core contracts, `SQLitePCLRaw.core`, and `SQLite3MC.PCLRaw.bundle`.
+The bundle supplies the SQLite3 Multiple Ciphers native library. Do not add another SQLite native bundle.
 
 ## Use
 
@@ -17,3 +19,14 @@ Create a `ServerStreamHub` with `ServerStreamHub.CreateInMemory(options)` for pr
 The [collaboration server example](https://github.com/reactiveui/Primitives/blob/main/src/examples/OccasionallyConnected.Collaboration.Server/README.md) shows an HTTP service using a durable hub. [ResilienceLab](https://github.com/reactiveui/Primitives/blob/main/src/examples/OccasionallyConnected.ResilienceLab/README.md) demonstrates retries, duplicate delivery, and conflict behavior.
 
 This package provides server primitives; host endpoints and application authentication are configured by your service. This is the first V1 release of the feature, with no earlier version to migrate from.
+
+## Native journal storage
+
+The journal calls SQLite directly through internal native handle owners shared with the SQLite store.
+It binds values as SQL parameters. It does not pool connections.
+Writer transactions take the database lock before changing journal state.
+WAL journaling and FULL synchronous writes preserve atomic commits after a process crash.
+
+Native failures use `SqliteDatabaseException` from the core contracts.
+Its `SqliteErrorCode` and `SqliteExtendedErrorCode` properties preserve SQLite's result codes.
+The public hub does not expose native handles or accept a database passphrase.

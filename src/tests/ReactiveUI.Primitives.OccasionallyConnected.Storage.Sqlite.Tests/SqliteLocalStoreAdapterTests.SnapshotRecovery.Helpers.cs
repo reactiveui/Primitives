@@ -138,16 +138,16 @@ public sealed partial class SqliteLocalStoreAdapterTests
     private static void CreateSnapshotRecoveryRollbackTrigger(string path)
     {
         using var connection = OpenRawConnection(path);
-        using var command = connection.CreateCommand();
-        command.CommandText = """
+        using var command = connection.CreateStatement();
+        command.SetSql("""
             CREATE TRIGGER oc_snapshot_recovery_abort
             AFTER UPDATE OF revision ON oc_snapshots
             WHEN NEW.server_cursor = 'snapshot-recovery-cursor'
             BEGIN
                 SELECT RAISE(ABORT, 'rollback snapshot recovery');
             END;
-            """;
-        _ = command.ExecuteNonQuery();
+            """);
+        _ = command.Execute();
     }
 
     /// <summary>Sets the outbox operation id to oversized corrupt text.</summary>
@@ -155,14 +155,14 @@ public sealed partial class SqliteLocalStoreAdapterTests
     private static void SetOutboxOperationIdOversized(string path)
     {
         using var connection = OpenRawConnection(path);
-        using var command = connection.CreateCommand();
-        command.CommandText = """
+        using var command = connection.CreateStatement();
+        command.SetSql("""
             PRAGMA foreign_keys = OFF;
             UPDATE oc_outbox SET operation_id = $operationId;
             PRAGMA foreign_keys = ON;
-            """;
-        _ = command.Parameters.AddWithValue("$operationId", new string('x', OversizedOperationIdentifierLength));
-        _ = command.ExecuteNonQuery();
+            """);
+        _ = command.Bind("$operationId", new string('x', OversizedOperationIdentifierLength));
+        _ = command.Execute();
     }
 
     /// <summary>Restores the outbox operation identifier.</summary>
@@ -178,14 +178,14 @@ public sealed partial class SqliteLocalStoreAdapterTests
     private static void SetOutboxOperationIdText(string path, string operationId)
     {
         using var connection = OpenRawConnection(path);
-        using var command = connection.CreateCommand();
-        command.CommandText = """
+        using var command = connection.CreateStatement();
+        command.SetSql("""
             PRAGMA foreign_keys = OFF;
             UPDATE oc_outbox SET operation_id = $operationId;
             PRAGMA foreign_keys = ON;
-            """;
-        _ = command.Parameters.AddWithValue(OperationIdParameter, operationId);
-        _ = command.ExecuteNonQuery();
+            """);
+        _ = command.Bind(OperationIdParameter, operationId);
+        _ = command.Execute();
     }
 
     /// <summary>Sets the durable operation state directly.</summary>
@@ -195,8 +195,8 @@ public sealed partial class SqliteLocalStoreAdapterTests
     private static void SetOutboxOperationState(string path, OperationId operationId, int operationState)
     {
         using var connection = OpenRawConnection(path);
-        using var command = connection.CreateCommand();
-        command.CommandText = """
+        using var command = connection.CreateStatement();
+        command.SetSql("""
             INSERT INTO oc_outbox_operation_states
                 (store_identity, operation_id, operation_state, attempt_count, changed_at_utc)
             VALUES ($storeIdentity, $operationId, $operationState, 0, $changedAtUtc)
@@ -204,12 +204,12 @@ public sealed partial class SqliteLocalStoreAdapterTests
             DO UPDATE SET
                 operation_state = excluded.operation_state,
                 changed_at_utc = excluded.changed_at_utc;
-            """;
-        _ = command.Parameters.AddWithValue(StoreIdentityParameter, StoreIdentity);
-        _ = command.Parameters.AddWithValue(OperationIdParameter, operationId.Value.ToString("D"));
-        _ = command.Parameters.AddWithValue("$operationState", operationState);
-        _ = command.Parameters.AddWithValue("$changedAtUtc", DateTimeOffset.UnixEpoch.ToString("O"));
-        _ = command.ExecuteNonQuery();
+            """);
+        _ = command.Bind(StoreIdentityParameter, StoreIdentity);
+        _ = command.Bind(OperationIdParameter, operationId.Value.ToString("D"));
+        _ = command.Bind("$operationState", operationState);
+        _ = command.Bind("$changedAtUtc", DateTimeOffset.UnixEpoch.ToString("O"));
+        _ = command.Execute();
     }
 
     /// <summary>Deletes the durable operation state directly.</summary>
@@ -218,14 +218,14 @@ public sealed partial class SqliteLocalStoreAdapterTests
     private static void DeleteOutboxOperationState(string path, OperationId operationId)
     {
         using var connection = OpenRawConnection(path);
-        using var command = connection.CreateCommand();
-        command.CommandText = """
+        using var command = connection.CreateStatement();
+        command.SetSql("""
             DELETE FROM oc_outbox_operation_states
             WHERE store_identity = $storeIdentity AND operation_id = $operationId;
-            """;
-        _ = command.Parameters.AddWithValue(StoreIdentityParameter, StoreIdentity);
-        _ = command.Parameters.AddWithValue(OperationIdParameter, operationId.Value.ToString("D"));
-        _ = command.ExecuteNonQuery();
+            """);
+        _ = command.Bind(StoreIdentityParameter, StoreIdentity);
+        _ = command.Bind(OperationIdParameter, operationId.Value.ToString("D"));
+        _ = command.Execute();
     }
 
     /// <summary>Reads the number of durable lease rows for one operation.</summary>
@@ -236,15 +236,15 @@ public sealed partial class SqliteLocalStoreAdapterTests
     private static long ReadLeaseOperationCount(string path, OperationId operationId)
     {
         using var connection = OpenRawConnection(path);
-        using var command = connection.CreateCommand();
-        command.CommandText = """
+        using var command = connection.CreateStatement();
+        command.SetSql("""
             SELECT COUNT(*)
             FROM oc_outbox_leases
             WHERE store_identity = $storeIdentity AND operation_id = $operationId;
-            """;
-        _ = command.Parameters.AddWithValue(StoreIdentityParameter, StoreIdentity);
-        _ = command.Parameters.AddWithValue(OperationIdParameter, operationId.Value.ToString("D"));
-        return command.ExecuteScalar() is long count
+            """);
+        _ = command.Bind(StoreIdentityParameter, StoreIdentity);
+        _ = command.Bind(OperationIdParameter, operationId.Value.ToString("D"));
+        return command.Scalar() is long count
             ? count
             : throw new InvalidOperationException("SQLite lease row count returned an unexpected value.");
     }

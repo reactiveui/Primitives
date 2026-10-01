@@ -2,8 +2,8 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
-using Microsoft.Data.Sqlite;
 using ReactiveUI.Primitives.OccasionallyConnected;
+using ReactiveUI.Primitives.OccasionallyConnected.Sqlite;
 
 namespace ReactiveUI.Primitives.OccasionallyConnected.Storage.Sqlite.Tests;
 
@@ -235,8 +235,8 @@ public sealed partial class SqliteLocalStoreAdapterTests
         using var database = TempDatabase.Create();
         await using var adapter = CreateAdapter(database.Path);
         await adapter.InitializeAsync(new(StoreIdentity, SchemaVersion, false), CancellationToken.None);
-        await using var connection = OpenRawConnection(database.Path);
-        await using var transaction = (SqliteTransaction)await connection.BeginTransactionAsync(CancellationToken.None);
+        using var connection = OpenRawConnection(database.Path);
+        using var transaction = connection.BeginTransaction();
 
         Action scan = () => SqliteLocalCommitSql.ReadSnapshotRecoveryReplayOnlyOperationIds(
             connection,

@@ -2,7 +2,6 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
-using Microsoft.Data.Sqlite;
 using ReactiveUI.Primitives.OccasionallyConnected;
 
 namespace ReactiveUI.Primitives.OccasionallyConnected.Storage.Sqlite;
@@ -46,7 +45,7 @@ internal static class SqliteStorageFailure
     /// <param name="exception">The observed exception.</param>
     /// <param name="failure">The mapped failure kind.</param>
     /// <returns>The SQLite exception that reported an unmapped storage-medium error, or null.</returns>
-    internal static SqliteException? FindStorageFailure(Exception exception, out DurableStorageFailure failure)
+    internal static SqliteDatabaseException? FindStorageFailure(Exception exception, out DurableStorageFailure failure)
     {
         failure = DurableStorageFailure.Unknown;
         if (DurableStorageException.IsInChain(exception))
@@ -57,7 +56,7 @@ internal static class SqliteStorageFailure
         var current = (Exception?)exception;
         for (var depth = 0; current is not null && depth < MaximumDepth; depth++)
         {
-            if (current is SqliteException sqlite && TryClassify(sqlite.SqliteErrorCode, out failure))
+            if (current is SqliteDatabaseException sqlite && TryClassify(sqlite.SqliteErrorCode, out failure))
             {
                 return sqlite;
             }
@@ -100,7 +99,7 @@ internal static class SqliteStorageFailure
     /// <param name="failure">The failure kind.</param>
     /// <param name="sqliteException">The SQLite exception that reported the failure.</param>
     /// <returns>The typed exception.</returns>
-    internal static DurableStorageException Create(DurableStorageFailure failure, SqliteException sqliteException) =>
+    internal static DurableStorageException Create(DurableStorageFailure failure, SqliteDatabaseException sqliteException) =>
         new(
             failure == DurableStorageFailure.StorageFull
                 ? "The SQLite store is full. The write was rolled back; free disk space before retrying."

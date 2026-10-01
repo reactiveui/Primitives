@@ -3,8 +3,8 @@
 // See the LICENSE file in the project root for full license information.
 
 using System.Runtime.CompilerServices;
-using Microsoft.Data.Sqlite;
 using ReactiveUI.Primitives.OccasionallyConnected;
+using ReactiveUI.Primitives.OccasionallyConnected.Sqlite;
 
 namespace ReactiveUI.Primitives.OccasionallyConnected.Storage.Sqlite.Tests;
 
@@ -352,35 +352,35 @@ public sealed partial class SqliteLocalStoreAdapterTests
     public Task WhenPersistedSnapshotSchemaVersionIsRealFraction_ThenRecoveryQuarantinesRawEvidence() =>
         AssertSnapshotSchemaStorageClassQuarantines(CorruptSnapshotPayloadSchemaVersionRealFraction);
 
-    /// <summary>Verifies Microsoft.Data.Sqlite coerces a TEXT schema-like value when read as Int32.</summary>
+    /// <summary>Verifies SQLite coerces a TEXT schema-like value when read as Int32.</summary>
     /// <returns>A task that represents the asynchronous test.</returns>
     [Test]
     public async Task WhenProviderReadsTextSchemaStorageClassAsInt32_ThenItCoercesValue()
     {
         using var database = TempDatabase.Create();
-        await using var connection = OpenRawConnection(database.Path);
-        await using var command = connection.CreateCommand();
-        command.CommandText = "SELECT CAST('1garbage' AS TEXT);";
-        await using var reader = await command.ExecuteReaderAsync(CancellationToken.None);
-        _ = await reader.ReadAsync(CancellationToken.None);
+        using var connection = OpenRawConnection(database.Path);
+        using var command = connection.CreateStatement();
+        command.SetSql("SELECT CAST('1garbage' AS TEXT);");
+        using var reader = command.Query();
+        _ = reader.Read();
 
-        await Assert.That(reader.GetDataTypeName(0)).IsEqualTo("TEXT");
+        await Assert.That(reader.GetFieldType(0)).IsEqualTo(typeof(string));
         await Assert.That(reader.GetInt32(0)).IsEqualTo(1);
     }
 
-    /// <summary>Verifies Microsoft.Data.Sqlite coerces a REAL schema-like value when read as Int32.</summary>
+    /// <summary>Verifies SQLite coerces a REAL schema-like value when read as Int32.</summary>
     /// <returns>A task that represents the asynchronous test.</returns>
     [Test]
     public async Task WhenProviderReadsRealSchemaStorageClassAsInt32_ThenItCoercesValue()
     {
         using var database = TempDatabase.Create();
-        await using var connection = OpenRawConnection(database.Path);
-        await using var command = connection.CreateCommand();
-        command.CommandText = "SELECT CAST(1.5 AS REAL);";
-        await using var reader = await command.ExecuteReaderAsync(CancellationToken.None);
-        _ = await reader.ReadAsync(CancellationToken.None);
+        using var connection = OpenRawConnection(database.Path);
+        using var command = connection.CreateStatement();
+        command.SetSql("SELECT CAST(1.5 AS REAL);");
+        using var reader = command.Query();
+        _ = reader.Read();
 
-        await Assert.That(reader.GetDataTypeName(0)).IsEqualTo("REAL");
+        await Assert.That(reader.GetFieldType(0)).IsEqualTo(typeof(double));
         await Assert.That(reader.GetInt32(0)).IsEqualTo(1);
     }
 
@@ -464,11 +464,11 @@ public sealed partial class SqliteLocalStoreAdapterTests
     public async Task WhenRawPayloadEvidenceReaderSeesNullColumns_ThenCapturesEmptyEvidence()
     {
         using var database = TempDatabase.Create();
-        await using var connection = OpenRawConnection(database.Path);
-        await using var command = connection.CreateCommand();
-        command.CommandText = "SELECT NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL;";
-        await using var reader = await command.ExecuteReaderAsync(CancellationToken.None);
-        _ = await reader.ReadAsync(CancellationToken.None);
+        using var connection = OpenRawConnection(database.Path);
+        using var command = connection.CreateStatement();
+        command.SetSql("SELECT NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL;");
+        using var reader = command.Query();
+        _ = reader.Read();
 
         var evidence = SqliteLocalCommitSql.CapturePayloadEvidence(reader, SqlitePayloadEvidenceColumns.StartingAt(0));
 
@@ -653,14 +653,14 @@ public sealed partial class SqliteLocalStoreAdapterTests
     private static void CorruptSnapshotPayloadSchemaVersion(string path)
     {
         using var connection = OpenRawConnection(path);
-        using var command = connection.CreateCommand();
-        command.CommandText = """
+        using var command = connection.CreateStatement();
+        command.SetSql("""
             UPDATE oc_snapshots
             SET payload_schema_version = 0
             WHERE store_identity = $storeIdentity AND stream_id = $streamId;
-            """;
+            """);
         AddStreamParameters(command);
-        _ = command.ExecuteNonQuery();
+        _ = command.Execute();
     }
 
     /// <summary>Corrupts the persisted authoritative snapshot schema version so its envelope cannot be constructed.</summary>
@@ -668,14 +668,14 @@ public sealed partial class SqliteLocalStoreAdapterTests
     private static void CorruptAuthoritativeSnapshotPayloadSchemaVersion(string path)
     {
         using var connection = OpenRawConnection(path);
-        using var command = connection.CreateCommand();
-        command.CommandText = """
+        using var command = connection.CreateStatement();
+        command.SetSql("""
             UPDATE oc_snapshot_authoritative_states
             SET payload_schema_version = 0
             WHERE store_identity = $storeIdentity AND stream_id = $streamId;
-            """;
+            """);
         AddStreamParameters(command);
-        _ = command.ExecuteNonQuery();
+        _ = command.Execute();
     }
 
     /// <summary>Corrupts the persisted outbox schema version so an envelope cannot be constructed.</summary>
@@ -683,14 +683,14 @@ public sealed partial class SqliteLocalStoreAdapterTests
     private static void CorruptOutboxPayloadSchemaVersion(string path)
     {
         using var connection = OpenRawConnection(path);
-        using var command = connection.CreateCommand();
-        command.CommandText = """
+        using var command = connection.CreateStatement();
+        command.SetSql("""
             UPDATE oc_outbox
             SET payload_schema_version = 0
             WHERE store_identity = $storeIdentity AND stream_id = $streamId;
-            """;
+            """);
         AddStreamParameters(command);
-        _ = command.ExecuteNonQuery();
+        _ = command.Execute();
     }
 
     /// <summary>Corrupts the persisted snapshot schema version to a TEXT value with an integer prefix.</summary>
@@ -698,14 +698,14 @@ public sealed partial class SqliteLocalStoreAdapterTests
     private static void CorruptSnapshotPayloadSchemaVersionTextWithSuffix(string path)
     {
         using var connection = OpenRawConnection(path);
-        using var command = connection.CreateCommand();
-        command.CommandText = """
+        using var command = connection.CreateStatement();
+        command.SetSql("""
             UPDATE oc_snapshots
             SET payload_schema_version = '1garbage'
             WHERE store_identity = $storeIdentity AND stream_id = $streamId;
-            """;
+            """);
         AddStreamParameters(command);
-        _ = command.ExecuteNonQuery();
+        _ = command.Execute();
     }
 
     /// <summary>Corrupts the persisted snapshot schema version to a REAL fractional value.</summary>
@@ -713,14 +713,14 @@ public sealed partial class SqliteLocalStoreAdapterTests
     private static void CorruptSnapshotPayloadSchemaVersionRealFraction(string path)
     {
         using var connection = OpenRawConnection(path);
-        using var command = connection.CreateCommand();
-        command.CommandText = """
+        using var command = connection.CreateStatement();
+        command.SetSql("""
             UPDATE oc_snapshots
             SET payload_schema_version = 1.5
             WHERE store_identity = $storeIdentity AND stream_id = $streamId;
-            """;
+            """);
         AddStreamParameters(command);
-        _ = command.ExecuteNonQuery();
+        _ = command.Execute();
     }
 
     /// <summary>Corrupts the persisted outbox schema version to a TEXT value with an integer prefix.</summary>
@@ -728,14 +728,14 @@ public sealed partial class SqliteLocalStoreAdapterTests
     private static void CorruptOutboxPayloadSchemaVersionTextWithSuffix(string path)
     {
         using var connection = OpenRawConnection(path);
-        using var command = connection.CreateCommand();
-        command.CommandText = """
+        using var command = connection.CreateStatement();
+        command.SetSql("""
             UPDATE oc_outbox
             SET payload_schema_version = '1garbage'
             WHERE store_identity = $storeIdentity AND stream_id = $streamId;
-            """;
+            """);
         AddStreamParameters(command);
-        _ = command.ExecuteNonQuery();
+        _ = command.Execute();
     }
 
     /// <summary>Corrupts the persisted outbox schema version to a REAL fractional value.</summary>
@@ -743,14 +743,14 @@ public sealed partial class SqliteLocalStoreAdapterTests
     private static void CorruptOutboxPayloadSchemaVersionRealFraction(string path)
     {
         using var connection = OpenRawConnection(path);
-        using var command = connection.CreateCommand();
-        command.CommandText = """
+        using var command = connection.CreateStatement();
+        command.SetSql("""
             UPDATE oc_outbox
             SET payload_schema_version = 1.5
             WHERE store_identity = $storeIdentity AND stream_id = $streamId;
-            """;
+            """);
         AddStreamParameters(command);
-        _ = command.ExecuteNonQuery();
+        _ = command.Execute();
     }
 
     /// <summary>Corrupts the persisted snapshot schema version to a value that cannot fit in Int32.</summary>
@@ -758,15 +758,15 @@ public sealed partial class SqliteLocalStoreAdapterTests
     private static void CorruptSnapshotPayloadSchemaVersionOutOfRange(string path)
     {
         using var connection = OpenRawConnection(path);
-        using var command = connection.CreateCommand();
-        command.CommandText = """
+        using var command = connection.CreateStatement();
+        command.SetSql("""
             UPDATE oc_snapshots
             SET payload_schema_version = $schemaVersion
             WHERE store_identity = $storeIdentity AND stream_id = $streamId;
-            """;
-        _ = command.Parameters.AddWithValue("$schemaVersion", long.MaxValue);
+            """);
+        _ = command.Bind("$schemaVersion", long.MaxValue);
         AddStreamParameters(command);
-        _ = command.ExecuteNonQuery();
+        _ = command.Execute();
     }
 
     /// <summary>Corrupts the persisted snapshot payload column type so raw evidence must use fallbacks.</summary>
@@ -774,8 +774,8 @@ public sealed partial class SqliteLocalStoreAdapterTests
     private static void CorruptSnapshotPayloadColumnTypes(string path)
     {
         using var connection = OpenRawConnection(path);
-        using var command = connection.CreateCommand();
-        command.CommandText = """
+        using var command = connection.CreateStatement();
+        command.SetSql("""
             UPDATE oc_snapshots
             SET payload_contract_id = x'ff',
                 payload_schema_version = 'not-an-integer',
@@ -783,9 +783,9 @@ public sealed partial class SqliteLocalStoreAdapterTests
                 payload = 123,
                 payload_hash = x'fd'
             WHERE store_identity = $storeIdentity AND stream_id = $streamId;
-            """;
+            """);
         AddStreamParameters(command);
-        _ = command.ExecuteNonQuery();
+        _ = command.Execute();
     }
 
     /// <summary>Corrupts the quarantine operation identifier for the representative stream.</summary>
@@ -793,14 +793,14 @@ public sealed partial class SqliteLocalStoreAdapterTests
     private static void CorruptQuarantineOperationIdentifier(string path)
     {
         using var connection = OpenRawConnection(path);
-        using var command = connection.CreateCommand();
-        command.CommandText = """
+        using var command = connection.CreateStatement();
+        command.SetSql("""
             UPDATE oc_payload_quarantine
             SET operation_id = 'not-a-guid'
             WHERE store_identity = $storeIdentity AND stream_id = $streamId;
-            """;
+            """);
         AddStreamParameters(command);
-        _ = command.ExecuteNonQuery();
+        _ = command.Execute();
     }
 
     /// <summary>Creates a trigger that removes inserted quarantine markers before the store rereads them.</summary>
@@ -808,24 +808,24 @@ public sealed partial class SqliteLocalStoreAdapterTests
     private static void DeleteInsertedQuarantineMarkers(string path)
     {
         using var connection = OpenRawConnection(path);
-        using var command = connection.CreateCommand();
-        command.CommandText = """
+        using var command = connection.CreateStatement();
+        command.SetSql("""
             CREATE TRIGGER delete_inserted_quarantine_marker
             AFTER INSERT ON oc_payload_quarantine
             BEGIN
                 DELETE FROM oc_payload_quarantine
                 WHERE store_identity = NEW.store_identity AND stream_id = NEW.stream_id;
             END;
-            """;
-        _ = command.ExecuteNonQuery();
+            """);
+        _ = command.Execute();
     }
 
     /// <summary>Adds the shared stream parameters for raw corruption helpers.</summary>
     /// <param name="command">The SQLite command.</param>
-    private static void AddStreamParameters(SqliteCommand command)
+    private static void AddStreamParameters(SqliteStatement command)
     {
-        _ = command.Parameters.AddWithValue("$storeIdentity", StoreIdentity);
-        _ = command.Parameters.AddWithValue("$streamId", Stream.Value);
+        _ = command.Bind("$storeIdentity", StoreIdentity);
+        _ = command.Bind("$streamId", Stream.Value);
     }
 
     /// <summary>Reads an optional leased operation batch from the adapter.</summary>

@@ -2,7 +2,6 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
-using Microsoft.Data.Sqlite;
 using ReactiveUI.Primitives.OccasionallyConnected;
 using ReactiveUI.Primitives.OccasionallyConnected.Storage.Sqlite;
 
@@ -29,7 +28,7 @@ public sealed partial class SqliteLocalCommitStoreTests
     /// <summary>The number of pending operations after two local commits.</summary>
     private const int TwoPendingOperations = 2;
 
-    /// <summary>Milliseconds to wait so Microsoft.Data.Sqlite observes a managed busy timeout attempt.</summary>
+    /// <summary>Milliseconds to wait so SQLite observes a managed busy timeout attempt.</summary>
     private const int ManagedBusyRetryDelayMilliseconds = 1200;
 
     /// <summary>The primary store identity used by tests.</summary>
@@ -280,8 +279,8 @@ public sealed partial class SqliteLocalCommitStoreTests
         using var store = CreateInitializedStore(database.Path);
         var subscriptionId = store.GetOrCreateSubscriptionId(Stream, SubscriptionId.New(), CancellationToken.None);
         using var cancellation = new CancellationTokenSource();
-        await using var blocker = OpenRawConnection(database.Path);
-        await using var transaction = (SqliteTransaction)await blocker.BeginTransactionAsync();
+        using var blocker = OpenRawConnection(database.Path);
+        using var transaction = blocker.BeginTransaction();
         InsertBlockingIdentity(blocker, transaction);
         using var started = new ManualResetEventSlim();
         var blockedCommit = Task.Factory.StartNew(
@@ -306,7 +305,7 @@ public sealed partial class SqliteLocalCommitStoreTests
         await cancellation.CancelAsync();
 
         await Assert.That(async () => await blockedCommit).ThrowsExactly<OperationCanceledException>();
-        await transaction.RollbackAsync();
+        transaction.Rollback();
         var recovery = store.RecoverStream(Stream, subscriptionId, CancellationToken.None);
         await Assert.That(recovery.NextClientSequence).IsEqualTo(1);
         await Assert.That(recovery.PendingOperations.Count).IsEqualTo(0);
@@ -325,7 +324,7 @@ public sealed partial class SqliteLocalCommitStoreTests
 
         Action action = () => store.CommitLocalOperation(CreateOperation(clientSequence: 1), CreateSnapshotMutation(expectedRevision: 0), CancellationToken.None);
 
-        await Assert.That(action).ThrowsExactly<SqliteException>();
+        await Assert.That(action).ThrowsExactly<SqliteDatabaseException>();
         DropRollbackTrigger(database.Path);
         var recovery = store.RecoverStream(Stream, subscriptionId, CancellationToken.None);
         await Assert.That(recovery.NextClientSequence).IsEqualTo(1);
@@ -342,11 +341,11 @@ public sealed partial class SqliteLocalCommitStoreTests
         using var store = CreateInitializedStore(database.Path);
         var subscriptionId = store.GetOrCreateSubscriptionId(Stream, SubscriptionId.New(), CancellationToken.None);
         _ = store.CommitLocalOperation(CreateOperation(clientSequence: 1), CreateSnapshotMutation(expectedRevision: 0), CancellationToken.None);
-        await using (var connection = OpenRawConnection(database.Path))
+        using (var connection = OpenRawConnection(database.Path))
         {
-            await using var command = connection.CreateCommand();
-            command.CommandText = "UPDATE oc_outbox SET payload_schema_version = 0;";
-            _ = await command.ExecuteNonQueryAsync();
+            using var command = connection.CreateStatement();
+            command.SetSql("UPDATE oc_outbox SET payload_schema_version = 0;");
+            _ = command.Execute();
         }
 
         Action action = () => store.RecoverStream(Stream, subscriptionId, CancellationToken.None);
@@ -750,14 +749,14 @@ public sealed partial class SqliteLocalCommitStoreTests
         using var database = TempDatabase.Create();
         using var store = CreateInitializedStore(database.Path);
         var subscriptionId = store.GetOrCreateSubscriptionId(Stream, SubscriptionId.New(), CancellationToken.None);
-        await using var blocker = OpenRawConnection(database.Path);
-        await using var transaction = (SqliteTransaction)await blocker.BeginTransactionAsync();
+        using var blocker = OpenRawConnection(database.Path);
+        using var transaction = blocker.BeginTransaction();
         InsertBlockingIdentity(blocker, transaction);
 
         Action action = () => store.CommitLocalOperation(CreateOperation(clientSequence: 1), CreateSnapshotMutation(expectedRevision: 0), CancellationToken.None);
 
         await Assert.That(action).ThrowsExactly<TimeoutException>();
-        await transaction.RollbackAsync();
+        transaction.Rollback();
         var recovery = store.RecoverStream(Stream, subscriptionId, CancellationToken.None);
         await Assert.That(recovery.NextClientSequence).IsEqualTo(1);
         await Assert.That(recovery.PendingOperations.Count).IsEqualTo(0);
@@ -887,11 +886,11 @@ public sealed partial class SqliteLocalCommitStoreTests
     public async Task WhenStoredScalarValuesAreMalformed_ThenReadersFailClosed()
     {
         using var database = TempDatabase.Create();
-        await using var connection = OpenRawConnection(database.Path);
-        await using var command = connection.CreateCommand();
-        command.CommandText = "SELECT NULL, X'01', 'not-a-date', 0, -1;";
-        await using var reader = await command.ExecuteReaderAsync();
-        _ = await reader.ReadAsync();
+        using var connection = OpenRawConnection(database.Path);
+        using var command = connection.CreateStatement();
+        command.SetSql("SELECT NULL, X'01', 'not-a-date', 0, -1;");
+        using var reader = command.Query();
+        _ = reader.Read();
 
         const int NullColumnIndex = 0;
         const int BytesColumnIndex = 1;

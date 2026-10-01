@@ -4,8 +4,8 @@
 
 using System.Collections.ObjectModel;
 using System.Runtime.CompilerServices;
-using Microsoft.Data.Sqlite;
 using ReactiveUI.Primitives.OccasionallyConnected;
+using ReactiveUI.Primitives.OccasionallyConnected.Sqlite;
 
 namespace ReactiveUI.Primitives.OccasionallyConnected.Storage.Sqlite;
 
@@ -159,7 +159,7 @@ internal sealed partial class SqliteLocalCommitStore : IDisposable
     /// <exception cref="NotSupportedException">Authenticated encryption at rest is required but unavailable.</exception>
     /// <exception cref="ObjectDisposedException">This instance has been disposed.</exception>
     /// <exception cref="OperationCanceledException">The operation is canceled before the transaction commits.</exception>
-    /// <exception cref="SqliteException">SQLite rejects the operation.</exception>
+    /// <exception cref="SqliteDatabaseException">SQLite rejects the operation.</exception>
     internal void Initialize(LocalStoreInitialization initialization, CancellationToken cancellationToken)
     {
         ArgumentExceptionHelper.ThrowIfNull(initialization);
@@ -185,7 +185,7 @@ internal sealed partial class SqliteLocalCommitStore : IDisposable
             cancellationToken.ThrowIfCancellationRequested();
             _ = Directory.CreateDirectory(SqliteIdentityStoreData.GetDirectoryForCreate(_databasePath));
             using var connection = RetryValidatedInitializationConnection(
-                () => OpenStoreConnection(initialization.StoreIdentity),
+                () => OpenStoreConnection(initialization.StoreIdentity, cancellationToken),
                 static connection =>
                 {
                     SqliteLocalCommitConnection.ConfigureLockPolling(connection);
@@ -223,7 +223,7 @@ internal sealed partial class SqliteLocalCommitStore : IDisposable
     /// <exception cref="InvalidOperationException">The store has not been initialized or stored identity state conflicts.</exception>
     /// <exception cref="ObjectDisposedException">This instance has been disposed.</exception>
     /// <exception cref="OperationCanceledException">The operation is canceled before the transaction commits.</exception>
-    /// <exception cref="SqliteException">SQLite rejects the operation.</exception>
+    /// <exception cref="SqliteDatabaseException">SQLite rejects the operation.</exception>
     internal SubscriptionId GetOrCreateSubscriptionId(StreamId streamId, SubscriptionId? preferredId, CancellationToken cancellationToken)
     {
         SqliteSubscriptionIdentitySql.ValidateLookup(streamId, preferredId);
@@ -233,7 +233,7 @@ internal sealed partial class SqliteLocalCommitStore : IDisposable
             ThrowIfDisposed();
             var storeIdentity = GetInitializedStoreIdentity();
             cancellationToken.ThrowIfCancellationRequested();
-            using var connection = OpenStoreConnection(storeIdentity, forWrite: true);
+            using var connection = OpenStoreConnection(storeIdentity, cancellationToken, forWrite: true);
             SqliteLocalCommitConnection.ConfigureLockPolling(connection);
             SqliteConnectionSettings.ConfigureOperationalConnection(connection);
             using var transaction = SqliteLocalCommitConnection.BeginWriteTransaction(connection, cancellationToken);
@@ -258,7 +258,7 @@ internal sealed partial class SqliteLocalCommitStore : IDisposable
     /// <exception cref="InvalidOperationException">The store has not been initialized or the durable stream state rejects the commit.</exception>
     /// <exception cref="ObjectDisposedException">This instance has been disposed.</exception>
     /// <exception cref="OperationCanceledException">The operation is canceled before the transaction commits.</exception>
-    /// <exception cref="SqliteException">SQLite rejects the operation.</exception>
+    /// <exception cref="SqliteDatabaseException">SQLite rejects the operation.</exception>
     internal LocalCommitResult CommitLocalOperation(
         SyncOperation operation,
         SnapshotMutation snapshotMutation,
@@ -273,7 +273,7 @@ internal sealed partial class SqliteLocalCommitStore : IDisposable
             ThrowIfDisposed();
             var storeIdentity = GetInitializedStoreIdentity();
             cancellationToken.ThrowIfCancellationRequested();
-            using var connection = OpenStoreConnection(storeIdentity, forWrite: true);
+            using var connection = OpenStoreConnection(storeIdentity, cancellationToken, forWrite: true);
             SqliteLocalCommitConnection.ConfigureLockPolling(connection);
             ConfigureLocalCommitConnection(connection);
             using var transaction = SqliteLocalCommitConnection.BeginWriteTransaction(connection, cancellationToken);
@@ -332,7 +332,7 @@ internal sealed partial class SqliteLocalCommitStore : IDisposable
     /// <exception cref="InvalidOperationException">The store has not been initialized or recovered data is invalid.</exception>
     /// <exception cref="ObjectDisposedException">This instance has been disposed.</exception>
     /// <exception cref="OperationCanceledException">The operation is canceled before recovery completes.</exception>
-    /// <exception cref="SqliteException">SQLite rejects the operation.</exception>
+    /// <exception cref="SqliteDatabaseException">SQLite rejects the operation.</exception>
     internal RecoveredStream RecoverStream(StreamId streamId, SubscriptionId subscriptionId, CancellationToken cancellationToken)
     {
         SqliteLocalCommitValidation.ValidateRecoveryInput(streamId, subscriptionId);
@@ -341,7 +341,7 @@ internal sealed partial class SqliteLocalCommitStore : IDisposable
         {
             ThrowIfDisposed();
             var storeIdentity = GetInitializedStoreIdentity();
-            using var connection = OpenStoreConnection(storeIdentity);
+            using var connection = OpenStoreConnection(storeIdentity, cancellationToken);
             SqliteLocalCommitConnection.ConfigureLockPolling(connection);
             SqliteConnectionSettings.ConfigureOperationalConnection(connection);
             using var transaction = BeginVerifiedReadTransaction(connection);
@@ -403,7 +403,7 @@ internal sealed partial class SqliteLocalCommitStore : IDisposable
     /// <exception cref="InvalidOperationException">The store has not been initialized or the durable lease state is invalid.</exception>
     /// <exception cref="ObjectDisposedException">This instance has been disposed.</exception>
     /// <exception cref="OperationCanceledException">The operation is canceled before the transaction commits.</exception>
-    /// <exception cref="SqliteException">SQLite rejects the operation.</exception>
+    /// <exception cref="SqliteDatabaseException">SQLite rejects the operation.</exception>
     internal LeasedOperationBatch? LeasePendingOperationBatch(OutboxLeaseRequest request, CancellationToken cancellationToken)
     {
         SqliteLocalCommitValidation.ValidateLeaseRequest(request);
@@ -416,7 +416,7 @@ internal sealed partial class SqliteLocalCommitStore : IDisposable
             ThrowIfDisposed();
             var storeIdentity = GetInitializedStoreIdentity();
             cancellationToken.ThrowIfCancellationRequested();
-            using var connection = OpenStoreConnection(storeIdentity, forWrite: true);
+            using var connection = OpenStoreConnection(storeIdentity, cancellationToken, forWrite: true);
             SqliteLocalCommitConnection.ConfigureLockPolling(connection);
             SqliteConnectionSettings.ConfigureOperationalConnection(connection);
             using var transaction = SqliteLocalCommitConnection.BeginWriteTransaction(connection, cancellationToken);
@@ -469,7 +469,7 @@ internal sealed partial class SqliteLocalCommitStore : IDisposable
     /// <exception cref="InvalidOperationException">The store has not been initialized or the lease is not current.</exception>
     /// <exception cref="ObjectDisposedException">This instance has been disposed.</exception>
     /// <exception cref="OperationCanceledException">The operation is canceled before the transaction commits.</exception>
-    /// <exception cref="SqliteException">SQLite rejects the operation.</exception>
+    /// <exception cref="SqliteDatabaseException">SQLite rejects the operation.</exception>
     internal void RenewLease(Guid leaseId, TimeSpan extension, CancellationToken cancellationToken)
     {
         SqliteLocalCommitValidation.ValidateLeaseRenewalInput(leaseId, extension);
@@ -480,7 +480,7 @@ internal sealed partial class SqliteLocalCommitStore : IDisposable
             ThrowIfDisposed();
             var storeIdentity = GetInitializedStoreIdentity();
             cancellationToken.ThrowIfCancellationRequested();
-            using var connection = OpenStoreConnection(storeIdentity, forWrite: true);
+            using var connection = OpenStoreConnection(storeIdentity, cancellationToken, forWrite: true);
             SqliteLocalCommitConnection.ConfigureLockPolling(connection);
             SqliteConnectionSettings.ConfigureOperationalConnection(connection);
             using var transaction = SqliteLocalCommitConnection.BeginWriteTransaction(connection, cancellationToken);
@@ -516,7 +516,7 @@ internal sealed partial class SqliteLocalCommitStore : IDisposable
     /// <exception cref="InvalidOperationException">The store has not been initialized or the lease membership is incomplete.</exception>
     /// <exception cref="ObjectDisposedException">This instance has been disposed.</exception>
     /// <exception cref="OperationCanceledException">The operation is canceled before the transaction commits.</exception>
-    /// <exception cref="SqliteException">SQLite rejects the operation.</exception>
+    /// <exception cref="SqliteDatabaseException">SQLite rejects the operation.</exception>
     internal void ReleaseLease(Guid leaseId, CancellationToken cancellationToken)
     {
         SqliteLocalCommitValidation.ValidateLeaseId(leaseId);
@@ -526,7 +526,7 @@ internal sealed partial class SqliteLocalCommitStore : IDisposable
             ThrowIfDisposed();
             var storeIdentity = GetInitializedStoreIdentity();
             cancellationToken.ThrowIfCancellationRequested();
-            using var connection = OpenStoreConnection(storeIdentity, forWrite: true);
+            using var connection = OpenStoreConnection(storeIdentity, cancellationToken, forWrite: true);
             SqliteLocalCommitConnection.ConfigureLockPolling(connection);
             SqliteConnectionSettings.ConfigureOperationalConnection(connection);
             using var transaction = SqliteLocalCommitConnection.BeginWriteTransaction(connection, cancellationToken);
@@ -557,7 +557,7 @@ internal sealed partial class SqliteLocalCommitStore : IDisposable
     /// <exception cref="InvalidOperationException">The store has not been initialized or stored inbox data is invalid.</exception>
     /// <exception cref="ObjectDisposedException">This instance has been disposed.</exception>
     /// <exception cref="OperationCanceledException">The operation is canceled before lookup completes.</exception>
-    /// <exception cref="SqliteException">SQLite rejects the operation.</exception>
+    /// <exception cref="SqliteDatabaseException">SQLite rejects the operation.</exception>
     internal IReadOnlyList<Guid> GetUnappliedEventIds(
         StreamId streamId,
         IReadOnlyList<Guid> eventIds,
@@ -570,7 +570,7 @@ internal sealed partial class SqliteLocalCommitStore : IDisposable
             ThrowIfDisposed();
             var storeIdentity = GetInitializedStoreIdentity();
             cancellationToken.ThrowIfCancellationRequested();
-            using var connection = OpenStoreConnection(storeIdentity);
+            using var connection = OpenStoreConnection(storeIdentity, cancellationToken);
             SqliteLocalCommitConnection.ConfigureLockPolling(connection);
             SqliteConnectionSettings.ConfigureOperationalConnection(connection);
             using var transaction = BeginVerifiedReadTransaction(connection);
@@ -602,7 +602,7 @@ internal sealed partial class SqliteLocalCommitStore : IDisposable
     /// <exception cref="InvalidOperationException">The store has not been initialized or durable state is invalid.</exception>
     /// <exception cref="ObjectDisposedException">This instance has been disposed.</exception>
     /// <exception cref="OperationCanceledException">The operation is canceled before the transaction commits.</exception>
-    /// <exception cref="SqliteException">SQLite rejects the operation.</exception>
+    /// <exception cref="SqliteDatabaseException">SQLite rejects the operation.</exception>
     internal CompactionResult Compact(
         CompactionRequest request,
         RetentionOptions retention,
@@ -616,7 +616,7 @@ internal sealed partial class SqliteLocalCommitStore : IDisposable
             ThrowIfDisposed();
             var storeIdentity = GetInitializedStoreIdentity();
             cancellationToken.ThrowIfCancellationRequested();
-            using var connection = OpenStoreConnection(storeIdentity, forWrite: true);
+            using var connection = OpenStoreConnection(storeIdentity, cancellationToken, forWrite: true);
             SqliteLocalCommitConnection.ConfigureLockPolling(connection);
             SqliteConnectionSettings.ConfigureOperationalConnection(connection);
             using var transaction = SqliteLocalCommitConnection.BeginWriteTransaction(connection, cancellationToken);
@@ -642,7 +642,7 @@ internal sealed partial class SqliteLocalCommitStore : IDisposable
     /// <exception cref="InvalidOperationException">The store has not been initialized or the stream is missing.</exception>
     /// <exception cref="ObjectDisposedException">This instance has been disposed.</exception>
     /// <exception cref="OperationCanceledException">The operation is canceled before the transaction commits.</exception>
-    /// <exception cref="SqliteException">SQLite rejects the operation.</exception>
+    /// <exception cref="SqliteDatabaseException">SQLite rejects the operation.</exception>
     internal LocalPayloadQuarantineResult QuarantinePayload(
         SqliteNormalizedPayloadQuarantineRequest request,
         CancellationToken cancellationToken)
@@ -653,7 +653,7 @@ internal sealed partial class SqliteLocalCommitStore : IDisposable
             ThrowIfDisposed();
             var storeIdentity = GetInitializedStoreIdentity();
             cancellationToken.ThrowIfCancellationRequested();
-            using var connection = OpenStoreConnection(storeIdentity, forWrite: true);
+            using var connection = OpenStoreConnection(storeIdentity, cancellationToken, forWrite: true);
             SqliteLocalCommitConnection.ConfigureLockPolling(connection);
             SqliteConnectionSettings.ConfigureOperationalConnection(connection);
             using var transaction = SqliteLocalCommitConnection.BeginWriteTransaction(connection, cancellationToken);
@@ -676,7 +676,7 @@ internal sealed partial class SqliteLocalCommitStore : IDisposable
     /// <exception cref="InvalidOperationException">The store has not been initialized.</exception>
     /// <exception cref="ObjectDisposedException">This instance has been disposed.</exception>
     /// <exception cref="OperationCanceledException">The operation is canceled before lookup completes.</exception>
-    /// <exception cref="SqliteException">SQLite rejects the operation.</exception>
+    /// <exception cref="SqliteDatabaseException">SQLite rejects the operation.</exception>
     internal LocalPayloadQuarantineRecord? GetPayloadQuarantine(StreamId streamId, CancellationToken cancellationToken)
     {
         SqliteLocalCommitValidation.ValidateStreamId(streamId, nameof(streamId));
@@ -686,7 +686,7 @@ internal sealed partial class SqliteLocalCommitStore : IDisposable
             ThrowIfDisposed();
             var storeIdentity = GetInitializedStoreIdentity();
             cancellationToken.ThrowIfCancellationRequested();
-            using var connection = OpenStoreConnection(storeIdentity);
+            using var connection = OpenStoreConnection(storeIdentity, cancellationToken);
             SqliteLocalCommitConnection.ConfigureLockPolling(connection);
             SqliteConnectionSettings.ConfigureOperationalConnection(connection);
             using var transaction = BeginVerifiedReadTransaction(connection);
@@ -706,7 +706,7 @@ internal sealed partial class SqliteLocalCommitStore : IDisposable
     /// <exception cref="InvalidOperationException">The store has not been initialized or the durable stream state rejects the apply.</exception>
     /// <exception cref="ObjectDisposedException">This instance has been disposed.</exception>
     /// <exception cref="OperationCanceledException">The operation is canceled before the transaction commits.</exception>
-    /// <exception cref="SqliteException">SQLite rejects the operation.</exception>
+    /// <exception cref="SqliteDatabaseException">SQLite rejects the operation.</exception>
     internal RemoteApplyResult ApplyRemoteBatch(
         RemoteEventBatch batch,
         SnapshotMutation snapshotMutation,
@@ -721,7 +721,7 @@ internal sealed partial class SqliteLocalCommitStore : IDisposable
             ThrowIfDisposed();
             var storeIdentity = GetInitializedStoreIdentity();
             cancellationToken.ThrowIfCancellationRequested();
-            using var connection = OpenStoreConnection(storeIdentity, forWrite: true);
+            using var connection = OpenStoreConnection(storeIdentity, cancellationToken, forWrite: true);
             SqliteLocalCommitConnection.ConfigureLockPolling(connection);
             SqliteConnectionSettings.ConfigureOperationalConnection(connection);
             using var transaction = SqliteLocalCommitConnection.BeginWriteTransaction(connection, cancellationToken);
@@ -779,7 +779,7 @@ internal sealed partial class SqliteLocalCommitStore : IDisposable
             ThrowIfDisposed();
             var storeIdentity = GetInitializedStoreIdentity();
             cancellationToken.ThrowIfCancellationRequested();
-            using var connection = OpenStoreConnection(storeIdentity);
+            using var connection = OpenStoreConnection(storeIdentity, cancellationToken);
             SqliteLocalCommitConnection.ConfigureLockPolling(connection);
             SqliteConnectionSettings.ConfigureOperationalConnection(connection);
             using var transaction = BeginVerifiedReadTransaction(connection);
@@ -803,7 +803,7 @@ internal sealed partial class SqliteLocalCommitStore : IDisposable
             ThrowIfDisposed();
             var storeIdentity = GetInitializedStoreIdentity();
             cancellationToken.ThrowIfCancellationRequested();
-            using var connection = OpenStoreConnection(storeIdentity);
+            using var connection = OpenStoreConnection(storeIdentity, cancellationToken);
             SqliteLocalCommitConnection.ConfigureLockPolling(connection);
             SqliteConnectionSettings.ConfigureOperationalConnection(connection);
             using var transaction = BeginVerifiedReadTransaction(connection);
@@ -825,7 +825,7 @@ internal sealed partial class SqliteLocalCommitStore : IDisposable
     /// <exception cref="InvalidOperationException">The store has not been initialized or the lease is not current.</exception>
     /// <exception cref="ObjectDisposedException">This instance has been disposed.</exception>
     /// <exception cref="OperationCanceledException">The operation is canceled before the transaction commits.</exception>
-    /// <exception cref="SqliteException">SQLite rejects the operation.</exception>
+    /// <exception cref="SqliteDatabaseException">SQLite rejects the operation.</exception>
     internal AttemptBarrierResult TryBeginRemoteAttempt(
         Guid leaseId,
         OperationId operationId,
@@ -835,7 +835,7 @@ internal sealed partial class SqliteLocalCommitStore : IDisposable
         SqliteLocalCommitValidation.ValidateAttemptBarrierInput(leaseId, operationId, nextAttempt);
         cancellationToken.ThrowIfCancellationRequested();
         var storeIdentity = GetInitializedStoreIdentityForOperation();
-        using var connection = OpenStoreConnection(storeIdentity, forWrite: true);
+        using var connection = OpenStoreConnection(storeIdentity, cancellationToken, forWrite: true);
         SqliteLocalCommitConnection.ConfigureLockPolling(connection);
         SqliteConnectionSettings.ConfigureOperationalConnection(connection);
         using var transaction = SqliteLocalCommitConnection.BeginWriteTransaction(connection, cancellationToken);
@@ -871,7 +871,7 @@ internal sealed partial class SqliteLocalCommitStore : IDisposable
     /// <exception cref="InvalidOperationException">The store has not been initialized or the lease is not current.</exception>
     /// <exception cref="ObjectDisposedException">This instance has been disposed.</exception>
     /// <exception cref="OperationCanceledException">The operation is canceled before the transaction commits.</exception>
-    /// <exception cref="SqliteException">SQLite rejects the operation.</exception>
+    /// <exception cref="SqliteDatabaseException">SQLite rejects the operation.</exception>
     /// <exception cref="SyncBatchValidationException">The result does not exactly match the leased batch.</exception>
     internal ValueTask ApplySyncResultAsync(Guid leaseId, RemoteSyncResult result, CancellationToken cancellationToken)
     {
@@ -893,7 +893,7 @@ internal sealed partial class SqliteLocalCommitStore : IDisposable
             ThrowIfDisposed();
             var storeIdentity = GetInitializedStoreIdentity();
             cancellationToken.ThrowIfCancellationRequested();
-            using var connection = OpenStoreConnection(storeIdentity, forWrite: true);
+            using var connection = OpenStoreConnection(storeIdentity, cancellationToken, forWrite: true);
             SqliteLocalCommitConnection.ConfigureLockPolling(connection);
             SqliteConnectionSettings.ConfigureOperationalConnection(connection);
             using var transaction = SqliteLocalCommitConnection.BeginWriteTransaction(connection, cancellationToken);
@@ -924,14 +924,14 @@ internal sealed partial class SqliteLocalCommitStore : IDisposable
     /// <exception cref="InvalidOperationException">The store has not been initialized or the lease is not current.</exception>
     /// <exception cref="ObjectDisposedException">This instance has been disposed.</exception>
     /// <exception cref="OperationCanceledException">The operation is canceled before the transaction commits.</exception>
-    /// <exception cref="SqliteException">SQLite rejects the operation.</exception>
+    /// <exception cref="SqliteDatabaseException">SQLite rejects the operation.</exception>
     /// <exception cref="SyncBatchValidationException">The result does not exactly match the leased batch.</exception>
     internal void ApplySyncResult(Guid leaseId, RemoteSyncResult result, CancellationToken cancellationToken)
     {
         SqliteLocalCommitValidation.ValidateSyncResultInput(leaseId, result);
         cancellationToken.ThrowIfCancellationRequested();
         var storeIdentity = GetInitializedStoreIdentityForOperation();
-        using var connection = OpenStoreConnection(storeIdentity, forWrite: true);
+        using var connection = OpenStoreConnection(storeIdentity, cancellationToken, forWrite: true);
         SqliteLocalCommitConnection.ConfigureLockPolling(connection);
         SqliteConnectionSettings.ConfigureOperationalConnection(connection);
         using var transaction = SqliteLocalCommitConnection.BeginWriteTransaction(connection, cancellationToken);
@@ -964,7 +964,7 @@ internal sealed partial class SqliteLocalCommitStore : IDisposable
     /// <exception cref="InvalidOperationException">The store has not been initialized or the reconciliation is stale.</exception>
     /// <exception cref="ObjectDisposedException">This instance has been disposed.</exception>
     /// <exception cref="OperationCanceledException">The operation is canceled before the transaction commits.</exception>
-    /// <exception cref="SqliteException">SQLite rejects the operation.</exception>
+    /// <exception cref="SqliteDatabaseException">SQLite rejects the operation.</exception>
     /// <exception cref="SyncBatchValidationException">The result does not exactly match the leased batch.</exception>
     internal IReadOnlyList<LocalSnapshot> ApplySyncResult(
         Guid leaseId,
@@ -976,7 +976,7 @@ internal sealed partial class SqliteLocalCommitStore : IDisposable
         ArgumentExceptionHelper.ThrowIfNull(snapshotMutations);
         cancellationToken.ThrowIfCancellationRequested();
         var storeIdentity = GetInitializedStoreIdentityForOperation();
-        using var connection = OpenStoreConnection(storeIdentity, forWrite: true);
+        using var connection = OpenStoreConnection(storeIdentity, cancellationToken, forWrite: true);
         SqliteLocalCommitConnection.ConfigureLockPolling(connection);
         SqliteConnectionSettings.ConfigureOperationalConnection(connection);
         using var transaction = SqliteLocalCommitConnection.BeginWriteTransaction(connection, cancellationToken);
@@ -1032,7 +1032,7 @@ internal sealed partial class SqliteLocalCommitStore : IDisposable
     /// <exception cref="InvalidOperationException">The store is not initialized or the transaction fences are stale.</exception>
     /// <exception cref="ObjectDisposedException">This instance has been disposed.</exception>
     /// <exception cref="OperationCanceledException">The operation is canceled before the transaction commits.</exception>
-    /// <exception cref="SqliteException">SQLite rejects the operation.</exception>
+    /// <exception cref="SqliteDatabaseException">SQLite rejects the operation.</exception>
     internal LocalSnapshot DeadLetterOperation(
         Guid leaseId,
         OperationId operationId,
@@ -1043,7 +1043,7 @@ internal sealed partial class SqliteLocalCommitStore : IDisposable
         SqliteLocalCommitValidation.ValidateDeadLetterInput(leaseId, operationId, reasonCode, snapshotMutation);
         cancellationToken.ThrowIfCancellationRequested();
         var storeIdentity = GetInitializedStoreIdentityForOperation();
-        using var connection = OpenStoreConnection(storeIdentity, forWrite: true);
+        using var connection = OpenStoreConnection(storeIdentity, cancellationToken, forWrite: true);
         SqliteLocalCommitConnection.ConfigureLockPolling(connection);
         SqliteConnectionSettings.ConfigureOperationalConnection(connection);
         using var transaction = SqliteLocalCommitConnection.BeginWriteTransaction(connection, cancellationToken);
@@ -1166,7 +1166,7 @@ internal sealed partial class SqliteLocalCommitStore : IDisposable
     /// <returns>The recovered payload rows.</returns>
     /// <exception cref="SqlitePayloadQuarantineException">A persisted payload row is corrupt.</exception>
     private static SqliteRecoveredPayloadRows ReadRecoverablePayloadRows(
-        SqliteConnection connection,
+        SqliteDatabase connection,
         SqliteTransaction transaction,
         string storeIdentity,
         StreamId streamId,
@@ -1181,7 +1181,7 @@ internal sealed partial class SqliteLocalCommitStore : IDisposable
     /// <param name="connection">The open connection.</param>
     /// <param name="transaction">The active transaction.</param>
     /// <param name="userVersion">The current user version.</param>
-    private static void InitializeSchema(SqliteConnection connection, SqliteTransaction transaction, long userVersion)
+    private static void InitializeSchema(SqliteDatabase connection, SqliteTransaction transaction, long userVersion)
     {
         if (userVersion == 0 && !SqliteLocalCommitConnection.HasUserTables(connection, transaction))
         {
@@ -1215,7 +1215,7 @@ internal sealed partial class SqliteLocalCommitStore : IDisposable
     /// <param name="request">The quarantine request.</param>
     /// <exception cref="InvalidOperationException">The supplied operation is missing or belongs to another stream.</exception>
     private static void ValidateQuarantineOperationBinding(
-        SqliteConnection connection,
+        SqliteDatabase connection,
         SqliteTransaction transaction,
         string storeIdentity,
         LocalPayloadQuarantineRequest request)
@@ -1336,7 +1336,7 @@ internal sealed partial class SqliteLocalCommitStore : IDisposable
     /// <param name="transaction">The open write transaction.</param>
     /// <param name="beforeCommit">The checkpoint reported inside the transaction.</param>
     /// <param name="afterCommit">The checkpoint reported after the transaction commits.</param>
-    /// <exception cref="SqliteException">SQLite rejects the commit.</exception>
+    /// <exception cref="SqliteDatabaseException">SQLite rejects the commit.</exception>
     private void CommitAtCheckpoints(SqliteTransaction transaction, SqliteCommitCheckpoint beforeCommit, SqliteCommitCheckpoint afterCommit)
     {
         _faultPoint.Reached(beforeCommit);
@@ -1346,7 +1346,7 @@ internal sealed partial class SqliteLocalCommitStore : IDisposable
 
     /// <summary>Applies operational settings and notifies the internal commit test seam.</summary>
     /// <param name="connection">The local commit connection.</param>
-    private void ConfigureLocalCommitConnection(SqliteConnection connection)
+    private void ConfigureLocalCommitConnection(SqliteDatabase connection)
     {
         SqliteConnectionSettings.ConfigureOperationalConnection(connection);
         _faultPoint.BeforeLocalCommitTransaction(connection);

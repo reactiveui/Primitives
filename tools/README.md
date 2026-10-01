@@ -17,6 +17,12 @@ dotnet run --project tools/OccasionallyConnected.Ci/OccasionallyConnected.Ci.csp
 
 Coverage checks the complete OccasionallyConnected test suite list on net8.0,
 net9.0, net10.0, or net11.0. Each adapter runs only on its supported frameworks.
+This matrix runs on every pull request and push to main.
+The Build workflow tests the other suites. It still builds every project.
+This split avoids repeating the feature matrix within one test-run deadline.
+Sonar builds every target. It runs the other suites on every supported target.
+It runs all feature suites on .NET 10 and imports their reports for source coverage.
+The required feature matrix still verifies the other frameworks.
 The runtime and SQLite suites share CPU-sized test budgets within each host.
 This bounds competing database fixtures. Each test still runs its own concurrent
 operations and keeps its original assertions and deadlines.

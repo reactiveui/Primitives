@@ -598,14 +598,14 @@ public sealed partial class SqliteLocalStoreAdapterTests
     private static void SetOutboxPayloadOversizedAndInvalid(string path)
     {
         using var connection = OpenRawConnection(path);
-        using var command = connection.CreateCommand();
-        command.CommandText = """
+        using var command = connection.CreateStatement();
+        command.SetSql("""
             UPDATE oc_outbox
             SET payload = zeroblob($payloadLength),
                 payload_schema_version = 0;
-            """;
-        _ = command.Parameters.AddWithValue("$payloadLength", OversizedPayloadLength);
-        _ = command.ExecuteNonQuery();
+            """);
+        _ = command.Bind("$payloadLength", OversizedPayloadLength);
+        _ = command.Execute();
     }
 
     /// <summary>Reads raw outbox evidence without decoding the intentionally corrupted operation scalar.</summary>
@@ -615,9 +615,9 @@ public sealed partial class SqliteLocalStoreAdapterTests
     private static (long Count, string OperationId, string OperationTypeStorage) ReadOutboxOperationEvidence(string path)
     {
         using var connection = OpenRawConnection(path);
-        using var command = connection.CreateCommand();
-        command.CommandText = "SELECT COUNT(*), MIN(operation_id), MIN(typeof(operation_type)) FROM oc_outbox;";
-        using var reader = command.ExecuteReader();
+        using var command = connection.CreateStatement();
+        command.SetSql("SELECT COUNT(*), MIN(operation_id), MIN(typeof(operation_type)) FROM oc_outbox;");
+        using var reader = command.Query();
         return reader.Read() && !reader.IsDBNull(OutboxEvidenceOperationIdIndex) && !reader.IsDBNull(OutboxEvidenceOperationTypeIndex)
             ? (
                 reader.GetInt64(OutboxEvidenceCountIndex),
@@ -631,13 +631,13 @@ public sealed partial class SqliteLocalStoreAdapterTests
     private static void SetOutboxOperationsReplayOnly(string path)
     {
         using var connection = OpenRawConnection(path);
-        using var command = connection.CreateCommand();
-        command.CommandText = """
+        using var command = connection.CreateStatement();
+        command.SetSql("""
             UPDATE oc_outbox_operation_states
             SET operation_state = 4;
             DELETE FROM oc_outbox_receive_inclusions;
-            """;
-        _ = command.ExecuteNonQuery();
+            """);
+        _ = command.Execute();
     }
 
     /// <summary>Corrupts one payload's schema and bytes while preserving its scalar lengths for preflight accounting.</summary>
@@ -646,15 +646,15 @@ public sealed partial class SqliteLocalStoreAdapterTests
     private static void SetOutboxPayloadSchemaZeroAndBytesInvalidForSequence(string path, long clientSequence)
     {
         using var connection = OpenRawConnection(path);
-        using var command = connection.CreateCommand();
-        command.CommandText = """
+        using var command = connection.CreateStatement();
+        command.SetSql("""
             UPDATE oc_outbox
             SET payload = zeroblob(length(CAST(payload AS BLOB))),
                 payload_schema_version = 0
             WHERE client_sequence = $clientSequence;
-            """;
-        _ = command.Parameters.AddWithValue("$clientSequence", clientSequence);
-        _ = command.ExecuteNonQuery();
+            """);
+        _ = command.Bind("$clientSequence", clientSequence);
+        _ = command.Execute();
     }
 
     /// <summary>Corrupts the operation type storage class without changing payload storage.</summary>
@@ -662,12 +662,12 @@ public sealed partial class SqliteLocalStoreAdapterTests
     private static void SetOutboxOperationTypeInvalid(string path)
     {
         using var connection = OpenRawConnection(path);
-        using var command = connection.CreateCommand();
-        command.CommandText = """
+        using var command = connection.CreateStatement();
+        command.SetSql("""
             UPDATE oc_outbox
             SET operation_type = 'not-an-integer';
-        """;
-        _ = command.ExecuteNonQuery();
+        """);
+        _ = command.Execute();
     }
 
     /// <summary>Corrupts one operation base version with non-text storage.</summary>
@@ -675,10 +675,10 @@ public sealed partial class SqliteLocalStoreAdapterTests
     private static void SetOutboxBaseVersionBlob(string path)
     {
         using var connection = OpenRawConnection(path);
-        using var command = connection.CreateCommand();
-        command.CommandText = "UPDATE oc_outbox SET base_version = zeroblob($blobLength);";
-        _ = command.Parameters.AddWithValue("$blobLength", CorruptScalarBlobLength);
-        _ = command.ExecuteNonQuery();
+        using var command = connection.CreateStatement();
+        command.SetSql("UPDATE oc_outbox SET base_version = zeroblob($blobLength);");
+        _ = command.Bind("$blobLength", CorruptScalarBlobLength);
+        _ = command.Execute();
     }
 
     /// <summary>Deletes durable stream rows while preserving subscription and payload rows for corruption tests.</summary>
@@ -686,13 +686,13 @@ public sealed partial class SqliteLocalStoreAdapterTests
     private static void DeleteStreamRows(string path)
     {
         using var connection = OpenRawConnection(path);
-        using var command = connection.CreateCommand();
-        command.CommandText = """
+        using var command = connection.CreateStatement();
+        command.SetSql("""
             PRAGMA foreign_keys = OFF;
             DELETE FROM oc_streams;
             PRAGMA foreign_keys = ON;
-        """;
-        _ = command.ExecuteNonQuery();
+        """);
+        _ = command.Execute();
     }
 
     /// <summary>Deletes subscription identity rows while preserving stream rows for corruption tests.</summary>
@@ -700,13 +700,13 @@ public sealed partial class SqliteLocalStoreAdapterTests
     private static void DeleteSubscriptionIdentityRows(string path)
     {
         using var connection = OpenRawConnection(path);
-        using var command = connection.CreateCommand();
-        command.CommandText = """
+        using var command = connection.CreateStatement();
+        command.SetSql("""
             PRAGMA foreign_keys = OFF;
             DELETE FROM oc_subscription_identities;
             PRAGMA foreign_keys = ON;
-            """;
-        _ = command.ExecuteNonQuery();
+            """);
+        _ = command.Execute();
     }
 
     /// <summary>Sets the durable snapshot cursor directly.</summary>
@@ -715,10 +715,10 @@ public sealed partial class SqliteLocalStoreAdapterTests
     private static void SetSnapshotServerCursor(string path, string cursor)
     {
         using var connection = OpenRawConnection(path);
-        using var command = connection.CreateCommand();
-        command.CommandText = "UPDATE oc_snapshots SET server_cursor = $cursor;";
-        _ = command.Parameters.AddWithValue("$cursor", cursor);
-        _ = command.ExecuteNonQuery();
+        using var command = connection.CreateStatement();
+        command.SetSql("UPDATE oc_snapshots SET server_cursor = $cursor;");
+        _ = command.Bind("$cursor", cursor);
+        _ = command.Execute();
     }
 
     /// <summary>Sets the stream cursor to non-text storage.</summary>
@@ -726,10 +726,10 @@ public sealed partial class SqliteLocalStoreAdapterTests
     private static void SetStreamServerCursorBlob(string path)
     {
         using var connection = OpenRawConnection(path);
-        using var command = connection.CreateCommand();
-        command.CommandText = "UPDATE oc_streams SET server_cursor = zeroblob($blobLength);";
-        _ = command.Parameters.AddWithValue("$blobLength", CorruptScalarBlobLength);
-        _ = command.ExecuteNonQuery();
+        using var command = connection.CreateStatement();
+        command.SetSql("UPDATE oc_streams SET server_cursor = zeroblob($blobLength);");
+        _ = command.Bind("$blobLength", CorruptScalarBlobLength);
+        _ = command.Execute();
     }
 
     /// <summary>Sets the subscription identity row to raw text.</summary>
@@ -738,14 +738,14 @@ public sealed partial class SqliteLocalStoreAdapterTests
     private static void SetSubscriptionIdentityText(string path, string subscriptionId)
     {
         using var connection = OpenRawConnection(path);
-        using var command = connection.CreateCommand();
-        command.CommandText = """
+        using var command = connection.CreateStatement();
+        command.SetSql("""
             PRAGMA foreign_keys = OFF;
             UPDATE oc_subscription_identities SET subscription_id = $subscriptionId;
             PRAGMA foreign_keys = ON;
-            """;
-        _ = command.Parameters.AddWithValue("$subscriptionId", subscriptionId);
-        _ = command.ExecuteNonQuery();
+            """);
+        _ = command.Bind("$subscriptionId", subscriptionId);
+        _ = command.Execute();
     }
 
     /// <summary>Sets the stream subscription identity to a different valid identifier.</summary>
@@ -754,10 +754,10 @@ public sealed partial class SqliteLocalStoreAdapterTests
     private static void SetStreamSubscriptionId(string path, SubscriptionId subscriptionId)
     {
         using var connection = OpenRawConnection(path);
-        using var command = connection.CreateCommand();
-        command.CommandText = "UPDATE oc_streams SET subscription_id = $subscriptionId;";
-        _ = command.Parameters.AddWithValue("$subscriptionId", subscriptionId.Value.ToString("D"));
-        _ = command.ExecuteNonQuery();
+        using var command = connection.CreateStatement();
+        command.SetSql("UPDATE oc_streams SET subscription_id = $subscriptionId;");
+        _ = command.Bind("$subscriptionId", subscriptionId.Value.ToString("D"));
+        _ = command.Execute();
     }
 
     /// <summary>Sets the stream subscription identity to raw text.</summary>
@@ -766,10 +766,10 @@ public sealed partial class SqliteLocalStoreAdapterTests
     private static void SetStreamSubscriptionIdText(string path, string subscriptionId)
     {
         using var connection = OpenRawConnection(path);
-        using var command = connection.CreateCommand();
-        command.CommandText = "UPDATE oc_streams SET subscription_id = $rawSubscriptionId;";
-        _ = command.Parameters.AddWithValue("$rawSubscriptionId", subscriptionId);
-        _ = command.ExecuteNonQuery();
+        using var command = connection.CreateStatement();
+        command.SetSql("UPDATE oc_streams SET subscription_id = $rawSubscriptionId;");
+        _ = command.Bind("$rawSubscriptionId", subscriptionId);
+        _ = command.Execute();
     }
 
     /// <summary>Reads raw snapshot cursor evidence without using recovery decoders.</summary>
@@ -779,8 +779,8 @@ public sealed partial class SqliteLocalStoreAdapterTests
     private static (string? SnapshotCursor, string? StreamCursor, long OperationCount) ReadSnapshotCursorEvidence(string path)
     {
         using var connection = OpenRawConnection(path);
-        using var command = connection.CreateCommand();
-        command.CommandText = """
+        using var command = connection.CreateStatement();
+        command.SetSql("""
             SELECT snapshot.server_cursor, stream.server_cursor, COUNT(outbox.operation_id)
             FROM oc_snapshots AS snapshot
             LEFT JOIN oc_streams AS stream
@@ -788,8 +788,8 @@ public sealed partial class SqliteLocalStoreAdapterTests
             LEFT JOIN oc_outbox AS outbox
                 ON outbox.store_identity = snapshot.store_identity AND outbox.stream_id = snapshot.stream_id
             GROUP BY snapshot.server_cursor, stream.server_cursor;
-            """;
-        using var reader = command.ExecuteReader();
+            """);
+        using var reader = command.Query();
         if (!reader.Read())
         {
             throw new InvalidOperationException("Expected one snapshot cursor evidence row.");
@@ -807,9 +807,9 @@ public sealed partial class SqliteLocalStoreAdapterTests
     private static string ReadSubscriptionIdentityText(string path)
     {
         using var connection = OpenRawConnection(path);
-        using var command = connection.CreateCommand();
-        command.CommandText = "SELECT subscription_id FROM oc_subscription_identities LIMIT 1;";
-        return command.ExecuteScalar() is string value
+        using var command = connection.CreateStatement();
+        command.SetSql("SELECT subscription_id FROM oc_subscription_identities LIMIT 1;");
+        return command.Scalar() is string value
             ? value
             : throw new InvalidOperationException("Expected one subscription identity row.");
     }
@@ -821,9 +821,9 @@ public sealed partial class SqliteLocalStoreAdapterTests
     private static long ReadSubscriptionIdentityCount(string path)
     {
         using var connection = OpenRawConnection(path);
-        using var command = connection.CreateCommand();
-        command.CommandText = "SELECT COUNT(*) FROM oc_subscription_identities;";
-        return command.ExecuteScalar() is long value
+        using var command = connection.CreateStatement();
+        command.SetSql("SELECT COUNT(*) FROM oc_subscription_identities;");
+        return command.Scalar() is long value
             ? value
             : throw new InvalidOperationException("Expected a subscription identity row count.");
     }
@@ -835,9 +835,9 @@ public sealed partial class SqliteLocalStoreAdapterTests
     private static string ReadStreamServerCursorStorage(string path)
     {
         using var connection = OpenRawConnection(path);
-        using var command = connection.CreateCommand();
-        command.CommandText = "SELECT typeof(server_cursor) FROM oc_streams LIMIT 1;";
-        return command.ExecuteScalar() is string value
+        using var command = connection.CreateStatement();
+        command.SetSql("SELECT typeof(server_cursor) FROM oc_streams LIMIT 1;");
+        return command.Scalar() is string value
             ? value
             : throw new InvalidOperationException("Expected one stream cursor storage row.");
     }
@@ -849,9 +849,9 @@ public sealed partial class SqliteLocalStoreAdapterTests
     private static string ReadStreamSubscriptionIdentityText(string path)
     {
         using var connection = OpenRawConnection(path);
-        using var command = connection.CreateCommand();
-        command.CommandText = "SELECT subscription_id FROM oc_streams LIMIT 1;";
-        return command.ExecuteScalar() is string value
+        using var command = connection.CreateStatement();
+        command.SetSql("SELECT subscription_id FROM oc_streams LIMIT 1;");
+        return command.Scalar() is string value
             ? value
             : throw new InvalidOperationException("Expected one stream subscription identity row.");
     }
@@ -863,9 +863,9 @@ public sealed partial class SqliteLocalStoreAdapterTests
     private static long ReadOutboxOperationIdLength(string path)
     {
         using var connection = OpenRawConnection(path);
-        using var command = connection.CreateCommand();
-        command.CommandText = "SELECT length(CAST(operation_id AS BLOB)) FROM oc_outbox LIMIT 1;";
-        return command.ExecuteScalar() is long value
+        using var command = connection.CreateStatement();
+        command.SetSql("SELECT length(CAST(operation_id AS BLOB)) FROM oc_outbox LIMIT 1;");
+        return command.Scalar() is long value
             ? value
             : throw new InvalidOperationException("Expected one operation id length row.");
     }
@@ -877,9 +877,9 @@ public sealed partial class SqliteLocalStoreAdapterTests
     private static string ReadOutboxBaseVersionStorage(string path)
     {
         using var connection = OpenRawConnection(path);
-        using var command = connection.CreateCommand();
-        command.CommandText = "SELECT typeof(base_version) FROM oc_outbox LIMIT 1;";
-        return command.ExecuteScalar() is string value
+        using var command = connection.CreateStatement();
+        command.SetSql("SELECT typeof(base_version) FROM oc_outbox LIMIT 1;");
+        return command.Scalar() is string value
             ? value
             : throw new InvalidOperationException("Expected one operation base version storage row.");
     }

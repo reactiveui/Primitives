@@ -4,6 +4,7 @@
 
 using System.Text;
 using ReactiveUI.Primitives.OccasionallyConnected;
+using ReactiveUI.Primitives.OccasionallyConnected.Sqlite;
 using ReactiveUI.Primitives.OccasionallyConnected.Storage.Sqlite;
 
 namespace ReactiveUI.Primitives.OccasionallyConnected.Storage.Sqlite.Tests;
@@ -277,14 +278,14 @@ public sealed partial class SqliteLocalStoreAdapterTests
     private static void SwapOutboxPayloadRows(string path)
     {
         using var connection = OpenRawConnection(path);
-        using var command = connection.CreateCommand();
-        command.CommandText = """
+        using var command = connection.CreateStatement();
+        command.SetSql("""
             UPDATE oc_outbox
             SET payload = (SELECT payload FROM oc_outbox WHERE client_sequence = 1),
                 payload_hash = (SELECT payload_hash FROM oc_outbox WHERE client_sequence = 1)
             WHERE client_sequence = 2;
-            """;
-        _ = command.ExecuteNonQuery();
+            """);
+        _ = command.Execute();
     }
 
     /// <summary>Changes the plaintext content type of the pending outbox row.</summary>
@@ -292,9 +293,9 @@ public sealed partial class SqliteLocalStoreAdapterTests
     private static void ChangePendingOutboxContentType(string path)
     {
         using var connection = OpenRawConnection(path);
-        using var command = connection.CreateCommand();
-        command.CommandText = "UPDATE oc_outbox SET payload_content_type = 'text/plain' WHERE client_sequence = 2;";
-        _ = command.ExecuteNonQuery();
+        using var command = connection.CreateStatement();
+        command.SetSql("UPDATE oc_outbox SET payload_content_type = 'text/plain' WHERE client_sequence = 2;");
+        _ = command.Execute();
     }
 
     /// <summary>Copies the snapshot cursor ciphertext onto the stream row.</summary>
@@ -302,13 +303,13 @@ public sealed partial class SqliteLocalStoreAdapterTests
     private static void MoveSnapshotCursorToStream(string path)
     {
         using var connection = OpenRawConnection(path);
-        using var command = connection.CreateCommand();
-        command.CommandText = """
+        using var command = connection.CreateStatement();
+        command.SetSql("""
             UPDATE oc_streams
             SET server_cursor = (SELECT server_cursor FROM oc_snapshots WHERE stream_id = 'sensor/temperature')
             WHERE stream_id = 'sensor/temperature';
-            """;
-        _ = command.ExecuteNonQuery();
+            """);
+        _ = command.Execute();
     }
 
     /// <summary>Flips the last byte of the snapshot payload ciphertext.</summary>
@@ -317,16 +318,16 @@ public sealed partial class SqliteLocalStoreAdapterTests
     {
         using var connection = OpenRawConnection(path);
         byte[] value;
-        using (var read = connection.CreateCommand())
+        using (var read = connection.CreateStatement())
         {
-            read.CommandText = "SELECT payload FROM oc_snapshots WHERE stream_id = 'sensor/temperature';";
-            value = FlipLastByte(read.ExecuteScalar());
+            read.SetSql("SELECT payload FROM oc_snapshots WHERE stream_id = 'sensor/temperature';");
+            value = FlipLastByte(read.Scalar());
         }
 
-        using var write = connection.CreateCommand();
-        write.CommandText = "UPDATE oc_snapshots SET payload = $value WHERE stream_id = 'sensor/temperature';";
-        _ = write.Parameters.AddWithValue("$value", value);
-        _ = write.ExecuteNonQuery();
+        using var write = connection.CreateStatement();
+        write.SetSql("UPDATE oc_snapshots SET payload = $value WHERE stream_id = 'sensor/temperature';");
+        _ = write.Bind("$value", value);
+        _ = write.Execute();
     }
 
     /// <summary>Flips the last byte of the pending outbox payload ciphertext.</summary>
@@ -335,16 +336,16 @@ public sealed partial class SqliteLocalStoreAdapterTests
     {
         using var connection = OpenRawConnection(path);
         byte[] value;
-        using (var read = connection.CreateCommand())
+        using (var read = connection.CreateStatement())
         {
-            read.CommandText = "SELECT payload FROM oc_outbox WHERE client_sequence = 2;";
-            value = FlipLastByte(read.ExecuteScalar());
+            read.SetSql("SELECT payload FROM oc_outbox WHERE client_sequence = 2;");
+            value = FlipLastByte(read.Scalar());
         }
 
-        using var write = connection.CreateCommand();
-        write.CommandText = "UPDATE oc_outbox SET payload = $value WHERE client_sequence = 2;";
-        _ = write.Parameters.AddWithValue("$value", value);
-        _ = write.ExecuteNonQuery();
+        using var write = connection.CreateStatement();
+        write.SetSql("UPDATE oc_outbox SET payload = $value WHERE client_sequence = 2;");
+        _ = write.Bind("$value", value);
+        _ = write.Execute();
     }
 
     /// <summary>Returns a copy of a BLOB value with its last byte flipped.</summary>
@@ -363,9 +364,9 @@ public sealed partial class SqliteLocalStoreAdapterTests
     private static string ReadPendingPayloadKeyId(string path)
     {
         using var connection = OpenRawConnection(path);
-        using var command = connection.CreateCommand();
-        command.CommandText = "SELECT payload FROM oc_outbox WHERE client_sequence = 2;";
-        return ReadEnvelopeKeyId(command.ExecuteScalar());
+        using var command = connection.CreateStatement();
+        command.SetSql("SELECT payload FROM oc_outbox WHERE client_sequence = 2;");
+        return ReadEnvelopeKeyId(command.Scalar());
     }
 
     /// <summary>Reads the key identifier of the stream cursor envelope.</summary>
@@ -374,9 +375,9 @@ public sealed partial class SqliteLocalStoreAdapterTests
     private static string ReadStreamCursorKeyId(string path)
     {
         using var connection = OpenRawConnection(path);
-        using var command = connection.CreateCommand();
-        command.CommandText = "SELECT server_cursor FROM oc_streams WHERE stream_id = 'sensor/temperature';";
-        return ReadEnvelopeKeyId(command.ExecuteScalar());
+        using var command = connection.CreateStatement();
+        command.SetSql("SELECT server_cursor FROM oc_streams WHERE stream_id = 'sensor/temperature';");
+        return ReadEnvelopeKeyId(command.Scalar());
     }
 
     /// <summary>Counts the record protection markers.</summary>
@@ -385,9 +386,9 @@ public sealed partial class SqliteLocalStoreAdapterTests
     private static object? ReadProtectionMarkerCount(string path)
     {
         using var connection = OpenRawConnection(path);
-        using var command = connection.CreateCommand();
-        command.CommandText = "SELECT COUNT(*) FROM oc_metadata WHERE key = 'rxui.localstore.record_protection';";
-        return command.ExecuteScalar();
+        using var command = connection.CreateStatement();
+        command.SetSql("SELECT COUNT(*) FROM oc_metadata WHERE key = 'rxui.localstore.record_protection';");
+        return command.Scalar();
     }
 
     /// <summary>Reads the key identifier from a stored envelope.</summary>
@@ -405,7 +406,7 @@ public sealed partial class SqliteLocalStoreAdapterTests
     private sealed class ThrowingCommitFaultPoint(SqliteCommitCheckpoint target) : ISqliteCommitFaultPoint
     {
         /// <inheritdoc/>
-        public void BeforeLocalCommitTransaction(Microsoft.Data.Sqlite.SqliteConnection connection)
+        public void BeforeLocalCommitTransaction(SqliteDatabase connection)
         {
         }
 
@@ -415,6 +416,26 @@ public sealed partial class SqliteLocalStoreAdapterTests
             if (checkpoint == target)
             {
                 throw new IOException($"Simulated crash at {checkpoint}.");
+            }
+        }
+    }
+
+    /// <summary>Cancels the caller token at the exact configured commit checkpoint.</summary>
+    /// <param name="target">The checkpoint that cancels the caller.</param>
+    /// <param name="cancellation">The caller's cancellation source.</param>
+    private sealed class CancelingCommitFaultPoint(SqliteCommitCheckpoint target, CancellationTokenSource cancellation) : ISqliteCommitFaultPoint
+    {
+        /// <inheritdoc/>
+        public void BeforeLocalCommitTransaction(SqliteDatabase connection)
+        {
+        }
+
+        /// <inheritdoc/>
+        public void Reached(SqliteCommitCheckpoint checkpoint)
+        {
+            if (checkpoint == target)
+            {
+                cancellation.Cancel();
             }
         }
     }

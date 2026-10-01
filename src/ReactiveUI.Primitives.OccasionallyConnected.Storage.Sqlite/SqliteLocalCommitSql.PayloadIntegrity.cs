@@ -3,8 +3,8 @@
 // See the LICENSE file in the project root for full license information.
 
 using System.Runtime.CompilerServices;
-using Microsoft.Data.Sqlite;
 using ReactiveUI.Primitives.OccasionallyConnected;
+using ReactiveUI.Primitives.OccasionallyConnected.Sqlite;
 
 namespace ReactiveUI.Primitives.OccasionallyConnected.Storage.Sqlite;
 
@@ -21,7 +21,7 @@ internal static partial class SqliteLocalCommitSql
     /// <returns>The stored payload length.</returns>
     /// <exception cref="InvalidOperationException">Stored SQLite data is invalid.</exception>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static long ReadPayloadLength(SqliteDataReader reader, SqlitePayloadEvidenceColumns columns) =>
+    private static long ReadPayloadLength(SqliteRows reader, SqlitePayloadEvidenceColumns columns) =>
         ReadProjectedNonNegativeLength(reader, columns.PayloadLengthIndex, "The SQLite payload bytes are invalid.");
 
     /// <summary>Reads the total stored payload metadata length from bounded SQL evidence.</summary>
@@ -29,7 +29,7 @@ internal static partial class SqliteLocalCommitSql
     /// <param name="columns">The evidence columns.</param>
     /// <returns>The stored metadata length.</returns>
     /// <exception cref="InvalidOperationException">Stored SQLite data is invalid.</exception>
-    private static long ReadPayloadMetadataLength(SqliteDataReader reader, SqlitePayloadEvidenceColumns columns)
+    private static long ReadPayloadMetadataLength(SqliteRows reader, SqlitePayloadEvidenceColumns columns)
     {
         var length = ReadProjectedNonNegativeLength(reader, columns.ContractLengthIndex, "The SQLite payload contract is invalid.");
         length = checked(length + ReadProjectedNonNegativeLength(reader, columns.ContentTypeLengthIndex, "The SQLite payload content type is invalid."));
@@ -43,7 +43,7 @@ internal static partial class SqliteLocalCommitSql
     /// <returns>The length.</returns>
     /// <exception cref="InvalidOperationException">Stored SQLite data is invalid.</exception>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static long ReadProjectedNonNegativeLength(SqliteDataReader reader, int index, string message) =>
+    private static long ReadProjectedNonNegativeLength(SqliteRows reader, int index, string message) =>
         ReadNonNegativeLong(reader, index, message);
 
     /// <summary>Reads and validates the canonical stored payload hash when bounded SQL evidence proves canonical hash intent.</summary>
@@ -51,7 +51,7 @@ internal static partial class SqliteLocalCommitSql
     /// <param name="columns">The evidence columns.</param>
     /// <returns>The canonical payload hash, or null when the stored hash uses the legacy opaque hash contract.</returns>
     /// <exception cref="InvalidOperationException">Stored SQLite data is invalid.</exception>
-    private static string? ReadCanonicalPayloadHashPreflight(SqliteDataReader reader, SqlitePayloadEvidenceColumns columns)
+    private static string? ReadCanonicalPayloadHashPreflight(SqliteRows reader, SqlitePayloadEvidenceColumns columns)
     {
         var hashLength = ReadProjectedNonNegativeLength(reader, columns.HashLengthIndex, InvalidPayloadHashMessage);
         if (hashLength == 0)
@@ -98,8 +98,8 @@ internal static partial class SqliteLocalCommitSql
     /// <param name="payloadHash">The stored canonical payload hash.</param>
     /// <exception cref="InvalidOperationException">Stored SQLite payload bytes do not match their hash.</exception>
     private static void ValidatePayloadHash(
-        SqliteConnection connection,
-        SqliteDataReader reader,
+        SqliteDatabase connection,
+        SqliteRows reader,
         SqlitePayloadColumns columns,
         long payloadLength,
         string payloadHash)
@@ -119,8 +119,8 @@ internal static partial class SqliteLocalCommitSql
     /// <returns>The payload bytes.</returns>
     /// <exception cref="InvalidOperationException">Stored SQLite payload bytes are invalid.</exception>
     private static byte[] ReadPayloadBytes(
-        SqliteConnection connection,
-        SqliteDataReader reader,
+        SqliteDatabase connection,
+        SqliteRows reader,
         SqlitePayloadColumns columns,
         long payloadLength)
     {
@@ -135,19 +135,17 @@ internal static partial class SqliteLocalCommitSql
     /// <param name="payloadLength">The projected payload length.</param>
     /// <returns>The opened BLOB stream.</returns>
     /// <exception cref="InvalidOperationException">Stored SQLite payload bytes are invalid.</exception>
-    private static SqliteBlob OpenPayloadBlob(
-        SqliteConnection connection,
-        SqliteDataReader reader,
+    private static SqliteBlobStream OpenPayloadBlob(
+        SqliteDatabase connection,
+        SqliteRows reader,
         SqlitePayloadColumns columns,
         long payloadLength)
     {
         var rowId = ReadPositiveLong(reader, columns.Source.RowIdIndex, "The SQLite payload rowid is invalid.");
-        var payload = new SqliteBlob(
-            connection,
+        var payload = connection.OpenBlob(
             columns.Source.TableName,
             columns.Source.PayloadColumnName,
-            rowId,
-            readOnly: true);
+            rowId);
         return SqlitePayloadStreamIntegrity.AcceptLength(
             payload,
             payloadLength,

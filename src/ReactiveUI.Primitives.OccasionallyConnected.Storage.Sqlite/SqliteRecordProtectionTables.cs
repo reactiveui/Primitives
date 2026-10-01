@@ -3,8 +3,8 @@
 // See the LICENSE file in the project root for full license information.
 
 using System.Runtime.CompilerServices;
-using Microsoft.Data.Sqlite;
 using ReactiveUI.Primitives.OccasionallyConnected;
+using ReactiveUI.Primitives.OccasionallyConnected.Sqlite;
 
 namespace ReactiveUI.Primitives.OccasionallyConnected.Storage.Sqlite;
 
@@ -156,66 +156,66 @@ internal static class SqliteRecordProtectionTables
     /// <param name="column">The column name.</param>
     /// <returns>The stored value.</returns>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    internal static object GetValue(SqliteDataReader reader, string column) => reader.GetValue(reader.GetOrdinal(column));
+    internal static object GetValue(SqliteRows reader, string column) => reader.GetValue(reader.GetOrdinal(column));
 
     /// <summary>Sets the constant batch query of a table.</summary>
     /// <param name="command">The command.</param>
     /// <param name="kind">The table.</param>
-    internal static void SetSelectSql(SqliteCommand command, SqliteProtectedTableKind kind)
+    internal static void SetSelectSql(SqliteStatement command, SqliteProtectedTableKind kind)
     {
         switch (kind)
         {
             case SqliteProtectedTableKind.Outbox:
             {
-                command.CommandText = OutboxSelectSql;
+                command.SetSql(OutboxSelectSql);
                 break;
             }
 
             case SqliteProtectedTableKind.OutboxAuthoritativeMutations:
             {
-                command.CommandText = OutboxAuthoritativeMutationsSelectSql;
+                command.SetSql(OutboxAuthoritativeMutationsSelectSql);
                 break;
             }
 
             case SqliteProtectedTableKind.OutboxMetadata:
             {
-                command.CommandText = OutboxMetadataSelectSql;
+                command.SetSql(OutboxMetadataSelectSql);
                 break;
             }
 
             case SqliteProtectedTableKind.Snapshots:
             {
-                command.CommandText = SnapshotsSelectSql;
+                command.SetSql(SnapshotsSelectSql);
                 break;
             }
 
             case SqliteProtectedTableKind.SnapshotAuthoritativeStates:
             {
-                command.CommandText = SnapshotAuthoritativeStatesSelectSql;
+                command.SetSql(SnapshotAuthoritativeStatesSelectSql);
                 break;
             }
 
             case SqliteProtectedTableKind.Streams:
             {
-                command.CommandText = StreamsSelectSql;
+                command.SetSql(StreamsSelectSql);
                 break;
             }
 
             case SqliteProtectedTableKind.Inbox:
             {
-                command.CommandText = InboxSelectSql;
+                command.SetSql(InboxSelectSql);
                 break;
             }
 
             case SqliteProtectedTableKind.PayloadQuarantine:
             {
-                command.CommandText = PayloadQuarantineSelectSql;
+                command.SetSql(PayloadQuarantineSelectSql);
                 break;
             }
 
             default:
             {
-                command.CommandText = DeadLettersSelectSql;
+                command.SetSql(DeadLettersSelectSql);
                 break;
             }
         }
@@ -224,61 +224,61 @@ internal static class SqliteRecordProtectionTables
     /// <summary>Sets the constant update statement of a table.</summary>
     /// <param name="command">The command.</param>
     /// <param name="kind">The table.</param>
-    internal static void SetUpdateSql(SqliteCommand command, SqliteProtectedTableKind kind)
+    internal static void SetUpdateSql(SqliteStatement command, SqliteProtectedTableKind kind)
     {
         switch (kind)
         {
             case SqliteProtectedTableKind.Outbox:
             {
-                command.CommandText = OutboxUpdateSql;
+                command.SetSql(OutboxUpdateSql);
                 break;
             }
 
             case SqliteProtectedTableKind.OutboxAuthoritativeMutations:
             {
-                command.CommandText = OutboxAuthoritativeMutationsUpdateSql;
+                command.SetSql(OutboxAuthoritativeMutationsUpdateSql);
                 break;
             }
 
             case SqliteProtectedTableKind.OutboxMetadata:
             {
-                command.CommandText = OutboxMetadataUpdateSql;
+                command.SetSql(OutboxMetadataUpdateSql);
                 break;
             }
 
             case SqliteProtectedTableKind.Snapshots:
             {
-                command.CommandText = SnapshotsUpdateSql;
+                command.SetSql(SnapshotsUpdateSql);
                 break;
             }
 
             case SqliteProtectedTableKind.SnapshotAuthoritativeStates:
             {
-                command.CommandText = SnapshotAuthoritativeStatesUpdateSql;
+                command.SetSql(SnapshotAuthoritativeStatesUpdateSql);
                 break;
             }
 
             case SqliteProtectedTableKind.Streams:
             {
-                command.CommandText = StreamsUpdateSql;
+                command.SetSql(StreamsUpdateSql);
                 break;
             }
 
             case SqliteProtectedTableKind.Inbox:
             {
-                command.CommandText = InboxUpdateSql;
+                command.SetSql(InboxUpdateSql);
                 break;
             }
 
             case SqliteProtectedTableKind.PayloadQuarantine:
             {
-                command.CommandText = PayloadQuarantineUpdateSql;
+                command.SetSql(PayloadQuarantineUpdateSql);
                 break;
             }
 
             default:
             {
-                command.CommandText = DeadLettersUpdateSql;
+                command.SetSql(DeadLettersUpdateSql);
                 break;
             }
         }
@@ -288,7 +288,7 @@ internal static class SqliteRecordProtectionTables
     /// <param name="reader">The reader.</param>
     /// <param name="values">The protected values.</param>
     /// <returns>Whether the row can be bound.</returns>
-    private static bool DescribeOutbox(SqliteDataReader reader, List<SqliteProtectedValue> values)
+    private static bool DescribeOutbox(SqliteRows reader, List<SqliteProtectedValue> values)
     {
         if (!TryReadOperationId(reader, OperationIdColumn, out var operationId)
             || !TryReadStreamId(reader, StreamIdColumn, out var streamId)
@@ -314,7 +314,7 @@ internal static class SqliteRecordProtectionTables
     /// <param name="reader">The reader.</param>
     /// <param name="values">The protected values.</param>
     /// <returns>Whether the row can be bound.</returns>
-    private static bool DescribeOutboxAuthoritativeMutation(SqliteDataReader reader, List<SqliteProtectedValue> values)
+    private static bool DescribeOutboxAuthoritativeMutation(SqliteRows reader, List<SqliteProtectedValue> values)
     {
         if (!TryReadOperationId(reader, OperationIdColumn, out var operationId)
             || !TryReadPayloadContext(reader, SqliteRecordContext.OutboxAuthoritativeMutation(operationId), out var payloadContext))
@@ -330,7 +330,7 @@ internal static class SqliteRecordProtectionTables
     /// <param name="reader">The reader.</param>
     /// <param name="values">The protected values.</param>
     /// <returns>Whether the row can be bound.</returns>
-    private static bool DescribeOutboxMetadata(SqliteDataReader reader, List<SqliteProtectedValue> values)
+    private static bool DescribeOutboxMetadata(SqliteRows reader, List<SqliteProtectedValue> values)
     {
         if (!TryReadOperationId(reader, OperationIdColumn, out var operationId) || GetValue(reader, "key") is not string key)
         {
@@ -345,7 +345,7 @@ internal static class SqliteRecordProtectionTables
     /// <param name="reader">The reader.</param>
     /// <param name="values">The protected values.</param>
     /// <returns>Whether the row can be bound.</returns>
-    private static bool DescribeSnapshot(SqliteDataReader reader, List<SqliteProtectedValue> values)
+    private static bool DescribeSnapshot(SqliteRows reader, List<SqliteProtectedValue> values)
     {
         if (!TryReadStreamId(reader, StreamIdColumn, out var streamId)
             || !TryReadInt(reader, "format_version", out var formatVersion)
@@ -369,7 +369,7 @@ internal static class SqliteRecordProtectionTables
     /// <param name="reader">The reader.</param>
     /// <param name="values">The protected values.</param>
     /// <returns>Whether the row can be bound.</returns>
-    private static bool DescribeSnapshotAuthoritativeState(SqliteDataReader reader, List<SqliteProtectedValue> values)
+    private static bool DescribeSnapshotAuthoritativeState(SqliteRows reader, List<SqliteProtectedValue> values)
     {
         if (!TryReadStreamId(reader, StreamIdColumn, out var streamId)
             || !TryReadPayloadContext(reader, SqliteRecordContext.SnapshotAuthoritativeState(streamId), out var payloadContext))
@@ -385,7 +385,7 @@ internal static class SqliteRecordProtectionTables
     /// <param name="reader">The reader.</param>
     /// <param name="values">The protected values.</param>
     /// <returns>Whether the row can be bound.</returns>
-    private static bool DescribeStream(SqliteDataReader reader, List<SqliteProtectedValue> values)
+    private static bool DescribeStream(SqliteRows reader, List<SqliteProtectedValue> values)
     {
         if (!TryReadStreamId(reader, StreamIdColumn, out var streamId))
         {
@@ -400,7 +400,7 @@ internal static class SqliteRecordProtectionTables
     /// <param name="reader">The reader.</param>
     /// <param name="values">The protected values.</param>
     /// <returns>Whether the row can be bound.</returns>
-    private static bool DescribeInbox(SqliteDataReader reader, List<SqliteProtectedValue> values)
+    private static bool DescribeInbox(SqliteRows reader, List<SqliteProtectedValue> values)
     {
         if (!TryReadStreamId(reader, StreamIdColumn, out var streamId) || !TryReadGuid(reader, "event_id", out var eventId))
         {
@@ -415,7 +415,7 @@ internal static class SqliteRecordProtectionTables
     /// <param name="reader">The reader.</param>
     /// <param name="values">The protected values.</param>
     /// <returns>Whether the row can be bound.</returns>
-    private static bool DescribeQuarantine(SqliteDataReader reader, List<SqliteProtectedValue> values)
+    private static bool DescribeQuarantine(SqliteRows reader, List<SqliteProtectedValue> values)
     {
         if (!TryReadStreamId(reader, StreamIdColumn, out var streamId) || !TryReadGuid(reader, "quarantine_id", out var quarantineId))
         {
@@ -436,7 +436,7 @@ internal static class SqliteRecordProtectionTables
     /// <param name="reader">The reader.</param>
     /// <param name="values">The protected values.</param>
     /// <returns>Whether the row can be bound.</returns>
-    private static bool DescribeDeadLetter(SqliteDataReader reader, List<SqliteProtectedValue> values)
+    private static bool DescribeDeadLetter(SqliteRows reader, List<SqliteProtectedValue> values)
     {
         if (!TryReadOperationId(reader, OperationIdColumn, out var operationId)
             || !TryReadInt(reader, "attempt_count", out var attemptCount)
@@ -466,7 +466,7 @@ internal static class SqliteRecordProtectionTables
     /// <param name="context">The row context.</param>
     /// <param name="payloadContext">The payload context.</param>
     /// <returns>Whether the metadata is well formed.</returns>
-    private static bool TryReadPayloadContext(SqliteDataReader reader, SqliteRecordContext context, out SqliteRecordContext payloadContext)
+    private static bool TryReadPayloadContext(SqliteRows reader, SqliteRecordContext context, out SqliteRecordContext payloadContext)
     {
         if (GetValue(reader, PayloadContractColumn) is string contractId
             && TryReadInt(reader, PayloadSchemaColumn, out var schemaVersion)
@@ -485,7 +485,7 @@ internal static class SqliteRecordProtectionTables
     /// <param name="column">The column name.</param>
     /// <param name="operationId">The operation identifier.</param>
     /// <returns>Whether the value is a non-empty GUID.</returns>
-    private static bool TryReadOperationId(SqliteDataReader reader, string column, out OperationId operationId)
+    private static bool TryReadOperationId(SqliteRows reader, string column, out OperationId operationId)
     {
         var parsed = TryReadGuid(reader, column, out var value);
         operationId = new(value);
@@ -497,7 +497,7 @@ internal static class SqliteRecordProtectionTables
     /// <param name="column">The column name.</param>
     /// <param name="value">The GUID.</param>
     /// <returns>Whether the value is a non-empty GUID.</returns>
-    private static bool TryReadGuid(SqliteDataReader reader, string column, out Guid value) =>
+    private static bool TryReadGuid(SqliteRows reader, string column, out Guid value) =>
         Guid.TryParse(GetValue(reader, column) as string, out value) && value != Guid.Empty;
 
     /// <summary>Reads a stream identifier.</summary>
@@ -505,7 +505,7 @@ internal static class SqliteRecordProtectionTables
     /// <param name="column">The column name.</param>
     /// <param name="streamId">The stream identifier.</param>
     /// <returns>Whether the value is a valid stream identifier.</returns>
-    private static bool TryReadStreamId(SqliteDataReader reader, string column, out StreamId streamId)
+    private static bool TryReadStreamId(SqliteRows reader, string column, out StreamId streamId)
     {
         streamId = default;
         if (GetValue(reader, column) is not string value)
@@ -529,7 +529,7 @@ internal static class SqliteRecordProtectionTables
     /// <param name="column">The column name.</param>
     /// <param name="value">The integer.</param>
     /// <returns>Whether the value is an INTEGER in the 32-bit range.</returns>
-    private static bool TryReadInt(SqliteDataReader reader, string column, out int value)
+    private static bool TryReadInt(SqliteRows reader, string column, out int value)
     {
         if (GetValue(reader, column) is long number && number is >= int.MinValue and <= int.MaxValue)
         {

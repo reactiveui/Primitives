@@ -4,7 +4,7 @@
 
 using System.Security.Cryptography;
 using System.Text;
-using Microsoft.Data.Sqlite;
+using ReactiveUI.Primitives.OccasionallyConnected.Sqlite;
 
 namespace ReactiveUI.Primitives.OccasionallyConnected.Storage.Sqlite;
 
@@ -51,17 +51,17 @@ internal static class SqliteSchemaChecksum
     /// <param name="connection">The open connection.</param>
     /// <param name="transaction">The current transaction.</param>
     /// <returns>The checksum text, prefixed with the algorithm name.</returns>
-    internal static string Compute(SqliteConnection connection, SqliteTransaction transaction)
+    internal static string Compute(SqliteDatabase connection, SqliteTransaction transaction)
     {
-        using var command = connection.CreateCommand();
-        command.Transaction = transaction;
-        command.CommandText = """
+        using var command = connection.CreateStatement();
+        command.UseTransaction(transaction);
+        command.SetSql("""
             SELECT type, name, tbl_name, sql FROM sqlite_master
             WHERE name NOT LIKE 'sqlite_%' AND sql IS NOT NULL
             ORDER BY type, name;
-            """;
+            """);
         StringBuilder builder = new();
-        using (var reader = command.ExecuteReader())
+        using (var reader = command.Query())
         {
             while (reader.Read())
             {
@@ -80,7 +80,7 @@ internal static class SqliteSchemaChecksum
     /// <param name="connection">The open connection.</param>
     /// <param name="transaction">The current transaction.</param>
     /// <exception cref="InvalidOperationException">The schema does not match its recorded checksum.</exception>
-    internal static void Verify(SqliteConnection connection, SqliteTransaction transaction)
+    internal static void Verify(SqliteDatabase connection, SqliteTransaction transaction)
     {
         var recorded = TrySelect(connection, transaction);
         if (recorded is not null && FixedTimeEquals(recorded, Compute(connection, transaction)))
@@ -96,7 +96,7 @@ internal static class SqliteSchemaChecksum
     /// <param name="connection">The open connection.</param>
     /// <param name="transaction">The write transaction.</param>
     /// <returns><see langword="true"/> when a new checksum was written.</returns>
-    internal static bool Record(SqliteConnection connection, SqliteTransaction transaction)
+    internal static bool Record(SqliteDatabase connection, SqliteTransaction transaction)
     {
         var computed = Compute(connection, transaction);
         var recorded = TrySelect(connection, transaction);
@@ -105,15 +105,15 @@ internal static class SqliteSchemaChecksum
             return false;
         }
 
-        using var command = connection.CreateCommand();
-        command.Transaction = transaction;
-        command.CommandText = """
+        using var command = connection.CreateStatement();
+        command.UseTransaction(transaction);
+        command.SetSql("""
             INSERT INTO oc_metadata (key, value) VALUES ($key, $value)
             ON CONFLICT (key) DO UPDATE SET value = excluded.value;
-            """;
-        _ = command.Parameters.AddWithValue("$key", MetadataKey);
-        _ = command.Parameters.AddWithValue("$value", computed);
-        _ = command.ExecuteNonQuery();
+            """);
+        _ = command.Bind("$key", MetadataKey);
+        _ = command.Bind("$value", computed);
+        _ = command.Execute();
         return true;
     }
 
@@ -121,13 +121,13 @@ internal static class SqliteSchemaChecksum
     /// <param name="connection">The open connection.</param>
     /// <param name="transaction">The current transaction.</param>
     /// <returns>The recorded checksum, or null when none is recorded.</returns>
-    internal static string? TrySelect(SqliteConnection connection, SqliteTransaction transaction)
+    internal static string? TrySelect(SqliteDatabase connection, SqliteTransaction transaction)
     {
-        using var command = connection.CreateCommand();
-        command.Transaction = transaction;
-        command.CommandText = "SELECT value FROM oc_metadata WHERE key = $key;";
-        _ = command.Parameters.AddWithValue("$key", MetadataKey);
-        return command.ExecuteScalar() as string;
+        using var command = connection.CreateStatement();
+        command.UseTransaction(transaction);
+        command.SetSql("SELECT value FROM oc_metadata WHERE key = $key;");
+        _ = command.Bind("$key", MetadataKey);
+        return command.Scalar() as string;
     }
 
     /// <summary>Hashes the normalized schema text.</summary>

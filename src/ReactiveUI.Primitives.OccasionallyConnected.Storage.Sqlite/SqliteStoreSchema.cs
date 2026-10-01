@@ -4,7 +4,7 @@
 
 using System.Globalization;
 using System.Text;
-using Microsoft.Data.Sqlite;
+using ReactiveUI.Primitives.OccasionallyConnected.Sqlite;
 
 namespace ReactiveUI.Primitives.OccasionallyConnected.Storage.Sqlite;
 
@@ -294,7 +294,7 @@ internal static class SqliteStoreSchema
     /// <param name="connection">The open connection.</param>
     /// <param name="transaction">The current transaction.</param>
     /// <exception cref="InvalidOperationException">The SQLite schema state is invalid.</exception>
-    internal static void CreateLocalCommitSchema(SqliteConnection connection, SqliteTransaction transaction)
+    internal static void CreateLocalCommitSchema(SqliteDatabase connection, SqliteTransaction transaction)
     {
         SetLocalCommitUserVersion(connection, transaction);
         CreateMetadataTable(connection, transaction);
@@ -316,7 +316,7 @@ internal static class SqliteStoreSchema
     /// <param name="userVersion">The SQLite user version.</param>
     /// <exception cref="InvalidOperationException">The existing schema is unsupported or invalid.</exception>
     internal static void ValidateExistingSchemaForLocalCommit(
-        SqliteConnection connection,
+        SqliteDatabase connection,
         SqliteTransaction transaction,
         long userVersion)
     {
@@ -333,7 +333,7 @@ internal static class SqliteStoreSchema
     /// <param name="connection">The open connection.</param>
     /// <param name="transaction">The active transaction.</param>
     /// <exception cref="InvalidOperationException">The table layout or schema metadata is invalid.</exception>
-    internal static void ValidateLocalCommitSchema(SqliteConnection connection, SqliteTransaction transaction)
+    internal static void ValidateLocalCommitSchema(SqliteDatabase connection, SqliteTransaction transaction)
     {
         ValidateUserTableNames(
             connection,
@@ -381,19 +381,19 @@ internal static class SqliteStoreSchema
     /// <param name="transaction">The transaction.</param>
     /// <param name="key">The metadata key.</param>
     /// <returns>The metadata value.</returns>
-    internal static string SelectMetadata(SqliteConnection connection, SqliteTransaction transaction, string key)
+    internal static string SelectMetadata(SqliteDatabase connection, SqliteTransaction transaction, string key)
     {
-        using var command = connection.CreateCommand();
-        command.Transaction = transaction;
-        command.CommandText = "SELECT value FROM oc_metadata WHERE key = $key;";
-        _ = command.Parameters.AddWithValue("$key", key);
-        return SqliteIdentityStoreData.ReadMetadataValue(command.ExecuteScalar());
+        using var command = connection.CreateStatement();
+        command.UseTransaction(transaction);
+        command.SetSql("SELECT value FROM oc_metadata WHERE key = $key;");
+        _ = command.Bind("$key", key);
+        return SqliteIdentityStoreData.ReadMetadataValue(command.Scalar());
     }
 
     /// <summary>Creates the core local commit tables.</summary>
     /// <param name="connection">The open connection.</param>
     /// <param name="transaction">The current transaction.</param>
-    private static void CreateLocalCommitTables(SqliteConnection connection, SqliteTransaction transaction)
+    private static void CreateLocalCommitTables(SqliteDatabase connection, SqliteTransaction transaction)
     {
         CreateStreamsTable(connection, transaction);
         CreateSnapshotsTable(connection, transaction);
@@ -404,7 +404,7 @@ internal static class SqliteStoreSchema
     /// <summary>Creates authoritative payload sidecar tables.</summary>
     /// <param name="connection">The open connection.</param>
     /// <param name="transaction">The current transaction.</param>
-    private static void CreateAuthoritativeStateTables(SqliteConnection connection, SqliteTransaction transaction)
+    private static void CreateAuthoritativeStateTables(SqliteDatabase connection, SqliteTransaction transaction)
     {
         CreateOutboxAuthoritativeMutationsTable(connection, transaction);
         CreateSnapshotAuthoritativeStatesTable(connection, transaction);
@@ -415,12 +415,12 @@ internal static class SqliteStoreSchema
     /// <param name="transaction">The current transaction.</param>
     /// <param name="expectedNames">The expected table names.</param>
     /// <exception cref="InvalidOperationException">The SQLite schema state is invalid.</exception>
-    private static void ValidateUserTableNames(SqliteConnection connection, SqliteTransaction transaction, string[] expectedNames)
+    private static void ValidateUserTableNames(SqliteDatabase connection, SqliteTransaction transaction, string[] expectedNames)
     {
-        using var command = connection.CreateCommand();
-        command.Transaction = transaction;
-        command.CommandText = "SELECT name FROM sqlite_master WHERE type = 'table' AND name NOT LIKE 'sqlite_%' ORDER BY name;";
-        using var reader = command.ExecuteReader();
+        using var command = connection.CreateStatement();
+        command.UseTransaction(transaction);
+        command.SetSql("SELECT name FROM sqlite_master WHERE type = 'table' AND name NOT LIKE 'sqlite_%' ORDER BY name;");
+        using var reader = command.Query();
         var found = 0;
         while (reader.Read())
         {
@@ -447,7 +447,7 @@ internal static class SqliteStoreSchema
     /// <param name="expectedSql">The expected SQL definition.</param>
     /// <exception cref="InvalidOperationException">The SQLite schema state is invalid.</exception>
     private static void ValidateTableDefinition(
-        SqliteConnection connection,
+        SqliteDatabase connection,
         SqliteTransaction transaction,
         string tableName,
         string expectedSql)
@@ -487,13 +487,13 @@ internal static class SqliteStoreSchema
     /// <param name="tableName">The table name.</param>
     /// <returns>The normalized table definition.</returns>
     /// <exception cref="InvalidOperationException">The SQLite schema state is invalid.</exception>
-    private static string ReadTableDefinition(SqliteConnection connection, SqliteTransaction transaction, string tableName)
+    private static string ReadTableDefinition(SqliteDatabase connection, SqliteTransaction transaction, string tableName)
     {
-        using var command = connection.CreateCommand();
-        command.Transaction = transaction;
-        command.CommandText = "SELECT sql FROM sqlite_master WHERE type = 'table' AND name = $name;";
-        _ = command.Parameters.AddWithValue("$name", tableName);
-        if (command.ExecuteScalar() is string tableSql)
+        using var command = connection.CreateStatement();
+        command.UseTransaction(transaction);
+        command.SetSql("SELECT sql FROM sqlite_master WHERE type = 'table' AND name = $name;");
+        _ = command.Bind("$name", tableName);
+        if (command.Scalar() is string tableSql)
         {
             return NormalizeCreateTableSql(tableSql);
         }
@@ -533,178 +533,178 @@ internal static class SqliteStoreSchema
     /// <param name="transaction">The transaction.</param>
     /// <param name="key">The metadata key.</param>
     /// <param name="value">The metadata value.</param>
-    private static void InsertMetadata(SqliteConnection connection, SqliteTransaction transaction, string key, string value)
+    private static void InsertMetadata(SqliteDatabase connection, SqliteTransaction transaction, string key, string value)
     {
-        using var command = connection.CreateCommand();
-        command.Transaction = transaction;
-        command.CommandText = "INSERT INTO oc_metadata (key, value) VALUES ($key, $value);";
-        _ = command.Parameters.AddWithValue("$key", key);
-        _ = command.Parameters.AddWithValue("$value", value);
-        _ = command.ExecuteNonQuery();
+        using var command = connection.CreateStatement();
+        command.UseTransaction(transaction);
+        command.SetSql("INSERT INTO oc_metadata (key, value) VALUES ($key, $value);");
+        _ = command.Bind("$key", key);
+        _ = command.Bind("$value", value);
+        _ = command.Execute();
     }
 
     /// <summary>Sets the current local commit schema version.</summary>
     /// <param name="connection">The open connection.</param>
     /// <param name="transaction">The transaction.</param>
-    private static void SetLocalCommitUserVersion(SqliteConnection connection, SqliteTransaction transaction)
+    private static void SetLocalCommitUserVersion(SqliteDatabase connection, SqliteTransaction transaction)
     {
-        using var command = connection.CreateCommand();
-        command.Transaction = transaction;
-        command.CommandText = "PRAGMA user_version = 1;";
-        _ = command.ExecuteNonQuery();
+        using var command = connection.CreateStatement();
+        command.UseTransaction(transaction);
+        command.SetSql("PRAGMA user_version = 1;");
+        _ = command.Execute();
     }
 
     /// <summary>Creates the metadata table.</summary>
     /// <param name="connection">The open connection.</param>
     /// <param name="transaction">The transaction.</param>
-    private static void CreateMetadataTable(SqliteConnection connection, SqliteTransaction transaction)
+    private static void CreateMetadataTable(SqliteDatabase connection, SqliteTransaction transaction)
     {
-        using var command = connection.CreateCommand();
-        command.Transaction = transaction;
-        command.CommandText = MetadataTableSql;
-        _ = command.ExecuteNonQuery();
+        using var command = connection.CreateStatement();
+        command.UseTransaction(transaction);
+        command.SetSql(MetadataTableSql);
+        _ = command.Execute();
     }
 
     /// <summary>Creates the subscription identity table.</summary>
     /// <param name="connection">The open connection.</param>
     /// <param name="transaction">The transaction.</param>
-    private static void CreateSubscriptionIdentitiesTable(SqliteConnection connection, SqliteTransaction transaction)
+    private static void CreateSubscriptionIdentitiesTable(SqliteDatabase connection, SqliteTransaction transaction)
     {
-        using var command = connection.CreateCommand();
-        command.Transaction = transaction;
-        command.CommandText = SubscriptionIdentitiesTableSql;
-        _ = command.ExecuteNonQuery();
+        using var command = connection.CreateStatement();
+        command.UseTransaction(transaction);
+        command.SetSql(SubscriptionIdentitiesTableSql);
+        _ = command.Execute();
     }
 
     /// <summary>Creates the streams table.</summary>
     /// <param name="connection">The open connection.</param>
     /// <param name="transaction">The transaction.</param>
-    private static void CreateStreamsTable(SqliteConnection connection, SqliteTransaction transaction)
+    private static void CreateStreamsTable(SqliteDatabase connection, SqliteTransaction transaction)
     {
-        using var command = connection.CreateCommand();
-        command.Transaction = transaction;
-        command.CommandText = StreamsTableSql;
-        _ = command.ExecuteNonQuery();
+        using var command = connection.CreateStatement();
+        command.UseTransaction(transaction);
+        command.SetSql(StreamsTableSql);
+        _ = command.Execute();
     }
 
     /// <summary>Creates the snapshots table.</summary>
     /// <param name="connection">The open connection.</param>
     /// <param name="transaction">The transaction.</param>
-    private static void CreateSnapshotsTable(SqliteConnection connection, SqliteTransaction transaction)
+    private static void CreateSnapshotsTable(SqliteDatabase connection, SqliteTransaction transaction)
     {
-        using var command = connection.CreateCommand();
-        command.Transaction = transaction;
-        command.CommandText = SnapshotsTableSql;
-        _ = command.ExecuteNonQuery();
+        using var command = connection.CreateStatement();
+        command.UseTransaction(transaction);
+        command.SetSql(SnapshotsTableSql);
+        _ = command.Execute();
     }
 
     /// <summary>Creates the outbox table.</summary>
     /// <param name="connection">The open connection.</param>
     /// <param name="transaction">The transaction.</param>
-    private static void CreateOutboxTable(SqliteConnection connection, SqliteTransaction transaction)
+    private static void CreateOutboxTable(SqliteDatabase connection, SqliteTransaction transaction)
     {
-        using var command = connection.CreateCommand();
-        command.Transaction = transaction;
-        command.CommandText = OutboxTableSql;
-        _ = command.ExecuteNonQuery();
+        using var command = connection.CreateStatement();
+        command.UseTransaction(transaction);
+        command.SetSql(OutboxTableSql);
+        _ = command.Execute();
     }
 
     /// <summary>Creates the outbox metadata table.</summary>
     /// <param name="connection">The open connection.</param>
     /// <param name="transaction">The transaction.</param>
-    private static void CreateOutboxMetadataTable(SqliteConnection connection, SqliteTransaction transaction)
+    private static void CreateOutboxMetadataTable(SqliteDatabase connection, SqliteTransaction transaction)
     {
-        using var command = connection.CreateCommand();
-        command.Transaction = transaction;
-        command.CommandText = OutboxMetadataTableSql;
-        _ = command.ExecuteNonQuery();
+        using var command = connection.CreateStatement();
+        command.UseTransaction(transaction);
+        command.SetSql(OutboxMetadataTableSql);
+        _ = command.Execute();
     }
 
     /// <summary>Creates the original authoritative mutation table.</summary>
     /// <param name="connection">The open connection.</param>
     /// <param name="transaction">The transaction.</param>
-    private static void CreateOutboxAuthoritativeMutationsTable(SqliteConnection connection, SqliteTransaction transaction)
+    private static void CreateOutboxAuthoritativeMutationsTable(SqliteDatabase connection, SqliteTransaction transaction)
     {
-        using var command = connection.CreateCommand();
-        command.Transaction = transaction;
-        command.CommandText = OutboxAuthoritativeMutationsTableSql;
-        _ = command.ExecuteNonQuery();
+        using var command = connection.CreateStatement();
+        command.UseTransaction(transaction);
+        command.SetSql(OutboxAuthoritativeMutationsTableSql);
+        _ = command.Execute();
     }
 
     /// <summary>Creates the current authoritative snapshot table.</summary>
     /// <param name="connection">The open connection.</param>
     /// <param name="transaction">The transaction.</param>
-    private static void CreateSnapshotAuthoritativeStatesTable(SqliteConnection connection, SqliteTransaction transaction)
+    private static void CreateSnapshotAuthoritativeStatesTable(SqliteDatabase connection, SqliteTransaction transaction)
     {
-        using var command = connection.CreateCommand();
-        command.Transaction = transaction;
-        command.CommandText = SnapshotAuthoritativeStatesTableSql;
-        _ = command.ExecuteNonQuery();
+        using var command = connection.CreateStatement();
+        command.UseTransaction(transaction);
+        command.SetSql(SnapshotAuthoritativeStatesTableSql);
+        _ = command.Execute();
     }
 
     /// <summary>Creates the receive inclusion table.</summary>
     /// <param name="connection">The open connection.</param>
     /// <param name="transaction">The transaction.</param>
-    private static void CreateOutboxReceiveInclusionsTable(SqliteConnection connection, SqliteTransaction transaction)
+    private static void CreateOutboxReceiveInclusionsTable(SqliteDatabase connection, SqliteTransaction transaction)
     {
-        using var command = connection.CreateCommand();
-        command.Transaction = transaction;
-        command.CommandText = OutboxReceiveInclusionsTableSql;
-        _ = command.ExecuteNonQuery();
+        using var command = connection.CreateStatement();
+        command.UseTransaction(transaction);
+        command.SetSql(OutboxReceiveInclusionsTableSql);
+        _ = command.Execute();
     }
 
     /// <summary>Creates the payload quarantine table.</summary>
     /// <param name="connection">The open connection.</param>
     /// <param name="transaction">The transaction.</param>
-    private static void CreatePayloadQuarantineTable(SqliteConnection connection, SqliteTransaction transaction)
+    private static void CreatePayloadQuarantineTable(SqliteDatabase connection, SqliteTransaction transaction)
     {
-        using var command = connection.CreateCommand();
-        command.Transaction = transaction;
-        command.CommandText = PayloadQuarantineTableSql;
-        _ = command.ExecuteNonQuery();
+        using var command = connection.CreateStatement();
+        command.UseTransaction(transaction);
+        command.SetSql(PayloadQuarantineTableSql);
+        _ = command.Execute();
     }
 
     /// <summary>Creates the inbox table.</summary>
     /// <param name="connection">The open connection.</param>
     /// <param name="transaction">The transaction.</param>
-    private static void CreateInboxTable(SqliteConnection connection, SqliteTransaction transaction)
+    private static void CreateInboxTable(SqliteDatabase connection, SqliteTransaction transaction)
     {
-        using var command = connection.CreateCommand();
-        command.Transaction = transaction;
-        command.CommandText = InboxTableSql;
-        _ = command.ExecuteNonQuery();
+        using var command = connection.CreateStatement();
+        command.UseTransaction(transaction);
+        command.SetSql(InboxTableSql);
+        _ = command.Execute();
     }
 
     /// <summary>Creates the outbox leases table.</summary>
     /// <param name="connection">The open connection.</param>
     /// <param name="transaction">The transaction.</param>
-    private static void CreateOutboxLeasesTable(SqliteConnection connection, SqliteTransaction transaction)
+    private static void CreateOutboxLeasesTable(SqliteDatabase connection, SqliteTransaction transaction)
     {
-        using var command = connection.CreateCommand();
-        command.Transaction = transaction;
-        command.CommandText = OutboxLeasesTableSql;
-        _ = command.ExecuteNonQuery();
+        using var command = connection.CreateStatement();
+        command.UseTransaction(transaction);
+        command.SetSql(OutboxLeasesTableSql);
+        _ = command.Execute();
     }
 
     /// <summary>Creates the outbox operation states table.</summary>
     /// <param name="connection">The open connection.</param>
     /// <param name="transaction">The transaction.</param>
-    private static void CreateOutboxOperationStatesTable(SqliteConnection connection, SqliteTransaction transaction)
+    private static void CreateOutboxOperationStatesTable(SqliteDatabase connection, SqliteTransaction transaction)
     {
-        using var command = connection.CreateCommand();
-        command.Transaction = transaction;
-        command.CommandText = OutboxOperationStatesTableSql;
-        _ = command.ExecuteNonQuery();
+        using var command = connection.CreateStatement();
+        command.UseTransaction(transaction);
+        command.SetSql(OutboxOperationStatesTableSql);
+        _ = command.Execute();
     }
 
     /// <summary>Creates the operation state proof table.</summary>
     /// <param name="connection">The connection.</param>
     /// <param name="transaction">The transaction.</param>
-    private static void CreateOperationStateProofsTable(SqliteConnection connection, SqliteTransaction transaction)
+    private static void CreateOperationStateProofsTable(SqliteDatabase connection, SqliteTransaction transaction)
     {
-        using var command = connection.CreateCommand();
-        command.Transaction = transaction;
-        command.CommandText = OperationStateProofsTableSql;
-        _ = command.ExecuteNonQuery();
+        using var command = connection.CreateStatement();
+        command.UseTransaction(transaction);
+        command.SetSql(OperationStateProofsTableSql);
+        _ = command.Execute();
     }
 }

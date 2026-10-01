@@ -6,8 +6,8 @@ using System.Globalization;
 using System.Runtime.CompilerServices;
 using System.Security.Cryptography;
 using System.Text;
-using Microsoft.Data.Sqlite;
 using ReactiveUI.Primitives.OccasionallyConnected;
+using ReactiveUI.Primitives.OccasionallyConnected.Sqlite;
 
 namespace ReactiveUI.Primitives.OccasionallyConnected.Storage.Sqlite;
 
@@ -85,7 +85,7 @@ internal static partial class SqliteOperationStateIntegrity
     /// <param name="connection">The connection.</param>
     /// <param name="transaction">The transaction, if any.</param>
     /// <exception cref="LocalStoreRecordAuthenticationException">A proof is missing or invalid.</exception>
-    internal static void Verify(SqliteConnection connection, SqliteTransaction? transaction)
+    internal static void Verify(SqliteDatabase connection, SqliteTransaction? transaction)
     {
         var cipher = SqliteRecordCipher.For(connection);
         if (cipher is null)
@@ -94,10 +94,10 @@ internal static partial class SqliteOperationStateIntegrity
         }
 
         cipher = new(cipher.Protection, string.Empty);
-        using var command = connection.CreateCommand();
-        command.Transaction = transaction;
-        command.CommandText = SelectRows;
-        using var reader = command.ExecuteReader();
+        using var command = connection.CreateStatement();
+        command.UseTransaction(transaction);
+        command.SetSql(SelectRows);
+        using var reader = command.Query();
         while (reader.Read())
         {
             if (reader.IsDBNull(ProofColumnIndex))
@@ -113,15 +113,15 @@ internal static partial class SqliteOperationStateIntegrity
             }
         }
 
-        using var orphan = connection.CreateCommand();
-        orphan.Transaction = transaction;
-        orphan.CommandText = """
+        using var orphan = connection.CreateStatement();
+        orphan.UseTransaction(transaction);
+        orphan.SetSql("""
             SELECT COUNT(*) FROM oc_operation_state_proofs AS proof
             LEFT JOIN oc_outbox_operation_states AS state
               ON state.store_identity = proof.store_identity AND state.operation_id = proof.operation_id
             WHERE state.operation_id IS NULL;
-            """;
-        if (Convert.ToInt64(orphan.ExecuteScalar(), CultureInfo.InvariantCulture) != 0)
+            """);
+        if (Convert.ToInt64(orphan.Scalar(), CultureInfo.InvariantCulture) != 0)
         {
             throw new LocalStoreRecordAuthenticationException("A persisted SQLite operation state proof is orphaned.");
         }
@@ -132,7 +132,7 @@ internal static partial class SqliteOperationStateIntegrity
     /// <summary>Writes all proofs in the same transaction as the state changes.</summary>
     /// <param name="connection">The connection.</param>
     /// <param name="transaction">The transaction.</param>
-    internal static void Write(SqliteConnection connection, SqliteTransaction transaction)
+    internal static void Write(SqliteDatabase connection, SqliteTransaction transaction)
     {
         var cipher = SqliteRecordCipher.For(connection);
         if (cipher is null)
@@ -172,11 +172,11 @@ internal static partial class SqliteOperationStateIntegrity
     /// <param name="afterOperationId">The preceding operation identity.</param>
     /// <returns>The batch and its final key.</returns>
     private static (int RowCount, string LastStoreIdentity, string LastOperationId, List<(string StoreIdentity, string OperationId, byte[] Proof)> Proofs)
-        ReadProofBatch(SqliteConnection connection, SqliteTransaction transaction, SqliteRecordCipher cipher, string afterStoreIdentity, string afterOperationId)
+        ReadProofBatch(SqliteDatabase connection, SqliteTransaction transaction, SqliteRecordCipher cipher, string afterStoreIdentity, string afterOperationId)
     {
-        using var read = connection.CreateCommand();
-        read.Transaction = transaction;
-        read.CommandText = """
+        using var read = connection.CreateStatement();
+        read.UseTransaction(transaction);
+        read.SetSql("""
             SELECT state.store_identity, state.operation_id, state.operation_state, state.attempt_count,
                    state.changed_at_utc, state.reason_code, state.retry_started_utc, state.retry_due_utc,
                    state.retry_previous_delay_ticks, state.retry_transient_attempt_count,
@@ -190,11 +190,11 @@ internal static partial class SqliteOperationStateIntegrity
                OR (state.store_identity = $afterStoreIdentity AND state.operation_id > $afterOperationId)
             ORDER BY state.store_identity, state.operation_id
             LIMIT $batchSize;
-            """;
-        _ = read.Parameters.AddWithValue("$afterStoreIdentity", afterStoreIdentity);
-        _ = read.Parameters.AddWithValue("$afterOperationId", afterOperationId);
-        _ = read.Parameters.AddWithValue("$batchSize", ProofBatchSize);
-        using var reader = read.ExecuteReader();
+            """);
+        _ = read.Bind("$afterStoreIdentity", afterStoreIdentity);
+        _ = read.Bind("$afterOperationId", afterOperationId);
+        _ = read.Bind("$batchSize", ProofBatchSize);
+        using var reader = read.Query();
         List<(string StoreIdentity, string OperationId, byte[] Proof)> proofs = [];
         var rowCount = 0;
         while (reader.Read())
@@ -219,7 +219,7 @@ internal static partial class SqliteOperationStateIntegrity
     /// <param name="cipher">The database scoped cipher.</param>
     /// <param name="stateBytes">The canonical state bytes.</param>
     /// <returns>Whether the proof can stay unchanged.</returns>
-    private static bool ProofIsCurrent(SqliteDataReader reader, SqliteRecordCipher cipher, byte[] stateBytes)
+    private static bool ProofIsCurrent(SqliteRows reader, SqliteRecordCipher cipher, byte[] stateBytes)
     {
         if (reader.IsDBNull(ProofColumnIndex))
         {
@@ -238,23 +238,23 @@ internal static partial class SqliteOperationStateIntegrity
     /// <param name="proofs">The replacement proofs.</param>
     /// <returns>Whether any proof was written.</returns>
     private static bool WriteProofBatch(
-        SqliteConnection connection,
+        SqliteDatabase connection,
         SqliteTransaction transaction,
         List<(string StoreIdentity, string OperationId, byte[] Proof)> proofs)
     {
         foreach (var proof in proofs)
         {
-            using var command = connection.CreateCommand();
-            command.Transaction = transaction;
-            command.CommandText = """
+            using var command = connection.CreateStatement();
+            command.UseTransaction(transaction);
+            command.SetSql("""
                 INSERT INTO oc_operation_state_proofs (store_identity, operation_id, proof)
                 VALUES ($storeIdentity, $operationId, $proof)
                 ON CONFLICT (store_identity, operation_id) DO UPDATE SET proof = excluded.proof;
-                """;
-            _ = command.Parameters.AddWithValue("$storeIdentity", proof.StoreIdentity);
-            _ = command.Parameters.AddWithValue("$operationId", proof.OperationId);
-            _ = command.Parameters.AddWithValue("$proof", proof.Proof);
-            _ = command.ExecuteNonQuery();
+                """);
+            _ = command.Bind("$storeIdentity", proof.StoreIdentity);
+            _ = command.Bind("$operationId", proof.OperationId);
+            _ = command.Bind("$proof", proof.Proof);
+            _ = command.Execute();
         }
 
         return proofs.Count != 0;
@@ -264,18 +264,18 @@ internal static partial class SqliteOperationStateIntegrity
     /// <param name="connection">The connection.</param>
     /// <param name="transaction">The transaction.</param>
     /// <returns>The number of deleted proofs.</returns>
-    private static int PruneProofs(SqliteConnection connection, SqliteTransaction transaction)
+    private static int PruneProofs(SqliteDatabase connection, SqliteTransaction transaction)
     {
-        using var command = connection.CreateCommand();
-        command.Transaction = transaction;
-        command.CommandText = """
+        using var command = connection.CreateStatement();
+        command.UseTransaction(transaction);
+        command.SetSql("""
             DELETE FROM oc_operation_state_proofs
             WHERE NOT EXISTS (
                 SELECT 1 FROM oc_outbox_operation_states AS state
                 WHERE state.store_identity = oc_operation_state_proofs.store_identity
                   AND state.operation_id = oc_operation_state_proofs.operation_id);
-            """;
-        return command.ExecuteNonQuery();
+            """);
+        return command.Execute();
     }
 
     /// <summary>Reports whether the operation state manifest uses the current key.</summary>
@@ -283,13 +283,13 @@ internal static partial class SqliteOperationStateIntegrity
     /// <param name="transaction">The transaction.</param>
     /// <param name="cipher">The database scoped cipher.</param>
     /// <returns>Whether the manifest exists.</returns>
-    private static bool ManifestUsesCurrentKey(SqliteConnection connection, SqliteTransaction transaction, SqliteRecordCipher cipher)
+    private static bool ManifestUsesCurrentKey(SqliteDatabase connection, SqliteTransaction transaction, SqliteRecordCipher cipher)
     {
-        using var command = connection.CreateCommand();
-        command.Transaction = transaction;
-        command.CommandText = "SELECT value FROM oc_metadata WHERE key = $key;";
-        _ = command.Parameters.AddWithValue("$key", ManifestKey);
-        return command.ExecuteScalar() is string stored
+        using var command = connection.CreateStatement();
+        command.UseTransaction(transaction);
+        command.SetSql("SELECT value FROM oc_metadata WHERE key = $key;");
+        _ = command.Bind("$key", ManifestKey);
+        return command.Scalar() is string stored
             && string.Equals(SqliteRecordCipher.ReadTextKeyId(stored), cipher.Protection.GetCurrentKeyId(), StringComparison.Ordinal);
     }
 
@@ -298,13 +298,13 @@ internal static partial class SqliteOperationStateIntegrity
     /// <param name="transaction">The transaction, if any.</param>
     /// <param name="cipher">The database scoped cipher.</param>
     /// <exception cref="LocalStoreRecordAuthenticationException">The manifest is missing or invalid.</exception>
-    private static void VerifyManifest(SqliteConnection connection, SqliteTransaction? transaction, SqliteRecordCipher cipher)
+    private static void VerifyManifest(SqliteDatabase connection, SqliteTransaction? transaction, SqliteRecordCipher cipher)
     {
-        using var command = connection.CreateCommand();
-        command.Transaction = transaction;
-        command.CommandText = "SELECT value FROM oc_metadata WHERE key = $key;";
-        _ = command.Parameters.AddWithValue("$key", ManifestKey);
-        if (command.ExecuteScalar() is not string stored)
+        using var command = connection.CreateStatement();
+        command.UseTransaction(transaction);
+        command.SetSql("SELECT value FROM oc_metadata WHERE key = $key;");
+        _ = command.Bind("$key", ManifestKey);
+        if (command.Scalar() is not string stored)
         {
             throw new LocalStoreRecordAuthenticationException("The SQLite operation state manifest is missing.");
         }
@@ -322,7 +322,7 @@ internal static partial class SqliteOperationStateIntegrity
     /// <param name="transaction">The transaction.</param>
     /// <param name="cipher">The database scoped cipher.</param>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static void WriteManifest(SqliteConnection connection, SqliteTransaction transaction, SqliteRecordCipher cipher) =>
+    private static void WriteManifest(SqliteDatabase connection, SqliteTransaction transaction, SqliteRecordCipher cipher) =>
         WriteManifest(connection, transaction, cipher, ComputeManifest(connection, transaction));
 
     /// <summary>Writes the supplied authenticated proof set in the current transaction.</summary>
@@ -330,32 +330,32 @@ internal static partial class SqliteOperationStateIntegrity
     /// <param name="transaction">The transaction.</param>
     /// <param name="cipher">The database scoped cipher.</param>
     /// <param name="plaintext">The manifest plaintext.</param>
-    private static void WriteManifest(SqliteConnection connection, SqliteTransaction transaction, SqliteRecordCipher cipher, string plaintext)
+    private static void WriteManifest(SqliteDatabase connection, SqliteTransaction transaction, SqliteRecordCipher cipher, string plaintext)
     {
         var manifest = cipher.ProtectText(plaintext, SqliteRecordContext.KeyCheck(), ManifestColumn);
-        using var command = connection.CreateCommand();
-        command.Transaction = transaction;
-        command.CommandText = """
+        using var command = connection.CreateStatement();
+        command.UseTransaction(transaction);
+        command.SetSql("""
             INSERT INTO oc_metadata (key, value) VALUES ($key, $value)
             ON CONFLICT (key) DO UPDATE SET value = excluded.value;
-            """;
-        _ = command.Parameters.AddWithValue("$key", ManifestKey);
-        _ = command.Parameters.AddWithValue("$value", manifest);
-        _ = command.ExecuteNonQuery();
+            """);
+        _ = command.Bind("$key", ManifestKey);
+        _ = command.Bind("$value", manifest);
+        _ = command.Execute();
     }
 
     /// <summary>Hashes the complete proof set, including row identities.</summary>
     /// <param name="connection">The connection.</param>
     /// <param name="transaction">The transaction, if any.</param>
     /// <returns>The manifest hash.</returns>
-    private static string ComputeManifest(SqliteConnection connection, SqliteTransaction? transaction)
+    private static string ComputeManifest(SqliteDatabase connection, SqliteTransaction? transaction)
     {
         var digest = new byte[32];
         long count = 0;
-        using var command = connection.CreateCommand();
-        command.Transaction = transaction;
-        command.CommandText = "SELECT store_identity, operation_id, proof, length(proof) AS proof_length FROM oc_operation_state_proofs;";
-        using var reader = command.ExecuteReader();
+        using var command = connection.CreateStatement();
+        command.UseTransaction(transaction);
+        command.SetSql("SELECT store_identity, operation_id, proof, length(proof) AS proof_length FROM oc_operation_state_proofs;");
+        using var reader = command.Query();
         while (reader.Read())
         {
             count++;
@@ -411,7 +411,7 @@ internal static partial class SqliteOperationStateIntegrity
     /// <param name="reader">The state row reader.</param>
     /// <returns>The canonical state bytes.</returns>
     /// <exception cref="LocalStoreRecordAuthenticationException">A field has an invalid storage class or length.</exception>
-    private static byte[] Serialize(SqliteDataReader reader)
+    private static byte[] Serialize(SqliteRows reader)
     {
         using var stream = new MemoryStream();
         using (var writer = new BinaryWriter(stream, Encoding.UTF8, leaveOpen: true))
@@ -466,7 +466,7 @@ internal static partial class SqliteOperationStateIntegrity
     /// <param name="index">The proof column index.</param>
     /// <returns>The proof bytes.</returns>
     /// <exception cref="LocalStoreRecordAuthenticationException">The proof is oversized or has the wrong storage class.</exception>
-    private static byte[] ReadProof(SqliteDataReader reader, int index)
+    private static byte[] ReadProof(SqliteRows reader, int index)
     {
         if (reader.GetFieldType(index) != typeof(byte[])
             || reader.GetInt64(reader.GetOrdinal("proof_length")) > MaximumProofLength)

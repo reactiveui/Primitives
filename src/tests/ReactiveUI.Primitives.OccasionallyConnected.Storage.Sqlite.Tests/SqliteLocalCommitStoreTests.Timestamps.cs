@@ -28,11 +28,11 @@ public sealed partial class SqliteLocalCommitStoreTests
             CreateSnapshotMutation(expectedRevision: 0),
             CancellationToken.None);
 
-        await using var connection = OpenRawConnection(database.Path);
-        await using var command = connection.CreateCommand();
-        command.CommandText = "SELECT committed_at_utc FROM oc_inbox WHERE event_id = $eventId;";
-        _ = command.Parameters.AddWithValue("$eventId", remoteEvent.EventId.ToString("D"));
-        var timestamp = await command.ExecuteScalarAsync() as string;
+        using var connection = OpenRawConnection(database.Path);
+        using var command = connection.CreateStatement();
+        command.SetSql("SELECT committed_at_utc FROM oc_inbox WHERE event_id = $eventId;");
+        _ = command.Bind("$eventId", remoteEvent.EventId.ToString("D"));
+        var timestamp = command.Scalar() as string;
         await Assert.That(timestamp).IsEqualTo(clock.GetUtcNow().ToString("O", CultureInfo.InvariantCulture));
         await Assert.That(timestamp).IsNotEqualTo(remoteEvent.CommittedAtUtc.ToString("O", CultureInfo.InvariantCulture));
     }

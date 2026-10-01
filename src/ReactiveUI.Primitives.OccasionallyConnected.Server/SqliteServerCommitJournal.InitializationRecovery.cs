@@ -2,7 +2,7 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
-using Microsoft.Data.Sqlite;
+using ReactiveUI.Primitives.OccasionallyConnected.Sqlite;
 
 namespace ReactiveUI.Primitives.OccasionallyConnected.Server;
 
@@ -13,7 +13,7 @@ internal sealed partial class SqliteServerCommitJournal
     /// <param name="openConnection">Creates and configures a fresh connection.</param>
     /// <param name="retryDelay">Waits briefly before the next attempt.</param>
     /// <returns>The configured connection.</returns>
-    internal static SqliteConnection RetryInitializationConnection(Func<SqliteConnection> openConnection, Action retryDelay)
+    internal static SqliteDatabase RetryInitializationConnection(Func<SqliteDatabase> openConnection, Action retryDelay)
     {
         var attempt = 0;
         while (true)
@@ -22,7 +22,7 @@ internal sealed partial class SqliteServerCommitJournal
             {
                 return openConnection();
             }
-            catch (SqliteException exception) when (exception.SqliteExtendedErrorCode == SqliteIoErrorTruncate && attempt < RecoveryOpenRetries)
+            catch (SqliteDatabaseException exception) when (exception.SqliteExtendedErrorCode == SqliteIoErrorTruncate && attempt < RecoveryOpenRetries)
             {
                 attempt++;
                 retryDelay();

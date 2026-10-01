@@ -2,7 +2,7 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
-using Microsoft.Data.Sqlite;
+using ReactiveUI.Primitives.OccasionallyConnected.Sqlite;
 using ReactiveUI.Primitives.OccasionallyConnected.Storage.Sqlite;
 
 namespace ReactiveUI.Primitives.OccasionallyConnected.Storage.Sqlite.Tests;
@@ -24,10 +24,10 @@ public sealed partial class SqliteLocalCommitConnectionTests
     public async Task WhenDurabilitySeesStartupWriter_ThenItRetriesPastTheCommandTimeout()
     {
         using var database = TempDatabase.Create();
-        await using var writer = SqliteLocalCommitConnection.OpenConnection(database.Path);
-        await using var durability = SqliteLocalCommitConnection.OpenConnection(database.Path);
-        await CreateStartupLockTableAsync(writer);
-        await using var transaction = (SqliteTransaction)await writer.BeginTransactionAsync();
+        using var writer = SqliteLocalCommitConnection.OpenConnection(database.Path);
+        using var durability = SqliteLocalCommitConnection.OpenConnection(database.Path);
+        CreateStartupLockTable(writer);
+        using var transaction = writer.BeginTransaction();
         await InsertStartupLockAsync(writer, transaction);
 
         SqliteLocalCommitConnection.ConfigureLockPolling(durability);
@@ -56,10 +56,10 @@ public sealed partial class SqliteLocalCommitConnectionTests
     public async Task WhenDurabilityWaitIsCanceled_ThenDurabilityConfigurationIsCanceled()
     {
         using var database = TempDatabase.Create();
-        await using var writer = SqliteLocalCommitConnection.OpenConnection(database.Path);
-        await using var durability = SqliteLocalCommitConnection.OpenConnection(database.Path);
-        await CreateStartupLockTableAsync(writer);
-        await using var transaction = (SqliteTransaction)await writer.BeginTransactionAsync();
+        using var writer = SqliteLocalCommitConnection.OpenConnection(database.Path);
+        using var durability = SqliteLocalCommitConnection.OpenConnection(database.Path);
+        CreateStartupLockTable(writer);
+        using var transaction = writer.BeginTransaction();
         await InsertStartupLockAsync(writer, transaction);
 
         SqliteLocalCommitConnection.ConfigureLockPolling(durability);
@@ -74,9 +74,8 @@ public sealed partial class SqliteLocalCommitConnectionTests
     [Test]
     public async Task WhenDurabilityVerificationFails_ThenFailureIsNotRetried()
     {
-        var connectionString = new SqliteConnectionStringBuilder { DataSource = ":memory:", Mode = SqliteOpenMode.Memory, Pooling = false }.ToString();
-        await using var connection = new SqliteConnection(connectionString);
-        await connection.OpenAsync();
+        using var connection = new SqliteDatabase(":memory:");
+
         SqliteLocalCommitConnection.ConfigureLockPolling(connection);
         Action configure = () => SqliteLocalCommitConnection.ConfigureDurabilityAfterOwnershipValidation(connection, CancellationToken.None);
 
@@ -87,7 +86,7 @@ public sealed partial class SqliteLocalCommitConnectionTests
     /// <param name="state">The durability connection, entry signal, and observer-ready signal.</param>
     private static void ConfigureDurabilityOnDedicatedThread(object? state)
     {
-        var (connection, entered, observerReady) = ((SqliteConnection, ManualResetEventSlim, ManualResetEventSlim))state!;
+        var (connection, entered, observerReady) = ((SqliteDatabase, ManualResetEventSlim, ManualResetEventSlim))state!;
         observerReady.Wait();
         entered.Set();
         SqliteLocalCommitConnection.ConfigureDurabilityAfterOwnershipValidation(connection, CancellationToken.None);
@@ -114,23 +113,22 @@ public sealed partial class SqliteLocalCommitConnectionTests
 
     /// <summary>Creates the table used to hold a SQLite writer lock.</summary>
     /// <param name="connection">The writer connection.</param>
-    /// <returns>A task representing the asynchronous operation.</returns>
-    private static async Task CreateStartupLockTableAsync(SqliteConnection connection)
+    private static void CreateStartupLockTable(SqliteDatabase connection)
     {
-        await using var command = connection.CreateCommand();
-        command.CommandText = "CREATE TABLE startup_lock (value INTEGER NOT NULL);";
-        await command.ExecuteNonQueryAsync();
+        using var command = connection.CreateStatement();
+        command.SetSql("CREATE TABLE startup_lock (value INTEGER NOT NULL);");
+        _ = command.Execute();
     }
 
     /// <summary>Writes within an open transaction to retain the SQLite writer lock.</summary>
     /// <param name="connection">The writer connection.</param>
     /// <param name="transaction">The open writer transaction.</param>
     /// <returns>A task representing the asynchronous operation.</returns>
-    private static async Task InsertStartupLockAsync(SqliteConnection connection, SqliteTransaction transaction)
+    private static async Task InsertStartupLockAsync(SqliteDatabase connection, SqliteTransaction transaction)
     {
-        await using var command = connection.CreateCommand();
-        command.Transaction = transaction;
-        command.CommandText = "INSERT INTO startup_lock (value) VALUES (1);";
-        await Assert.That(command.ExecuteNonQueryAsync()).IsEqualTo(1);
+        using var command = connection.CreateStatement();
+        command.UseTransaction(transaction);
+        command.SetSql("INSERT INTO startup_lock (value) VALUES (1);");
+        await Assert.That(command.Execute()).IsEqualTo(1);
     }
 }

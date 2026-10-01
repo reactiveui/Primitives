@@ -2,7 +2,7 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
-using Microsoft.Data.Sqlite;
+using ReactiveUI.Primitives.OccasionallyConnected.Sqlite;
 using ReactiveUI.Primitives.OccasionallyConnected.Storage.Sqlite;
 
 namespace ReactiveUI.Primitives.OccasionallyConnected.Storage.Sqlite.Tests;
@@ -15,9 +15,7 @@ public sealed class SqliteConnectionSettingsTests
     [Test]
     public async Task WhenWalCannotBeEnabled_ThenDurabilityConfigurationFailsClosed()
     {
-        var connectionString = new SqliteConnectionStringBuilder { DataSource = ":memory:", Mode = SqliteOpenMode.Memory, Pooling = false }.ToString();
-        await using var connection = new SqliteConnection(connectionString);
-        await connection.OpenAsync();
+        using var connection = new SqliteDatabase(":memory:");
 
         Action action = () => SqliteConnectionSettings.ConfigureDurability(connection);
 

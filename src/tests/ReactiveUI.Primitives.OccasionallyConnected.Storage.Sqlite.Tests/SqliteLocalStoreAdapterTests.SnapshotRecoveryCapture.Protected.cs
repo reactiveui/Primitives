@@ -48,11 +48,11 @@ public sealed partial class SqliteLocalStoreAdapterTests
         await using var adapter = CreateAdapter(database.Path);
         await adapter.InitializeAsync(CreatePlainInitialization(), CancellationToken.None);
         var subscriptionId = await adapter.GetOrCreateSubscriptionIdAsync(Stream, null, CancellationToken.None);
-        await using (var connection = OpenRawConnection(database.Path))
-        await using (var command = connection.CreateCommand())
+        using (var connection = OpenRawConnection(database.Path))
+        using (var command = connection.CreateStatement())
         {
-            command.CommandText = "UPDATE oc_streams SET server_cursor = zeroblob(1);";
-            _ = await command.ExecuteNonQueryAsync(CancellationToken.None);
+            command.SetSql("UPDATE oc_streams SET server_cursor = zeroblob(1);");
+            _ = command.Execute();
         }
 
         Func<Task<LocalSnapshotRecoveryCapture>> capture = () => RequireSnapshotRecoveryCaptureStore(adapter)

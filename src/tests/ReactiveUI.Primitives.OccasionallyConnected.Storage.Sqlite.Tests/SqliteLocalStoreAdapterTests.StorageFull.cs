@@ -2,8 +2,8 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
-using Microsoft.Data.Sqlite;
 using ReactiveUI.Primitives.OccasionallyConnected;
+using ReactiveUI.Primitives.OccasionallyConnected.Sqlite;
 using ReactiveUI.Primitives.OccasionallyConnected.Storage.Sqlite;
 
 namespace ReactiveUI.Primitives.OccasionallyConnected.Storage.Sqlite.Tests;
@@ -90,16 +90,16 @@ public sealed partial class SqliteLocalStoreAdapterTests
     /// <returns>A task that represents the asynchronous setup.</returns>
     private static async Task SetStorageFullPageSizeAsync(string path)
     {
-        await using var connection = OpenRawConnection(path);
-        await using var setPageSize = connection.CreateCommand();
-        setPageSize.CommandText = "PRAGMA page_size = 512;";
-        _ = await setPageSize.ExecuteNonQueryAsync();
-        await using var persistPageSize = connection.CreateCommand();
-        persistPageSize.CommandText = "VACUUM;";
-        _ = await persistPageSize.ExecuteNonQueryAsync();
-        await using var readPageSize = connection.CreateCommand();
-        readPageSize.CommandText = "PRAGMA page_size;";
-        var pageSize = Convert.ToInt64(await readPageSize.ExecuteScalarAsync(), System.Globalization.CultureInfo.InvariantCulture);
+        using var connection = OpenRawConnection(path);
+        using var setPageSize = connection.CreateStatement();
+        setPageSize.SetSql("PRAGMA page_size = 512;");
+        _ = setPageSize.Execute();
+        using var persistPageSize = connection.CreateStatement();
+        persistPageSize.SetSql("VACUUM;");
+        _ = persistPageSize.Execute();
+        using var readPageSize = connection.CreateStatement();
+        readPageSize.SetSql("PRAGMA page_size;");
+        var pageSize = Convert.ToInt64(readPageSize.Scalar(), System.Globalization.CultureInfo.InvariantCulture);
         await Assert.That(pageSize).IsEqualTo(StorageFullPageSize);
     }
 
@@ -116,19 +116,19 @@ public sealed partial class SqliteLocalStoreAdapterTests
         public long PageLimit { get; private set; }
 
         /// <inheritdoc/>
-        public void BeforeLocalCommitTransaction(SqliteConnection connection)
+        public void BeforeLocalCommitTransaction(SqliteDatabase connection)
         {
-            using var pageSizeCommand = connection.CreateCommand();
-            pageSizeCommand.CommandText = "PRAGMA page_size;";
-            PageSize = Convert.ToInt64(pageSizeCommand.ExecuteScalar(), System.Globalization.CultureInfo.InvariantCulture);
+            using var pageSizeCommand = connection.CreateStatement();
+            pageSizeCommand.SetSql("PRAGMA page_size;");
+            PageSize = Convert.ToInt64(pageSizeCommand.Scalar(), System.Globalization.CultureInfo.InvariantCulture);
 
-            using var pageCountCommand = connection.CreateCommand();
-            pageCountCommand.CommandText = "PRAGMA page_count;";
-            PageCount = Convert.ToInt64(pageCountCommand.ExecuteScalar(), System.Globalization.CultureInfo.InvariantCulture);
+            using var pageCountCommand = connection.CreateStatement();
+            pageCountCommand.SetSql("PRAGMA page_count;");
+            PageCount = Convert.ToInt64(pageCountCommand.Scalar(), System.Globalization.CultureInfo.InvariantCulture);
 
-            using var limitCommand = connection.CreateCommand();
-            limitCommand.CommandText = "PRAGMA max_page_count = 256;";
-            PageLimit = Convert.ToInt64(limitCommand.ExecuteScalar(), System.Globalization.CultureInfo.InvariantCulture);
+            using var limitCommand = connection.CreateStatement();
+            limitCommand.SetSql("PRAGMA max_page_count = 256;");
+            PageLimit = Convert.ToInt64(limitCommand.Scalar(), System.Globalization.CultureInfo.InvariantCulture);
             if (PageLimit != StorageFullMaximumPageCount || PageCount >= StorageFullMaximumPageCount)
             {
                 throw new InvalidOperationException("The SQLite schema does not fit below the controlled page limit.");

@@ -4,7 +4,6 @@
 
 using System.Collections;
 using System.Runtime.CompilerServices;
-using Microsoft.Data.Sqlite;
 using ReactiveUI.Primitives.OccasionallyConnected;
 using ReactiveUI.Primitives.OccasionallyConnected.Storage.Sqlite;
 
@@ -236,7 +235,7 @@ public sealed partial class SqliteLocalStoreAdapterTests
             [CreateSnapshotMutation(1, ResultAuthoritativeInitialText)],
             CancellationToken.None).AsTask();
 
-        await Assert.That(apply).ThrowsExactly<SqliteException>();
+        await Assert.That(apply).ThrowsExactly<SqliteDatabaseException>();
         DropResultStatusRollbackTrigger(database.Path);
         var recovered = await adapter.RecoverStreamAsync(Stream, subscription, CancellationToken.None);
         var status = await adapter.GetOperationStatusAsync(operation.OperationId, CancellationToken.None);
@@ -703,16 +702,16 @@ public sealed partial class SqliteLocalStoreAdapterTests
     private static void CreateResultStatusRollbackTrigger(string path)
     {
         using var connection = OpenRawConnection(path);
-        using var command = connection.CreateCommand();
-        command.CommandText = """
+        using var command = connection.CreateStatement();
+        command.SetSql("""
             CREATE TRIGGER oc_result_status_abort
             AFTER UPDATE OF operation_state ON oc_outbox_operation_states
             WHEN NEW.operation_state = 5
             BEGIN
                 SELECT RAISE(ABORT, 'rollback result status');
             END;
-            """;
-        _ = command.ExecuteNonQuery();
+            """);
+        _ = command.Execute();
     }
 
     /// <summary>Drops the result status rollback trigger.</summary>
@@ -720,9 +719,9 @@ public sealed partial class SqliteLocalStoreAdapterTests
     private static void DropResultStatusRollbackTrigger(string path)
     {
         using var connection = OpenRawConnection(path);
-        using var command = connection.CreateCommand();
-        command.CommandText = "DROP TRIGGER oc_result_status_abort;";
-        _ = command.ExecuteNonQuery();
+        using var command = connection.CreateStatement();
+        command.SetSql("DROP TRIGGER oc_result_status_abort;");
+        _ = command.Execute();
     }
 
     /// <summary>A caller-owned mutation list with observable indexing callbacks.</summary>

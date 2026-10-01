@@ -317,18 +317,18 @@ public sealed partial class SqliteLocalStoreAdapterTests
     private static void CorruptDeadLetterPayloadSchemaVersion(string path, OperationId operationId)
     {
         using var connection = OpenRawConnection(path);
-        using var command = connection.CreateCommand();
-        command.CommandText = """
+        using var command = connection.CreateStatement();
+        command.SetSql("""
             UPDATE oc_outbox
             SET payload_schema_version = 0
             WHERE store_identity = $storeIdentity
                 AND stream_id = $streamId
                 AND operation_id = $operationId;
-            """;
-        _ = command.Parameters.AddWithValue(StoreIdentityParameter, StoreIdentity);
-        _ = command.Parameters.AddWithValue(StreamIdParameter, Stream.Value);
-        _ = command.Parameters.AddWithValue(OperationIdParameter, operationId.Value.ToString("D"));
-        ThrowIfDeadLetterRecoveryMutationMissing(command.ExecuteNonQuery());
+            """);
+        _ = command.Bind(StoreIdentityParameter, StoreIdentity);
+        _ = command.Bind(StreamIdParameter, Stream.Value);
+        _ = command.Bind(OperationIdParameter, operationId.Value.ToString("D"));
+        ThrowIfDeadLetterRecoveryMutationMissing(command.Execute());
     }
 
     /// <summary>Deletes the stream row while retaining dead-letter outbox and state rows.</summary>
@@ -336,19 +336,19 @@ public sealed partial class SqliteLocalStoreAdapterTests
     private static void DeleteDeadLetterRecoveryStreamWithoutCascade(string path)
     {
         using var connection = OpenRawConnection(path);
-        using var disableKeys = connection.CreateCommand();
-        disableKeys.CommandText = "PRAGMA foreign_keys = OFF;";
-        _ = disableKeys.ExecuteNonQuery();
+        using var disableKeys = connection.CreateStatement();
+        disableKeys.SetSql("PRAGMA foreign_keys = OFF;");
+        _ = disableKeys.Execute();
 
-        using var delete = connection.CreateCommand();
-        delete.CommandText = """
+        using var delete = connection.CreateStatement();
+        delete.SetSql("""
             DELETE FROM oc_streams
             WHERE store_identity = $storeIdentity
                 AND stream_id = $streamId;
-            """;
-        _ = delete.Parameters.AddWithValue(StoreIdentityParameter, StoreIdentity);
-        _ = delete.Parameters.AddWithValue(StreamIdParameter, Stream.Value);
-        ThrowIfDeadLetterRecoveryMutationMissing(delete.ExecuteNonQuery());
+            """);
+        _ = delete.Bind(StoreIdentityParameter, StoreIdentity);
+        _ = delete.Bind(StreamIdParameter, Stream.Value);
+        ThrowIfDeadLetterRecoveryMutationMissing(delete.Execute());
     }
 
     /// <summary>Counts retained dead-letter rows for the stream.</summary>
@@ -358,8 +358,8 @@ public sealed partial class SqliteLocalStoreAdapterTests
     private static long ReadRetainedDeadLetterRecoveryRowCount(string path)
     {
         using var connection = OpenRawConnection(path);
-        using var command = connection.CreateCommand();
-        command.CommandText = """
+        using var command = connection.CreateStatement();
+        command.SetSql("""
             SELECT COUNT(*)
             FROM oc_outbox AS outbox
             INNER JOIN oc_outbox_operation_states AS state
@@ -368,10 +368,10 @@ public sealed partial class SqliteLocalStoreAdapterTests
             WHERE outbox.store_identity = $storeIdentity
                 AND outbox.stream_id = $streamId
                 AND state.operation_state = 6;
-            """;
-        _ = command.Parameters.AddWithValue(StoreIdentityParameter, StoreIdentity);
-        _ = command.Parameters.AddWithValue(StreamIdParameter, Stream.Value);
-        return command.ExecuteScalar() is long rowCount
+            """);
+        _ = command.Bind(StoreIdentityParameter, StoreIdentity);
+        _ = command.Bind(StreamIdParameter, Stream.Value);
+        return command.Scalar() is long rowCount
             ? rowCount
             : throw new InvalidOperationException("Expected a retained dead-letter row count.");
     }

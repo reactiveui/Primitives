@@ -2,8 +2,8 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
-using Microsoft.Data.Sqlite;
 using ReactiveUI.Primitives.OccasionallyConnected;
+using ReactiveUI.Primitives.OccasionallyConnected.Sqlite;
 
 namespace ReactiveUI.Primitives.OccasionallyConnected.Storage.Sqlite;
 
@@ -77,7 +77,7 @@ internal sealed partial class SqliteLocalCommitStore
     /// <param name="request">The quarantine request.</param>
     /// <param name="evidence">The bounded payload evidence.</param>
     private static void PersistPayloadQuarantine(
-        SqliteConnection connection,
+        SqliteDatabase connection,
         SqliteTransaction transaction,
         string storeIdentity,
         LocalPayloadQuarantineRequest request,
@@ -97,7 +97,7 @@ internal sealed partial class SqliteLocalCommitStore
     /// <exception cref="InvalidOperationException">The stream row failed validation or authentication and was quarantined.</exception>
     /// <remarks>An already quarantined stream reports its sequence without the cursor that failed authentication.</remarks>
     private bool TryReadRecoveryStreamState(
-        SqliteConnection connection,
+        SqliteDatabase connection,
         SqliteTransaction transaction,
         in SqliteRecoveryTarget target,
         out SqliteLocalStreamState stream,
@@ -128,7 +128,7 @@ internal sealed partial class SqliteLocalCommitStore
     /// <param name="cancellationToken">The cancellation token.</param>
     /// <returns>The exception to throw.</returns>
     private InvalidOperationException QuarantineRecovery(
-        SqliteConnection connection,
+        SqliteDatabase connection,
         SqliteTransaction transaction,
         in SqliteRecoveryTarget target,
         SqlitePayloadQuarantineException exception,

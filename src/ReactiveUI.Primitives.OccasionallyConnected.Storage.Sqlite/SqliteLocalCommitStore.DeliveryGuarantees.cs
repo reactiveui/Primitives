@@ -3,7 +3,7 @@
 // See the LICENSE file in the project root for full license information.
 
 using System.Runtime.CompilerServices;
-using Microsoft.Data.Sqlite;
+using ReactiveUI.Primitives.OccasionallyConnected.Sqlite;
 
 namespace ReactiveUI.Primitives.OccasionallyConnected.Storage.Sqlite;
 
@@ -19,7 +19,7 @@ internal sealed partial class SqliteLocalCommitStore
     /// <exception cref="InvalidOperationException">The store is not initialized, the lease is not current, or the operation is not eligible.</exception>
     /// <exception cref="ObjectDisposedException">This instance has been disposed.</exception>
     /// <exception cref="OperationCanceledException">The operation is canceled before the transaction commits.</exception>
-    /// <exception cref="SqliteException">SQLite rejects the operation.</exception>
+    /// <exception cref="SqliteDatabaseException">SQLite rejects the operation.</exception>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal SyncOperationStatus ExpireDeliveryGuarantee(Guid leaseId, OperationId operationId, CancellationToken cancellationToken) =>
         ExecuteGuaranteeTransition(
@@ -44,7 +44,7 @@ internal sealed partial class SqliteLocalCommitStore
     /// <exception cref="InvalidOperationException">The store is not initialized, the lease is not current, or the operation is not eligible.</exception>
     /// <exception cref="ObjectDisposedException">This instance has been disposed.</exception>
     /// <exception cref="OperationCanceledException">The operation is canceled before the transaction commits.</exception>
-    /// <exception cref="SqliteException">SQLite rejects the operation.</exception>
+    /// <exception cref="SqliteDatabaseException">SQLite rejects the operation.</exception>
     internal SyncOperationStatus DowngradeDeliveryGuarantee(
         Guid leaseId,
         OperationId operationId,
@@ -78,14 +78,14 @@ internal sealed partial class SqliteLocalCommitStore
     private SyncOperationStatus ExecuteGuaranteeTransition(
         Guid leaseId,
         OperationId operationId,
-        Func<SqliteConnection, SqliteTransaction, string, DateTimeOffset, SyncOperationStatus> transition,
+        Func<SqliteDatabase, SqliteTransaction, string, DateTimeOffset, SyncOperationStatus> transition,
         CancellationToken cancellationToken)
     {
         SqliteLocalCommitValidation.ValidateLeaseId(leaseId);
         SqliteLocalCommitValidation.ValidateOperationId(operationId, nameof(operationId));
         cancellationToken.ThrowIfCancellationRequested();
         var storeIdentity = GetInitializedStoreIdentityForOperation();
-        using var connection = OpenStoreConnection(storeIdentity, forWrite: true);
+        using var connection = OpenStoreConnection(storeIdentity, cancellationToken, forWrite: true);
         SqliteLocalCommitConnection.ConfigureLockPolling(connection);
         SqliteConnectionSettings.ConfigureOperationalConnection(connection);
         using var transaction = SqliteLocalCommitConnection.BeginWriteTransaction(connection, cancellationToken);

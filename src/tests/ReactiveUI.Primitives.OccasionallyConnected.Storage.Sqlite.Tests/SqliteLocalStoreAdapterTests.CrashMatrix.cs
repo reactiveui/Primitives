@@ -6,6 +6,7 @@ using System.Diagnostics;
 using System.Globalization;
 using System.Runtime.CompilerServices;
 using ReactiveUI.Primitives.OccasionallyConnected;
+using ReactiveUI.Primitives.OccasionallyConnected.Sqlite;
 using ReactiveUI.Primitives.OccasionallyConnected.Storage.Sqlite;
 
 namespace ReactiveUI.Primitives.OccasionallyConnected.Storage.Sqlite.Tests;
@@ -345,7 +346,7 @@ public sealed partial class SqliteLocalStoreAdapterTests
     private sealed class BlockingCommitFaultPoint(SqliteCommitCheckpoint target, string signalPath) : ISqliteCommitFaultPoint
     {
         /// <inheritdoc/>
-        public void BeforeLocalCommitTransaction(Microsoft.Data.Sqlite.SqliteConnection connection)
+        public void BeforeLocalCommitTransaction(SqliteDatabase connection)
         {
         }
 

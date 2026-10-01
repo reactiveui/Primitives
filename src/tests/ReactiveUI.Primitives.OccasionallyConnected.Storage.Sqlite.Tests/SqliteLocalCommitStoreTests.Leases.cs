@@ -3,7 +3,6 @@
 // See the LICENSE file in the project root for full license information.
 
 using System.Runtime.CompilerServices;
-using Microsoft.Data.Sqlite;
 using ReactiveUI.Primitives.OccasionallyConnected;
 using ReactiveUI.Primitives.OccasionallyConnected.Storage.Sqlite;
 
@@ -241,7 +240,7 @@ public sealed partial class SqliteLocalCommitStoreTests
 
             Func<Task> action = async () => await LeaseSingleBatch(store, new(Stream, 1, DefaultLeaseBytes, TimeSpan.FromMinutes(1)));
 
-            await Assert.That(action).ThrowsExactly<SqliteException>();
+            await Assert.That(action).ThrowsExactly<SqliteDatabaseException>();
             DropLeaseRollbackTrigger(database.Path);
             await Assert.That(CountAllLeaseRows(database.Path)).IsEqualTo(0);
         }
@@ -318,14 +317,14 @@ public sealed partial class SqliteLocalCommitStoreTests
     private static void DeleteOutboxOperation(string path, OperationId operationId)
     {
         using var connection = OpenRawConnection(path);
-        using var command = connection.CreateCommand();
-        command.CommandText = """
+        using var command = connection.CreateStatement();
+        command.SetSql("""
             PRAGMA foreign_keys = ON;
             DELETE FROM oc_outbox WHERE store_identity = $storeIdentity AND operation_id = $operationId;
-            """;
-        _ = command.Parameters.AddWithValue(StoreIdentityParameter, StoreIdentity);
-        _ = command.Parameters.AddWithValue("$operationId", operationId.Value.ToString("D"));
-        _ = command.ExecuteNonQuery();
+            """);
+        _ = command.Bind(StoreIdentityParameter, StoreIdentity);
+        _ = command.Bind("$operationId", operationId.Value.ToString("D"));
+        _ = command.Execute();
     }
 
     /// <summary>Updates a lease expiry directly through SQLite.</summary>
@@ -335,16 +334,16 @@ public sealed partial class SqliteLocalCommitStoreTests
     private static void UpdateLeaseExpiryText(string path, Guid leaseId, string expiryText)
     {
         using var connection = OpenRawConnection(path);
-        using var command = connection.CreateCommand();
-        command.CommandText = """
+        using var command = connection.CreateStatement();
+        command.SetSql("""
             UPDATE oc_outbox_leases
             SET lease_expires_at_utc = $leaseExpiresAtUtc
             WHERE store_identity = $storeIdentity AND lease_id = $leaseId;
-            """;
-        _ = command.Parameters.AddWithValue(StoreIdentityParameter, StoreIdentity);
-        _ = command.Parameters.AddWithValue("$leaseId", leaseId.ToString("D"));
-        _ = command.Parameters.AddWithValue("$leaseExpiresAtUtc", expiryText);
-        _ = command.ExecuteNonQuery();
+            """);
+        _ = command.Bind(StoreIdentityParameter, StoreIdentity);
+        _ = command.Bind("$leaseId", leaseId.ToString("D"));
+        _ = command.Bind("$leaseExpiresAtUtc", expiryText);
+        _ = command.Execute();
     }
 
     /// <summary>Counts lease rows for one lease.</summary>
@@ -355,11 +354,11 @@ public sealed partial class SqliteLocalCommitStoreTests
     private static long CountLeaseRows(string path, Guid leaseId)
     {
         using var connection = OpenRawConnection(path);
-        using var command = connection.CreateCommand();
-        command.CommandText = "SELECT COUNT(*) FROM oc_outbox_leases WHERE store_identity = $storeIdentity AND lease_id = $leaseId;";
-        _ = command.Parameters.AddWithValue(StoreIdentityParameter, StoreIdentity);
-        _ = command.Parameters.AddWithValue("$leaseId", leaseId.ToString("D"));
-        return command.ExecuteScalar() is long count ? count : throw new InvalidOperationException("The lease row count could not be read.");
+        using var command = connection.CreateStatement();
+        command.SetSql("SELECT COUNT(*) FROM oc_outbox_leases WHERE store_identity = $storeIdentity AND lease_id = $leaseId;");
+        _ = command.Bind(StoreIdentityParameter, StoreIdentity);
+        _ = command.Bind("$leaseId", leaseId.ToString("D"));
+        return command.Scalar() is long count ? count : throw new InvalidOperationException("The lease row count could not be read.");
     }
 
     /// <summary>Counts all lease rows.</summary>
@@ -369,9 +368,9 @@ public sealed partial class SqliteLocalCommitStoreTests
     private static long CountAllLeaseRows(string path)
     {
         using var connection = OpenRawConnection(path);
-        using var command = connection.CreateCommand();
-        command.CommandText = "SELECT COUNT(*) FROM oc_outbox_leases;";
-        return command.ExecuteScalar() is long count ? count : throw new InvalidOperationException("The lease row count could not be read.");
+        using var command = connection.CreateStatement();
+        command.SetSql("SELECT COUNT(*) FROM oc_outbox_leases;");
+        return command.Scalar() is long count ? count : throw new InvalidOperationException("The lease row count could not be read.");
     }
 
     /// <summary>Creates a trigger that aborts lease inserts.</summary>
@@ -379,15 +378,15 @@ public sealed partial class SqliteLocalCommitStoreTests
     private static void CreateLeaseRollbackTrigger(string path)
     {
         using var connection = OpenRawConnection(path);
-        using var command = connection.CreateCommand();
-        command.CommandText = """
+        using var command = connection.CreateStatement();
+        command.SetSql("""
             CREATE TRIGGER oc_outbox_lease_abort
             AFTER INSERT ON oc_outbox_leases
             BEGIN
                 SELECT RAISE(ABORT, 'rollback lease insert');
             END;
-            """;
-        _ = command.ExecuteNonQuery();
+            """);
+        _ = command.Execute();
     }
 
     /// <summary>Drops the lease rollback trigger.</summary>
@@ -395,9 +394,9 @@ public sealed partial class SqliteLocalCommitStoreTests
     private static void DropLeaseRollbackTrigger(string path)
     {
         using var connection = OpenRawConnection(path);
-        using var command = connection.CreateCommand();
-        command.CommandText = "DROP TRIGGER oc_outbox_lease_abort;";
-        _ = command.ExecuteNonQuery();
+        using var command = connection.CreateStatement();
+        command.SetSql("DROP TRIGGER oc_outbox_lease_abort;");
+        _ = command.Execute();
     }
 
     /// <summary>Manual time provider for lease expiry tests.</summary>

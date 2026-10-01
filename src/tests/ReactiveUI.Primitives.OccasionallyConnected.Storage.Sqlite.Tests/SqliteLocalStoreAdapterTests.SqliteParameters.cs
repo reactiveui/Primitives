@@ -83,9 +83,9 @@ public sealed partial class SqliteLocalStoreAdapterTests
     private static List<string> ReadTableNames(string path)
     {
         using var connection = OpenRawConnection(path);
-        using var command = connection.CreateCommand();
-        command.CommandText = "SELECT name FROM sqlite_master WHERE type = 'table' ORDER BY name;";
-        using var reader = command.ExecuteReader();
+        using var command = connection.CreateStatement();
+        command.SetSql("SELECT name FROM sqlite_master WHERE type = 'table' ORDER BY name;");
+        using var reader = command.Query();
         var names = new List<string>();
         while (reader.Read())
         {

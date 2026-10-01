@@ -2,7 +2,7 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
-using Microsoft.Data.Sqlite;
+using ReactiveUI.Primitives.OccasionallyConnected.Sqlite;
 
 namespace ReactiveUI.Primitives.OccasionallyConnected.Server.Tests;
 
@@ -28,13 +28,13 @@ public sealed partial class SqliteServerCommitJournalTests
     {
         var attempts = 0;
         var delays = 0;
-        await using var connection = SqliteServerCommitJournal.RetryInitializationConnection(
+        using var connection = SqliteServerCommitJournal.RetryInitializationConnection(
             () =>
             {
                 attempts++;
                 return attempts == 1
-                    ? throw new SqliteException("WAL truncate", SqliteIoError, SqliteIoErrorTruncate)
-                    : new SqliteConnection(new SqliteConnectionStringBuilder { DataSource = ":memory:" }.ToString());
+                    ? throw new SqliteDatabaseException("WAL truncate", SqliteIoError, SqliteIoErrorTruncate)
+                    : new SqliteDatabase(":memory:");
             },
             () => delays++);
 
@@ -53,11 +53,11 @@ public sealed partial class SqliteServerCommitJournalTests
             () =>
             {
                 attempts++;
-                throw new SqliteException("write failure", SqliteIoError, SqliteIoErrorWrite);
+                throw new SqliteDatabaseException("write failure", SqliteIoError, SqliteIoErrorWrite);
             },
             () => delays++);
 
-        await Assert.That(open).ThrowsExactly<SqliteException>();
+        await Assert.That(open).ThrowsExactly<SqliteDatabaseException>();
         await Assert.That(attempts).IsEqualTo(1);
         await Assert.That(delays).IsEqualTo(0);
     }
@@ -73,11 +73,11 @@ public sealed partial class SqliteServerCommitJournalTests
             () =>
             {
                 attempts++;
-                throw new SqliteException("WAL truncate", SqliteIoError, SqliteIoErrorTruncate);
+                throw new SqliteDatabaseException("WAL truncate", SqliteIoError, SqliteIoErrorTruncate);
             },
             () => delays++);
 
-        await Assert.That(open).ThrowsExactly<SqliteException>();
+        await Assert.That(open).ThrowsExactly<SqliteDatabaseException>();
         await Assert.That(attempts).IsEqualTo(StartupRetryCount + 1);
         await Assert.That(delays).IsEqualTo(StartupRetryCount);
     }

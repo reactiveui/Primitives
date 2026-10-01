@@ -66,17 +66,17 @@ public sealed partial class SqliteLocalStoreAdapterTests
             CreateEncryptedOperation(FirstClientSequence, "operation"),
             new(Stream, CreatePayload("initial"), 1, 0),
             CancellationToken.None);
-        await using (var connection = OpenRawConnection(database.Path))
-        await using (var command = connection.CreateCommand())
+        using (var connection = OpenRawConnection(database.Path))
+        using (var command = connection.CreateStatement())
         {
-            command.CommandText = """
+            command.SetSql("""
                 CREATE TRIGGER ignore_encrypted_cursor_update
                 BEFORE UPDATE OF server_cursor ON oc_streams
                 BEGIN
                     SELECT RAISE(IGNORE);
                 END;
-                """;
-            _ = await command.ExecuteNonQueryAsync(CancellationToken.None);
+                """);
+            _ = command.Execute();
         }
 
         var remote = CreateRemoteEvent("next-cursor");
@@ -115,13 +115,13 @@ public sealed partial class SqliteLocalStoreAdapterTests
             .WithPayloadMetadata(payload.ContractId, payload.SchemaVersion, payload.ContentType);
         var cipher = new SqliteRecordCipher(SqliteRecordProtection.Create(CreateFirstKeyProvider()), StoreIdentity);
         var protectedHash = cipher.ProtectText(replacementHash, context, SqliteRecordContext.PayloadHashColumn);
-        await using (var connection = OpenRawConnection(database.Path))
-        await using (var command = connection.CreateCommand())
+        using (var connection = OpenRawConnection(database.Path))
+        using (var command = connection.CreateStatement())
         {
-            command.CommandText = "UPDATE oc_snapshots SET payload_hash = $hash WHERE stream_id = $streamId;";
-            _ = command.Parameters.AddWithValue("$hash", protectedHash);
-            _ = command.Parameters.AddWithValue("$streamId", Stream.Value);
-            await Assert.That(await command.ExecuteNonQueryAsync(CancellationToken.None)).IsEqualTo(1);
+            command.SetSql("UPDATE oc_snapshots SET payload_hash = $hash WHERE stream_id = $streamId;");
+            _ = command.Bind("$hash", protectedHash);
+            _ = command.Bind("$streamId", Stream.Value);
+            await Assert.That(command.Execute()).IsEqualTo(1);
         }
 
         await using var reopened = CreateEncryptedAdapter(database.Path, CreateFirstKeyProvider());

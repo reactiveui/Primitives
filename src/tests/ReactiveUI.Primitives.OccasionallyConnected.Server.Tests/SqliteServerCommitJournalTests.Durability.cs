@@ -5,7 +5,7 @@
 using System.Diagnostics;
 using System.Globalization;
 using System.Runtime.CompilerServices;
-using Microsoft.Data.Sqlite;
+using ReactiveUI.Primitives.OccasionallyConnected.Sqlite;
 
 namespace ReactiveUI.Primitives.OccasionallyConnected.Server.Tests;
 
@@ -200,17 +200,17 @@ public sealed partial class SqliteServerCommitJournalTests
     private static void ApplyReplayCorruption(string path, ReplayCorruption corruption)
     {
         using var connection = OpenRawConnection(path);
-        using var command = connection.CreateCommand();
+        using var command = connection.CreateStatement();
         DisableForeignKeys(command);
         SetReplayCorruptionCommand(command, corruption);
-        _ = command.ExecuteNonQuery();
+        _ = command.Execute();
     }
 
     /// <summary>Sets one replay corruption command.</summary>
     /// <param name="command">The command.</param>
     /// <param name="corruption">The corruption to apply.</param>
     /// <exception cref="InvalidOperationException">The corruption value is unsupported.</exception>
-    private static void SetReplayCorruptionCommand(SqliteCommand command, ReplayCorruption corruption)
+    private static void SetReplayCorruptionCommand(SqliteStatement command, ReplayCorruption corruption)
     {
         if (corruption <= ReplayCorruption.BlobClientId)
         {
@@ -237,61 +237,61 @@ public sealed partial class SqliteServerCommitJournalTests
     /// <param name="command">The command.</param>
     /// <param name="corruption">The corruption to apply.</param>
     /// <exception cref="InvalidOperationException">The corruption value is unsupported.</exception>
-    private static void SetLedgerCorruptionCommand(SqliteCommand command, ReplayCorruption corruption)
+    private static void SetLedgerCorruptionCommand(SqliteStatement command, ReplayCorruption corruption)
     {
         switch (corruption)
         {
             case ReplayCorruption.InvalidResultKind:
             {
-                command.CommandText = "UPDATE oc_server_journal_ledger SET result_kind = 99;";
+                command.SetSql("UPDATE oc_server_journal_ledger SET result_kind = 99;");
                 break;
             }
 
             case ReplayCorruption.FractionalResultKind:
             {
-                command.CommandText = "UPDATE oc_server_journal_ledger SET result_kind = 0.5;";
+                command.SetSql("UPDATE oc_server_journal_ledger SET result_kind = 0.5;");
                 break;
             }
 
             case ReplayCorruption.TextResultKind:
             {
-                command.CommandText = "UPDATE oc_server_journal_ledger SET result_kind = 'accepted';";
+                command.SetSql("UPDATE oc_server_journal_ledger SET result_kind = 'accepted';");
                 break;
             }
 
             case ReplayCorruption.OutOfRangeResultKind:
             {
-                command.CommandText = "UPDATE oc_server_journal_ledger SET result_kind = 9223372036854775807;";
+                command.SetSql("UPDATE oc_server_journal_ledger SET result_kind = 9223372036854775807;");
                 break;
             }
 
             case ReplayCorruption.ShortFingerprint:
             {
-                command.CommandText = "UPDATE oc_server_journal_ledger SET fingerprint = zeroblob(1);";
+                command.SetSql("UPDATE oc_server_journal_ledger SET fingerprint = zeroblob(1);");
                 break;
             }
 
             case ReplayCorruption.InvalidCommitTimestamp:
             {
-                command.CommandText = "UPDATE oc_server_journal_ledger SET committed_at_utc = 'not-a-date';";
+                command.SetSql("UPDATE oc_server_journal_ledger SET committed_at_utc = 'not-a-date';");
                 break;
             }
 
             case ReplayCorruption.EmptyOperationId:
             {
-                command.CommandText = "UPDATE oc_server_journal_ledger SET operation_id = '00000000-0000-0000-0000-000000000000';";
+                command.SetSql("UPDATE oc_server_journal_ledger SET operation_id = '00000000-0000-0000-0000-000000000000';");
                 break;
             }
 
             case ReplayCorruption.BlankClientId:
             {
-                command.CommandText = "UPDATE oc_server_journal_ledger SET client_id = ' ';";
+                command.SetSql("UPDATE oc_server_journal_ledger SET client_id = ' ';");
                 break;
             }
 
             case ReplayCorruption.BlobClientId:
             {
-                command.CommandText = "UPDATE oc_server_journal_ledger SET client_id = x'313233';";
+                command.SetSql("UPDATE oc_server_journal_ledger SET client_id = x'313233';");
                 break;
             }
 
@@ -306,19 +306,19 @@ public sealed partial class SqliteServerCommitJournalTests
     /// <param name="command">The command.</param>
     /// <param name="corruption">The corruption to apply.</param>
     /// <exception cref="InvalidOperationException">The corruption value is unsupported.</exception>
-    private static void SetConflictCorruptionCommand(SqliteCommand command, ReplayCorruption corruption)
+    private static void SetConflictCorruptionCommand(SqliteStatement command, ReplayCorruption corruption)
     {
         switch (corruption)
         {
             case ReplayCorruption.BlankConflictResolution:
             {
-                command.CommandText = "UPDATE oc_server_journal_conflicts SET resolution_code = ' ';";
+                command.SetSql("UPDATE oc_server_journal_conflicts SET resolution_code = ' ';");
                 break;
             }
 
             case ReplayCorruption.PartialConflictPayload:
             {
-                command.CommandText = "UPDATE oc_server_journal_conflicts SET resolved_payload_contract_id = NULL;";
+                command.SetSql("UPDATE oc_server_journal_conflicts SET resolved_payload_contract_id = NULL;");
                 break;
             }
 
@@ -333,49 +333,49 @@ public sealed partial class SqliteServerCommitJournalTests
     /// <param name="command">The command.</param>
     /// <param name="corruption">The corruption to apply.</param>
     /// <exception cref="InvalidOperationException">The corruption value is unsupported.</exception>
-    private static void SetEventCorruptionCommand(SqliteCommand command, ReplayCorruption corruption)
+    private static void SetEventCorruptionCommand(SqliteStatement command, ReplayCorruption corruption)
     {
         switch (corruption)
         {
             case ReplayCorruption.EmptyEventId:
             {
-                command.CommandText = "UPDATE oc_server_journal_events SET event_id = '00000000-0000-0000-0000-000000000000';";
+                command.SetSql("UPDATE oc_server_journal_events SET event_id = '00000000-0000-0000-0000-000000000000';");
                 break;
             }
 
             case ReplayCorruption.BlankEventCursor:
             {
-                command.CommandText = "UPDATE oc_server_journal_events SET server_cursor = ' ';";
+                command.SetSql("UPDATE oc_server_journal_events SET server_cursor = ' ';");
                 break;
             }
 
             case ReplayCorruption.InvalidEventPayloadSchema:
             {
-                command.CommandText = "UPDATE oc_server_journal_events SET payload_schema_version = 0;";
+                command.SetSql("UPDATE oc_server_journal_events SET payload_schema_version = 0;");
                 break;
             }
 
             case ReplayCorruption.FractionalEventPayloadSchema:
             {
-                command.CommandText = "UPDATE oc_server_journal_events SET payload_schema_version = 0.5;";
+                command.SetSql("UPDATE oc_server_journal_events SET payload_schema_version = 0.5;");
                 break;
             }
 
             case ReplayCorruption.TextEventPayloadSchema:
             {
-                command.CommandText = "UPDATE oc_server_journal_events SET payload_schema_version = 'one';";
+                command.SetSql("UPDATE oc_server_journal_events SET payload_schema_version = 'one';");
                 break;
             }
 
             case ReplayCorruption.NonBlobEventPayload:
             {
-                command.CommandText = "UPDATE oc_server_journal_events SET payload = 'not-a-blob';";
+                command.SetSql("UPDATE oc_server_journal_events SET payload = 'not-a-blob';");
                 break;
             }
 
             case ReplayCorruption.PartialEventOrigin:
             {
-                command.CommandText = "UPDATE oc_server_journal_events SET origin_client_id = NULL;";
+                command.SetSql("UPDATE oc_server_journal_events SET origin_client_id = NULL;");
                 break;
             }
 
@@ -390,25 +390,25 @@ public sealed partial class SqliteServerCommitJournalTests
     /// <param name="command">The command.</param>
     /// <param name="corruption">The corruption to apply.</param>
     /// <exception cref="InvalidOperationException">The corruption value is unsupported.</exception>
-    private static void SetStreamCorruptionCommand(SqliteCommand command, ReplayCorruption corruption)
+    private static void SetStreamCorruptionCommand(SqliteStatement command, ReplayCorruption corruption)
     {
         switch (corruption)
         {
             case ReplayCorruption.PartialStreamState:
             {
-                command.CommandText = "UPDATE oc_server_journal_streams SET state_version = NULL;";
+                command.SetSql("UPDATE oc_server_journal_streams SET state_version = NULL;");
                 break;
             }
 
             case ReplayCorruption.BlankStreamCursor:
             {
-                command.CommandText = "UPDATE oc_server_journal_streams SET last_cursor = ' ';";
+                command.SetSql("UPDATE oc_server_journal_streams SET last_cursor = ' ';");
                 break;
             }
 
             case ReplayCorruption.PartialWriteStamp:
             {
-                command.CommandText = "UPDATE oc_server_journal_streams SET write_stamp_committed_at_utc = NULL;";
+                command.SetSql("UPDATE oc_server_journal_streams SET write_stamp_committed_at_utc = NULL;");
                 break;
             }
 
@@ -426,49 +426,49 @@ public sealed partial class SqliteServerCommitJournalTests
     private static void ApplyMetricCorruption(string path, MetricCorruption corruption)
     {
         using var connection = OpenRawConnection(path);
-        using var command = connection.CreateCommand();
+        using var command = connection.CreateStatement();
         DisableForeignKeys(command);
         switch (corruption)
         {
             case MetricCorruption.BlankTenantId:
             {
-                command.CommandText = "UPDATE oc_server_journal_streams SET tenant_id = ' ';";
+                command.SetSql("UPDATE oc_server_journal_streams SET tenant_id = ' ';");
                 break;
             }
 
             case MetricCorruption.InvalidStreamId:
             {
-                command.CommandText = "UPDATE oc_server_journal_streams SET stream_id = '../bad';";
+                command.SetSql("UPDATE oc_server_journal_streams SET stream_id = '../bad';");
                 break;
             }
 
             case MetricCorruption.NegativeStateBytes:
             {
-                command.CommandText = "UPDATE oc_server_journal_streams SET state_bytes = -1;";
+                command.SetSql("UPDATE oc_server_journal_streams SET state_bytes = -1;");
                 break;
             }
 
             case MetricCorruption.FractionalStateBytes:
             {
-                command.CommandText = "UPDATE oc_server_journal_streams SET state_bytes = 0.5;";
+                command.SetSql("UPDATE oc_server_journal_streams SET state_bytes = 0.5;");
                 break;
             }
 
             case MetricCorruption.TextStateBytes:
             {
-                command.CommandText = "UPDATE oc_server_journal_streams SET state_bytes = 'zero';";
+                command.SetSql("UPDATE oc_server_journal_streams SET state_bytes = 'zero';");
                 break;
             }
 
             case MetricCorruption.NegativeCursorBytes:
             {
-                command.CommandText = "UPDATE oc_server_journal_streams SET last_cursor_bytes = -1;";
+                command.SetSql("UPDATE oc_server_journal_streams SET last_cursor_bytes = -1;");
                 break;
             }
 
             case MetricCorruption.NegativeLedgerBytes:
             {
-                command.CommandText = "UPDATE oc_server_journal_ledger SET logical_bytes = -1;";
+                command.SetSql("UPDATE oc_server_journal_ledger SET logical_bytes = -1;");
                 break;
             }
 
@@ -478,15 +478,15 @@ public sealed partial class SqliteServerCommitJournalTests
             }
         }
 
-        _ = command.ExecuteNonQuery();
+        _ = command.Execute();
     }
 
     /// <summary>Allows raw tests to create corrupted parent-key rows.</summary>
     /// <param name="command">The command.</param>
-    private static void DisableForeignKeys(SqliteCommand command)
+    private static void DisableForeignKeys(SqliteStatement command)
     {
-        command.CommandText = "PRAGMA foreign_keys = OFF;";
-        _ = command.ExecuteNonQuery();
+        command.SetSql("PRAGMA foreign_keys = OFF;");
+        _ = command.Execute();
     }
 
     /// <summary>Starts raw writes inside an uncommitted transaction and keeps the process alive.</summary>
@@ -496,9 +496,9 @@ public sealed partial class SqliteServerCommitJournalTests
     {
         var connection = OpenRawConnection(path);
         var transaction = connection.BeginTransaction();
-        using var command = connection.CreateCommand();
-        command.Transaction = transaction;
-        command.CommandText = """
+        using var command = connection.CreateStatement();
+        command.UseTransaction(transaction);
+        command.SetSql("""
             INSERT INTO oc_server_journal_streams
                 (tenant_id, stream_id, revision, state_version, state_payload_contract_id, state_payload_schema_version,
                  state_payload_content_type, state_payload, state_payload_hash, write_stamp_committed_at_utc, write_stamp_client_id,
@@ -506,8 +506,8 @@ public sealed partial class SqliteServerCommitJournalTests
                  last_group_sequence, receive_history_incomplete)
             VALUES
                 ('tenant', 'stream', 99, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, 0, 0, 0, 0);
-            """;
-        _ = command.ExecuteNonQuery();
+            """);
+        _ = command.Execute();
         return new(connection, transaction);
     }
 
@@ -523,7 +523,7 @@ public sealed partial class SqliteServerCommitJournalTests
         {
             return CreateJournal(databasePath);
         }
-        catch (SqliteException exception)
+        catch (SqliteDatabaseException exception)
         {
             throw new InvalidOperationException(
                 CreateCrashRecoveryFailureMessage(
@@ -545,7 +545,7 @@ public sealed partial class SqliteServerCommitJournalTests
     /// <returns>The diagnostic failure message.</returns>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static string CreateCrashRecoveryFailureMessage(
-        SqliteException exception,
+        SqliteDatabaseException exception,
         string databasePath,
         CrashChildOutput childOutput,
         string filesBeforeConstructor,
@@ -774,7 +774,7 @@ public sealed partial class SqliteServerCommitJournalTests
     private sealed class UncommittedRawWrite : IDisposable
     {
         /// <summary>The held connection.</summary>
-        private readonly SqliteConnection _connection;
+        private readonly SqliteDatabase _connection;
 
         /// <summary>The held transaction.</summary>
         private readonly SqliteTransaction _transaction;
@@ -782,7 +782,7 @@ public sealed partial class SqliteServerCommitJournalTests
         /// <summary>Initializes a new instance of the <see cref="UncommittedRawWrite"/> class.</summary>
         /// <param name="connection">The held connection.</param>
         /// <param name="transaction">The held transaction.</param>
-        internal UncommittedRawWrite(SqliteConnection connection, SqliteTransaction transaction)
+        internal UncommittedRawWrite(SqliteDatabase connection, SqliteTransaction transaction)
         {
             _connection = connection;
             _transaction = transaction;

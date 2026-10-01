@@ -3,7 +3,6 @@
 // See the LICENSE file in the project root for full license information.
 
 using System.Runtime.CompilerServices;
-using Microsoft.Data.Sqlite;
 using ReactiveUI.Primitives.OccasionallyConnected;
 using ReactiveUI.Primitives.OccasionallyConnected.Collaboration.Server;
 
@@ -117,7 +116,7 @@ public sealed class CollaborationServerRuntimeTests
         using var lease = new DatabaseLease(createDirectory: true);
         await File.WriteAllTextAsync(lease.Path, CorruptSqliteContent).ConfigureAwait(false);
 
-        var exception = await Assert.ThrowsExactlyAsync<SqliteException>(() =>
+        var exception = await Assert.ThrowsExactlyAsync<SqliteDatabaseException>(() =>
             CollaborationServerRuntime.CreateAsync(CreateOptions(lease.Path), CancellationToken.None).AsTask());
 
         await Assert.That(exception).IsNotNull();

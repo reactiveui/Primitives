@@ -3,7 +3,6 @@
 // See the LICENSE file in the project root for full license information.
 
 using System.Runtime.CompilerServices;
-using Microsoft.Data.Sqlite;
 using ReactiveUI.Primitives.OccasionallyConnected;
 using ReactiveUI.Primitives.OccasionallyConnected.Storage.Sqlite;
 
@@ -346,7 +345,7 @@ public sealed partial class SqliteLocalStoreAdapterTests
             CreateSnapshotMutation(1, ResultOptimisticLocalText),
             CancellationToken.None).AsTask();
 
-        await Assert.That(action).ThrowsExactly<SqliteException>();
+        await Assert.That(action).ThrowsExactly<SqliteDatabaseException>();
         DropDeadLetterStatusRollbackTrigger(database.Path);
         var recovered = await adapter.RecoverStreamAsync(Stream, created.SubscriptionId, CancellationToken.None);
         var status = await adapter.GetOperationStatusAsync(created.Operation.OperationId, CancellationToken.None);
@@ -734,16 +733,16 @@ public sealed partial class SqliteLocalStoreAdapterTests
     private static void CreateDeadLetterStatusRollbackTrigger(string path)
     {
         using var connection = OpenRawConnection(path);
-        using var command = connection.CreateCommand();
-        command.CommandText = """
+        using var command = connection.CreateStatement();
+        command.SetSql("""
             CREATE TRIGGER oc_dead_letter_status_abort
             AFTER UPDATE OF operation_state ON oc_outbox_operation_states
             WHEN NEW.operation_state = 6
             BEGIN
                 SELECT RAISE(ABORT, 'rollback dead letter status');
             END;
-            """;
-        _ = command.ExecuteNonQuery();
+            """);
+        _ = command.Execute();
     }
 
     /// <summary>Drops the trigger that aborts dead-letter status updates.</summary>
@@ -751,9 +750,9 @@ public sealed partial class SqliteLocalStoreAdapterTests
     private static void DropDeadLetterStatusRollbackTrigger(string path)
     {
         using var connection = OpenRawConnection(path);
-        using var command = connection.CreateCommand();
-        command.CommandText = "DROP TRIGGER oc_dead_letter_status_abort;";
-        _ = command.ExecuteNonQuery();
+        using var command = connection.CreateStatement();
+        command.SetSql("DROP TRIGGER oc_dead_letter_status_abort;");
+        _ = command.Execute();
     }
 
     /// <summary>Sets one operation state through raw SQLite.</summary>
@@ -763,20 +762,20 @@ public sealed partial class SqliteLocalStoreAdapterTests
     private static void SetOperationState(string path, OperationId operationId, SyncOperationState state)
     {
         using var connection = OpenRawConnection(path);
-        using var command = connection.CreateCommand();
-        command.CommandText = """
+        using var command = connection.CreateStatement();
+        command.SetSql("""
             UPDATE oc_outbox_operation_states
             SET operation_state = $operationState,
                 reason_code = $reasonCode
             WHERE store_identity = $storeIdentity AND operation_id = $operationId;
-            """;
-        _ = command.Parameters.AddWithValue("$operationState", (int)state);
-        _ = command.Parameters.AddWithValue(
+            """);
+        _ = command.Bind("$operationState", (int)state);
+        _ = command.Bind(
             "$reasonCode",
             state == SyncOperationState.DeadLettered ? SqliteDeadLetterReasonCode : DBNull.Value);
-        _ = command.Parameters.AddWithValue(StoreIdentityParameter, StoreIdentity);
-        _ = command.Parameters.AddWithValue(OperationIdParameter, operationId.Value.ToString("D"));
-        _ = command.ExecuteNonQuery();
+        _ = command.Bind(StoreIdentityParameter, StoreIdentity);
+        _ = command.Bind(OperationIdParameter, operationId.Value.ToString("D"));
+        _ = command.Execute();
     }
 
     /// <summary>Sets one operation attempt while preserving its current state.</summary>
@@ -786,16 +785,16 @@ public sealed partial class SqliteLocalStoreAdapterTests
     private static void SetOperationAttempt(string path, OperationId operationId, int attempt)
     {
         using var connection = OpenRawConnection(path);
-        using var command = connection.CreateCommand();
-        command.CommandText = """
+        using var command = connection.CreateStatement();
+        command.SetSql("""
             UPDATE oc_outbox_operation_states
             SET attempt_count = $attempt
             WHERE store_identity = $storeIdentity AND operation_id = $operationId;
-            """;
-        _ = command.Parameters.AddWithValue("$attempt", attempt);
-        _ = command.Parameters.AddWithValue(StoreIdentityParameter, StoreIdentity);
-        _ = command.Parameters.AddWithValue(OperationIdParameter, operationId.Value.ToString("D"));
-        _ = command.ExecuteNonQuery();
+            """);
+        _ = command.Bind("$attempt", attempt);
+        _ = command.Bind(StoreIdentityParameter, StoreIdentity);
+        _ = command.Bind(OperationIdParameter, operationId.Value.ToString("D"));
+        _ = command.Execute();
     }
 
     /// <summary>Creates a trigger that makes dead-letter status updates affect zero rows.</summary>
@@ -803,16 +802,16 @@ public sealed partial class SqliteLocalStoreAdapterTests
     private static void CreateDeadLetterUpdateIgnoreTrigger(string path)
     {
         using var connection = OpenRawConnection(path);
-        using var command = connection.CreateCommand();
-        command.CommandText = """
+        using var command = connection.CreateStatement();
+        command.SetSql("""
             CREATE TRIGGER oc_dead_letter_status_ignore
             BEFORE UPDATE OF operation_state ON oc_outbox_operation_states
             WHEN NEW.operation_state = 6
             BEGIN
                 SELECT RAISE(IGNORE);
             END;
-            """;
-        _ = command.ExecuteNonQuery();
+            """);
+        _ = command.Execute();
     }
 
     /// <summary>Removes the durable reason from a dead-letter operation.</summary>
@@ -821,15 +820,15 @@ public sealed partial class SqliteLocalStoreAdapterTests
     private static void NullDeadLetterReason(string path, OperationId operationId)
     {
         using var connection = OpenRawConnection(path);
-        using var command = connection.CreateCommand();
-        command.CommandText = """
+        using var command = connection.CreateStatement();
+        command.SetSql("""
             UPDATE oc_outbox_operation_states
             SET reason_code = NULL
             WHERE store_identity = $storeIdentity AND operation_id = $operationId;
-            """;
-        _ = command.Parameters.AddWithValue(StoreIdentityParameter, StoreIdentity);
-        _ = command.Parameters.AddWithValue(OperationIdParameter, operationId.Value.ToString("D"));
-        _ = command.ExecuteNonQuery();
+            """);
+        _ = command.Bind(StoreIdentityParameter, StoreIdentity);
+        _ = command.Bind(OperationIdParameter, operationId.Value.ToString("D"));
+        _ = command.Execute();
     }
 
     /// <summary>Corrupts the stream stored on a lease row.</summary>
@@ -839,17 +838,17 @@ public sealed partial class SqliteLocalStoreAdapterTests
     private static void CorruptLeaseStream(string path, Guid leaseId, OperationId operationId)
     {
         using var connection = OpenRawConnection(path);
-        using var command = connection.CreateCommand();
-        command.CommandText = """
+        using var command = connection.CreateStatement();
+        command.SetSql("""
             UPDATE oc_outbox_leases
             SET stream_id = $streamId
             WHERE store_identity = $storeIdentity AND lease_id = $leaseId AND operation_id = $operationId;
-            """;
-        _ = command.Parameters.AddWithValue(StreamIdParameter, DeadLetterOtherStream.Value);
-        _ = command.Parameters.AddWithValue(StoreIdentityParameter, StoreIdentity);
-        _ = command.Parameters.AddWithValue(LeaseIdParameter, leaseId.ToString("D"));
-        _ = command.Parameters.AddWithValue(OperationIdParameter, operationId.Value.ToString("D"));
-        _ = command.ExecuteNonQuery();
+            """);
+        _ = command.Bind(StreamIdParameter, DeadLetterOtherStream.Value);
+        _ = command.Bind(StoreIdentityParameter, StoreIdentity);
+        _ = command.Bind(LeaseIdParameter, leaseId.ToString("D"));
+        _ = command.Bind(OperationIdParameter, operationId.Value.ToString("D"));
+        _ = command.Execute();
     }
 
     /// <summary>Expires one lease through raw SQLite.</summary>
@@ -858,16 +857,16 @@ public sealed partial class SqliteLocalStoreAdapterTests
     private static void ExpireLease(string path, Guid leaseId)
     {
         using var connection = OpenRawConnection(path);
-        using var command = connection.CreateCommand();
-        command.CommandText = """
+        using var command = connection.CreateStatement();
+        command.SetSql("""
             UPDATE oc_outbox_leases
             SET lease_expires_at_utc = $leaseExpiresAtUtc
             WHERE store_identity = $storeIdentity AND lease_id = $leaseId;
-            """;
-        _ = command.Parameters.AddWithValue("$leaseExpiresAtUtc", SqliteLocalCommitSql.FormatDateTimeOffset(DateTimeOffset.UnixEpoch));
-        _ = command.Parameters.AddWithValue(StoreIdentityParameter, StoreIdentity);
-        _ = command.Parameters.AddWithValue(LeaseIdParameter, leaseId.ToString("D"));
-        _ = command.ExecuteNonQuery();
+            """);
+        _ = command.Bind("$leaseExpiresAtUtc", SqliteLocalCommitSql.FormatDateTimeOffset(DateTimeOffset.UnixEpoch));
+        _ = command.Bind(StoreIdentityParameter, StoreIdentity);
+        _ = command.Bind(LeaseIdParameter, leaseId.ToString("D"));
+        _ = command.Execute();
     }
 
     /// <summary>Deletes one lease row through raw SQLite.</summary>
@@ -877,15 +876,15 @@ public sealed partial class SqliteLocalStoreAdapterTests
     private static void DeleteLease(string path, Guid leaseId, OperationId operationId)
     {
         using var connection = OpenRawConnection(path);
-        using var command = connection.CreateCommand();
-        command.CommandText = """
+        using var command = connection.CreateStatement();
+        command.SetSql("""
             DELETE FROM oc_outbox_leases
             WHERE store_identity = $storeIdentity AND lease_id = $leaseId AND operation_id = $operationId;
-            """;
-        _ = command.Parameters.AddWithValue(StoreIdentityParameter, StoreIdentity);
-        _ = command.Parameters.AddWithValue(LeaseIdParameter, leaseId.ToString("D"));
-        _ = command.Parameters.AddWithValue(OperationIdParameter, operationId.Value.ToString("D"));
-        _ = command.ExecuteNonQuery();
+            """);
+        _ = command.Bind(StoreIdentityParameter, StoreIdentity);
+        _ = command.Bind(LeaseIdParameter, leaseId.ToString("D"));
+        _ = command.Bind(OperationIdParameter, operationId.Value.ToString("D"));
+        _ = command.Execute();
     }
 
     /// <summary>Adds one operation to an existing lease through raw SQLite.</summary>
@@ -895,8 +894,8 @@ public sealed partial class SqliteLocalStoreAdapterTests
     private static void AddOperationToLease(string path, Guid leaseId, SyncOperation operation)
     {
         using var connection = OpenRawConnection(path);
-        using var command = connection.CreateCommand();
-        command.CommandText = """
+        using var command = connection.CreateStatement();
+        command.SetSql("""
             UPDATE oc_outbox_leases
             SET lease_member_count = $leaseMemberCount
             WHERE store_identity = $storeIdentity AND lease_id = $leaseId;
@@ -907,14 +906,14 @@ public sealed partial class SqliteLocalStoreAdapterTests
             FROM oc_outbox_leases
             WHERE store_identity = $storeIdentity AND lease_id = $leaseId
             LIMIT 1;
-            """;
-        _ = command.Parameters.AddWithValue("$leaseMemberCount", DeadLetterTwoOperations);
-        _ = command.Parameters.AddWithValue(StoreIdentityParameter, StoreIdentity);
-        _ = command.Parameters.AddWithValue(LeaseIdParameter, leaseId.ToString("D"));
-        _ = command.Parameters.AddWithValue(OperationIdParameter, operation.OperationId.Value.ToString("D"));
-        _ = command.Parameters.AddWithValue(StreamIdParameter, operation.StreamId.Value);
-        _ = command.Parameters.AddWithValue("$clientSequence", operation.ClientSequence);
-        _ = command.ExecuteNonQuery();
+            """);
+        _ = command.Bind("$leaseMemberCount", DeadLetterTwoOperations);
+        _ = command.Bind(StoreIdentityParameter, StoreIdentity);
+        _ = command.Bind(LeaseIdParameter, leaseId.ToString("D"));
+        _ = command.Bind(OperationIdParameter, operation.OperationId.Value.ToString("D"));
+        _ = command.Bind(StreamIdParameter, operation.StreamId.Value);
+        _ = command.Bind("$clientSequence", operation.ClientSequence);
+        _ = command.Execute();
     }
 
     /// <summary>Deletes one operation state through raw SQLite.</summary>
@@ -923,14 +922,14 @@ public sealed partial class SqliteLocalStoreAdapterTests
     private static void DeleteOperationState(string path, OperationId operationId)
     {
         using var connection = OpenRawConnection(path);
-        using var command = connection.CreateCommand();
-        command.CommandText = """
+        using var command = connection.CreateStatement();
+        command.SetSql("""
             DELETE FROM oc_outbox_operation_states
             WHERE store_identity = $storeIdentity AND operation_id = $operationId;
-            """;
-        _ = command.Parameters.AddWithValue(StoreIdentityParameter, StoreIdentity);
-        _ = command.Parameters.AddWithValue(OperationIdParameter, operationId.Value.ToString("D"));
-        _ = command.ExecuteNonQuery();
+            """);
+        _ = command.Bind(StoreIdentityParameter, StoreIdentity);
+        _ = command.Bind(OperationIdParameter, operationId.Value.ToString("D"));
+        _ = command.Execute();
     }
 
     /// <summary>Reads the current snapshot revision through raw SQLite.</summary>
@@ -941,15 +940,15 @@ public sealed partial class SqliteLocalStoreAdapterTests
     private static long ReadSnapshotRevision(string path, StreamId streamId)
     {
         using var connection = OpenRawConnection(path);
-        using var command = connection.CreateCommand();
-        command.CommandText = """
+        using var command = connection.CreateStatement();
+        command.SetSql("""
             SELECT revision
             FROM oc_snapshots
             WHERE store_identity = $storeIdentity AND stream_id = $streamId;
-            """;
-        _ = command.Parameters.AddWithValue(StoreIdentityParameter, StoreIdentity);
-        _ = command.Parameters.AddWithValue(StreamIdParameter, streamId.Value);
-        return (long)(command.ExecuteScalar() ?? throw new InvalidOperationException("Expected a snapshot revision."));
+            """);
+        _ = command.Bind(StoreIdentityParameter, StoreIdentity);
+        _ = command.Bind(StreamIdParameter, streamId.Value);
+        return (long)(command.Scalar() ?? throw new InvalidOperationException("Expected a snapshot revision."));
     }
 
     /// <summary>Deletes the current snapshot row through raw SQLite.</summary>
@@ -963,14 +962,14 @@ public sealed partial class SqliteLocalStoreAdapterTests
     private static void DeleteSnapshot(string path, StreamId streamId)
     {
         using var connection = OpenRawConnection(path);
-        using var command = connection.CreateCommand();
-        command.CommandText = """
+        using var command = connection.CreateStatement();
+        command.SetSql("""
             DELETE FROM oc_snapshots
             WHERE store_identity = $storeIdentity AND stream_id = $streamId;
-            """;
-        _ = command.Parameters.AddWithValue(StoreIdentityParameter, StoreIdentity);
-        _ = command.Parameters.AddWithValue(StreamIdParameter, streamId.Value);
-        _ = command.ExecuteNonQuery();
+            """);
+        _ = command.Bind(StoreIdentityParameter, StoreIdentity);
+        _ = command.Bind(StreamIdParameter, streamId.Value);
+        _ = command.Execute();
     }
 
     /// <summary>A committed operation, its current lease, and stream subscription.</summary>

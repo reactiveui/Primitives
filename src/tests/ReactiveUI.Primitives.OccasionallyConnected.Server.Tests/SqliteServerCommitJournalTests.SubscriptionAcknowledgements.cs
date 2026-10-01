@@ -264,7 +264,7 @@ public sealed partial class SqliteServerCommitJournalTests
         CreateAbortLatestOfferTrigger(database.Path);
 
         await Assert.That(() => journal.OfferReceivePage(new(identity, null, SingleEntryCount, DefaultMaximumEvents, DefaultMaximumLogicalBytes)))
-            .ThrowsExactly<Microsoft.Data.Sqlite.SqliteException>();
+            .ThrowsExactly<SqliteDatabaseException>();
         await Assert.That(journal.SubscriptionOfferCount).IsEqualTo(0);
     }
 
@@ -538,9 +538,9 @@ public sealed partial class SqliteServerCommitJournalTests
     private static void CreateExtraUserTable(string path)
     {
         using var connection = OpenRawConnection(path);
-        using var command = connection.CreateCommand();
-        command.CommandText = "CREATE TABLE zzz_extra_user_table (id INTEGER NOT NULL);";
-        _ = command.ExecuteNonQuery();
+        using var command = connection.CreateStatement();
+        command.SetSql("CREATE TABLE zzz_extra_user_table (id INTEGER NOT NULL);");
+        _ = command.Execute();
     }
 
     /// <summary>Creates a subscription identity for the default trusted context.</summary>
@@ -554,15 +554,15 @@ public sealed partial class SqliteServerCommitJournalTests
     private static void CreateAbortLatestOfferTrigger(string path)
     {
         using var connection = OpenRawConnection(path);
-        using var command = connection.CreateCommand();
-        command.CommandText = """
+        using var command = connection.CreateStatement();
+        command.SetSql("""
             CREATE TRIGGER oc_server_subscription_abort_latest_offer
             BEFORE UPDATE OF latest_offered_cursor ON oc_server_journal_subscriptions
             BEGIN
                 SELECT RAISE(ABORT, 'abort subscription offer');
             END;
-            """;
-        _ = command.ExecuteNonQuery();
+            """);
+        _ = command.Execute();
     }
 
     /// <summary>Creates a trigger that deletes an offer before its timestamp update.</summary>
@@ -570,16 +570,16 @@ public sealed partial class SqliteServerCommitJournalTests
     private static void CreateDeleteOfferBeforeOfferedAtTrigger(string path)
     {
         using var connection = OpenRawConnection(path);
-        using var command = connection.CreateCommand();
-        command.CommandText = """
+        using var command = connection.CreateStatement();
+        command.SetSql("""
             CREATE TRIGGER oc_server_subscription_offer_delete_before_offered_at
             BEFORE UPDATE OF offered_at_utc ON oc_server_journal_subscription_offers
             BEGIN
                 DELETE FROM oc_server_journal_subscription_offers
                 WHERE subscription_id = OLD.subscription_id AND cursor = OLD.cursor;
             END;
-            """;
-        _ = command.ExecuteNonQuery();
+            """);
+        _ = command.Execute();
     }
 
     /// <summary>Creates a trigger that deletes a subscription before latest offer state changes.</summary>
@@ -587,15 +587,15 @@ public sealed partial class SqliteServerCommitJournalTests
     private static void CreateDeleteSubscriptionBeforeLatestOfferTrigger(string path)
     {
         using var connection = OpenRawConnection(path);
-        using var command = connection.CreateCommand();
-        command.CommandText = """
+        using var command = connection.CreateStatement();
+        command.SetSql("""
             CREATE TRIGGER oc_server_subscription_delete_before_latest_offer
             BEFORE UPDATE OF latest_offered_cursor ON oc_server_journal_subscriptions
             BEGIN
                 DELETE FROM oc_server_journal_subscriptions WHERE subscription_id = OLD.subscription_id;
             END;
-            """;
-        _ = command.ExecuteNonQuery();
+            """);
+        _ = command.Execute();
     }
 
     /// <summary>Creates a trigger that deletes a subscription before acknowledgement state changes.</summary>
@@ -603,15 +603,15 @@ public sealed partial class SqliteServerCommitJournalTests
     private static void CreateDeleteSubscriptionBeforeAcknowledgementTrigger(string path)
     {
         using var connection = OpenRawConnection(path);
-        using var command = connection.CreateCommand();
-        command.CommandText = """
+        using var command = connection.CreateStatement();
+        command.SetSql("""
             CREATE TRIGGER oc_server_subscription_delete_before_acknowledgement
             BEFORE UPDATE OF acknowledged_cursor ON oc_server_journal_subscriptions
             BEGIN
                 DELETE FROM oc_server_journal_subscriptions WHERE subscription_id = OLD.subscription_id;
             END;
-            """;
-        _ = command.ExecuteNonQuery();
+            """);
+        _ = command.Execute();
     }
 
     /// <summary>Creates a trigger that deletes a subscription before its update timestamp changes.</summary>
@@ -619,15 +619,15 @@ public sealed partial class SqliteServerCommitJournalTests
     private static void CreateDeleteSubscriptionBeforeUpdatedAtTrigger(string path)
     {
         using var connection = OpenRawConnection(path);
-        using var command = connection.CreateCommand();
-        command.CommandText = """
+        using var command = connection.CreateStatement();
+        command.SetSql("""
             CREATE TRIGGER oc_server_subscription_delete_before_updated_at
             BEFORE UPDATE OF updated_at_utc ON oc_server_journal_subscriptions
             BEGIN
                 DELETE FROM oc_server_journal_subscriptions WHERE subscription_id = OLD.subscription_id;
             END;
-            """;
-        _ = command.ExecuteNonQuery();
+            """);
+        _ = command.Execute();
     }
 
     /// <summary>Replaces subscription tables with invalid definitions.</summary>
@@ -635,14 +635,14 @@ public sealed partial class SqliteServerCommitJournalTests
     private static void CorruptSubscriptionTables(string path)
     {
         using var connection = OpenRawConnection(path);
-        using var command = connection.CreateCommand();
-        command.CommandText = """
+        using var command = connection.CreateStatement();
+        command.SetSql("""
             DROP TABLE oc_server_journal_subscription_offers;
             DROP TABLE oc_server_journal_subscriptions;
             CREATE TABLE oc_server_journal_subscriptions (id INTEGER NOT NULL);
             CREATE TABLE oc_server_journal_subscription_offers (id INTEGER NOT NULL);
-            """;
-        _ = command.ExecuteNonQuery();
+            """);
+        _ = command.Execute();
     }
 
     /// <summary>Commits one accepted event and returns its offered cursor.</summary>
@@ -672,9 +672,9 @@ public sealed partial class SqliteServerCommitJournalTests
     private static long ReadUserVersion(string path)
     {
         using var connection = OpenRawConnection(path);
-        using var command = connection.CreateCommand();
-        command.CommandText = "PRAGMA user_version;";
-        return Convert.ToInt64(command.ExecuteScalar(), System.Globalization.CultureInfo.InvariantCulture);
+        using var command = connection.CreateStatement();
+        command.SetSql("PRAGMA user_version;");
+        return Convert.ToInt64(command.Scalar(), System.Globalization.CultureInfo.InvariantCulture);
     }
 
     /// <summary>Creates a configured subscription journal.</summary>

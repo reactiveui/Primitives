@@ -2,8 +2,8 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
-using Microsoft.Data.Sqlite;
 using ReactiveUI.Primitives.OccasionallyConnected;
+using ReactiveUI.Primitives.OccasionallyConnected.Sqlite;
 using ReactiveUI.Primitives.OccasionallyConnected.Storage.Sqlite;
 
 namespace ReactiveUI.Primitives.OccasionallyConnected.Storage.Sqlite.Tests;
@@ -22,7 +22,7 @@ public sealed class SqliteStorageFailureTests
     [Test]
     public async Task WhenSqliteReportsFull_ThenWriteFailureIsTyped()
     {
-        var source = new SqliteException("database or disk is full", SqliteStorageFailure.SqliteFull);
+        var source = new SqliteDatabaseException("database or disk is full", SqliteStorageFailure.SqliteFull);
         DurableStorageException? observed = null;
         try
         {
@@ -46,9 +46,9 @@ public sealed class SqliteStorageFailureTests
         await Assert.That(SqliteStorageFailure.TryClassify(SqliteStorageFailure.SqliteIoError, out var failure)).IsTrue();
         await Assert.That(failure).IsEqualTo(DurableStorageFailure.InputOutput);
 
-        var constraint = new SqliteException("constraint", SqliteConstraint);
+        var constraint = new SqliteDatabaseException("constraint", SqliteConstraint);
         Action action = () => _ = SqliteStorageFailure.Run<int>(_ => throw constraint, CancellationToken.None);
-        await Assert.That(action).ThrowsExactly<SqliteException>();
+        await Assert.That(action).ThrowsExactly<SqliteDatabaseException>();
     }
 
     /// <summary>Verifies an I/O error maps to its kind and an existing durable failure is left intact.</summary>
@@ -56,7 +56,7 @@ public sealed class SqliteStorageFailureTests
     [Test]
     public async Task WhenStorageFailureIsAlreadyTyped_ThenItIsNotWrappedAgain()
     {
-        var source = new SqliteException("I/O error", SqliteStorageFailure.SqliteIoError);
+        var source = new SqliteDatabaseException("I/O error", SqliteStorageFailure.SqliteIoError);
         var typed = new DurableStorageException("storage failed", DurableStorageFailure.InputOutput, source);
         var wrapped = new InvalidOperationException("outer", typed);
         var result = SqliteStorageFailure.FindStorageFailure(wrapped, out var failure);
@@ -84,17 +84,16 @@ public sealed class SqliteStorageFailureTests
     [Test]
     public async Task WhenSqlitePageLimitIsReached_ThenWriteRollsBack()
     {
-        var connectionString = new SqliteConnectionStringBuilder { DataSource = ":memory:" }.ToString();
-        await using var connection = new SqliteConnection(connectionString);
-        await connection.OpenAsync();
-        await using (var setup = connection.CreateCommand())
+        using var connection = new SqliteDatabase(":memory:");
+
+        using (var setup = connection.CreateStatement())
         {
-            setup.CommandText = "CREATE TABLE payloads (value BLOB NOT NULL); PRAGMA max_page_count = 2;";
-            _ = await setup.ExecuteNonQueryAsync();
+            setup.SetSql("CREATE TABLE payloads (value BLOB NOT NULL); PRAGMA max_page_count = 2;");
+            _ = setup.Execute();
         }
 
         DurableStorageException? observed = null;
-        await using (var transaction = (SqliteTransaction)await connection.BeginTransactionAsync())
+        using (var transaction = connection.BeginTransaction())
         {
             try
             {
@@ -102,11 +101,11 @@ public sealed class SqliteStorageFailureTests
                     token =>
                     {
                         token.ThrowIfCancellationRequested();
-                        using var command = connection.CreateCommand();
-                        command.Transaction = transaction;
-                        command.CommandText = "INSERT INTO payloads (value) VALUES (zeroblob($size));";
-                        _ = command.Parameters.AddWithValue("$size", OversizedBlobBytes);
-                        return command.ExecuteNonQuery();
+                        using var command = connection.CreateStatement();
+                        command.UseTransaction(transaction);
+                        command.SetSql("INSERT INTO payloads (value) VALUES (zeroblob($size));");
+                        _ = command.Bind("$size", OversizedBlobBytes);
+                        return command.Execute();
                     },
                     CancellationToken.None);
             }
@@ -118,8 +117,8 @@ public sealed class SqliteStorageFailureTests
 
         await Assert.That(observed).IsNotNull();
         await Assert.That(observed!.Failure).IsEqualTo(DurableStorageFailure.StorageFull);
-        await using var count = connection.CreateCommand();
-        count.CommandText = "SELECT COUNT(*) FROM payloads;";
-        await Assert.That(Convert.ToInt64(await count.ExecuteScalarAsync(), System.Globalization.CultureInfo.InvariantCulture)).IsEqualTo(0);
+        using var count = connection.CreateStatement();
+        count.SetSql("SELECT COUNT(*) FROM payloads;");
+        await Assert.That(Convert.ToInt64(count.Scalar(), System.Globalization.CultureInfo.InvariantCulture)).IsEqualTo(0);
     }
 }

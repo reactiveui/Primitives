@@ -140,9 +140,9 @@ public sealed partial class SqliteServerCommitJournalTests
     private static void WriteReceiveHistoryMarker(string path, int value)
     {
         using var connection = OpenRawConnection(path);
-        using var command = connection.CreateCommand();
-        command.CommandText = "UPDATE oc_server_journal_streams SET receive_history_incomplete = $value;";
-        _ = command.Parameters.AddWithValue("$value", value);
-        _ = command.ExecuteNonQuery();
+        using var command = connection.CreateStatement();
+        command.SetSql("UPDATE oc_server_journal_streams SET receive_history_incomplete = $value;");
+        _ = command.Bind("$value", value);
+        _ = command.Execute();
     }
 }

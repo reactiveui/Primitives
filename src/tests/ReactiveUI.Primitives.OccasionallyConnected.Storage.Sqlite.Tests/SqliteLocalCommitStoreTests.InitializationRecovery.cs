@@ -2,7 +2,7 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
-using Microsoft.Data.Sqlite;
+using ReactiveUI.Primitives.OccasionallyConnected.Sqlite;
 using ReactiveUI.Primitives.OccasionallyConnected.Storage.Sqlite;
 
 namespace ReactiveUI.Primitives.OccasionallyConnected.Storage.Sqlite.Tests;
@@ -35,13 +35,13 @@ public sealed partial class SqliteLocalCommitStoreTests
     {
         var attempts = 0;
         var delays = 0;
-        SqliteConnection? first = null;
-        await using var recovered = SqliteLocalCommitStore.RetryValidatedInitializationConnection(
+        SqliteDatabase? first = null;
+        using var recovered = SqliteLocalCommitStore.RetryValidatedInitializationConnection(
             () =>
             {
                 attempts++;
-                var connection = new SqliteConnection(new SqliteConnectionStringBuilder { DataSource = InMemorySource }.ToString());
-                connection.Open();
+                var connection = new SqliteDatabase(InMemorySource);
+
                 first ??= connection;
                 return connection;
             },
@@ -49,7 +49,7 @@ public sealed partial class SqliteLocalCommitStoreTests
             {
                 if (attempts == 1)
                 {
-                    throw new SqliteException(WalTruncateMessage, SqliteIoError, SqliteIoErrorTruncate);
+                    throw new SqliteDatabaseException(WalTruncateMessage, SqliteIoError, SqliteIoErrorTruncate);
                 }
             },
             () => delays++,
@@ -57,8 +57,8 @@ public sealed partial class SqliteLocalCommitStoreTests
 
         await Assert.That(attempts).IsEqualTo(delays + 1);
         await Assert.That(delays).IsEqualTo(1);
-        await Assert.That(first?.State).IsEqualTo(System.Data.ConnectionState.Closed);
-        await Assert.That(recovered.State).IsEqualTo(System.Data.ConnectionState.Open);
+        await Assert.That(first?.IsDisposed).IsTrue();
+        await Assert.That(recovered.IsDisposed).IsFalse();
     }
 
     /// <summary>Verifies a WAL truncate error during connection open also retries.</summary>
@@ -68,13 +68,13 @@ public sealed partial class SqliteLocalCommitStoreTests
     {
         var attempts = 0;
         var delays = 0;
-        await using var recovered = SqliteLocalCommitStore.RetryValidatedInitializationConnection(
+        using var recovered = SqliteLocalCommitStore.RetryValidatedInitializationConnection(
             () =>
             {
                 attempts++;
                 return attempts == 1
-                    ? throw new SqliteException(WalTruncateMessage, SqliteIoError, SqliteIoErrorTruncate)
-                    : new SqliteConnection(new SqliteConnectionStringBuilder { DataSource = InMemorySource }.ToString());
+                    ? throw new SqliteDatabaseException(WalTruncateMessage, SqliteIoError, SqliteIoErrorTruncate)
+                    : new SqliteDatabase(InMemorySource);
             },
             static _ => { },
             () => delays++,
@@ -90,20 +90,20 @@ public sealed partial class SqliteLocalCommitStoreTests
     public async Task RetryValidatedInitializationConnectionDisposesFailedValidation()
     {
         var delays = 0;
-        SqliteConnection? failed = null;
+        SqliteDatabase? failed = null;
         Action open = () => _ = SqliteLocalCommitStore.RetryValidatedInitializationConnection(
             () =>
             {
-                failed = new(new SqliteConnectionStringBuilder { DataSource = InMemorySource }.ToString());
-                failed.Open();
+                failed = new(InMemorySource);
+
                 return failed;
             },
-            static _ => throw new SqliteException("write failure", SqliteIoError, SqliteIoErrorWrite),
+            static _ => throw new SqliteDatabaseException("write failure", SqliteIoError, SqliteIoErrorWrite),
             () => delays++,
             CancellationToken.None);
 
-        await Assert.That(open).ThrowsExactly<SqliteException>();
-        await Assert.That(failed?.State).IsEqualTo(System.Data.ConnectionState.Closed);
+        await Assert.That(open).ThrowsExactly<SqliteDatabaseException>();
+        await Assert.That(failed?.IsDisposed).IsTrue();
         await Assert.That(delays).IsEqualTo(0);
     }
 
@@ -118,13 +118,13 @@ public sealed partial class SqliteLocalCommitStoreTests
             () =>
             {
                 attempts++;
-                throw new SqliteException("write failure", SqliteIoError, SqliteIoErrorWrite);
+                throw new SqliteDatabaseException("write failure", SqliteIoError, SqliteIoErrorWrite);
             },
             static _ => { },
             () => delays++,
             CancellationToken.None);
 
-        await Assert.That(open).ThrowsExactly<SqliteException>();
+        await Assert.That(open).ThrowsExactly<SqliteDatabaseException>();
         await Assert.That(attempts).IsEqualTo(1);
         await Assert.That(delays).IsEqualTo(0);
     }
@@ -140,13 +140,13 @@ public sealed partial class SqliteLocalCommitStoreTests
             () =>
             {
                 attempts++;
-                throw new SqliteException(WalTruncateMessage, SqliteIoError, SqliteIoErrorTruncate);
+                throw new SqliteDatabaseException(WalTruncateMessage, SqliteIoError, SqliteIoErrorTruncate);
             },
             static _ => { },
             () => delays++,
             CancellationToken.None);
 
-        await Assert.That(open).ThrowsExactly<SqliteException>();
+        await Assert.That(open).ThrowsExactly<SqliteDatabaseException>();
         await Assert.That(attempts).IsEqualTo(StartupRetryCount + 1);
         await Assert.That(delays).IsEqualTo(StartupRetryCount);
     }

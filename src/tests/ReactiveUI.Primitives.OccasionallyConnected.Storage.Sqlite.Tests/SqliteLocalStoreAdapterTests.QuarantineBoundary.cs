@@ -4,7 +4,6 @@
 
 using System.Runtime.CompilerServices;
 using System.Security.Cryptography;
-using Microsoft.Data.Sqlite;
 using ReactiveUI.Primitives.OccasionallyConnected;
 
 namespace ReactiveUI.Primitives.OccasionallyConnected.Storage.Sqlite.Tests;
@@ -766,20 +765,20 @@ public sealed partial class SqliteLocalStoreAdapterTests
     private static void CorruptSnapshotPayloadSchemaVersionAndOversizedMetadata(string path)
     {
         using var connection = OpenRawConnection(path);
-        using var command = connection.CreateCommand();
-        command.CommandText = """
+        using var command = connection.CreateStatement();
+        command.SetSql("""
             UPDATE oc_snapshots
             SET payload_contract_id = $contractId,
                 payload_schema_version = 0,
                 payload_content_type = $contentType,
                 payload_hash = $payloadHash
             WHERE store_identity = $storeIdentity AND stream_id = $streamId;
-            """;
-        _ = command.Parameters.AddWithValue("$contractId", new string('c', SqliteOversizedQuarantineBoundaryBytes));
-        _ = command.Parameters.AddWithValue("$contentType", new string('t', SqliteOversizedQuarantineBoundaryBytes));
-        _ = command.Parameters.AddWithValue(PayloadHashParameterName, new string('h', SqliteOversizedQuarantineBoundaryBytes));
+            """);
+        _ = command.Bind("$contractId", new string('c', SqliteOversizedQuarantineBoundaryBytes));
+        _ = command.Bind("$contentType", new string('t', SqliteOversizedQuarantineBoundaryBytes));
+        _ = command.Bind(PayloadHashParameterName, new string('h', SqliteOversizedQuarantineBoundaryBytes));
         AddStreamParameters(command);
-        _ = command.ExecuteNonQuery();
+        _ = command.Execute();
     }
 
     /// <summary>Corrupts the persisted snapshot payload hash.</summary>
@@ -788,15 +787,15 @@ public sealed partial class SqliteLocalStoreAdapterTests
     private static void CorruptSnapshotPayloadHash(string path, string payloadHash)
     {
         using var connection = OpenRawConnection(path);
-        using var command = connection.CreateCommand();
-        command.CommandText = """
+        using var command = connection.CreateStatement();
+        command.SetSql("""
             UPDATE oc_snapshots
             SET payload_hash = $payloadHash
             WHERE store_identity = $storeIdentity AND stream_id = $streamId;
-            """;
-        _ = command.Parameters.AddWithValue(PayloadHashParameterName, payloadHash);
+            """);
+        _ = command.Bind(PayloadHashParameterName, payloadHash);
         AddStreamParameters(command);
-        _ = command.ExecuteNonQuery();
+        _ = command.Execute();
     }
 
     /// <summary>Corrupts the persisted snapshot payload hash with raw bytes stored as TEXT.</summary>
@@ -805,16 +804,16 @@ public sealed partial class SqliteLocalStoreAdapterTests
     private static void CorruptSnapshotPayloadHashBytesAsText(string path, string payloadHashHex)
     {
         using var connection = OpenRawConnection(path);
-        using var command = connection.CreateCommand();
-        command.CommandText = """
+        using var command = connection.CreateStatement();
+        command.SetSql("""
             UPDATE oc_snapshots
             SET payload_hash = CAST($payloadHashBytes AS TEXT)
             WHERE store_identity = $storeIdentity AND stream_id = $streamId;
-            """;
-        _ = command.Parameters.Add("$payloadHashBytes", SqliteType.Blob);
-        command.Parameters["$payloadHashBytes"].Value = Convert.FromHexString(payloadHashHex);
+            """);
+
+        _ = command.Bind("$payloadHashBytes", Convert.FromHexString(payloadHashHex));
         AddStreamParameters(command);
-        _ = command.ExecuteNonQuery();
+        _ = command.Execute();
     }
 
     /// <summary>Corrupts the persisted authoritative snapshot payload hash to a supplied value.</summary>
@@ -823,15 +822,15 @@ public sealed partial class SqliteLocalStoreAdapterTests
     private static void CorruptAuthoritativeSnapshotPayloadHashTo(string path, string payloadHash)
     {
         using var connection = OpenRawConnection(path);
-        using var command = connection.CreateCommand();
-        command.CommandText = """
+        using var command = connection.CreateStatement();
+        command.SetSql("""
             UPDATE oc_snapshot_authoritative_states
             SET payload_hash = $payloadHash
             WHERE store_identity = $storeIdentity AND stream_id = $streamId;
-            """;
-        _ = command.Parameters.AddWithValue(PayloadHashParameterName, payloadHash);
+            """);
+        _ = command.Bind(PayloadHashParameterName, payloadHash);
         AddStreamParameters(command);
-        _ = command.ExecuteNonQuery();
+        _ = command.Execute();
     }
 
     /// <summary>Corrupts the persisted snapshot contract bytes and schema version.</summary>
@@ -840,17 +839,17 @@ public sealed partial class SqliteLocalStoreAdapterTests
     private static void CorruptSnapshotPayloadContractBytesAndSchema(string path, string metadataHex)
     {
         using var connection = OpenRawConnection(path);
-        using var command = connection.CreateCommand();
-        command.CommandText = """
+        using var command = connection.CreateStatement();
+        command.SetSql("""
             UPDATE oc_snapshots
             SET payload_contract_id = CAST($metadataBytes AS TEXT),
                 payload_schema_version = 0
             WHERE store_identity = $storeIdentity AND stream_id = $streamId;
-            """;
-        _ = command.Parameters.Add("$metadataBytes", SqliteType.Blob);
-        command.Parameters["$metadataBytes"].Value = Convert.FromHexString(metadataHex);
+            """);
+
+        _ = command.Bind("$metadataBytes", Convert.FromHexString(metadataHex));
         AddStreamParameters(command);
-        _ = command.ExecuteNonQuery();
+        _ = command.Execute();
     }
 
     /// <summary>Corrupts the persisted snapshot payload storage with oversized text.</summary>
@@ -858,15 +857,15 @@ public sealed partial class SqliteLocalStoreAdapterTests
     private static void CorruptSnapshotPayloadWithLargeTextStorage(string path)
     {
         using var connection = OpenRawConnection(path);
-        using var command = connection.CreateCommand();
-        command.CommandText = """
+        using var command = connection.CreateStatement();
+        command.SetSql("""
             UPDATE oc_snapshots
             SET payload = replace(hex(zeroblob($payloadBytes)), '00', 'p')
             WHERE store_identity = $storeIdentity AND stream_id = $streamId;
-            """;
-        _ = command.Parameters.AddWithValue("$payloadBytes", LargeCorruptSqliteValueBytes);
+            """);
+        _ = command.Bind("$payloadBytes", LargeCorruptSqliteValueBytes);
         AddStreamParameters(command);
-        _ = command.ExecuteNonQuery();
+        _ = command.Execute();
     }
 
     /// <summary>Corrupts the authoritative snapshot payload hash with a huge invalid text value.</summary>

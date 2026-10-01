@@ -3,7 +3,7 @@
 // See the LICENSE file in the project root for full license information.
 
 using System.Text;
-using Microsoft.Data.Sqlite;
+using ReactiveUI.Primitives.OccasionallyConnected.Sqlite;
 using ReactiveUI.Primitives.OccasionallyConnected.Storage.Sqlite;
 
 namespace ReactiveUI.Primitives.OccasionallyConnected.ResilienceLab;
@@ -211,19 +211,17 @@ internal static class CorruptionQuarantineScenario
     /// <param name="databasePath">The SQLite database path.</param>
     private static void CorruptSnapshotSchemaVersion(string databasePath)
     {
-        var connectionString = new SqliteConnectionStringBuilder { DataSource = databasePath, Mode = SqliteOpenMode.ReadWrite, Pooling = false }
-            .ToString();
-        using var connection = new SqliteConnection(connectionString);
-        connection.Open();
-        using var command = connection.CreateCommand();
-        command.CommandText = """
+        using var connection = new SqliteDatabase(databasePath, create: false);
+
+        using var command = connection.CreateStatement();
+        command.SetSql("""
             UPDATE oc_snapshots
             SET payload_schema_version = 0
             WHERE store_identity = $storeIdentity AND stream_id = $streamId;
-            """;
-        _ = command.Parameters.AddWithValue("$storeIdentity", StoreIdentity);
-        _ = command.Parameters.AddWithValue("$streamId", CorruptStream.Value);
-        _ = command.ExecuteNonQuery();
+            """);
+        _ = command.Bind("$storeIdentity", StoreIdentity);
+        _ = command.Bind("$streamId", CorruptStream.Value);
+        _ = command.Execute();
     }
 
     /// <summary>Creates the store initialization.</summary>

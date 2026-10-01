@@ -2,8 +2,8 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
-using Microsoft.Data.Sqlite;
 using ReactiveUI.Primitives.OccasionallyConnected;
+using ReactiveUI.Primitives.OccasionallyConnected.Sqlite;
 
 namespace ReactiveUI.Primitives.OccasionallyConnected.Storage.Sqlite;
 
@@ -56,25 +56,25 @@ internal static class SqliteSubscriptionIdentitySql
     /// <param name="streamId">The stream identifier.</param>
     /// <param name="subscriptionId">The subscription identifier.</param>
     internal static void InsertSubscriptionIdentityIfMissing(
-        SqliteConnection connection,
+        SqliteDatabase connection,
         SqliteTransaction transaction,
         string storeIdentity,
         StreamId streamId,
         SubscriptionId subscriptionId)
     {
-        using var command = connection.CreateCommand();
-        command.Transaction = transaction;
-        command.CommandText = """
+        using var command = connection.CreateStatement();
+        command.UseTransaction(transaction);
+        command.SetSql("""
             INSERT INTO oc_subscription_identities
                 (store_identity, stream_id, subscription_id)
             VALUES
                 ($storeIdentity, $streamId, $subscriptionId)
             ON CONFLICT (store_identity, stream_id) DO NOTHING;
-            """;
-        _ = command.Parameters.AddWithValue(StoreIdentityParameter, storeIdentity);
-        _ = command.Parameters.AddWithValue(StreamIdParameter, streamId.Value);
-        _ = command.Parameters.AddWithValue("$subscriptionId", subscriptionId.Value.ToString("D"));
-        _ = command.ExecuteNonQuery();
+            """);
+        _ = command.Bind(StoreIdentityParameter, storeIdentity);
+        _ = command.Bind(StreamIdParameter, streamId.Value);
+        _ = command.Bind("$subscriptionId", subscriptionId.Value.ToString("D"));
+        _ = command.Execute();
     }
 
     /// <summary>Selects a persisted subscription identity.</summary>
@@ -85,19 +85,19 @@ internal static class SqliteSubscriptionIdentitySql
     /// <returns>The persisted subscription identity.</returns>
     /// <exception cref="InvalidOperationException">The persisted identity row is missing or malformed.</exception>
     internal static SubscriptionId SelectSubscriptionIdentity(
-        SqliteConnection connection,
+        SqliteDatabase connection,
         SqliteTransaction transaction,
         string storeIdentity,
         StreamId streamId)
     {
-        using var command = connection.CreateCommand();
-        command.Transaction = transaction;
-        command.CommandText = """
+        using var command = connection.CreateStatement();
+        command.UseTransaction(transaction);
+        command.SetSql("""
             SELECT subscription_id FROM oc_subscription_identities
             WHERE store_identity = $storeIdentity AND stream_id = $streamId;
-            """;
-        _ = command.Parameters.AddWithValue(StoreIdentityParameter, storeIdentity);
-        _ = command.Parameters.AddWithValue(StreamIdParameter, streamId.Value);
-        return SqliteIdentityStoreData.ReadSubscriptionId(command.ExecuteScalar());
+            """);
+        _ = command.Bind(StoreIdentityParameter, storeIdentity);
+        _ = command.Bind(StreamIdParameter, streamId.Value);
+        return SqliteIdentityStoreData.ReadSubscriptionId(command.Scalar());
     }
 }

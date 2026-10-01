@@ -2,8 +2,8 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
-using Microsoft.Data.Sqlite;
 using ReactiveUI.Primitives.OccasionallyConnected;
+using ReactiveUI.Primitives.OccasionallyConnected.Sqlite;
 using ReactiveUI.Primitives.OccasionallyConnected.Storage.Sqlite;
 
 namespace ReactiveUI.Primitives.OccasionallyConnected.Storage.Sqlite.Tests;
@@ -29,14 +29,14 @@ public sealed class SqliteLocalCommitSqlTests
     public async Task WhenStreamRowIsMissing_ThenReadStreamStateFailsClosed()
     {
         using var database = TempDatabase.Create();
-        await using var connection = OpenRawConnection(database.Path);
-        await using (var transaction = (SqliteTransaction)await connection.BeginTransactionAsync())
+        using var connection = OpenRawConnection(database.Path);
+        using (var transaction = connection.BeginTransaction())
         {
             SqliteStoreSchema.CreateLocalCommitSchema(connection, transaction);
-            await transaction.CommitAsync();
+            transaction.Commit();
         }
 
-        await using var readTransaction = (SqliteTransaction)await connection.BeginTransactionAsync();
+        using var readTransaction = connection.BeginTransaction();
         Action action = () => SqliteLocalCommitSql.ReadStreamState(connection, readTransaction, StoreIdentity, new("sensor/missing"));
 
         await Assert.That(action).ThrowsExactly<InvalidOperationException>();
@@ -48,8 +48,8 @@ public sealed class SqliteLocalCommitSqlTests
     public async Task WhenInboxPrimaryKeyAlreadyExists_ThenInsertInboxEventThrowsInvalidOperationException()
     {
         using var database = TempDatabase.Create();
-        await using var connection = OpenRawConnection(database.Path);
-        await using var transaction = (SqliteTransaction)await connection.BeginTransactionAsync();
+        using var connection = OpenRawConnection(database.Path);
+        using var transaction = connection.BeginTransaction();
         SqliteStoreSchema.CreateLocalCommitSchema(connection, transaction);
         EnsureStream(connection, transaction);
         var remoteEvent = CreateRemoteEvent(Cursor);
@@ -66,8 +66,8 @@ public sealed class SqliteLocalCommitSqlTests
     public async Task WhenInboxUniqueIndexRejectsInsert_ThenInsertInboxEventThrowsInvalidOperationException()
     {
         using var database = TempDatabase.Create();
-        await using var connection = OpenRawConnection(database.Path);
-        await using var transaction = (SqliteTransaction)await connection.BeginTransactionAsync();
+        using var connection = OpenRawConnection(database.Path);
+        using var transaction = connection.BeginTransaction();
         SqliteStoreSchema.CreateLocalCommitSchema(connection, transaction);
         EnsureStream(connection, transaction);
         CreateInboxServerCursorUniqueIndex(connection, transaction);
@@ -84,23 +84,22 @@ public sealed class SqliteLocalCommitSqlTests
     public async Task WhenInboxForeignKeyRejectsInsert_ThenInsertInboxEventPreservesSqliteException()
     {
         using var database = TempDatabase.Create();
-        await using var connection = OpenRawConnection(database.Path);
-        await using var transaction = (SqliteTransaction)await connection.BeginTransactionAsync();
+        using var connection = OpenRawConnection(database.Path);
+        using var transaction = connection.BeginTransaction();
         SqliteStoreSchema.CreateLocalCommitSchema(connection, transaction);
 
         Action missingStream = () => SqliteLocalCommitSql.InsertInboxEvent(connection, transaction, StoreIdentity, CreateRemoteEvent(Cursor), DateTimeOffset.UnixEpoch);
 
-        await Assert.That(missingStream).ThrowsExactly<SqliteException>();
+        await Assert.That(missingStream).ThrowsExactly<SqliteDatabaseException>();
     }
 
     /// <summary>Opens a raw SQLite connection with pooling disabled.</summary>
     /// <param name="path">The SQLite database path.</param>
     /// <returns>The open connection.</returns>
-    private static SqliteConnection OpenRawConnection(string path)
+    private static SqliteDatabase OpenRawConnection(string path)
     {
-        var connectionString = new SqliteConnectionStringBuilder { DataSource = path, Pooling = false }.ToString();
-        var connection = new SqliteConnection(connectionString);
-        connection.Open();
+        var connection = new SqliteDatabase(path);
+
         return connection;
     }
 
@@ -119,7 +118,7 @@ public sealed class SqliteLocalCommitSqlTests
     /// <summary>Ensures the stream row required by inbox foreign keys exists.</summary>
     /// <param name="connection">The connection.</param>
     /// <param name="transaction">The transaction.</param>
-    private static void EnsureStream(SqliteConnection connection, SqliteTransaction transaction)
+    private static void EnsureStream(SqliteDatabase connection, SqliteTransaction transaction)
     {
         SqliteSubscriptionIdentitySql.InsertSubscriptionIdentityIfMissing(connection, transaction, StoreIdentity, Stream, Subscription);
         SqliteLocalCommitSql.EnsureStreamRow(connection, transaction, StoreIdentity, Stream, Subscription);
@@ -128,12 +127,12 @@ public sealed class SqliteLocalCommitSqlTests
     /// <summary>Creates a unique index used to exercise SQLite unique constraint mapping.</summary>
     /// <param name="connection">The connection.</param>
     /// <param name="transaction">The transaction.</param>
-    private static void CreateInboxServerCursorUniqueIndex(SqliteConnection connection, SqliteTransaction transaction)
+    private static void CreateInboxServerCursorUniqueIndex(SqliteDatabase connection, SqliteTransaction transaction)
     {
-        using var command = connection.CreateCommand();
-        command.Transaction = transaction;
-        command.CommandText = "CREATE UNIQUE INDEX oc_inbox_cursor_unique ON oc_inbox (store_identity, stream_id, server_cursor);";
-        _ = command.ExecuteNonQuery();
+        using var command = connection.CreateStatement();
+        command.UseTransaction(transaction);
+        command.SetSql("CREATE UNIQUE INDEX oc_inbox_cursor_unique ON oc_inbox (store_identity, stream_id, server_cursor);");
+        _ = command.Execute();
     }
 
     /// <summary>Temporary database file helper.</summary>

@@ -3,8 +3,8 @@
 // See the LICENSE file in the project root for full license information.
 
 using System.Runtime.CompilerServices;
-using Microsoft.Data.Sqlite;
 using ReactiveUI.Primitives.OccasionallyConnected;
+using ReactiveUI.Primitives.OccasionallyConnected.Sqlite;
 
 namespace ReactiveUI.Primitives.OccasionallyConnected.Storage.Sqlite;
 
@@ -38,7 +38,7 @@ internal static partial class SqliteRecordProtectionMaintenance
     /// <param name="connection">The connection.</param>
     /// <param name="transaction">The transaction.</param>
     /// <returns>Whether the database is protected.</returns>
-    internal static bool IsProtected(SqliteConnection connection, SqliteTransaction transaction) =>
+    internal static bool IsProtected(SqliteDatabase connection, SqliteTransaction transaction) =>
         TrySelectMetadata(connection, transaction, ProtectionMetadataKey) is not null;
 
     /// <summary>Validates or establishes the record protection state of a database inside the initialization transaction.</summary>
@@ -50,7 +50,7 @@ internal static partial class SqliteRecordProtectionMaintenance
     /// <exception cref="InvalidOperationException">The database protection state does not match the configuration or the keys.</exception>
     /// <exception cref="NotSupportedException">The database uses an unknown protection format.</exception>
     internal static bool EnsureProtectionState(
-        SqliteConnection connection,
+        SqliteDatabase connection,
         SqliteTransaction transaction,
         SqliteRecordProtection? protection,
         CancellationToken cancellationToken)
@@ -103,7 +103,7 @@ internal static partial class SqliteRecordProtectionMaintenance
     /// <returns>The number of values re-encrypted.</returns>
     /// <exception cref="InvalidOperationException">The database is not protected or the key check fails.</exception>
     internal static long RotateKeys(
-        SqliteConnection connection,
+        SqliteDatabase connection,
         SqliteTransaction transaction,
         SqliteRecordProtection protection,
         CancellationToken cancellationToken)
@@ -121,22 +121,22 @@ internal static partial class SqliteRecordProtectionMaintenance
 
     /// <summary>Truncates the write-ahead log so superseded page images leave the WAL file.</summary>
     /// <param name="connection">The connection, outside any transaction.</param>
-    internal static void TruncateWriteAheadLog(SqliteConnection connection)
+    internal static void TruncateWriteAheadLog(SqliteDatabase connection)
     {
-        using var command = connection.CreateCommand();
-        command.CommandText = "PRAGMA wal_checkpoint(TRUNCATE);";
-        _ = command.ExecuteNonQuery();
+        using var command = connection.CreateStatement();
+        command.SetSql("PRAGMA wal_checkpoint(TRUNCATE);");
+        _ = command.Execute();
     }
 
     /// <summary>Makes SQLite overwrite freed content so replaced plaintext does not stay in free space.</summary>
     /// <param name="connection">The connection.</param>
     /// <param name="transaction">The active transaction.</param>
-    private static void EnableSecureDelete(SqliteConnection connection, SqliteTransaction transaction)
+    private static void EnableSecureDelete(SqliteDatabase connection, SqliteTransaction transaction)
     {
-        using var command = connection.CreateCommand();
-        command.Transaction = transaction;
-        command.CommandText = "PRAGMA secure_delete = ON;";
-        _ = command.ExecuteNonQuery();
+        using var command = connection.CreateStatement();
+        command.UseTransaction(transaction);
+        command.SetSql("PRAGMA secure_delete = ON;");
+        _ = command.Execute();
     }
 
     /// <summary>Creates the encrypted key check value under the current key.</summary>
@@ -151,7 +151,7 @@ internal static partial class SqliteRecordProtectionMaintenance
     /// <param name="transaction">The transaction.</param>
     /// <param name="protection">The record protection.</param>
     /// <exception cref="InvalidOperationException">The key check is missing or the configured keys do not open it.</exception>
-    private static void VerifyKeyCheck(SqliteConnection connection, SqliteTransaction transaction, SqliteRecordProtection protection)
+    private static void VerifyKeyCheck(SqliteDatabase connection, SqliteTransaction transaction, SqliteRecordProtection protection)
     {
         var stored = TrySelectMetadata(connection, transaction, KeyCheckMetadataKey)
             ?? throw new InvalidOperationException("The SQLite local store record protection key check is missing.");
@@ -184,13 +184,13 @@ internal static partial class SqliteRecordProtectionMaintenance
     /// <param name="transaction">The transaction.</param>
     /// <param name="key">The metadata key.</param>
     /// <returns>The value, or null when absent.</returns>
-    private static string? TrySelectMetadata(SqliteConnection connection, SqliteTransaction transaction, string key)
+    private static string? TrySelectMetadata(SqliteDatabase connection, SqliteTransaction transaction, string key)
     {
-        using var command = connection.CreateCommand();
-        command.Transaction = transaction;
-        command.CommandText = "SELECT value FROM oc_metadata WHERE key = $key;";
-        _ = command.Parameters.AddWithValue("$key", key);
-        return command.ExecuteScalar() as string;
+        using var command = connection.CreateStatement();
+        command.UseTransaction(transaction);
+        command.SetSql("SELECT value FROM oc_metadata WHERE key = $key;");
+        _ = command.Bind("$key", key);
+        return command.Scalar() as string;
     }
 
     /// <summary>Inserts or replaces one metadata value.</summary>
@@ -198,16 +198,16 @@ internal static partial class SqliteRecordProtectionMaintenance
     /// <param name="transaction">The transaction.</param>
     /// <param name="key">The metadata key.</param>
     /// <param name="value">The metadata value.</param>
-    private static void UpsertMetadata(SqliteConnection connection, SqliteTransaction transaction, string key, string value)
+    private static void UpsertMetadata(SqliteDatabase connection, SqliteTransaction transaction, string key, string value)
     {
-        using var command = connection.CreateCommand();
-        command.Transaction = transaction;
-        command.CommandText = """
+        using var command = connection.CreateStatement();
+        command.UseTransaction(transaction);
+        command.SetSql("""
             INSERT INTO oc_metadata (key, value) VALUES ($key, $value)
             ON CONFLICT (key) DO UPDATE SET value = excluded.value;
-            """;
-        _ = command.Parameters.AddWithValue("$key", key);
-        _ = command.Parameters.AddWithValue("$value", value);
-        _ = command.ExecuteNonQuery();
+            """);
+        _ = command.Bind("$key", key);
+        _ = command.Bind("$value", value);
+        _ = command.Execute();
     }
 }

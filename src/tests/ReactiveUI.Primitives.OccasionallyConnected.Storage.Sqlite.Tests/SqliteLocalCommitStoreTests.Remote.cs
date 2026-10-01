@@ -2,7 +2,6 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
-using Microsoft.Data.Sqlite;
 using ReactiveUI.Primitives.OccasionallyConnected;
 using ReactiveUI.Primitives.OccasionallyConnected.Storage.Sqlite;
 
@@ -214,8 +213,8 @@ public sealed partial class SqliteLocalCommitStoreTests
         using var database = TempDatabase.Create();
         using var store = CreateInitializedStore(database.Path);
         _ = store.GetOrCreateSubscriptionId(Stream, SubscriptionId.New(), CancellationToken.None);
-        await using var connection = OpenRawConnection(database.Path);
-        await using var transaction = (SqliteTransaction)await connection.BeginTransactionAsync();
+        using var connection = OpenRawConnection(database.Path);
+        using var transaction = connection.BeginTransaction();
 
         Action action = () => SqliteLocalCommitSql.UpdateServerCursor(
             connection,
@@ -269,7 +268,7 @@ public sealed partial class SqliteLocalCommitStoreTests
             new(Stream, CreatePayload("rollback-snapshot"), FormatVersion: 1, ExpectedRevision: 0),
             CancellationToken.None);
 
-        await Assert.That(action).ThrowsExactly<SqliteException>();
+        await Assert.That(action).ThrowsExactly<SqliteDatabaseException>();
         DropRemoteApplyRollbackTrigger(database.Path);
         var recovery = store.RecoverStream(Stream, subscriptionId, CancellationToken.None);
         var unapplied = store.GetUnappliedEventIds(Stream, [remoteEvent.EventId], CancellationToken.None);

@@ -243,10 +243,10 @@ public sealed partial class SqliteServerCommitJournalTests
     private static long ReadSubscriptionGenerationHighWater(string path)
     {
         using var connection = OpenRawConnection(path);
-        using var command = connection.CreateCommand();
-        command.CommandText = "SELECT value FROM oc_server_journal_metadata WHERE key = $key;";
-        _ = command.Parameters.AddWithValue("$key", SubscriptionGenerationHighWaterMetadataKey);
-        var value = command.ExecuteScalar();
+        using var command = connection.CreateStatement();
+        command.SetSql("SELECT value FROM oc_server_journal_metadata WHERE key = $key;");
+        _ = command.Bind("$key", SubscriptionGenerationHighWaterMetadataKey);
+        var value = command.Scalar();
         return value is string text
             ? long.Parse(text, System.Globalization.CultureInfo.InvariantCulture)
             : throw new InvalidOperationException("The generation metadata value is missing.");
@@ -265,11 +265,11 @@ public sealed partial class SqliteServerCommitJournalTests
     private static void WriteSubscriptionGenerationHighWater(string path, string value)
     {
         using var connection = OpenRawConnection(path);
-        using var command = connection.CreateCommand();
-        command.CommandText = "UPDATE oc_server_journal_metadata SET value = $value WHERE key = $key;";
-        _ = command.Parameters.AddWithValue("$key", SubscriptionGenerationHighWaterMetadataKey);
-        _ = command.Parameters.AddWithValue("$value", value);
-        _ = command.ExecuteNonQuery();
+        using var command = connection.CreateStatement();
+        command.SetSql("UPDATE oc_server_journal_metadata SET value = $value WHERE key = $key;");
+        _ = command.Bind("$key", SubscriptionGenerationHighWaterMetadataKey);
+        _ = command.Bind("$value", value);
+        _ = command.Execute();
     }
 
     /// <summary>Deletes one subscription and the current-schema generation high-water metadata.</summary>
@@ -278,16 +278,16 @@ public sealed partial class SqliteServerCommitJournalTests
     private static void DeleteSubscriptionAndGenerationHighWater(string path, SubscriptionId subscriptionId)
     {
         using var connection = OpenRawConnection(path);
-        using var command = connection.CreateCommand();
-        command.CommandText = $$"""
+        using var command = connection.CreateStatement();
+        command.SetSql($$"""
             DELETE FROM oc_server_journal_subscriptions
             WHERE subscription_id = {{RawSubscriptionIdParameterName}};
             DELETE FROM oc_server_journal_metadata
             WHERE key = {{RawGenerationKeyParameterName}};
-            """;
-        _ = command.Parameters.AddWithValue(RawSubscriptionIdParameterName, subscriptionId.Value.ToString("D"));
-        _ = command.Parameters.AddWithValue(RawGenerationKeyParameterName, SubscriptionGenerationHighWaterMetadataKey);
-        _ = command.ExecuteNonQuery();
+            """);
+        _ = command.Bind(RawSubscriptionIdParameterName, subscriptionId.Value.ToString("D"));
+        _ = command.Bind(RawGenerationKeyParameterName, SubscriptionGenerationHighWaterMetadataKey);
+        _ = command.Execute();
     }
 
     /// <summary>Increments a retained subscription generation without rewriting its existing offers.</summary>
@@ -296,18 +296,18 @@ public sealed partial class SqliteServerCommitJournalTests
     private static void IncrementSubscriptionGeneration(string path, SubscriptionId subscriptionId)
     {
         using var connection = OpenRawConnection(path);
-        using var command = connection.CreateCommand();
-        command.CommandText = $$"""
+        using var command = connection.CreateStatement();
+        command.SetSql($$"""
             UPDATE oc_server_journal_subscriptions
             SET generation = generation + 1
             WHERE subscription_id = {{RawSubscriptionIdParameterName}};
             UPDATE oc_server_journal_metadata
             SET value = CAST(CAST(value AS INTEGER) + 1 AS TEXT)
             WHERE key = {{RawGenerationKeyParameterName}};
-            """;
-        _ = command.Parameters.AddWithValue(RawSubscriptionIdParameterName, subscriptionId.Value.ToString("D"));
-        _ = command.Parameters.AddWithValue(RawGenerationKeyParameterName, SubscriptionGenerationHighWaterMetadataKey);
-        _ = command.ExecuteNonQuery();
+            """);
+        _ = command.Bind(RawSubscriptionIdParameterName, subscriptionId.Value.ToString("D"));
+        _ = command.Bind(RawGenerationKeyParameterName, SubscriptionGenerationHighWaterMetadataKey);
+        _ = command.Execute();
     }
 
     /// <summary>Writes a retained subscription revision directly for overflow coverage.</summary>
@@ -317,15 +317,15 @@ public sealed partial class SqliteServerCommitJournalTests
     private static void WriteSubscriptionRevision(string path, SubscriptionId subscriptionId, long revision)
     {
         using var connection = OpenRawConnection(path);
-        using var command = connection.CreateCommand();
-        command.CommandText = $$"""
+        using var command = connection.CreateStatement();
+        command.SetSql($$"""
             UPDATE oc_server_journal_subscriptions
             SET revision = $revision
             WHERE subscription_id = {{RawSubscriptionIdParameterName}};
-            """;
-        _ = command.Parameters.AddWithValue(RawSubscriptionIdParameterName, subscriptionId.Value.ToString("D"));
-        _ = command.Parameters.AddWithValue("$revision", revision);
-        _ = command.ExecuteNonQuery();
+            """);
+        _ = command.Bind(RawSubscriptionIdParameterName, subscriptionId.Value.ToString("D"));
+        _ = command.Bind("$revision", revision);
+        _ = command.Execute();
     }
 
     /// <summary>Creates a trigger that deletes a subscription before its revision is updated.</summary>
@@ -333,15 +333,15 @@ public sealed partial class SqliteServerCommitJournalTests
     private static void CreateDeleteSubscriptionBeforeRevisionUpdateTrigger(string path)
     {
         using var connection = OpenRawConnection(path);
-        using var command = connection.CreateCommand();
-        command.CommandText = """
+        using var command = connection.CreateStatement();
+        command.SetSql("""
             CREATE TRIGGER oc_server_snapshot_delete_before_revision_update
             BEFORE UPDATE OF revision ON oc_server_journal_subscriptions
             BEGIN
                 DELETE FROM oc_server_journal_subscriptions WHERE subscription_id = OLD.subscription_id;
             END;
-            """;
-        _ = command.ExecuteNonQuery();
+            """);
+        _ = command.Execute();
     }
 
     /// <summary>Drops the trigger that deletes a subscription before its revision is updated.</summary>
@@ -349,8 +349,8 @@ public sealed partial class SqliteServerCommitJournalTests
     private static void DropDeleteSubscriptionBeforeRevisionUpdateTrigger(string path)
     {
         using var connection = OpenRawConnection(path);
-        using var command = connection.CreateCommand();
-        command.CommandText = "DROP TRIGGER oc_server_snapshot_delete_before_revision_update;";
-        _ = command.ExecuteNonQuery();
+        using var command = connection.CreateStatement();
+        command.SetSql("DROP TRIGGER oc_server_snapshot_delete_before_revision_update;");
+        _ = command.Execute();
     }
 }

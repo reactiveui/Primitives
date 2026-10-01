@@ -2,7 +2,6 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
-using Microsoft.Data.Sqlite;
 using ReactiveUI.Primitives.OccasionallyConnected;
 
 namespace ReactiveUI.Primitives.OccasionallyConnected.Storage.Sqlite.Tests;
@@ -54,15 +53,15 @@ public sealed partial class SqliteLocalCommitStoreTests
     private static void SetStreamSubscriptionId(string path, SubscriptionId subscriptionId)
     {
         using var connection = OpenRawConnection(path);
-        using var command = connection.CreateCommand();
-        command.CommandText = """
+        using var command = connection.CreateStatement();
+        command.SetSql("""
             UPDATE oc_streams
             SET subscription_id = $subscriptionId
             WHERE store_identity = $storeIdentity AND stream_id = $streamId;
-            """;
-        _ = command.Parameters.AddWithValue("$subscriptionId", subscriptionId.Value.ToString("D"));
-        _ = command.Parameters.AddWithValue(StoreIdentityParameter, StoreIdentity);
-        _ = command.Parameters.AddWithValue(StreamIdParameter, Stream.Value);
-        _ = command.ExecuteNonQuery();
+            """);
+        _ = command.Bind("$subscriptionId", subscriptionId.Value.ToString("D"));
+        _ = command.Bind(StoreIdentityParameter, StoreIdentity);
+        _ = command.Bind(StreamIdParameter, Stream.Value);
+        _ = command.Execute();
     }
 }

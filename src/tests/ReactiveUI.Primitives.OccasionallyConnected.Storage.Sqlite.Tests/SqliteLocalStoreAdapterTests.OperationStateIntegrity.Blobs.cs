@@ -17,11 +17,11 @@ public sealed partial class SqliteLocalStoreAdapterTests
     {
         using var database = TempDatabase.Create();
         _ = await SeedEncryptedDatabaseAsync(database.Path);
-        await using (var connection = OpenRawConnection(database.Path))
-        await using (var command = connection.CreateCommand())
+        using (var connection = OpenRawConnection(database.Path))
+        using (var command = connection.CreateStatement())
         {
-            command.CommandText = "UPDATE oc_operation_state_proofs SET proof = zeroblob(4194305) WHERE operation_id = (SELECT operation_id FROM oc_outbox WHERE client_sequence = 2);";
-            _ = await command.ExecuteNonQueryAsync();
+            command.SetSql("UPDATE oc_operation_state_proofs SET proof = zeroblob(4194305) WHERE operation_id = (SELECT operation_id FROM oc_outbox WHERE client_sequence = 2);");
+            _ = command.Execute();
         }
 
         await AssertEncryptedOpenFailsAuthenticationAsync(database.Path);

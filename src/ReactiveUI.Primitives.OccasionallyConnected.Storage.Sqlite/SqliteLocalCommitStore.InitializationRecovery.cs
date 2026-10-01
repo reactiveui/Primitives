@@ -2,7 +2,7 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
-using Microsoft.Data.Sqlite;
+using ReactiveUI.Primitives.OccasionallyConnected.Sqlite;
 
 namespace ReactiveUI.Primitives.OccasionallyConnected.Storage.Sqlite;
 
@@ -15,16 +15,16 @@ internal sealed partial class SqliteLocalCommitStore
     /// <param name="retryDelay">Waits briefly before the next attempt.</param>
     /// <param name="cancellationToken">The cancellation token.</param>
     /// <returns>The validated connection.</returns>
-    internal static SqliteConnection RetryValidatedInitializationConnection(
-        Func<SqliteConnection> openConnection,
-        Action<SqliteConnection> validate,
+    internal static SqliteDatabase RetryValidatedInitializationConnection(
+        Func<SqliteDatabase> openConnection,
+        Action<SqliteDatabase> validate,
         Action retryDelay,
         CancellationToken cancellationToken)
     {
         var attempt = 0;
         while (true)
         {
-            SqliteConnection? connection = null;
+            SqliteDatabase? connection = null;
             try
             {
                 cancellationToken.ThrowIfCancellationRequested();
@@ -32,7 +32,7 @@ internal sealed partial class SqliteLocalCommitStore
                 validate(connection);
                 return connection;
             }
-            catch (SqliteException exception) when (exception.SqliteExtendedErrorCode == SqliteIoErrorTruncate && attempt < RecoveryOpenRetries)
+            catch (SqliteDatabaseException exception) when (exception.SqliteExtendedErrorCode == SqliteIoErrorTruncate && attempt < RecoveryOpenRetries)
             {
                 connection?.Dispose();
                 attempt++;

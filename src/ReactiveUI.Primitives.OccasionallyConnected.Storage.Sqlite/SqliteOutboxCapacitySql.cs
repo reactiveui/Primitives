@@ -3,8 +3,8 @@
 // See the LICENSE file in the project root for full license information.
 
 using System.Text;
-using Microsoft.Data.Sqlite;
 using ReactiveUI.Primitives.OccasionallyConnected;
+using ReactiveUI.Primitives.OccasionallyConnected.Sqlite;
 
 namespace ReactiveUI.Primitives.OccasionallyConnected.Storage.Sqlite;
 
@@ -22,7 +22,7 @@ internal static class SqliteOutboxCapacitySql
     /// <param name="options">The optional capacity limits.</param>
     /// <exception cref="QueueCapacityExceededException">The operation cannot be admitted.</exception>
     internal static void EnsureCapacityFor(
-        SqliteConnection connection,
+        SqliteDatabase connection,
         SqliteTransaction transaction,
         string storeIdentity,
         SyncOperation operation,
@@ -72,13 +72,13 @@ internal static class SqliteOutboxCapacitySql
     /// <param name="storeIdentity">The store partition identity.</param>
     /// <returns>The current unresolved operation count and bytes.</returns>
     private static (long Count, long Bytes) ReadUsage(
-        SqliteConnection connection,
+        SqliteDatabase connection,
         SqliteTransaction transaction,
         string storeIdentity)
     {
-        using var command = connection.CreateCommand();
-        command.Transaction = transaction;
-        command.CommandText = """
+        using var command = connection.CreateStatement();
+        command.UseTransaction(transaction);
+        command.SetSql("""
             SELECT COUNT(*), COALESCE(SUM(
                 $fixedEnvelopeBytes
                 + length(CAST(outbox.stream_id AS BLOB))
@@ -98,13 +98,13 @@ internal static class SqliteOutboxCapacitySql
                AND state.operation_id = outbox.operation_id
             WHERE outbox.store_identity = $storeIdentity
               AND (state.operation_state IS NULL OR state.operation_state NOT IN ($synchronized, $rejected, $deadLettered));
-            """;
-        _ = command.Parameters.AddWithValue("$storeIdentity", storeIdentity);
-        _ = command.Parameters.AddWithValue("$fixedEnvelopeBytes", FixedOperationEnvelopeBytes);
-        _ = command.Parameters.AddWithValue("$synchronized", (int)SyncOperationState.Synchronized);
-        _ = command.Parameters.AddWithValue("$rejected", (int)SyncOperationState.Rejected);
-        _ = command.Parameters.AddWithValue("$deadLettered", (int)SyncOperationState.DeadLettered);
-        using var reader = command.ExecuteReader();
+            """);
+        _ = command.Bind("$storeIdentity", storeIdentity);
+        _ = command.Bind("$fixedEnvelopeBytes", FixedOperationEnvelopeBytes);
+        _ = command.Bind("$synchronized", (int)SyncOperationState.Synchronized);
+        _ = command.Bind("$rejected", (int)SyncOperationState.Rejected);
+        _ = command.Bind("$deadLettered", (int)SyncOperationState.DeadLettered);
+        using var reader = command.Query();
         _ = reader.Read();
         return (reader.GetInt64(0), reader.GetInt64(1));
     }

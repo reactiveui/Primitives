@@ -2,8 +2,8 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
-using Microsoft.Data.Sqlite;
 using ReactiveUI.Primitives.OccasionallyConnected;
+using ReactiveUI.Primitives.OccasionallyConnected.Sqlite;
 
 namespace ReactiveUI.Primitives.OccasionallyConnected.Storage.Sqlite;
 
@@ -93,9 +93,9 @@ internal static partial class SqliteLocalCommitSql
     /// <returns>The compaction result.</returns>
     /// <exception cref="OperationCanceledException">Compaction was canceled before commit.</exception>
     /// <exception cref="InvalidOperationException">Stored SQLite data is invalid.</exception>
-    /// <exception cref="SqliteException">SQLite rejects a compaction statement.</exception>
+    /// <exception cref="SqliteDatabaseException">SQLite rejects a compaction statement.</exception>
     internal static CompactionResult Compact(
-        SqliteConnection connection,
+        SqliteDatabase connection,
         SqliteTransaction transaction,
         string storeIdentity,
         CompactionRequest request,
@@ -161,14 +161,14 @@ internal static partial class SqliteLocalCommitSql
     /// <param name="streamId">The optional stream filter.</param>
     /// <returns>The scoped retained payload and metadata byte count; inbox rows are counted as zero and SQLite file size is not measured.</returns>
     private static long ReadScopedRetainedBytes(
-        SqliteConnection connection,
+        SqliteDatabase connection,
         SqliteTransaction transaction,
         string storeIdentity,
         StreamId? streamId)
     {
-        using var command = connection.CreateCommand();
-        command.Transaction = transaction;
-        command.CommandText = """
+        using var command = connection.CreateStatement();
+        command.UseTransaction(transaction);
+        command.SetSql("""
             SELECT COALESCE(SUM(
                 length(outbox.payload) + COALESCE((
                     SELECT length(authoritative.payload)
@@ -182,10 +182,10 @@ internal static partial class SqliteLocalCommitSql
             FROM oc_outbox AS outbox
             WHERE outbox.store_identity = $storeIdentity
                 AND ($streamId IS NULL OR outbox.stream_id = $streamId);
-            """;
-        _ = command.Parameters.AddWithValue(StoreIdentityParameter, storeIdentity);
-        _ = command.Parameters.AddWithValue(StreamIdParameter, (object?)streamId?.Value ?? DBNull.Value);
-        return ReadNonNegativeLong(command.ExecuteScalar(), "The SQLite compaction byte count is invalid.");
+            """);
+        _ = command.Bind(StoreIdentityParameter, storeIdentity);
+        _ = command.Bind(StreamIdParameter, (object?)streamId?.Value ?? DBNull.Value);
+        return ReadNonNegativeLong(command.Scalar(), "The SQLite compaction byte count is invalid.");
     }
 
     /// <summary>Deletes one bounded batch of eligible outbox-backed rows.</summary>
@@ -197,7 +197,7 @@ internal static partial class SqliteLocalCommitSql
     /// <param name="cancellationToken">The cancellation token.</param>
     /// <returns>The number of rows removed.</returns>
     private static long DeleteNextOperationBatch(
-        SqliteConnection connection,
+        SqliteDatabase connection,
         SqliteTransaction transaction,
         string storeIdentity,
         in OperationCompactionFilter filter,
@@ -227,7 +227,7 @@ internal static partial class SqliteLocalCommitSql
     /// <param name="cancellationToken">The cancellation token.</param>
     /// <returns>The number of rows removed.</returns>
     private static long DeleteNextInboxBatch(
-        SqliteConnection connection,
+        SqliteDatabase connection,
         SqliteTransaction transaction,
         string storeIdentity,
         StreamId? streamId,
@@ -255,29 +255,29 @@ internal static partial class SqliteLocalCommitSql
     /// <param name="filter">The outbox-backed row filter.</param>
     /// <returns>The candidate rows.</returns>
     private static List<OperationCompactionCandidate> SelectOperationCompactionCandidates(
-        SqliteConnection connection,
+        SqliteDatabase connection,
         SqliteTransaction transaction,
         string storeIdentity,
         in OperationCompactionFilter filter)
     {
-        using var command = connection.CreateCommand();
-        command.Transaction = transaction;
-        command.CommandText = SelectOperationCompactionCandidatesSql;
-        _ = command.Parameters.AddWithValue(StoreIdentityParameter, storeIdentity);
-        _ = command.Parameters.AddWithValue("$firstState", (int)filter.FirstState);
-        _ = command.Parameters.AddWithValue("$secondState", filter.SecondState.HasValue ? (int)filter.SecondState.GetValueOrDefault() : DBNull.Value);
-        _ = command.Parameters.AddWithValue("$cutoffUtc", FormatDateTimeOffset(filter.CutoffUtc));
-        _ = command.Parameters.AddWithValue("$limit", CompactionBatchSize);
-        _ = command.Parameters.AddWithValue(StreamIdParameter, (object?)filter.StreamId?.Value ?? DBNull.Value);
+        using var command = connection.CreateStatement();
+        command.UseTransaction(transaction);
+        command.SetSql(SelectOperationCompactionCandidatesSql);
+        _ = command.Bind(StoreIdentityParameter, storeIdentity);
+        _ = command.Bind("$firstState", (int)filter.FirstState);
+        _ = command.Bind("$secondState", filter.SecondState.HasValue ? (int)filter.SecondState.GetValueOrDefault() : DBNull.Value);
+        _ = command.Bind("$cutoffUtc", FormatDateTimeOffset(filter.CutoffUtc));
+        _ = command.Bind("$limit", CompactionBatchSize);
+        _ = command.Bind(StreamIdParameter, (object?)filter.StreamId?.Value ?? DBNull.Value);
 
-        using var reader = command.ExecuteReader();
+        using var reader = command.Query();
         return ReadOperationCompactionCandidates(reader);
     }
 
     /// <summary>Reads outbox-backed compaction candidates from the current reader.</summary>
     /// <param name="reader">The reader.</param>
     /// <returns>The candidate rows.</returns>
-    private static List<OperationCompactionCandidate> ReadOperationCompactionCandidates(SqliteDataReader reader)
+    private static List<OperationCompactionCandidate> ReadOperationCompactionCandidates(SqliteRows reader)
     {
         List<OperationCompactionCandidate> candidates = [];
         while (reader.Read())
@@ -299,15 +299,15 @@ internal static partial class SqliteLocalCommitSql
     /// <param name="cutoffUtc">The cutoff timestamp.</param>
     /// <returns>The candidate rows.</returns>
     private static List<InboxCompactionCandidate> SelectInboxCompactionCandidates(
-        SqliteConnection connection,
+        SqliteDatabase connection,
         SqliteTransaction transaction,
         string storeIdentity,
         StreamId? streamId,
         DateTimeOffset cutoffUtc)
     {
-        using var command = connection.CreateCommand();
-        command.Transaction = transaction;
-        command.CommandText = """
+        using var command = connection.CreateStatement();
+        command.UseTransaction(transaction);
+        command.SetSql("""
             SELECT inbox.rowid, inbox.committed_at_utc
             FROM oc_inbox AS inbox
             WHERE inbox.store_identity = $storeIdentity
@@ -329,13 +329,13 @@ internal static partial class SqliteLocalCommitSql
                             OR (unresolved_state.operation_state = 4 AND unresolved_inclusion.operation_id IS NULL)))
             ORDER BY inbox.committed_at_utc ASC, inbox.stream_id ASC, inbox.event_id ASC
             LIMIT $limit;
-            """;
-        _ = command.Parameters.AddWithValue(StoreIdentityParameter, storeIdentity);
-        _ = command.Parameters.AddWithValue("$cutoffUtc", FormatDateTimeOffset(cutoffUtc));
-        _ = command.Parameters.AddWithValue("$limit", CompactionBatchSize);
-        _ = command.Parameters.AddWithValue(StreamIdParameter, (object?)streamId?.Value ?? DBNull.Value);
+            """);
+        _ = command.Bind(StoreIdentityParameter, storeIdentity);
+        _ = command.Bind("$cutoffUtc", FormatDateTimeOffset(cutoffUtc));
+        _ = command.Bind("$limit", CompactionBatchSize);
+        _ = command.Bind(StreamIdParameter, (object?)streamId?.Value ?? DBNull.Value);
 
-        using var reader = command.ExecuteReader();
+        using var reader = command.Query();
         List<InboxCompactionCandidate> candidates = [];
         while (reader.Read())
         {
@@ -354,20 +354,20 @@ internal static partial class SqliteLocalCommitSql
     /// <param name="operationId">The operation id.</param>
     /// <exception cref="InvalidOperationException">The row disappeared before deletion.</exception>
     private static void DeleteOutboxOperationForCompaction(
-        SqliteConnection connection,
+        SqliteDatabase connection,
         SqliteTransaction transaction,
         string storeIdentity,
         OperationId operationId)
     {
-        using var command = connection.CreateCommand();
-        command.Transaction = transaction;
-        command.CommandText = """
+        using var command = connection.CreateStatement();
+        command.UseTransaction(transaction);
+        command.SetSql("""
             DELETE FROM oc_outbox
             WHERE store_identity = $storeIdentity AND operation_id = $operationId;
-            """;
-        _ = command.Parameters.AddWithValue(StoreIdentityParameter, storeIdentity);
-        _ = command.Parameters.AddWithValue(OperationIdParameter, operationId.Value.ToString("D"));
-        if (command.ExecuteNonQuery() == 1)
+            """);
+        _ = command.Bind(StoreIdentityParameter, storeIdentity);
+        _ = command.Bind(OperationIdParameter, operationId.Value.ToString("D"));
+        if (command.Execute() == 1)
         {
             return;
         }
@@ -380,13 +380,13 @@ internal static partial class SqliteLocalCommitSql
     /// <param name="transaction">The transaction.</param>
     /// <param name="rowId">The SQLite row id.</param>
     /// <exception cref="InvalidOperationException">The row disappeared before deletion.</exception>
-    private static void DeleteInboxRowForCompaction(SqliteConnection connection, SqliteTransaction transaction, long rowId)
+    private static void DeleteInboxRowForCompaction(SqliteDatabase connection, SqliteTransaction transaction, long rowId)
     {
-        using var command = connection.CreateCommand();
-        command.Transaction = transaction;
-        command.CommandText = "DELETE FROM oc_inbox WHERE rowid = $rowId;";
-        _ = command.Parameters.AddWithValue("$rowId", rowId);
-        if (command.ExecuteNonQuery() == 1)
+        using var command = connection.CreateStatement();
+        command.UseTransaction(transaction);
+        command.SetSql("DELETE FROM oc_inbox WHERE rowid = $rowId;");
+        _ = command.Bind("$rowId", rowId);
+        if (command.Execute() == 1)
         {
             return;
         }

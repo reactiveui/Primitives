@@ -288,16 +288,16 @@ public sealed partial class SqliteLocalCommitStoreTests
     private static void SetAuthoritativeSnapshotHash(string path, string payloadHash)
     {
         using var connection = OpenRawConnection(path);
-        using var command = connection.CreateCommand();
-        command.CommandText = """
+        using var command = connection.CreateStatement();
+        command.SetSql("""
             UPDATE oc_snapshot_authoritative_states
             SET payload_hash = $payloadHash
             WHERE store_identity = $storeIdentity AND stream_id = $streamId;
-            """;
-        _ = command.Parameters.AddWithValue("$payloadHash", payloadHash);
-        _ = command.Parameters.AddWithValue(StoreIdentityParameter, StoreIdentity);
-        _ = command.Parameters.AddWithValue(StreamIdParameter, Stream.Value);
-        if (command.ExecuteNonQuery() == 1)
+            """);
+        _ = command.Bind("$payloadHash", payloadHash);
+        _ = command.Bind(StoreIdentityParameter, StoreIdentity);
+        _ = command.Bind(StreamIdParameter, Stream.Value);
+        if (command.Execute() == 1)
         {
             return;
         }

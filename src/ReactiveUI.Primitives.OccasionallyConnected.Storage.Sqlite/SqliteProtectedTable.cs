@@ -2,7 +2,7 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
-using Microsoft.Data.Sqlite;
+using ReactiveUI.Primitives.OccasionallyConnected.Sqlite;
 
 namespace ReactiveUI.Primitives.OccasionallyConnected.Storage.Sqlite;
 
@@ -11,4 +11,4 @@ namespace ReactiveUI.Primitives.OccasionallyConnected.Storage.Sqlite;
 /// <param name="Describe">Adds the protected values of the current row, or returns false when the row cannot be bound.</param>
 internal sealed record SqliteProtectedTable(
     SqliteProtectedTableKind Kind,
-    Func<SqliteDataReader, List<SqliteProtectedValue>, bool> Describe);
+    Func<SqliteRows, List<SqliteProtectedValue>, bool> Describe);

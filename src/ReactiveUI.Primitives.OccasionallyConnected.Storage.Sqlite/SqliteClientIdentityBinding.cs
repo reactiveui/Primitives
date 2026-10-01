@@ -4,7 +4,7 @@
 
 using System.Globalization;
 using System.Text;
-using Microsoft.Data.Sqlite;
+using ReactiveUI.Primitives.OccasionallyConnected.Sqlite;
 
 namespace ReactiveUI.Primitives.OccasionallyConnected.Storage.Sqlite;
 
@@ -66,7 +66,7 @@ internal static class SqliteClientIdentityBinding
     /// <returns>The effective client identity binding.</returns>
     /// <exception cref="InvalidOperationException">The requested binding conflicts with existing state.</exception>
     internal static string? BindOrValidate(
-        SqliteConnection connection,
+        SqliteDatabase connection,
         SqliteTransaction transaction,
         string storeIdentity,
         string? clientId)
@@ -135,13 +135,13 @@ internal static class SqliteClientIdentityBinding
     /// <param name="key">The metadata key.</param>
     /// <returns>The existing binding, if one exists.</returns>
     /// <exception cref="InvalidOperationException">The stored binding has an invalid SQLite value type.</exception>
-    private static string? SelectBinding(SqliteConnection connection, SqliteTransaction transaction, string key)
+    private static string? SelectBinding(SqliteDatabase connection, SqliteTransaction transaction, string key)
     {
-        using var command = connection.CreateCommand();
-        command.Transaction = transaction;
-        command.CommandText = "SELECT value FROM oc_metadata WHERE key = $key;";
-        _ = command.Parameters.AddWithValue("$key", key);
-        return command.ExecuteScalar() switch
+        using var command = connection.CreateStatement();
+        command.UseTransaction(transaction);
+        command.SetSql("SELECT value FROM oc_metadata WHERE key = $key;");
+        _ = command.Bind("$key", key);
+        return command.Scalar() switch
         {
             null => null,
             string value => value,
@@ -154,14 +154,14 @@ internal static class SqliteClientIdentityBinding
     /// <param name="transaction">The current transaction.</param>
     /// <param name="key">The metadata key.</param>
     /// <param name="clientId">The client identity.</param>
-    private static void InsertBinding(SqliteConnection connection, SqliteTransaction transaction, string key, string clientId)
+    private static void InsertBinding(SqliteDatabase connection, SqliteTransaction transaction, string key, string clientId)
     {
-        using var command = connection.CreateCommand();
-        command.Transaction = transaction;
-        command.CommandText = "INSERT INTO oc_metadata (key, value) VALUES ($key, $value);";
-        _ = command.Parameters.AddWithValue("$key", key);
-        _ = command.Parameters.AddWithValue("$value", clientId);
-        _ = command.ExecuteNonQuery();
+        using var command = connection.CreateStatement();
+        command.UseTransaction(transaction);
+        command.SetSql("INSERT INTO oc_metadata (key, value) VALUES ($key, $value);");
+        _ = command.Bind("$key", key);
+        _ = command.Bind("$value", clientId);
+        _ = command.Execute();
     }
 
     /// <summary>Determines whether a partition contains durable state beyond empty subscription mappings.</summary>
@@ -169,11 +169,11 @@ internal static class SqliteClientIdentityBinding
     /// <param name="transaction">The current transaction.</param>
     /// <param name="storeIdentity">The store identity partition.</param>
     /// <returns>Whether protected state exists.</returns>
-    private static bool HasMutablePartitionState(SqliteConnection connection, SqliteTransaction transaction, string storeIdentity)
+    private static bool HasMutablePartitionState(SqliteDatabase connection, SqliteTransaction transaction, string storeIdentity)
     {
-        using var command = connection.CreateCommand();
-        command.Transaction = transaction;
-        command.CommandText = """
+        using var command = connection.CreateStatement();
+        command.UseTransaction(transaction);
+        command.SetSql("""
             SELECT
                 (SELECT COUNT(*) FROM oc_snapshots WHERE store_identity = $storeIdentity) +
                 (SELECT COUNT(*) FROM oc_outbox WHERE store_identity = $storeIdentity) +
@@ -186,8 +186,8 @@ internal static class SqliteClientIdentityBinding
                 (SELECT COUNT(*) FROM oc_streams
                     WHERE store_identity = $storeIdentity
                     AND (next_client_sequence <> 1 OR server_cursor IS NOT NULL));
-            """;
-        _ = command.Parameters.AddWithValue("$storeIdentity", storeIdentity);
-        return Convert.ToInt64(command.ExecuteScalar(), CultureInfo.InvariantCulture) != 0;
+            """);
+        _ = command.Bind("$storeIdentity", storeIdentity);
+        return Convert.ToInt64(command.Scalar(), CultureInfo.InvariantCulture) != 0;
     }
 }

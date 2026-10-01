@@ -6,8 +6,8 @@ using System.Runtime.CompilerServices;
 #if NET8_0_OR_GREATER
 using System.Security.Cryptography;
 #endif
-using Microsoft.Data.Sqlite;
 using ReactiveUI.Primitives.OccasionallyConnected;
+using ReactiveUI.Primitives.OccasionallyConnected.Sqlite;
 
 namespace ReactiveUI.Primitives.OccasionallyConnected.Storage.Sqlite;
 
@@ -22,7 +22,7 @@ internal sealed partial class SqliteLocalCommitStore
     /// <exception cref="InvalidOperationException">The store has not been initialized or a durable fence rejects recovery.</exception>
     /// <exception cref="ObjectDisposedException">This instance has been disposed.</exception>
     /// <exception cref="OperationCanceledException">The operation is canceled before the transaction commits.</exception>
-    /// <exception cref="SqliteException">SQLite rejects the operation.</exception>
+    /// <exception cref="SqliteDatabaseException">SQLite rejects the operation.</exception>
     internal LocalSnapshotRecoveryResult ApplySnapshotRecovery(
         LocalSnapshotRecoveryMutation mutation,
         CancellationToken cancellationToken)
@@ -96,9 +96,9 @@ internal sealed partial class SqliteLocalCommitStore
     /// <param name="storeIdentity">The store identity.</param>
     /// <param name="mutation">The recovery mutation.</param>
     /// <exception cref="InvalidOperationException">A durable fence rejects recovery.</exception>
-    /// <exception cref="SqliteException">SQLite rejects the operation.</exception>
+    /// <exception cref="SqliteDatabaseException">SQLite rejects the operation.</exception>
     private static void PrepareSnapshotRecoveryStream(
-        SqliteConnection connection,
+        SqliteDatabase connection,
         SqliteTransaction transaction,
         string storeIdentity,
         LocalSnapshotRecoveryMutation mutation)
@@ -119,9 +119,9 @@ internal sealed partial class SqliteLocalCommitStore
     /// <param name="nowUtc">The current UTC timestamp.</param>
     /// <param name="counts">The operation disposition counts.</param>
     /// <returns>The recovery result.</returns>
-    /// <exception cref="SqliteException">SQLite rejects the operation.</exception>
+    /// <exception cref="SqliteDatabaseException">SQLite rejects the operation.</exception>
     private static LocalSnapshotRecoveryResult PersistSnapshotRecoverySnapshot(
-        SqliteConnection connection,
+        SqliteDatabase connection,
         SqliteTransaction transaction,
         string storeIdentity,
         LocalSnapshotRecoveryMutation mutation,
@@ -191,7 +191,7 @@ internal sealed partial class SqliteLocalCommitStore
     /// <param name="dispositions">The operation dispositions.</param>
     /// <returns>The operation disposition counts.</returns>
     /// <exception cref="OperationCanceledException">The operation is canceled while applying dispositions.</exception>
-    /// <exception cref="SqliteException">SQLite rejects the operation.</exception>
+    /// <exception cref="SqliteDatabaseException">SQLite rejects the operation.</exception>
     private static SnapshotRecoveryOperationCounts ApplySnapshotRecoveryOperations(
         in SnapshotRecoveryOperationContext context,
         List<SqliteSnapshotRecoveryPendingOperation> pending,
@@ -241,7 +241,7 @@ internal sealed partial class SqliteLocalCommitStore
     /// <param name="operationId">The operation identifier.</param>
     /// <param name="disposition">The disposition.</param>
     /// <param name="replayOnly">Whether the disposition targets replay-only receive inclusion.</param>
-    /// <exception cref="SqliteException">SQLite rejects the operation.</exception>
+    /// <exception cref="SqliteDatabaseException">SQLite rejects the operation.</exception>
     private static void ApplyIncludedSnapshotRecoveryOperation(
         in SnapshotRecoveryOperationContext context,
         OperationId operationId,
@@ -268,7 +268,7 @@ internal sealed partial class SqliteLocalCommitStore
     /// <param name="context">The operation application context.</param>
     /// <param name="operationId">The operation identifier.</param>
     /// <param name="disposition">The disposition.</param>
-    /// <exception cref="SqliteException">SQLite rejects the operation.</exception>
+    /// <exception cref="SqliteDatabaseException">SQLite rejects the operation.</exception>
     private static void ApplyRejectedSnapshotRecoveryOperation(
         in SnapshotRecoveryOperationContext context,
         OperationId operationId,
@@ -288,7 +288,7 @@ internal sealed partial class SqliteLocalCommitStore
     /// <summary>Releases an expired lease for an unknown disposition.</summary>
     /// <param name="context">The operation application context.</param>
     /// <param name="operationId">The operation identifier.</param>
-    /// <exception cref="SqliteException">SQLite rejects the operation.</exception>
+    /// <exception cref="SqliteDatabaseException">SQLite rejects the operation.</exception>
     private static void ReleaseExpiredSnapshotRecoveryLease(in SnapshotRecoveryOperationContext context, OperationId operationId)
     {
         if (context.ExpiredLeases.Contains(operationId))
@@ -359,9 +359,9 @@ internal sealed partial class SqliteLocalCommitStore
     /// <param name="stream">The stream state.</param>
     /// <param name="mutation">The recovery mutation.</param>
     /// <exception cref="InvalidOperationException">A durable fence rejects recovery.</exception>
-    /// <exception cref="SqliteException">SQLite rejects the operation.</exception>
+    /// <exception cref="SqliteDatabaseException">SQLite rejects the operation.</exception>
     private static void ValidateSnapshotRecoveryFences(
-        SqliteConnection connection,
+        SqliteDatabase connection,
         SqliteTransaction transaction,
         string storeIdentity,
         SqliteLocalStreamState stream,
@@ -406,9 +406,9 @@ internal sealed partial class SqliteLocalCommitStore
     /// <exception cref="ArgumentException">The recovery dispositions do not exactly match pending operations.</exception>
     /// <exception cref="InvalidOperationException">A durable fence rejects recovery.</exception>
     /// <exception cref="OperationCanceledException">The operation is canceled while applying operation dispositions.</exception>
-    /// <exception cref="SqliteException">SQLite rejects the operation.</exception>
+    /// <exception cref="SqliteDatabaseException">SQLite rejects the operation.</exception>
     private static LocalSnapshotRecoveryResult ApplySnapshotRecoveryTransaction(
-        SqliteConnection connection,
+        SqliteDatabase connection,
         SqliteTransaction transaction,
         string storeIdentity,
         LocalSnapshotRecoveryMutation mutation,
@@ -455,7 +455,7 @@ internal sealed partial class SqliteLocalCommitStore
     /// <exception cref="InvalidOperationException">The store has not been initialized or a durable fence rejects recovery.</exception>
     /// <exception cref="ObjectDisposedException">This instance has been disposed.</exception>
     /// <exception cref="OperationCanceledException">The operation is canceled before the transaction commits.</exception>
-    /// <exception cref="SqliteException">SQLite rejects the operation.</exception>
+    /// <exception cref="SqliteDatabaseException">SQLite rejects the operation.</exception>
     private LocalSnapshotRecoveryResult ApplySnapshotRecoveryLocked(
         LocalSnapshotRecoveryMutation mutation,
         DateTimeOffset nowUtc,
@@ -464,7 +464,7 @@ internal sealed partial class SqliteLocalCommitStore
         ThrowIfDisposed();
         var storeIdentity = GetInitializedStoreIdentity();
         cancellationToken.ThrowIfCancellationRequested();
-        using var connection = OpenStoreConnection(storeIdentity, forWrite: true);
+        using var connection = OpenStoreConnection(storeIdentity, cancellationToken, forWrite: true);
         SqliteLocalCommitConnection.ConfigureLockPolling(connection);
         SqliteConnectionSettings.ConfigureOperationalConnection(connection);
         using var transaction = SqliteLocalCommitConnection.BeginWriteTransaction(connection, cancellationToken);
@@ -482,7 +482,7 @@ internal sealed partial class SqliteLocalCommitStore
     /// <param name="NowUtc">The current UTC timestamp.</param>
     /// <param name="CancellationToken">The cancellation token.</param>
     private readonly record struct SnapshotRecoveryOperationContext(
-        SqliteConnection Connection,
+        SqliteDatabase Connection,
         SqliteTransaction Transaction,
         string StoreIdentity,
         HashSet<OperationId> ExpiredLeases,

@@ -3,8 +3,8 @@
 // See the LICENSE file in the project root for full license information.
 
 using System.Runtime.CompilerServices;
-using Microsoft.Data.Sqlite;
 using ReactiveUI.Primitives.OccasionallyConnected;
+using ReactiveUI.Primitives.OccasionallyConnected.Sqlite;
 
 namespace ReactiveUI.Primitives.OccasionallyConnected.Storage.Sqlite;
 
@@ -87,7 +87,7 @@ internal static partial class SqliteLocalCommitSql
     /// <exception cref="InvalidOperationException">The operation state cannot be inserted.</exception>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal static void InsertInitialOperationState(
-        SqliteConnection connection,
+        SqliteDatabase connection,
         SqliteTransaction transaction,
         string storeIdentity,
         SyncOperation operation,
@@ -106,24 +106,24 @@ internal static partial class SqliteLocalCommitSql
     /// <returns>The status, or null when no operation exists.</returns>
     /// <exception cref="InvalidOperationException">Stored SQLite data is invalid.</exception>
     internal static SyncOperationStatus? ReadOperationStatus(
-        SqliteConnection connection,
+        SqliteDatabase connection,
         SqliteTransaction transaction,
         string storeIdentity,
         OperationId operationId)
     {
-        using var command = connection.CreateCommand();
-        command.Transaction = transaction;
-        command.CommandText = """
+        using var command = connection.CreateStatement();
+        command.UseTransaction(transaction);
+        command.SetSql("""
             SELECT outbox.stream_id, state.operation_state, state.attempt_count, state.changed_at_utc, state.reason_code
             FROM oc_outbox AS outbox
             LEFT JOIN oc_outbox_operation_states AS state
                 ON state.store_identity = outbox.store_identity
                 AND state.operation_id = outbox.operation_id
             WHERE outbox.store_identity = $storeIdentity AND outbox.operation_id = $operationId;
-            """;
-        _ = command.Parameters.AddWithValue(StoreIdentityParameter, storeIdentity);
-        _ = command.Parameters.AddWithValue(OperationIdParameter, operationId.Value.ToString("D"));
-        using var reader = command.ExecuteReader();
+            """);
+        _ = command.Bind(StoreIdentityParameter, storeIdentity);
+        _ = command.Bind(OperationIdParameter, operationId.Value.ToString("D"));
+        using var reader = command.Query();
         if (!reader.Read())
         {
             return null;
@@ -152,14 +152,14 @@ internal static partial class SqliteLocalCommitSql
     /// <returns>The retry state, if present.</returns>
     /// <exception cref="InvalidOperationException">Stored SQLite data is invalid.</exception>
     internal static RetryState? ReadRetryState(
-        SqliteConnection connection,
+        SqliteDatabase connection,
         SqliteTransaction transaction,
         string storeIdentity,
         OperationId operationId)
     {
-        using var command = connection.CreateCommand();
-        command.Transaction = transaction;
-        command.CommandText = """
+        using var command = connection.CreateStatement();
+        command.UseTransaction(transaction);
+        command.SetSql("""
             SELECT retry_started_utc, retry_due_utc, retry_previous_delay_ticks,
                    retry_transient_attempt_count, retry_authentication_state, retry_credentials_version,
                    state.operation_id
@@ -168,10 +168,10 @@ internal static partial class SqliteLocalCommitSql
                 ON state.store_identity = outbox.store_identity
                 AND state.operation_id = outbox.operation_id
             WHERE outbox.store_identity = $storeIdentity AND outbox.operation_id = $operationId;
-            """;
-        _ = command.Parameters.AddWithValue(StoreIdentityParameter, storeIdentity);
-        _ = command.Parameters.AddWithValue(OperationIdParameter, operationId.Value.ToString("D"));
-        using var reader = command.ExecuteReader();
+            """);
+        _ = command.Bind(StoreIdentityParameter, storeIdentity);
+        _ = command.Bind(OperationIdParameter, operationId.Value.ToString("D"));
+        using var reader = command.Query();
         if (!reader.Read())
         {
             return null;
@@ -208,7 +208,7 @@ internal static partial class SqliteLocalCommitSql
     /// <returns>The attempt barrier result.</returns>
     /// <exception cref="InvalidOperationException">The lease does not own the operation or stored data is invalid.</exception>
     internal static AttemptBarrierResult TryBeginRemoteAttempt(
-        SqliteConnection connection,
+        SqliteDatabase connection,
         SqliteTransaction transaction,
         string storeIdentity,
         Guid leaseId,
@@ -255,7 +255,7 @@ internal static partial class SqliteLocalCommitSql
     /// <param name="changedAtUtc">The state change timestamp.</param>
     /// <exception cref="InvalidOperationException">The operation result cannot be applied.</exception>
     internal static void ApplySyncResult(
-        SqliteConnection connection,
+        SqliteDatabase connection,
         SqliteTransaction transaction,
         string storeIdentity,
         RemoteSyncResult result,
@@ -285,7 +285,7 @@ internal static partial class SqliteLocalCommitSql
     /// <param name="changedAtUtc">The state change timestamp.</param>
     /// <exception cref="InvalidOperationException">The operation is already terminal or missing.</exception>
     internal static void DeadLetterOperation(
-        SqliteConnection connection,
+        SqliteDatabase connection,
         SqliteTransaction transaction,
         string storeIdentity,
         OperationId operationId,
@@ -298,9 +298,9 @@ internal static partial class SqliteLocalCommitSql
             throw new InvalidOperationException("The SQLite operation state is terminal.");
         }
 
-        using var command = connection.CreateCommand();
-        command.Transaction = transaction;
-        command.CommandText = """
+        using var command = connection.CreateStatement();
+        command.UseTransaction(transaction);
+        command.SetSql("""
             UPDATE oc_outbox_operation_states
             SET operation_state = $operationState,
                 changed_at_utc = $changedAtUtc,
@@ -312,14 +312,14 @@ internal static partial class SqliteLocalCommitSql
                 retry_authentication_state = NULL,
                 retry_credentials_version = NULL
             WHERE store_identity = $storeIdentity AND operation_id = $operationId;
-            """;
+            """);
         AddStatusParameters(command, storeIdentity, operationId, SyncOperationState.DeadLettered, changedAtUtc, reasonCode);
-        command.Parameters[ReasonCodeParameter].Value = ProtectText(
+        _ = command.Bind(ReasonCodeParameter, ProtectText(
             command,
             reasonCode,
             SqliteRecordContext.DeadLetter(operationId, current.Attempt, FormatDateTimeOffset(changedAtUtc)),
-            SqliteRecordContext.ReasonCodeColumn);
-        if (command.ExecuteNonQuery() == 1)
+            SqliteRecordContext.ReasonCodeColumn));
+        if (command.Execute() == 1)
         {
             return;
         }
@@ -336,7 +336,7 @@ internal static partial class SqliteLocalCommitSql
     /// <param name="changedAtUtc">The status change timestamp.</param>
     /// <exception cref="InvalidOperationException">The operation cannot accept retry state.</exception>
     internal static void SaveRetryState(
-        SqliteConnection connection,
+        SqliteDatabase connection,
         SqliteTransaction transaction,
         string storeIdentity,
         OperationId operationId,
@@ -354,9 +354,9 @@ internal static partial class SqliteLocalCommitSql
             throw new InvalidOperationException("At-most-once operations cannot be retried after an ambiguous attempt.");
         }
 
-        using var command = connection.CreateCommand();
-        command.Transaction = transaction;
-        command.CommandText = """
+        using var command = connection.CreateStatement();
+        command.UseTransaction(transaction);
+        command.SetSql("""
             UPDATE oc_outbox_operation_states
             SET operation_state = $operationState,
                 changed_at_utc = $changedAtUtc,
@@ -367,13 +367,13 @@ internal static partial class SqliteLocalCommitSql
                 retry_authentication_state = $retryAuthenticationState,
                 retry_credentials_version = $retryCredentialsVersion
             WHERE store_identity = $storeIdentity AND operation_id = $operationId;
-            """;
-        _ = command.Parameters.AddWithValue(OperationStateParameter, (int)SyncOperationState.QueuedForUpload);
-        _ = command.Parameters.AddWithValue(ChangedAtUtcParameter, FormatDateTimeOffset(changedAtUtc));
+            """);
+        _ = command.Bind(OperationStateParameter, (int)SyncOperationState.QueuedForUpload);
+        _ = command.Bind(ChangedAtUtcParameter, FormatDateTimeOffset(changedAtUtc));
         AddRetryStateParameters(command, retryState);
-        _ = command.Parameters.AddWithValue(StoreIdentityParameter, storeIdentity);
-        _ = command.Parameters.AddWithValue(OperationIdParameter, operationId.Value.ToString("D"));
-        if (command.ExecuteNonQuery() == 1)
+        _ = command.Bind(StoreIdentityParameter, storeIdentity);
+        _ = command.Bind(OperationIdParameter, operationId.Value.ToString("D"));
+        if (command.Execute() == 1)
         {
             return;
         }
@@ -398,7 +398,7 @@ internal static partial class SqliteLocalCommitSql
     /// <param name="reasonCode">The optional reason code.</param>
     /// <exception cref="InvalidOperationException">The operation state cannot be updated.</exception>
     private static void UpdateOperationState(
-        SqliteConnection connection,
+        SqliteDatabase connection,
         SqliteTransaction transaction,
         string storeIdentity,
         OperationId operationId,
@@ -406,9 +406,9 @@ internal static partial class SqliteLocalCommitSql
         DateTimeOffset changedAtUtc,
         string? reasonCode)
     {
-        using var command = connection.CreateCommand();
-        command.Transaction = transaction;
-        command.CommandText = """
+        using var command = connection.CreateStatement();
+        command.UseTransaction(transaction);
+        command.SetSql("""
             UPDATE oc_outbox_operation_states
             SET operation_state = $operationState,
                 changed_at_utc = $changedAtUtc,
@@ -417,10 +417,10 @@ internal static partial class SqliteLocalCommitSql
                     ELSE $reasonCode
                 END
             WHERE store_identity = $storeIdentity AND operation_id = $operationId;
-            """;
+            """);
         AddStatusParameters(command, storeIdentity, operationId, state, changedAtUtc, reasonCode);
         AddDowngradedReasonCodeParameter(command);
-        if (command.ExecuteNonQuery() == 1)
+        if (command.Execute() == 1)
         {
             return;
         }
@@ -435,14 +435,14 @@ internal static partial class SqliteLocalCommitSql
     /// <param name="state">The operation state.</param>
     /// <exception cref="InvalidOperationException">The operation state cannot be inserted.</exception>
     private static void UpsertOperationState(
-        SqliteConnection connection,
+        SqliteDatabase connection,
         SqliteTransaction transaction,
         string storeIdentity,
         in OperationStateWrite state)
     {
-        using var command = connection.CreateCommand();
-        command.Transaction = transaction;
-        command.CommandText = """
+        using var command = connection.CreateStatement();
+        command.UseTransaction(transaction);
+        command.SetSql("""
             INSERT INTO oc_outbox_operation_states
                 (store_identity, operation_id, operation_state, attempt_count, changed_at_utc, reason_code)
             VALUES
@@ -456,11 +456,11 @@ internal static partial class SqliteLocalCommitSql
                         THEN oc_outbox_operation_states.reason_code
                     ELSE excluded.reason_code
                 END;
-            """;
+            """);
         AddStatusParameters(command, storeIdentity, state.OperationId, state.State, state.ChangedAtUtc, state.ReasonCode);
         AddDowngradedReasonCodeParameter(command);
-        _ = command.Parameters.AddWithValue(AttemptCountParameter, state.Attempt);
-        if (command.ExecuteNonQuery() == 1)
+        _ = command.Bind(AttemptCountParameter, state.Attempt);
+        if (command.Execute() == 1)
         {
             return;
         }
@@ -476,18 +476,18 @@ internal static partial class SqliteLocalCommitSql
     /// <param name="changedAtUtc">The changed-at timestamp.</param>
     /// <param name="reasonCode">The optional reason code.</param>
     private static void AddStatusParameters(
-        SqliteCommand command,
+        SqliteStatement command,
         string storeIdentity,
         OperationId operationId,
         SyncOperationState state,
         DateTimeOffset changedAtUtc,
         string? reasonCode)
     {
-        _ = command.Parameters.AddWithValue(StoreIdentityParameter, storeIdentity);
-        _ = command.Parameters.AddWithValue(OperationIdParameter, operationId.Value.ToString("D"));
-        _ = command.Parameters.AddWithValue(OperationStateParameter, (int)state);
-        _ = command.Parameters.AddWithValue(ChangedAtUtcParameter, FormatDateTimeOffset(changedAtUtc));
-        _ = command.Parameters.AddWithValue(ReasonCodeParameter, (object?)reasonCode ?? DBNull.Value);
+        _ = command.Bind(StoreIdentityParameter, storeIdentity);
+        _ = command.Bind(OperationIdParameter, operationId.Value.ToString("D"));
+        _ = command.Bind(OperationStateParameter, (int)state);
+        _ = command.Bind(ChangedAtUtcParameter, FormatDateTimeOffset(changedAtUtc));
+        _ = command.Bind(ReasonCodeParameter, (object?)reasonCode ?? DBNull.Value);
     }
 
     /// <summary>Reads one leased operation state for barrier validation.</summary>
@@ -499,15 +499,15 @@ internal static partial class SqliteLocalCommitSql
     /// <returns>The leased operation state.</returns>
     /// <exception cref="InvalidOperationException">The lease does not own the operation or stored data is invalid.</exception>
     private static OperationStateTarget ReadLeasedOperationState(
-        SqliteConnection connection,
+        SqliteDatabase connection,
         SqliteTransaction transaction,
         string storeIdentity,
         Guid leaseId,
         OperationId operationId)
     {
-        using var command = connection.CreateCommand();
-        command.Transaction = transaction;
-        command.CommandText = """
+        using var command = connection.CreateStatement();
+        command.UseTransaction(transaction);
+        command.SetSql("""
             SELECT state.operation_state, state.attempt_count, outbox.policy_delivery_guarantee
             FROM oc_outbox_operation_states AS state
             INNER JOIN oc_outbox AS outbox
@@ -519,10 +519,10 @@ internal static partial class SqliteLocalCommitSql
             WHERE state.store_identity = $storeIdentity
                 AND state.operation_id = $operationId
                 AND lease.lease_id = $leaseId;
-            """;
+            """);
         AddLeaseParameters(command, storeIdentity, leaseId);
-        _ = command.Parameters.AddWithValue(OperationIdParameter, operationId.Value.ToString("D"));
-        using var reader = command.ExecuteReader();
+        _ = command.Bind(OperationIdParameter, operationId.Value.ToString("D"));
+        using var reader = command.Query();
         if (!reader.Read())
         {
             throw new InvalidOperationException("The SQLite outbox lease does not own the operation.");
@@ -542,24 +542,24 @@ internal static partial class SqliteLocalCommitSql
     /// <returns>The operation state.</returns>
     /// <exception cref="InvalidOperationException">Stored SQLite data is invalid.</exception>
     private static OperationStateTarget ReadOperationRetryTarget(
-        SqliteConnection connection,
+        SqliteDatabase connection,
         SqliteTransaction transaction,
         string storeIdentity,
         OperationId operationId)
     {
-        using var command = connection.CreateCommand();
-        command.Transaction = transaction;
-        command.CommandText = """
+        using var command = connection.CreateStatement();
+        command.UseTransaction(transaction);
+        command.SetSql("""
             SELECT state.operation_state, state.attempt_count, outbox.policy_delivery_guarantee
             FROM oc_outbox_operation_states AS state
             INNER JOIN oc_outbox AS outbox
                 ON outbox.store_identity = state.store_identity
                 AND outbox.operation_id = state.operation_id
             WHERE state.store_identity = $storeIdentity AND state.operation_id = $operationId;
-            """;
-        _ = command.Parameters.AddWithValue(StoreIdentityParameter, storeIdentity);
-        _ = command.Parameters.AddWithValue(OperationIdParameter, operationId.Value.ToString("D"));
-        using var reader = command.ExecuteReader();
+            """);
+        _ = command.Bind(StoreIdentityParameter, storeIdentity);
+        _ = command.Bind(OperationIdParameter, operationId.Value.ToString("D"));
+        using var reader = command.Query();
         if (!reader.Read())
         {
             throw new InvalidOperationException(MissingOperationStateMessage);
@@ -576,7 +576,7 @@ internal static partial class SqliteLocalCommitSql
     /// <param name="index">The column index.</param>
     /// <returns>The operation state.</returns>
     /// <exception cref="InvalidOperationException">Stored SQLite data is invalid.</exception>
-    private static SyncOperationState ReadOperationState(SqliteDataReader reader, int index)
+    private static SyncOperationState ReadOperationState(SqliteRows reader, int index)
     {
         var state = (SyncOperationState)ReadInt(reader, index, InvalidOperationStateMessage);
         return IsDefined(state) ? state : throw new InvalidOperationException(InvalidOperationStateMessage);
@@ -587,7 +587,7 @@ internal static partial class SqliteLocalCommitSql
     /// <param name="index">The column index.</param>
     /// <returns>The delivery guarantee.</returns>
     /// <exception cref="InvalidOperationException">Stored SQLite data is invalid.</exception>
-    private static DeliveryGuarantee ReadDeliveryGuarantee(SqliteDataReader reader, int index)
+    private static DeliveryGuarantee ReadDeliveryGuarantee(SqliteRows reader, int index)
     {
         var guarantee = (DeliveryGuarantee)ReadInt(reader, index, "The SQLite delivery guarantee is invalid.");
         return guarantee is DeliveryGuarantee.AtMostOnce or DeliveryGuarantee.AtLeastOnce or DeliveryGuarantee.ExactlyOnce
@@ -600,7 +600,7 @@ internal static partial class SqliteLocalCommitSql
     /// <param name="index">The column index.</param>
     /// <returns>The retry authentication state.</returns>
     /// <exception cref="InvalidOperationException">Stored SQLite data is invalid.</exception>
-    private static RetryAuthenticationState ReadRetryAuthenticationState(SqliteDataReader reader, int index)
+    private static RetryAuthenticationState ReadRetryAuthenticationState(SqliteRows reader, int index)
     {
         var state = (RetryAuthenticationState)ReadInt(reader, index, "The SQLite retry authentication state is invalid.");
         return state is RetryAuthenticationState.None or RetryAuthenticationState.RenewalRetryUsed
@@ -614,7 +614,7 @@ internal static partial class SqliteLocalCommitSql
     /// <param name="message">The failure message.</param>
     /// <returns>The timestamp.</returns>
     /// <exception cref="InvalidOperationException">Stored SQLite data is invalid.</exception>
-    private static DateTimeOffset? ReadNullableDateTimeOffset(SqliteDataReader reader, int index, string message) =>
+    private static DateTimeOffset? ReadNullableDateTimeOffset(SqliteRows reader, int index, string message) =>
         reader.IsDBNull(index) ? null : ReadDateTimeOffset(reader, index, message);
 
     /// <summary>Reads a nullable long.</summary>
@@ -623,7 +623,7 @@ internal static partial class SqliteLocalCommitSql
     /// <param name="message">The failure message.</param>
     /// <returns>The value.</returns>
     /// <exception cref="InvalidOperationException">Stored SQLite data is invalid.</exception>
-    private static long? ReadNullableLong(SqliteDataReader reader, int index, string message)
+    private static long? ReadNullableLong(SqliteRows reader, int index, string message)
     {
         if (reader.IsDBNull(index))
         {
@@ -640,7 +640,7 @@ internal static partial class SqliteLocalCommitSql
     /// <param name="message">The failure message.</param>
     /// <returns>The value.</returns>
     /// <exception cref="InvalidOperationException">Stored SQLite data is invalid.</exception>
-    private static int ReadNonNegativeInt(SqliteDataReader reader, int index, string message)
+    private static int ReadNonNegativeInt(SqliteRows reader, int index, string message)
     {
         var value = ReadInt(reader, index, message);
         return value >= 0 ? value : throw new InvalidOperationException(message);
@@ -651,7 +651,7 @@ internal static partial class SqliteLocalCommitSql
     /// <param name="index">The column index.</param>
     /// <returns>The reason code.</returns>
     /// <exception cref="InvalidOperationException">Stored SQLite data is invalid.</exception>
-    private static string? ReadReasonCode(SqliteDataReader reader, int index)
+    private static string? ReadReasonCode(SqliteRows reader, int index)
     {
         var reason = ReadNullableString(reader, index);
         return reason is null || reason.Length > 0

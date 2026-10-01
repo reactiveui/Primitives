@@ -330,9 +330,8 @@ Linux and macOS across the four modern frameworks. Full-solution CI builds remai
   lifecycle failures. Root restored the invalid cross-stream uniqueness constraint and observed an executable regression
   before restoring the implementation. All 37 tests pass on each modern target with 100% matching line and branch coverage
   (78 branches per target). All eight library targets build cleanly and appear in the generated package.
-- Uses Microsoft.Data.Sqlite 10.0.12 with SQLitePCLRaw.bundle_e_sqlite3 2.1.13 to obtain the corrected native-asset packaging
-  described in [SQLitePCLRaw #678](https://github.com/ericsink/SQLitePCL.raw/issues/678). API tracking and runtime dependency
-  assets remain enabled. Root verified separate coverage reports for each target and the packed dependency groups.
+- Uses `SQLitePCLRaw.core` 3.0.5 for direct native access and `SQLite3MC.PCLRaw.bundle` 2.4.0 for the native library.
+  The store and server journal share internal native handle owners. API tracking and runtime dependency assets remain enabled.
 - This is the identity persistence component, not the complete local store adapter. Outbox/inbox transactions, leases,
   compaction, encryption, migrations beyond schema v1 and process-crash conformance remain subsequent work.
 

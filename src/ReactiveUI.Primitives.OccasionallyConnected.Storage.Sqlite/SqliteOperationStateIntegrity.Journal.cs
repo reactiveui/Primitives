@@ -2,8 +2,8 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
-using Microsoft.Data.Sqlite;
 using ReactiveUI.Primitives.OccasionallyConnected;
+using ReactiveUI.Primitives.OccasionallyConnected.Sqlite;
 
 namespace ReactiveUI.Primitives.OccasionallyConnected.Storage.Sqlite;
 
@@ -33,10 +33,10 @@ internal static partial class SqliteOperationStateIntegrity
 
     /// <summary>Installs a connection-local journal before a protected write begins.</summary>
     /// <param name="connection">The writable connection.</param>
-    internal static void InstallJournal(SqliteConnection connection)
+    internal static void InstallJournal(SqliteDatabase connection)
     {
-        using var command = connection.CreateCommand();
-        command.CommandText = """
+        using var command = connection.CreateStatement();
+        command.SetSql("""
             CREATE TEMP TABLE oc_state_journal (
                 store_identity TEXT NOT NULL, operation_id TEXT NOT NULL,
                 operation_state INTEGER NULL, attempt_count INTEGER NULL, changed_at_utc TEXT NULL,
@@ -67,14 +67,14 @@ internal static partial class SqliteOperationStateIntegrity
                        (SELECT proof FROM main.oc_operation_state_proofs
                         WHERE store_identity = OLD.store_identity AND operation_id = OLD.operation_id), 1;
             END;
-            """;
-        _ = command.ExecuteNonQuery();
+            """);
+        _ = command.Execute();
     }
 
     /// <summary>Updates proofs and the authenticated manifest for journaled state changes.</summary>
     /// <param name="connection">The connection.</param>
     /// <param name="transaction">The write transaction.</param>
-    internal static void WriteChanges(SqliteConnection connection, SqliteTransaction transaction)
+    internal static void WriteChanges(SqliteDatabase connection, SqliteTransaction transaction)
     {
         var cipher = SqliteRecordCipher.For(connection);
         if (cipher is null)
@@ -114,13 +114,13 @@ internal static partial class SqliteOperationStateIntegrity
     /// <param name="cipher">The database scoped cipher.</param>
     /// <returns>The authenticated accumulator.</returns>
     /// <exception cref="LocalStoreRecordAuthenticationException">The manifest is missing or invalid.</exception>
-    private static JournalManifest ReadManifest(SqliteConnection connection, SqliteTransaction transaction, SqliteRecordCipher cipher)
+    private static JournalManifest ReadManifest(SqliteDatabase connection, SqliteTransaction transaction, SqliteRecordCipher cipher)
     {
-        using var command = connection.CreateCommand();
-        command.Transaction = transaction;
-        command.CommandText = "SELECT value FROM oc_metadata WHERE key = $key;";
-        _ = command.Parameters.AddWithValue("$key", ManifestKey);
-        if (command.ExecuteScalar() is not string stored)
+        using var command = connection.CreateStatement();
+        command.UseTransaction(transaction);
+        command.SetSql("SELECT value FROM oc_metadata WHERE key = $key;");
+        _ = command.Bind("$key", ManifestKey);
+        if (command.Scalar() is not string stored)
         {
             throw new LocalStoreRecordAuthenticationException("The SQLite operation state manifest is missing.");
         }
@@ -201,14 +201,14 @@ internal static partial class SqliteOperationStateIntegrity
     /// <param name="afterOperationId">The last operation identity.</param>
     /// <returns>The changes and final key.</returns>
     private static (List<JournalChange> Changes, string LastStoreIdentity, string LastOperationId) ReadJournalBatch(
-        SqliteConnection connection,
+        SqliteDatabase connection,
         SqliteTransaction transaction,
         string afterStoreIdentity,
         string afterOperationId)
     {
-        using var command = connection.CreateCommand();
-        command.Transaction = transaction;
-        command.CommandText = """
+        using var command = connection.CreateStatement();
+        command.UseTransaction(transaction);
+        command.SetSql("""
             SELECT store_identity, operation_id, operation_state, attempt_count, changed_at_utc,
                    reason_code, retry_started_utc, retry_due_utc, retry_previous_delay_ticks,
                    retry_transient_attempt_count, retry_authentication_state, retry_credentials_version,
@@ -219,11 +219,11 @@ internal static partial class SqliteOperationStateIntegrity
             WHERE store_identity > $storeIdentity
                OR (store_identity = $storeIdentity AND operation_id > $operationId)
             ORDER BY store_identity, operation_id LIMIT $batchSize;
-            """;
-        _ = command.Parameters.AddWithValue(StoreIdentityParameter, afterStoreIdentity);
-        _ = command.Parameters.AddWithValue(OperationIdParameter, afterOperationId);
-        _ = command.Parameters.AddWithValue("$batchSize", ProofBatchSize);
-        using var reader = command.ExecuteReader();
+            """);
+        _ = command.Bind(StoreIdentityParameter, afterStoreIdentity);
+        _ = command.Bind(OperationIdParameter, afterOperationId);
+        _ = command.Bind("$batchSize", ProofBatchSize);
+        using var reader = command.Query();
         List<JournalChange> changes = [];
         while (reader.Read())
         {
@@ -251,7 +251,7 @@ internal static partial class SqliteOperationStateIntegrity
     /// <param name="change">The original row.</param>
     /// <exception cref="LocalStoreRecordAuthenticationException">The original row has no valid proof.</exception>
     private static void ApplyJournalChange(
-        SqliteConnection connection,
+        SqliteDatabase connection,
         SqliteTransaction transaction,
         SqliteRecordCipher cipher,
         JournalManifest manifest,
@@ -280,25 +280,25 @@ internal static partial class SqliteOperationStateIntegrity
     /// <param name="manifest">The set accumulator.</param>
     /// <param name="change">The original row.</param>
     private static void SignCurrentRow(
-        SqliteConnection connection,
+        SqliteDatabase connection,
         SqliteTransaction transaction,
         SqliteRecordCipher cipher,
         JournalManifest manifest,
         JournalChange change)
     {
-        using var command = connection.CreateCommand();
-        command.Transaction = transaction;
-        command.CommandText = """
+        using var command = connection.CreateStatement();
+        command.UseTransaction(transaction);
+        command.SetSql("""
             SELECT store_identity, operation_id, operation_state, attempt_count, changed_at_utc,
                    reason_code, retry_started_utc, retry_due_utc, retry_previous_delay_ticks,
                    retry_transient_attempt_count, retry_authentication_state, retry_credentials_version,
             """ + StateLengthColumns + " " + """
             FROM oc_outbox_operation_states AS state WHERE store_identity = $storeIdentity AND operation_id = $operationId;
-            """;
-        _ = command.Parameters.AddWithValue(StoreIdentityParameter, change.StoreIdentity);
-        _ = command.Parameters.AddWithValue(OperationIdParameter, change.OperationId);
+            """);
+        _ = command.Bind(StoreIdentityParameter, change.StoreIdentity);
+        _ = command.Bind(OperationIdParameter, change.OperationId);
         byte[]? proof;
-        using (var reader = command.ExecuteReader())
+        using (var reader = command.Query())
         {
             proof = reader.Read()
                 ? cipher.ProtectBytes(Serialize(reader), SqliteRecordContext.KeyCheck(), ProofColumn)
@@ -320,14 +320,14 @@ internal static partial class SqliteOperationStateIntegrity
     /// <param name="connection">The connection.</param>
     /// <param name="transaction">The transaction.</param>
     /// <param name="change">The original row.</param>
-    private static void DeleteProof(SqliteConnection connection, SqliteTransaction transaction, JournalChange change)
+    private static void DeleteProof(SqliteDatabase connection, SqliteTransaction transaction, JournalChange change)
     {
-        using var command = connection.CreateCommand();
-        command.Transaction = transaction;
-        command.CommandText = "DELETE FROM oc_operation_state_proofs WHERE store_identity = $storeIdentity AND operation_id = $operationId;";
-        _ = command.Parameters.AddWithValue(StoreIdentityParameter, change.StoreIdentity);
-        _ = command.Parameters.AddWithValue(OperationIdParameter, change.OperationId);
-        _ = command.ExecuteNonQuery();
+        using var command = connection.CreateStatement();
+        command.UseTransaction(transaction);
+        command.SetSql("DELETE FROM oc_operation_state_proofs WHERE store_identity = $storeIdentity AND operation_id = $operationId;");
+        _ = command.Bind(StoreIdentityParameter, change.StoreIdentity);
+        _ = command.Bind(OperationIdParameter, change.OperationId);
+        _ = command.Execute();
     }
 
     /// <summary>The authenticated row count and set digest.</summary>

@@ -3,8 +3,8 @@
 // See the LICENSE file in the project root for full license information.
 
 using System.Runtime.CompilerServices;
-using Microsoft.Data.Sqlite;
 using ReactiveUI.Primitives.OccasionallyConnected;
+using ReactiveUI.Primitives.OccasionallyConnected.Sqlite;
 using ReactiveUI.Primitives.OccasionallyConnected.Storage.Sqlite;
 
 namespace ReactiveUI.Primitives.OccasionallyConnected.Storage.Sqlite.Tests;
@@ -17,9 +17,9 @@ public sealed class SqliteRecordProtectionMaintenanceTests
     [Test]
     public async Task UnsupportedProtectionFormatFailsBeforeRecordAccess()
     {
-        await using var connection = await CreateMetadataConnectionAsync();
+        using var connection = await CreateMetadataConnectionAsync();
         await InsertMetadataAsync(connection, SqliteRecordProtectionMaintenance.ProtectionMetadataKey, "future-format");
-        await using var transaction = (SqliteTransaction)await connection.BeginTransactionAsync();
+        using var transaction = connection.BeginTransaction();
 
         await Assert.That(() => SqliteRecordProtectionMaintenance.EnsureProtectionState(
                 connection,
@@ -34,8 +34,8 @@ public sealed class SqliteRecordProtectionMaintenanceTests
     [Test]
     public async Task KeyRotationRequiresProtectedDatabase()
     {
-        await using var connection = await CreateMetadataConnectionAsync();
-        await using var transaction = (SqliteTransaction)await connection.BeginTransactionAsync();
+        using var connection = await CreateMetadataConnectionAsync();
+        using var transaction = connection.BeginTransaction();
 
         await Assert.That(() => SqliteRecordProtectionMaintenance.RotateKeys(
                 connection,
@@ -50,12 +50,12 @@ public sealed class SqliteRecordProtectionMaintenanceTests
     [Test]
     public async Task MissingKeyCheckFailsClosed()
     {
-        await using var connection = await CreateMetadataConnectionAsync();
+        using var connection = await CreateMetadataConnectionAsync();
         await InsertMetadataAsync(
             connection,
             SqliteRecordProtectionMaintenance.ProtectionMetadataKey,
             SqliteRecordProtectionMaintenance.ProtectionFormat);
-        await using var transaction = (SqliteTransaction)await connection.BeginTransactionAsync();
+        using var transaction = connection.BeginTransaction();
 
         await Assert.That(() => SqliteRecordProtectionMaintenance.EnsureProtectionState(
                 connection,
@@ -70,7 +70,7 @@ public sealed class SqliteRecordProtectionMaintenanceTests
     [Test]
     public async Task IncorrectKeyCheckPlaintextFailsClosed()
     {
-        await using var connection = await CreateMetadataConnectionAsync();
+        using var connection = await CreateMetadataConnectionAsync();
         var cipher = new SqliteRecordCipher(CreateProtection(), string.Empty);
         var check = cipher.ProtectText("wrong check value", SqliteRecordContext.KeyCheck(), "value");
         await InsertMetadataAsync(
@@ -78,7 +78,7 @@ public sealed class SqliteRecordProtectionMaintenanceTests
             SqliteRecordProtectionMaintenance.ProtectionMetadataKey,
             SqliteRecordProtectionMaintenance.ProtectionFormat);
         await InsertMetadataAsync(connection, SqliteRecordProtectionMaintenance.KeyCheckMetadataKey, check);
-        await using var transaction = (SqliteTransaction)await connection.BeginTransactionAsync();
+        using var transaction = connection.BeginTransaction();
 
         await Assert.That(() => SqliteRecordProtectionMaintenance.EnsureProtectionState(
                 connection,
@@ -90,14 +90,13 @@ public sealed class SqliteRecordProtectionMaintenanceTests
 
     /// <summary>Creates an in-memory metadata table without protection rows.</summary>
     /// <returns>The open connection.</returns>
-    private static async Task<SqliteConnection> CreateMetadataConnectionAsync()
+    private static async Task<SqliteDatabase> CreateMetadataConnectionAsync()
     {
-        var connectionString = new SqliteConnectionStringBuilder { DataSource = ":memory:" }.ToString();
-        var connection = new SqliteConnection(connectionString);
-        await connection.OpenAsync();
-        await using var command = connection.CreateCommand();
-        command.CommandText = "CREATE TABLE oc_metadata (key TEXT PRIMARY KEY, value TEXT NOT NULL);";
-        _ = await command.ExecuteNonQueryAsync();
+        var connection = new SqliteDatabase(":memory:");
+
+        using var command = connection.CreateStatement();
+        command.SetSql("CREATE TABLE oc_metadata (key TEXT PRIMARY KEY, value TEXT NOT NULL);");
+        _ = command.Execute();
         return connection;
     }
 
@@ -106,13 +105,13 @@ public sealed class SqliteRecordProtectionMaintenanceTests
     /// <param name="key">The metadata key.</param>
     /// <param name="value">The metadata value.</param>
     /// <returns>A task that represents the asynchronous insert.</returns>
-    private static async Task InsertMetadataAsync(SqliteConnection connection, string key, string value)
+    private static async Task InsertMetadataAsync(SqliteDatabase connection, string key, string value)
     {
-        await using var command = connection.CreateCommand();
-        command.CommandText = "INSERT INTO oc_metadata (key, value) VALUES ($key, $value);";
-        _ = command.Parameters.AddWithValue("$key", key);
-        _ = command.Parameters.AddWithValue("$value", value);
-        _ = await command.ExecuteNonQueryAsync();
+        using var command = connection.CreateStatement();
+        command.SetSql("INSERT INTO oc_metadata (key, value) VALUES ($key, $value);");
+        _ = command.Bind("$key", key);
+        _ = command.Bind("$value", value);
+        _ = command.Execute();
     }
 
     /// <summary>Creates protection with a fixed test key.</summary>

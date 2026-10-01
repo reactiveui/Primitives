@@ -2,7 +2,8 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
-using Microsoft.Data.Sqlite;
+using System.Runtime.CompilerServices;
+using ReactiveUI.Primitives.OccasionallyConnected.Sqlite;
 
 namespace ReactiveUI.Primitives.OccasionallyConnected.Storage.Sqlite;
 
@@ -14,51 +15,48 @@ internal static class SqliteConnectionSettings
 
     /// <summary>Applies the connection busy timeout.</summary>
     /// <param name="connection">The open connection.</param>
-    internal static void ConfigureBusyTimeout(SqliteConnection connection)
-    {
-        using var command = connection.CreateCommand();
-        command.CommandText = "PRAGMA busy_timeout = 30000;";
-        _ = command.ExecuteNonQuery();
-    }
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    internal static void ConfigureBusyTimeout(SqliteDatabase connection) =>
+        connection.SetBusyTimeout(SqliteDatabase.DefaultBusyTimeoutMilliseconds);
 
     /// <summary>Applies per-connection settings required before operational transactions.</summary>
     /// <param name="connection">The open connection.</param>
     /// <exception cref="InvalidOperationException">SQLite did not accept the required operational settings.</exception>
-    internal static void ConfigureOperationalConnection(SqliteConnection connection)
+    internal static void ConfigureOperationalConnection(SqliteDatabase connection)
     {
-        using (var foreignKeysCommand = connection.CreateCommand())
+        using (var foreignKeysCommand = connection.CreateStatement())
         {
-            foreignKeysCommand.CommandText = "PRAGMA foreign_keys = ON;";
-            _ = foreignKeysCommand.ExecuteNonQuery();
+            foreignKeysCommand.SetSql("PRAGMA foreign_keys = ON;");
+            _ = foreignKeysCommand.Execute();
         }
 
-        using (var synchronousCommand = connection.CreateCommand())
+        using (var synchronousCommand = connection.CreateStatement())
         {
-            synchronousCommand.CommandText = "PRAGMA synchronous = FULL;";
-            _ = synchronousCommand.ExecuteNonQuery();
+            synchronousCommand.SetSql("PRAGMA synchronous = FULL;");
+            _ = synchronousCommand.Execute();
         }
 
-        using (var verifyForeignKeysCommand = connection.CreateCommand())
+        using (var verifyForeignKeysCommand = connection.CreateStatement())
         {
-            verifyForeignKeysCommand.CommandText = "PRAGMA foreign_keys;";
-            VerifyForeignKeys(verifyForeignKeysCommand.ExecuteScalar());
+            verifyForeignKeysCommand.SetSql("PRAGMA foreign_keys;");
+            VerifyForeignKeys(verifyForeignKeysCommand.Scalar());
         }
 
-        using var verifySynchronousCommand = connection.CreateCommand();
-        verifySynchronousCommand.CommandText = "PRAGMA synchronous;";
-        VerifyFullSynchronous(verifySynchronousCommand.ExecuteScalar());
+        using var verifySynchronousCommand = connection.CreateStatement();
+        verifySynchronousCommand.SetSql("PRAGMA synchronous;");
+        VerifyFullSynchronous(verifySynchronousCommand.Scalar());
     }
 
     /// <summary>Applies durability pragmas after schema validation.</summary>
     /// <param name="connection">The open connection.</param>
     /// <exception cref="InvalidOperationException">SQLite did not accept the required durability settings.</exception>
-    internal static void ConfigureDurability(SqliteConnection connection)
+    internal static void ConfigureDurability(SqliteDatabase connection)
     {
         ConfigureOperationalConnection(connection);
 
-        using var command = connection.CreateCommand();
-        command.CommandText = "PRAGMA journal_mode = WAL;";
-        VerifyWalJournalMode(command.ExecuteScalar());
+        using var command = connection.CreateStatement();
+        command.SetSql("PRAGMA journal_mode = WAL;");
+        VerifyWalJournalMode(command.Scalar());
     }
 
     /// <summary>Verifies SQLite enabled foreign key enforcement for the current connection.</summary>

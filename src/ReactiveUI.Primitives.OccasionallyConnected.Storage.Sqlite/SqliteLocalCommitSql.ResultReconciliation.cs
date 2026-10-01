@@ -2,8 +2,8 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
-using Microsoft.Data.Sqlite;
 using ReactiveUI.Primitives.OccasionallyConnected;
+using ReactiveUI.Primitives.OccasionallyConnected.Sqlite;
 
 namespace ReactiveUI.Primitives.OccasionallyConnected.Storage.Sqlite;
 
@@ -23,7 +23,7 @@ internal static partial class SqliteLocalCommitSql
     /// <param name="maximumPayloadBytes">The maximum payload bytes this adapter can materialize.</param>
     /// <exception cref="InvalidOperationException">A rejection contradicts inclusion or requires a snapshot rebuild.</exception>
     internal static void ValidateStatusOnlyReconciliation(
-        SqliteConnection connection,
+        SqliteDatabase connection,
         SqliteTransaction transaction,
         string storeIdentity,
         IReadOnlyList<SyncOperation> leasedOperations,
@@ -62,7 +62,7 @@ internal static partial class SqliteLocalCommitSql
     /// <returns>The committed snapshots.</returns>
     /// <exception cref="InvalidOperationException">The replacement set or revision fence is invalid.</exception>
     internal static List<LocalSnapshot> CreateResultReconciliationSnapshots(
-        SqliteConnection connection,
+        SqliteDatabase connection,
         SqliteTransaction transaction,
         string storeIdentity,
         IReadOnlyList<SyncOperation> leasedOperations,
@@ -123,7 +123,7 @@ internal static partial class SqliteLocalCommitSql
     /// <returns>The committed replacement snapshot.</returns>
     /// <exception cref="InvalidOperationException">The operation is already included, terminal, or the snapshot is stale.</exception>
     internal static LocalSnapshot CreateDeadLetterSnapshot(
-        SqliteConnection connection,
+        SqliteDatabase connection,
         SqliteTransaction transaction,
         string storeIdentity,
         SyncOperation operation,
@@ -167,7 +167,7 @@ internal static partial class SqliteLocalCommitSql
     /// <param name="mutation">The replacement mutation.</param>
     /// <exception cref="InvalidOperationException">The mutation targets another stream or contradicts inclusion.</exception>
     private static void ValidateDeadLetterOperationTarget(
-        SqliteConnection connection,
+        SqliteDatabase connection,
         SqliteTransaction transaction,
         string storeIdentity,
         SyncOperation operation,
@@ -192,7 +192,7 @@ internal static partial class SqliteLocalCommitSql
     /// <param name="operationId">The operation identifier.</param>
     /// <exception cref="InvalidOperationException">The operation is already included.</exception>
     private static void ValidateDeadLetterInclusion(
-        SqliteConnection connection,
+        SqliteDatabase connection,
         SqliteTransaction transaction,
         string storeIdentity,
         OperationId operationId) =>
@@ -206,7 +206,7 @@ internal static partial class SqliteLocalCommitSql
     /// <param name="operationId">The operation identifier.</param>
     /// <exception cref="InvalidOperationException">The operation is terminal or has prior upload evidence.</exception>
     private static void ValidateDeadLetterOperationStatus(
-        SqliteConnection connection,
+        SqliteDatabase connection,
         SqliteTransaction transaction,
         string storeIdentity,
         OperationId operationId)
@@ -253,7 +253,7 @@ internal static partial class SqliteLocalCommitSql
     /// <returns>The affected streams.</returns>
     /// <exception cref="InvalidOperationException">The result contradicts authoritative inclusion.</exception>
     private static HashSet<StreamId> GetResultReconciliationStreams(
-        SqliteConnection connection,
+        SqliteDatabase connection,
         SqliteTransaction transaction,
         string storeIdentity,
         Dictionary<OperationId, StreamId> operationStreams,
@@ -312,20 +312,20 @@ internal static partial class SqliteLocalCommitSql
     /// <param name="operationId">The operation id.</param>
     /// <returns>Whether an inclusion row exists.</returns>
     private static bool IsOperationIncluded(
-        SqliteConnection connection,
+        SqliteDatabase connection,
         SqliteTransaction transaction,
         string storeIdentity,
         OperationId operationId)
     {
-        using var command = connection.CreateCommand();
-        command.Transaction = transaction;
-        command.CommandText = """
+        using var command = connection.CreateStatement();
+        command.UseTransaction(transaction);
+        command.SetSql("""
             SELECT 1
             FROM oc_outbox_receive_inclusions
             WHERE store_identity = $storeIdentity AND operation_id = $operationId;
-            """;
-        _ = command.Parameters.AddWithValue(StoreIdentityParameter, storeIdentity);
-        _ = command.Parameters.AddWithValue(OperationIdParameter, operationId.Value.ToString("D"));
-        return command.ExecuteScalar() is not null;
+            """);
+        _ = command.Bind(StoreIdentityParameter, storeIdentity);
+        _ = command.Bind(OperationIdParameter, operationId.Value.ToString("D"));
+        return command.Scalar() is not null;
     }
 }

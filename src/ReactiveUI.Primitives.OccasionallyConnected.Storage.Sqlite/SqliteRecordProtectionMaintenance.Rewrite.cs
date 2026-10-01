@@ -3,8 +3,8 @@
 // See the LICENSE file in the project root for full license information.
 
 using System.Runtime.CompilerServices;
-using Microsoft.Data.Sqlite;
 using ReactiveUI.Primitives.OccasionallyConnected;
+using ReactiveUI.Primitives.OccasionallyConnected.Sqlite;
 
 namespace ReactiveUI.Primitives.OccasionallyConnected.Storage.Sqlite;
 
@@ -39,7 +39,7 @@ internal static partial class SqliteRecordProtectionMaintenance
     /// <param name="cancellationToken">The cancellation token.</param>
     /// <returns>The number of rewritten values.</returns>
     private static long RewriteProtectedValues(
-        SqliteConnection connection,
+        SqliteDatabase connection,
         SqliteTransaction transaction,
         SqliteRecordProtection protection,
         RewriteMode mode,
@@ -63,7 +63,7 @@ internal static partial class SqliteRecordProtectionMaintenance
     /// <param name="cancellationToken">The cancellation token.</param>
     /// <returns>The number of rewritten values.</returns>
     private static long RewriteTable(
-        SqliteConnection connection,
+        SqliteDatabase connection,
         SqliteTransaction transaction,
         SqliteProtectedTable table,
         RewriteContext rewrite,
@@ -97,18 +97,18 @@ internal static partial class SqliteRecordProtectionMaintenance
     /// <param name="afterRowId">The last rowid of the previous batch.</param>
     /// <returns>The row count, the pending updates, and the last rowid read.</returns>
     private static (int RowCount, List<SqliteProtectedRowUpdate> Updates, long LastRowId) ReadRewriteBatch(
-        SqliteConnection connection,
+        SqliteDatabase connection,
         SqliteTransaction transaction,
         SqliteProtectedTable table,
         RewriteContext rewrite,
         long afterRowId)
     {
-        using var command = connection.CreateCommand();
-        command.Transaction = transaction;
+        using var command = connection.CreateStatement();
+        command.UseTransaction(transaction);
         SqliteRecordProtectionTables.SetSelectSql(command, table.Kind);
-        _ = command.Parameters.AddWithValue("$afterRowId", afterRowId);
-        _ = command.Parameters.AddWithValue("$batchSize", RewriteBatchSize);
-        using var reader = command.ExecuteReader();
+        _ = command.Bind("$afterRowId", afterRowId);
+        _ = command.Bind("$batchSize", RewriteBatchSize);
+        using var reader = command.Query();
         List<SqliteProtectedRowUpdate> updates = [];
         List<SqliteProtectedValue> values = [];
         var rowCount = 0;
@@ -141,7 +141,7 @@ internal static partial class SqliteRecordProtectionMaintenance
     /// <param name="rewrite">The rewrite state.</param>
     /// <returns>The row update.</returns>
     private static SqliteProtectedRowUpdate RewriteRow(
-        SqliteDataReader reader,
+        SqliteRows reader,
         long rowId,
         SqliteRecordCipher cipher,
         List<SqliteProtectedValue> values,
@@ -212,21 +212,21 @@ internal static partial class SqliteRecordProtectionMaintenance
     /// <param name="update">The row update.</param>
     /// <exception cref="InvalidOperationException">The row no longer exists.</exception>
     private static void ApplyUpdate(
-        SqliteConnection connection,
+        SqliteDatabase connection,
         SqliteTransaction transaction,
         SqliteProtectedTable table,
         SqliteProtectedRowUpdate update)
     {
-        using var command = connection.CreateCommand();
-        command.Transaction = transaction;
+        using var command = connection.CreateStatement();
+        command.UseTransaction(transaction);
         SqliteRecordProtectionTables.SetUpdateSql(command, table.Kind);
-        _ = command.Parameters.AddWithValue("$rowId", update.RowId);
+        _ = command.Bind("$rowId", update.RowId);
         foreach (var parameter in update.Parameters)
         {
-            _ = command.Parameters.AddWithValue(parameter.Key, parameter.Value);
+            _ = command.Bind(parameter.Key, parameter.Value);
         }
 
-        if (command.ExecuteNonQuery() != 1)
+        if (command.Execute() != 1)
         {
             throw new InvalidOperationException("A protected SQLite row changed during record protection maintenance.");
         }

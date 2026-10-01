@@ -556,9 +556,9 @@ public sealed partial class SqliteLocalStoreAdapterTests
     private static void CreateUnversionedUserTable(string path)
     {
         using var connection = OpenRawConnection(path);
-        using var command = connection.CreateCommand();
-        command.CommandText = "CREATE TABLE user_table (id INTEGER NOT NULL);";
-        _ = command.ExecuteNonQuery();
+        using var command = connection.CreateStatement();
+        command.SetSql("CREATE TABLE user_table (id INTEGER NOT NULL);");
+        _ = command.Execute();
     }
 
     /// <summary>Deletes SQLite database files created by a failed initialization test.</summary>

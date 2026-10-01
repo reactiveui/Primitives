@@ -2,10 +2,9 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
-using System.Data;
 using System.Runtime.CompilerServices;
 using System.Text;
-using Microsoft.Data.Sqlite;
+using ReactiveUI.Primitives.OccasionallyConnected.Sqlite;
 
 namespace ReactiveUI.Primitives.OccasionallyConnected.Server;
 
@@ -333,7 +332,7 @@ internal sealed partial class SqliteServerCommitJournal : IServerCommitJournal, 
         ServerCommitJournalGuard.ValidateStreamKey(streamKey);
         var requested = ServerCommitJournalGuard.CaptureOperationKeys(operationKeys, _options.MaximumOperationCaptureCount);
         using var connection = OpenConnection();
-        using var transaction = connection.BeginTransaction(IsolationLevel.Serializable, deferred: true);
+        using var transaction = connection.BeginTransaction(deferred: true);
         ValidateExistingSchema(connection, transaction);
         ValidateReadCapacity(connection, transaction);
         var stream = ReadStreamRecord(connection, transaction, streamKey);
@@ -352,7 +351,7 @@ internal sealed partial class SqliteServerCommitJournal : IServerCommitJournal, 
         var commit = ServerCommitJournalGuard.ValidatePlan(plan, _options);
         var observedUtc = _options.TimeProvider.GetUtcNow();
         using var connection = OpenConnection();
-        using var transaction = connection.BeginTransaction(IsolationLevel.Serializable, deferred: false);
+        using var transaction = connection.BeginTransaction();
         ValidateExistingSchema(connection, transaction);
         ValidateReadCapacity(connection, transaction);
         var streamExists = TryReadStreamRecord(connection, transaction, commit.StreamKey, out var stream);
@@ -410,7 +409,7 @@ internal sealed partial class SqliteServerCommitJournal : IServerCommitJournal, 
         ThrowIfDisposed();
         ArgumentExceptionHelper.ThrowIfNull(request);
         using var connection = OpenConnection();
-        using var transaction = connection.BeginTransaction(IsolationLevel.Serializable, deferred: true);
+        using var transaction = connection.BeginTransaction(deferred: true);
         ValidateExistingSchema(connection, transaction);
         ValidateReadCapacity(connection, transaction);
         var stream = ReadStreamRecord(connection, transaction, request.StreamKey);
@@ -438,7 +437,7 @@ internal sealed partial class SqliteServerCommitJournal : IServerCommitJournal, 
         ServerSubscriptionJournalOperations.ValidateRegistrationRequest(request);
         var observedUtc = _options.TimeProvider.GetUtcNow();
         using var connection = OpenConnection();
-        using var transaction = connection.BeginTransaction(IsolationLevel.Serializable, deferred: false);
+        using var transaction = connection.BeginTransaction();
         ValidateExistingSchema(connection, transaction);
         ValidateReadCapacity(connection, transaction);
         var updatedUtc = ServerCommitJournalOperations.Max(ReadLatestUtc(connection, transaction), observedUtc);
@@ -457,7 +456,7 @@ internal sealed partial class SqliteServerCommitJournal : IServerCommitJournal, 
         ServerSubscriptionJournalOperations.ValidatePageRequest(request);
         var observedUtc = _options.TimeProvider.GetUtcNow();
         using var connection = OpenConnection();
-        using var transaction = connection.BeginTransaction(IsolationLevel.Serializable, deferred: false);
+        using var transaction = connection.BeginTransaction();
         ValidateExistingSchema(connection, transaction);
         ValidateReadCapacity(connection, transaction);
         var record = ReadRegisteredSubscription(connection, transaction, request.Identity);
@@ -492,7 +491,7 @@ internal sealed partial class SqliteServerCommitJournal : IServerCommitJournal, 
         ServerSubscriptionJournalOperations.ValidateAcknowledgementRequest(request);
         var observedUtc = _options.TimeProvider.GetUtcNow();
         using var connection = OpenConnection();
-        using var transaction = connection.BeginTransaction(IsolationLevel.Serializable, deferred: false);
+        using var transaction = connection.BeginTransaction();
         ValidateExistingSchema(connection, transaction);
         ValidateReadCapacity(connection, transaction);
         var identity = new ServerSubscriptionIdentity(request.StreamKey, request.ClientId, request.Acknowledgement.SubscriptionId);
@@ -511,7 +510,7 @@ internal sealed partial class SqliteServerCommitJournal : IServerCommitJournal, 
         ServerSnapshotRecoveryJournalOperations.ValidateReadRequest(request);
         var operationKeys = ServerSnapshotRecoveryJournalOperations.CaptureOperationProofs(request, out var fingerprints);
         using var connection = OpenConnection();
-        using var transaction = connection.BeginTransaction(IsolationLevel.Serializable, deferred: true);
+        using var transaction = connection.BeginTransaction(deferred: true);
         ValidateExistingSchema(connection, transaction);
         ValidateReadCapacity(connection, transaction);
         var stream = ReadStreamRecord(connection, transaction, request.StreamKey);
@@ -559,7 +558,7 @@ internal sealed partial class SqliteServerCommitJournal : IServerCommitJournal, 
 
         var observedUtc = _options.TimeProvider.GetUtcNow();
         using var connection = OpenConnection();
-        using var transaction = connection.BeginTransaction(IsolationLevel.Serializable, deferred: false);
+        using var transaction = connection.BeginTransaction();
         ValidateExistingSchema(connection, transaction);
         ValidateReadCapacity(connection, transaction);
         var result = TryOfferSnapshot(connection, transaction, request, observedUtc);
@@ -623,7 +622,7 @@ internal sealed partial class SqliteServerCommitJournal : IServerCommitJournal, 
         ThrowIfDisposed();
         var sampledUtc = utcNow ?? _options.TimeProvider.GetUtcNow();
         using var connection = OpenConnection();
-        using var transaction = connection.BeginTransaction(IsolationLevel.Serializable, deferred: false);
+        using var transaction = connection.BeginTransaction();
         ValidateExistingSchema(connection, transaction);
         var compactUtc = ServerCommitJournalOperations.Max(ReadLatestUtc(connection, transaction), sampledUtc);
         var removed = DeleteExpired(connection, transaction, compactUtc);
@@ -662,7 +661,7 @@ internal sealed partial class SqliteServerCommitJournal : IServerCommitJournal, 
     /// <param name="connection">The connection.</param>
     /// <param name="transaction">The transaction protecting the preflight and subsequent read.</param>
     /// <exception cref="InvalidOperationException">Retained data exceeds the configured read bounds.</exception>
-    private void ValidateReadCapacity(SqliteConnection connection, SqliteTransaction transaction)
+    private void ValidateReadCapacity(SqliteDatabase connection, SqliteTransaction transaction)
     {
         var metrics = ReadMetrics(connection, transaction);
         if (HasCountCapacity(metrics.StreamCount, metrics.LedgerEntryCount, metrics.EventCount)
@@ -697,7 +696,7 @@ internal sealed partial class SqliteServerCommitJournal : IServerCommitJournal, 
     {
         _ = Directory.CreateDirectory(GetDirectoryForCreate(_databasePath));
         using var connection = OpenInitializationConnection();
-        using var transaction = connection.BeginTransaction(IsolationLevel.Serializable, deferred: false);
+        using var transaction = connection.BeginTransaction();
         var userVersion = GetUserVersion(connection, transaction);
         if (userVersion == 0 && !HasUserTables(connection, transaction))
         {
@@ -715,7 +714,7 @@ internal sealed partial class SqliteServerCommitJournal : IServerCommitJournal, 
     /// <summary>Opens a fresh startup connection while Windows releases a killed writer's WAL handle.</summary>
     /// <returns>The configured connection.</returns>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private SqliteConnection OpenInitializationConnection() =>
+    private SqliteDatabase OpenInitializationConnection() =>
         RetryInitializationConnection(OpenConnection, static () => Thread.Sleep(RecoveryOpenRetryMilliseconds));
 
     /// <summary>Reads retained metrics from the database.</summary>
@@ -724,7 +723,7 @@ internal sealed partial class SqliteServerCommitJournal : IServerCommitJournal, 
     {
         ThrowIfDisposed();
         using var connection = OpenConnection();
-        using var transaction = connection.BeginTransaction(IsolationLevel.Serializable, deferred: true);
+        using var transaction = connection.BeginTransaction(deferred: true);
         ValidateExistingSchema(connection, transaction);
         var metrics = ReadMetrics(connection, transaction);
         transaction.Commit();
@@ -733,13 +732,11 @@ internal sealed partial class SqliteServerCommitJournal : IServerCommitJournal, 
 
     /// <summary>Opens a SQLite connection with pooling disabled.</summary>
     /// <returns>The open SQLite connection.</returns>
-    private SqliteConnection OpenConnection()
+    private SqliteDatabase OpenConnection()
     {
-        var connectionString = new SqliteConnectionStringBuilder { DataSource = _databasePath, Mode = SqliteOpenMode.ReadWriteCreate, Pooling = false }.ToString();
-        var connection = new SqliteConnection(connectionString);
+        var connection = new SqliteDatabase(_databasePath);
         try
         {
-            connection.Open();
             ConfigureBusyTimeout(connection);
             ConfigureOperationalConnection(connection);
             return connection;

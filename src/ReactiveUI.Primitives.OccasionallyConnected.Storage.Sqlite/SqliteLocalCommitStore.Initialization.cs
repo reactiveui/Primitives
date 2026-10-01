@@ -2,7 +2,7 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
-using Microsoft.Data.Sqlite;
+using ReactiveUI.Primitives.OccasionallyConnected.Sqlite;
 
 namespace ReactiveUI.Primitives.OccasionallyConnected.Storage.Sqlite;
 
@@ -14,7 +14,7 @@ internal sealed partial class SqliteLocalCommitStore
     /// <param name="connection">The open connection.</param>
     /// <param name="transaction">The active transaction.</param>
     /// <param name="encrypted">Whether plaintext records became encrypted.</param>
-    private void CommitInitialization(SqliteConnection connection, SqliteTransaction transaction, bool encrypted)
+    private void CommitInitialization(SqliteDatabase connection, SqliteTransaction transaction, bool encrypted)
     {
         if (encrypted)
         {

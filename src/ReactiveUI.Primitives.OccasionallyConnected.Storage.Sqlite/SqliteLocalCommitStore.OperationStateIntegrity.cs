@@ -2,7 +2,7 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
-using Microsoft.Data.Sqlite;
+using ReactiveUI.Primitives.OccasionallyConnected.Sqlite;
 
 namespace ReactiveUI.Primitives.OccasionallyConnected.Storage.Sqlite;
 
@@ -15,7 +15,7 @@ internal sealed partial class SqliteLocalCommitStore
     /// <param name="transaction">The transaction.</param>
     /// <param name="userVersion">The version before initialization.</param>
     /// <param name="migrated">Whether plaintext rows became encrypted in this transaction.</param>
-    private static void EnsureOperationStateIntegrity(SqliteConnection connection, SqliteTransaction transaction, long userVersion, bool migrated)
+    private static void EnsureOperationStateIntegrity(SqliteDatabase connection, SqliteTransaction transaction, long userVersion, bool migrated)
     {
         if (userVersion == SqliteStoreSchema.LocalCommitSchemaVersion && !migrated)
         {

@@ -5,7 +5,7 @@
 #nullable enable
 
 using System.Runtime.CompilerServices;
-using Microsoft.Data.Sqlite;
+using ReactiveUI.Primitives.OccasionallyConnected.Sqlite;
 
 namespace ReactiveUI.Primitives.OccasionallyConnected.Server;
 
@@ -161,7 +161,7 @@ internal sealed partial class SqliteServerCommitJournal
     /// <param name="stream">The stream record.</param>
     /// <returns>Whether the stream exists.</returns>
     private static bool TryReadStreamRecord(
-        SqliteConnection connection,
+        SqliteDatabase connection,
         SqliteTransaction transaction,
         ServerStreamKey streamKey,
         out ServerCommitStreamRecord? stream)
@@ -182,7 +182,7 @@ internal sealed partial class SqliteServerCommitJournal
     /// <param name="streamKey">The stream key.</param>
     /// <returns>The stream record or null.</returns>
     private static ServerCommitStreamRecord? ReadStreamRecord(
-        SqliteConnection connection,
+        SqliteDatabase connection,
         SqliteTransaction transaction,
         ServerStreamKey streamKey)
     {
@@ -195,20 +195,20 @@ internal sealed partial class SqliteServerCommitJournal
     /// <param name="transaction">The transaction.</param>
     /// <param name="streamKey">The stream key.</param>
     /// <returns>The stream record or null.</returns>
-    private static ServerCommitStreamRecord? ReadStreamHeader(SqliteConnection connection, SqliteTransaction transaction, ServerStreamKey streamKey)
+    private static ServerCommitStreamRecord? ReadStreamHeader(SqliteDatabase connection, SqliteTransaction transaction, ServerStreamKey streamKey)
     {
-        using var command = connection.CreateCommand();
-        command.Transaction = transaction;
-        command.CommandText = """
+        using var command = connection.CreateStatement();
+        command.UseTransaction(transaction);
+        command.SetSql("""
             SELECT revision, state_version, state_payload_contract_id, state_payload_schema_version,
                    state_payload_content_type, state_payload, state_payload_hash, write_stamp_committed_at_utc,
                    write_stamp_client_id, write_stamp_operation_id, last_cursor, last_event_sequence,
                    state_bytes, last_cursor_bytes, last_group_sequence, receive_history_incomplete
             FROM oc_server_journal_streams
             WHERE tenant_id = $tenantId AND stream_id = $streamId;
-            """;
+            """);
         AddStreamParameters(command, streamKey);
-        using var reader = command.ExecuteReader();
+        using var reader = command.Query();
         if (!reader.Read())
         {
             return null;
@@ -245,22 +245,22 @@ internal sealed partial class SqliteServerCommitJournal
     /// <param name="streamKey">The stream key.</param>
     /// <param name="stream">The stream record.</param>
     private static void ReadLedger(
-        SqliteConnection connection,
+        SqliteDatabase connection,
         SqliteTransaction transaction,
         ServerStreamKey streamKey,
         ServerCommitStreamRecord stream)
     {
-        using var command = connection.CreateCommand();
-        command.Transaction = transaction;
-        command.CommandText = """
+        using var command = connection.CreateStatement();
+        command.UseTransaction(transaction);
+        command.SetSql("""
             SELECT client_id, operation_id, fingerprint, result_kind, result_reason_code, result_server_version,
                    committed_at_utc, expires_at_utc, logical_bytes, group_sequence
             FROM oc_server_journal_ledger
             WHERE tenant_id = $tenantId AND stream_id = $streamId
             ORDER BY group_sequence IS NULL ASC, group_sequence ASC, rowid ASC;
-            """;
+            """);
         AddStreamParameters(command, streamKey);
-        using var reader = command.ExecuteReader();
+        using var reader = command.Query();
         while (reader.Read())
         {
             var operationKey = ReadOperationKey(reader, LedgerClientColumn, LedgerOperationColumn);
@@ -300,23 +300,23 @@ internal sealed partial class SqliteServerCommitJournal
     /// <param name="operationKey">The operation key.</param>
     /// <returns>The conflict rows.</returns>
     private static List<ResolvedConflict> ReadConflicts(
-        SqliteConnection connection,
+        SqliteDatabase connection,
         SqliteTransaction transaction,
         ServerStreamKey streamKey,
         ServerOperationKey operationKey)
     {
-        using var command = connection.CreateCommand();
-        command.Transaction = transaction;
-        command.CommandText = """
+        using var command = connection.CreateStatement();
+        command.UseTransaction(transaction);
+        command.SetSql("""
             SELECT resolution_code, resolved_payload_contract_id, resolved_payload_schema_version,
                    resolved_payload_content_type, resolved_payload, resolved_payload_hash
             FROM oc_server_journal_conflicts
             WHERE tenant_id = $tenantId AND stream_id = $streamId AND client_id = $clientId AND operation_id = $operationId
             ORDER BY conflict_index ASC;
-            """;
+            """);
         AddStreamParameters(command, streamKey);
         AddOperationParameters(command, operationKey);
-        using var reader = command.ExecuteReader();
+        using var reader = command.Query();
         var conflicts = new List<ResolvedConflict>();
         while (reader.Read())
         {
@@ -336,24 +336,24 @@ internal sealed partial class SqliteServerCommitJournal
     /// <param name="operationKey">The operation key.</param>
     /// <returns>The event rows.</returns>
     private static List<RemoteEvent> ReadEvents(
-        SqliteConnection connection,
+        SqliteDatabase connection,
         SqliteTransaction transaction,
         ServerStreamKey streamKey,
         ServerOperationKey operationKey)
     {
-        using var command = connection.CreateCommand();
-        command.Transaction = transaction;
-        command.CommandText = """
+        using var command = connection.CreateStatement();
+        command.UseTransaction(transaction);
+        command.SetSql("""
             SELECT event_sequence, event_id, server_cursor, committed_at_utc, caused_by_operation_id,
                    origin_client_id, origin_operation_id, payload_contract_id, payload_schema_version,
                    payload_content_type, payload, payload_hash
             FROM oc_server_journal_events
             WHERE tenant_id = $tenantId AND stream_id = $streamId AND client_id = $clientId AND operation_id = $operationId
             ORDER BY event_index ASC;
-            """;
+            """);
         AddStreamParameters(command, streamKey);
         AddOperationParameters(command, operationKey);
-        using var reader = command.ExecuteReader();
+        using var reader = command.Query();
         var events = new List<RemoteEvent>();
         while (reader.Read())
         {
@@ -381,22 +381,22 @@ internal sealed partial class SqliteServerCommitJournal
     /// <param name="eventSequence">The event sequence.</param>
     /// <returns>The metadata.</returns>
     private static Dictionary<string, string> ReadEventMetadata(
-        SqliteConnection connection,
+        SqliteDatabase connection,
         SqliteTransaction transaction,
         ServerStreamKey streamKey,
         long eventSequence)
     {
-        using var command = connection.CreateCommand();
-        command.Transaction = transaction;
-        command.CommandText = """
+        using var command = connection.CreateStatement();
+        command.UseTransaction(transaction);
+        command.SetSql("""
             SELECT key, value
             FROM oc_server_journal_event_metadata
             WHERE tenant_id = $tenantId AND stream_id = $streamId AND event_sequence = $eventSequence
             ORDER BY key ASC;
-            """;
+            """);
         AddStreamParameters(command, streamKey);
-        _ = command.Parameters.AddWithValue(EventSequenceParameterName, eventSequence);
-        using var reader = command.ExecuteReader();
+        _ = command.Bind(EventSequenceParameterName, eventSequence);
+        using var reader = command.Query();
         var metadata = new Dictionary<string, string>(StringComparer.Ordinal);
         while (reader.Read())
         {
@@ -412,14 +412,14 @@ internal sealed partial class SqliteServerCommitJournal
     /// <param name="connection">The connection.</param>
     /// <param name="transaction">The transaction.</param>
     /// <returns>The retained metrics.</returns>
-    private static RetainedMetrics ReadMetrics(SqliteConnection connection, SqliteTransaction transaction)
+    private static RetainedMetrics ReadMetrics(SqliteDatabase connection, SqliteTransaction transaction)
     {
         var metrics = new RetainedMetrics();
-        using (var command = connection.CreateCommand())
+        using (var command = connection.CreateStatement())
         {
-            command.Transaction = transaction;
-            command.CommandText = "SELECT tenant_id, stream_id, state_bytes, last_cursor_bytes FROM oc_server_journal_streams;";
-            using var reader = command.ExecuteReader();
+            command.UseTransaction(transaction);
+            command.SetSql("SELECT tenant_id, stream_id, state_bytes, last_cursor_bytes FROM oc_server_journal_streams;");
+            using var reader = command.Query();
             while (reader.Read())
             {
                 var streamKey = new ServerStreamKey(
@@ -436,11 +436,11 @@ internal sealed partial class SqliteServerCommitJournal
             }
         }
 
-        using (var command = connection.CreateCommand())
+        using (var command = connection.CreateStatement())
         {
-            command.Transaction = transaction;
-            command.CommandText = "SELECT logical_bytes FROM oc_server_journal_ledger;";
-            using var reader = command.ExecuteReader();
+            command.UseTransaction(transaction);
+            command.SetSql("SELECT logical_bytes FROM oc_server_journal_ledger;");
+            using var reader = command.Query();
             while (reader.Read())
             {
                 metrics.LedgerEntryCount++;
@@ -462,14 +462,14 @@ internal sealed partial class SqliteServerCommitJournal
     /// <param name="transaction">The transaction.</param>
     /// <param name="metrics">The metrics to update.</param>
     private static void AddSubscriptionMetrics(
-        SqliteConnection connection,
+        SqliteDatabase connection,
         SqliteTransaction transaction,
         RetainedMetrics metrics)
     {
-        using var command = connection.CreateCommand();
-        command.Transaction = transaction;
-        command.CommandText = "SELECT logical_bytes FROM oc_server_journal_subscriptions;";
-        using var reader = command.ExecuteReader();
+        using var command = connection.CreateStatement();
+        command.UseTransaction(transaction);
+        command.SetSql("SELECT logical_bytes FROM oc_server_journal_subscriptions;");
+        using var reader = command.Query();
         while (reader.Read())
         {
             metrics.SubscriptionCount++;
@@ -484,14 +484,14 @@ internal sealed partial class SqliteServerCommitJournal
     /// <param name="transaction">The transaction.</param>
     /// <param name="metrics">The metrics to update.</param>
     private static void AddSubscriptionOfferMetrics(
-        SqliteConnection connection,
+        SqliteDatabase connection,
         SqliteTransaction transaction,
         RetainedMetrics metrics)
     {
-        using var command = connection.CreateCommand();
-        command.Transaction = transaction;
-        command.CommandText = "SELECT logical_bytes FROM oc_server_journal_subscription_offers;";
-        using var reader = command.ExecuteReader();
+        using var command = connection.CreateStatement();
+        command.UseTransaction(transaction);
+        command.SetSql("SELECT logical_bytes FROM oc_server_journal_subscription_offers;");
+        using var reader = command.Query();
         while (reader.Read())
         {
             metrics.SubscriptionOfferCount++;
@@ -506,15 +506,15 @@ internal sealed partial class SqliteServerCommitJournal
     /// <param name="transaction">The transaction.</param>
     /// <param name="utcNow">The compaction timestamp.</param>
     /// <returns>The projected metrics.</returns>
-    private static RetainedMetrics ReadExpiredMetrics(SqliteConnection connection, SqliteTransaction transaction, DateTimeOffset utcNow)
+    private static RetainedMetrics ReadExpiredMetrics(SqliteDatabase connection, SqliteTransaction transaction, DateTimeOffset utcNow)
     {
         var metrics = new RetainedMetrics();
-        using (var command = connection.CreateCommand())
+        using (var command = connection.CreateStatement())
         {
-            command.Transaction = transaction;
-            command.CommandText = "SELECT logical_bytes FROM oc_server_journal_ledger WHERE expires_at_utc < $utcNow;";
-            _ = command.Parameters.AddWithValue(UtcNowParameterName, FormatDateTimeOffset(utcNow));
-            using var reader = command.ExecuteReader();
+            command.UseTransaction(transaction);
+            command.SetSql("SELECT logical_bytes FROM oc_server_journal_ledger WHERE expires_at_utc < $utcNow;");
+            _ = command.Bind(UtcNowParameterName, FormatDateTimeOffset(utcNow));
+            using var reader = command.Query();
             while (reader.Read())
             {
                 metrics.LedgerEntryCount++;
@@ -524,10 +524,10 @@ internal sealed partial class SqliteServerCommitJournal
             }
         }
 
-        using (var command = connection.CreateCommand())
+        using (var command = connection.CreateStatement())
         {
-            command.Transaction = transaction;
-            command.CommandText = """
+            command.UseTransaction(transaction);
+            command.SetSql("""
                 SELECT COUNT(*)
                 FROM oc_server_journal_events AS event
                 INNER JOIN oc_server_journal_ledger AS ledger
@@ -536,9 +536,9 @@ internal sealed partial class SqliteServerCommitJournal
                     AND ledger.client_id = event.client_id
                     AND ledger.operation_id = event.operation_id
                 WHERE ledger.expires_at_utc < $utcNow;
-                """;
-            _ = command.Parameters.AddWithValue(UtcNowParameterName, FormatDateTimeOffset(utcNow));
-            metrics.EventCount = ReadCount(command.ExecuteScalar(), "The SQLite server journal event count is invalid.");
+                """);
+            _ = command.Bind(UtcNowParameterName, FormatDateTimeOffset(utcNow));
+            metrics.EventCount = ReadCount(command.Scalar(), "The SQLite server journal event count is invalid.");
         }
 
         return metrics;
@@ -549,13 +549,13 @@ internal sealed partial class SqliteServerCommitJournal
     /// <param name="transaction">The transaction.</param>
     /// <param name="utcNow">The compaction timestamp.</param>
     /// <returns>The deleted ledger count.</returns>
-    private static int DeleteExpired(SqliteConnection connection, SqliteTransaction transaction, DateTimeOffset utcNow)
+    private static int DeleteExpired(SqliteDatabase connection, SqliteTransaction transaction, DateTimeOffset utcNow)
     {
-        using var command = connection.CreateCommand();
-        command.Transaction = transaction;
-        command.CommandText = "DELETE FROM oc_server_journal_ledger WHERE expires_at_utc < $utcNow;";
-        _ = command.Parameters.AddWithValue(UtcNowParameterName, FormatDateTimeOffset(utcNow));
-        return command.ExecuteNonQuery();
+        using var command = connection.CreateStatement();
+        command.UseTransaction(transaction);
+        command.SetSql("DELETE FROM oc_server_journal_ledger WHERE expires_at_utc < $utcNow;");
+        _ = command.Bind(UtcNowParameterName, FormatDateTimeOffset(utcNow));
+        return command.Execute();
     }
 
     /// <summary>Reads the last event sequence for a stream.</summary>
@@ -563,17 +563,17 @@ internal sealed partial class SqliteServerCommitJournal
     /// <param name="transaction">The transaction.</param>
     /// <param name="streamKey">The stream key.</param>
     /// <returns>The last event sequence.</returns>
-    private static long ReadLastEventSequence(SqliteConnection connection, SqliteTransaction transaction, ServerStreamKey streamKey)
+    private static long ReadLastEventSequence(SqliteDatabase connection, SqliteTransaction transaction, ServerStreamKey streamKey)
     {
-        using var command = connection.CreateCommand();
-        command.Transaction = transaction;
-        command.CommandText = """
+        using var command = connection.CreateStatement();
+        command.UseTransaction(transaction);
+        command.SetSql("""
             SELECT last_event_sequence
             FROM oc_server_journal_streams
             WHERE tenant_id = $tenantId AND stream_id = $streamId;
-            """;
+            """);
         AddStreamParameters(command, streamKey);
-        return ReadNonNegativeLong(command.ExecuteScalar(), InvalidEventSequenceMessage);
+        return ReadNonNegativeLong(command.Scalar(), InvalidEventSequenceMessage);
     }
 
     /// <summary>Reads the last receive group sequence for a stream.</summary>
@@ -581,17 +581,17 @@ internal sealed partial class SqliteServerCommitJournal
     /// <param name="transaction">The transaction.</param>
     /// <param name="streamKey">The stream key.</param>
     /// <returns>The last group sequence.</returns>
-    private static long ReadLastGroupSequence(SqliteConnection connection, SqliteTransaction transaction, ServerStreamKey streamKey)
+    private static long ReadLastGroupSequence(SqliteDatabase connection, SqliteTransaction transaction, ServerStreamKey streamKey)
     {
-        using var command = connection.CreateCommand();
-        command.Transaction = transaction;
-        command.CommandText = """
+        using var command = connection.CreateStatement();
+        command.UseTransaction(transaction);
+        command.SetSql("""
             SELECT last_group_sequence
             FROM oc_server_journal_streams
             WHERE tenant_id = $tenantId AND stream_id = $streamId;
-            """;
+            """);
         AddStreamParameters(command, streamKey);
-        return ReadNonNegativeLong(command.ExecuteScalar(), InvalidGroupSequenceMessage);
+        return ReadNonNegativeLong(command.Scalar(), InvalidGroupSequenceMessage);
     }
 
     /// <summary>Reads the latest UTC high-water timestamp.</summary>
@@ -600,7 +600,7 @@ internal sealed partial class SqliteServerCommitJournal
     /// <returns>The latest timestamp.</returns>
     /// <exception cref="InvalidOperationException">Thrown when SQLite data or schema validation fails.</exception>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static DateTimeOffset ReadLatestUtc(SqliteConnection connection, SqliteTransaction transaction) =>
+    private static DateTimeOffset ReadLatestUtc(SqliteDatabase connection, SqliteTransaction transaction) =>
         ParseDateTimeOffset(SelectMetadata(connection, transaction, LatestUtcKey), "The SQLite server journal timestamp is invalid.");
 
     /// <summary>Writes the latest UTC high-water timestamp.</summary>
@@ -609,7 +609,7 @@ internal sealed partial class SqliteServerCommitJournal
     /// <param name="utc">The timestamp.</param>
     /// <exception cref="InvalidOperationException">Thrown when SQLite data or schema validation fails.</exception>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static void WriteLatestUtc(SqliteConnection connection, SqliteTransaction transaction, DateTimeOffset utc) =>
+    private static void WriteLatestUtc(SqliteDatabase connection, SqliteTransaction transaction, DateTimeOffset utc) =>
         WriteMetadataValue(connection, transaction, LatestUtcKey, FormatDateTimeOffset(utc));
 
     /// <summary>Writes a metadata value.</summary>
@@ -619,17 +619,17 @@ internal sealed partial class SqliteServerCommitJournal
     /// <param name="value">The metadata value.</param>
     /// <exception cref="InvalidOperationException">Thrown when SQLite data or schema validation fails.</exception>
     private static void WriteMetadataValue(
-        SqliteConnection connection,
+        SqliteDatabase connection,
         SqliteTransaction transaction,
         string key,
         string value)
     {
-        using var command = connection.CreateCommand();
-        command.Transaction = transaction;
-        command.CommandText = "UPDATE oc_server_journal_metadata SET value = $value WHERE key = $key;";
-        _ = command.Parameters.AddWithValue("$key", key);
-        _ = command.Parameters.AddWithValue(ValueParameterName, value);
-        if (command.ExecuteNonQuery() == 1)
+        using var command = connection.CreateStatement();
+        command.UseTransaction(transaction);
+        command.SetSql("UPDATE oc_server_journal_metadata SET value = $value WHERE key = $key;");
+        _ = command.Bind("$key", key);
+        _ = command.Bind(ValueParameterName, value);
+        if (command.Execute() == 1)
         {
             return;
         }
@@ -643,13 +643,13 @@ internal sealed partial class SqliteServerCommitJournal
     /// <param name="key">The metadata key.</param>
     /// <returns>The metadata value.</returns>
     /// <exception cref="InvalidOperationException">Thrown when SQLite data or schema validation fails.</exception>
-    private static string SelectMetadata(SqliteConnection connection, SqliteTransaction transaction, string key)
+    private static string SelectMetadata(SqliteDatabase connection, SqliteTransaction transaction, string key)
     {
-        using var command = connection.CreateCommand();
-        command.Transaction = transaction;
-        command.CommandText = "SELECT value FROM oc_server_journal_metadata WHERE key = $key;";
-        _ = command.Parameters.AddWithValue("$key", key);
-        return ReadStorage<string>(command.ExecuteScalar(), "The SQLite server journal metadata is incomplete.");
+        using var command = connection.CreateStatement();
+        command.UseTransaction(transaction);
+        command.SetSql("SELECT value FROM oc_server_journal_metadata WHERE key = $key;");
+        _ = command.Bind("$key", key);
+        return ReadStorage<string>(command.Scalar(), "The SQLite server journal metadata is incomplete.");
     }
 
     /// <summary>Inserts a metadata value.</summary>
@@ -657,13 +657,13 @@ internal sealed partial class SqliteServerCommitJournal
     /// <param name="transaction">The transaction.</param>
     /// <param name="key">The metadata key.</param>
     /// <param name="value">The metadata value.</param>
-    private static void InsertMetadata(SqliteConnection connection, SqliteTransaction transaction, string key, string value)
+    private static void InsertMetadata(SqliteDatabase connection, SqliteTransaction transaction, string key, string value)
     {
-        using var command = connection.CreateCommand();
-        command.Transaction = transaction;
-        command.CommandText = "INSERT INTO oc_server_journal_metadata (key, value) VALUES ($key, $value);";
-        _ = command.Parameters.AddWithValue("$key", key);
-        _ = command.Parameters.AddWithValue(ValueParameterName, value);
-        _ = command.ExecuteNonQuery();
+        using var command = connection.CreateStatement();
+        command.UseTransaction(transaction);
+        command.SetSql("INSERT INTO oc_server_journal_metadata (key, value) VALUES ($key, $value);");
+        _ = command.Bind("$key", key);
+        _ = command.Bind(ValueParameterName, value);
+        _ = command.Execute();
     }
 }

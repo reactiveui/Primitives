@@ -16,9 +16,12 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Microsoft.Data.Sqlite.Core" />
     <PackageReference Include="SQLitePCLRaw.core" />
     <PackageReference Include="SQLite3MC.PCLRaw.bundle" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Include="..\OccasionallyConnected.Sqlite.Shared\*.cs" Link="Sqlite\%(Filename)%(Extension)" />
   </ItemGroup>
 
   <ItemGroup>

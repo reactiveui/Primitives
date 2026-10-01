@@ -18,6 +18,7 @@
 
   <ItemGroup>
     <FrameworkReference Include="Microsoft.AspNetCore.App" />
+    <Compile Include="..\..\OccasionallyConnected.Sqlite.Shared\*.cs" Link="Sqlite\%(Filename)%(Extension)" />
   </ItemGroup>
 
 </Project>

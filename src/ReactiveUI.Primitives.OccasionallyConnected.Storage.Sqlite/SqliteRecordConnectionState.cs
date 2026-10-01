@@ -2,19 +2,17 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
-using Microsoft.Data.Sqlite;
+using ReactiveUI.Primitives.OccasionallyConnected.Sqlite;
 
 namespace ReactiveUI.Primitives.OccasionallyConnected.Storage.Sqlite;
 
-/// <summary>A SQLite connection that carries the record cipher for the store that opened it.</summary>
+/// <summary>Record protection state composed with an operational native connection.</summary>
 /// <remarks>Statement helpers resolve the cipher from the connection, so plaintext and protected stores share one code path.</remarks>
-internal sealed class SqliteProtectedConnection : SqliteConnection
+internal sealed class SqliteRecordConnectionState
 {
-    /// <summary>Initializes a new instance of the <see cref="SqliteProtectedConnection"/> class.</summary>
-    /// <param name="connectionString">The connection string.</param>
+    /// <summary>Initializes a new instance of the <see cref="SqliteRecordConnectionState"/> class.</summary>
     /// <param name="cipher">The record cipher.</param>
-    internal SqliteProtectedConnection(string connectionString, SqliteRecordCipher cipher)
-        : base(connectionString) => Cipher = cipher;
+    internal SqliteRecordConnectionState(SqliteRecordCipher cipher) => Cipher = cipher;
 
     /// <summary>Gets the record cipher.</summary>
     internal SqliteRecordCipher Cipher { get; }
@@ -29,7 +27,7 @@ internal sealed class SqliteProtectedConnection : SqliteConnection
     internal bool FullProofRewriteCompleted { get; set; }
 
     /// <summary>Gets or sets the integrity check to run after the writer lock is acquired.</summary>
-    internal Action<SqliteConnection, SqliteTransaction>? VerifyBeforeWrite { get; set; }
+    internal Action<SqliteDatabase, SqliteTransaction>? VerifyBeforeWrite { get; set; }
 
     /// <summary>Gets or sets the integrity observer update to run after commit.</summary>
     internal Action<bool>? ObserveAfterCommit { get; set; }

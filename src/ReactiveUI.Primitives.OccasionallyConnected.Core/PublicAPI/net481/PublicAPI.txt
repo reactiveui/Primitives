@@ -1315,6 +1315,17 @@ public static class SnapshotRecoveryValidator
     public static void Validate(ReactiveUI.Primitives.OccasionallyConnected.LocalSnapshotRecoveryMutation mutation, ReactiveUI.Primitives.OccasionallyConnected.RecoveredStream recovered, ReactiveUI.Primitives.OccasionallyConnected.SnapshotRecoveryLimits limits) { }
     public static void Validate(ReactiveUI.Primitives.OccasionallyConnected.RemoteSnapshotRecoveryRequest request, ReactiveUI.Primitives.OccasionallyConnected.RemoteSnapshotRecoveryResult result, ReactiveUI.Primitives.OccasionallyConnected.SnapshotRecoveryLimits limits) { }
 }
+[System.Diagnostics.DebuggerDisplay("{Message,nq}; SQLite={SqliteExtendedErrorCode}")]
+public sealed class SqliteDatabaseException : System.Data.Common.DbException
+{
+    public SqliteDatabaseException() { }
+    public SqliteDatabaseException(string message) { }
+    public SqliteDatabaseException(string message, System.Exception innerException) { }
+    public SqliteDatabaseException(string message, int errorCode) { }
+    public SqliteDatabaseException(string message, int errorCode, int extendedErrorCode) { }
+    public int SqliteErrorCode { get; }
+    public int SqliteExtendedErrorCode { get; }
+}
 [System.Diagnostics.DebuggerDisplay("{Kind,nq}")]
 public record StartPosition : System.IEquatable<ReactiveUI.Primitives.OccasionallyConnected.StartPosition>
 {

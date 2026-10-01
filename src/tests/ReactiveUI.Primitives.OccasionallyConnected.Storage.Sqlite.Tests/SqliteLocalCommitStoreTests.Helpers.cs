@@ -3,8 +3,8 @@
 // See the LICENSE file in the project root for full license information.
 
 using System.Runtime.CompilerServices;
-using Microsoft.Data.Sqlite;
 using ReactiveUI.Primitives.OccasionallyConnected;
+using ReactiveUI.Primitives.OccasionallyConnected.Sqlite;
 using ReactiveUI.Primitives.OccasionallyConnected.Storage.Sqlite;
 
 namespace ReactiveUI.Primitives.OccasionallyConnected.Storage.Sqlite.Tests;
@@ -89,8 +89,8 @@ public sealed partial class SqliteLocalCommitStoreTests
     private static void InstallConnectionSettingsProbes(string path)
     {
         using var connection = OpenRawConnection(path);
-        using var command = connection.CreateCommand();
-        command.CommandText = """
+        using var command = connection.CreateStatement();
+        command.SetSql("""
             CREATE TRIGGER probe_identity_settings AFTER INSERT ON oc_subscription_identities
             BEGIN
                 INSERT OR REPLACE INTO oc_metadata (key, value)
@@ -103,8 +103,8 @@ public sealed partial class SqliteLocalCommitStoreTests
                 SELECT 'probe_commit', CAST(foreign_keys AS TEXT) || ':' || CAST(synchronous AS TEXT)
                 FROM pragma_foreign_keys, pragma_synchronous;
             END;
-            """;
-        _ = command.ExecuteNonQuery();
+            """);
+        _ = command.Execute();
         using var transaction = connection.BeginTransaction();
         _ = SqliteSchemaChecksum.Record(connection, transaction);
         transaction.Commit();
@@ -118,10 +118,10 @@ public sealed partial class SqliteLocalCommitStoreTests
     private static string ReadConnectionSettingsProbe(string path, string key)
     {
         using var connection = OpenRawConnection(path);
-        using var command = connection.CreateCommand();
-        command.CommandText = "SELECT value FROM oc_metadata WHERE key = $key;";
-        _ = command.Parameters.AddWithValue("$key", key);
-        return command.ExecuteScalar() is string settings ? settings : throw new InvalidOperationException("The store connection probe did not execute.");
+        using var command = connection.CreateStatement();
+        command.SetSql("SELECT value FROM oc_metadata WHERE key = $key;");
+        _ = command.Bind("$key", key);
+        return command.Scalar() is string settings ? settings : throw new InvalidOperationException("The store connection probe did not execute.");
     }
 
     /// <summary>Reads the SQLite user version.</summary>
@@ -131,28 +131,28 @@ public sealed partial class SqliteLocalCommitStoreTests
     private static long ReadUserVersion(string path)
     {
         using var connection = OpenRawConnection(path);
-        using var command = connection.CreateCommand();
-        command.CommandText = "PRAGMA user_version;";
-        return command.ExecuteScalar() is long version ? version : throw new InvalidOperationException("The user version could not be read.");
+        using var command = connection.CreateStatement();
+        command.SetSql("PRAGMA user_version;");
+        return command.Scalar() is long version ? version : throw new InvalidOperationException("The user version could not be read.");
     }
 
     /// <summary>Inserts a row to hold a writer lock.</summary>
     /// <param name="connection">The connection.</param>
     /// <param name="transaction">The transaction.</param>
-    private static void InsertBlockingIdentity(SqliteConnection connection, SqliteTransaction transaction)
+    private static void InsertBlockingIdentity(SqliteDatabase connection, SqliteTransaction transaction)
     {
-        using var command = connection.CreateCommand();
-        command.Transaction = transaction;
-        command.CommandText = """
+        using var command = connection.CreateStatement();
+        command.UseTransaction(transaction);
+        command.SetSql("""
             INSERT INTO oc_subscription_identities
                 (store_identity, stream_id, subscription_id)
             VALUES
                 ($storeIdentity, $streamId, $subscriptionId);
-            """;
-        _ = command.Parameters.AddWithValue(StoreIdentityParameter, StoreIdentity);
-        _ = command.Parameters.AddWithValue(StreamIdParameter, "sensor/held-lock");
-        _ = command.Parameters.AddWithValue("$subscriptionId", SubscriptionId.New().Value.ToString("D"));
-        _ = command.ExecuteNonQuery();
+            """);
+        _ = command.Bind(StoreIdentityParameter, StoreIdentity);
+        _ = command.Bind(StreamIdParameter, "sensor/held-lock");
+        _ = command.Bind("$subscriptionId", SubscriptionId.New().Value.ToString("D"));
+        _ = command.Execute();
     }
 
     /// <summary>Creates a trigger that aborts commits after outbox insertion.</summary>
@@ -160,15 +160,15 @@ public sealed partial class SqliteLocalCommitStoreTests
     private static void CreateRollbackTrigger(string path)
     {
         using var connection = OpenRawConnection(path);
-        using var command = connection.CreateCommand();
-        command.CommandText = """
+        using var command = connection.CreateStatement();
+        command.SetSql("""
             CREATE TRIGGER oc_outbox_commit_abort
             AFTER INSERT ON oc_outbox
             BEGIN
                 SELECT RAISE(ABORT, 'rollback outbox insert');
             END;
-            """;
-        _ = command.ExecuteNonQuery();
+            """);
+        _ = command.Execute();
     }
 
     /// <summary>Creates a trigger that aborts remote apply after inbox insertion.</summary>
@@ -176,15 +176,15 @@ public sealed partial class SqliteLocalCommitStoreTests
     private static void CreateRemoteApplyRollbackTrigger(string path)
     {
         using var connection = OpenRawConnection(path);
-        using var command = connection.CreateCommand();
-        command.CommandText = """
+        using var command = connection.CreateStatement();
+        command.SetSql("""
             CREATE TRIGGER oc_inbox_commit_abort
             AFTER INSERT ON oc_inbox
             BEGIN
                 SELECT RAISE(ABORT, 'rollback inbox insert');
             END;
-            """;
-        _ = command.ExecuteNonQuery();
+            """);
+        _ = command.Execute();
     }
 
     /// <summary>Drops the remote apply rollback trigger.</summary>
@@ -192,9 +192,9 @@ public sealed partial class SqliteLocalCommitStoreTests
     private static void DropRemoteApplyRollbackTrigger(string path)
     {
         using var connection = OpenRawConnection(path);
-        using var command = connection.CreateCommand();
-        command.CommandText = "DROP TRIGGER oc_inbox_commit_abort;";
-        _ = command.ExecuteNonQuery();
+        using var command = connection.CreateStatement();
+        command.SetSql("DROP TRIGGER oc_inbox_commit_abort;");
+        _ = command.Execute();
     }
 
     /// <summary>Inserts a remote inbox event directly.</summary>
@@ -203,19 +203,19 @@ public sealed partial class SqliteLocalCommitStoreTests
     private static void InsertInboxEvent(string path, RemoteEvent remoteEvent)
     {
         using var connection = OpenRawConnection(path);
-        using var command = connection.CreateCommand();
-        command.CommandText = """
+        using var command = connection.CreateStatement();
+        command.SetSql("""
             INSERT INTO oc_inbox
                 (store_identity, stream_id, event_id, server_cursor, committed_at_utc)
             VALUES
                 ($storeIdentity, $streamId, $eventId, $serverCursor, $committedAtUtc);
-            """;
-        _ = command.Parameters.AddWithValue(StoreIdentityParameter, StoreIdentity);
-        _ = command.Parameters.AddWithValue(StreamIdParameter, remoteEvent.StreamId.Value);
-        _ = command.Parameters.AddWithValue("$eventId", remoteEvent.EventId.ToString("D"));
-        _ = command.Parameters.AddWithValue(ServerCursorParameter, remoteEvent.ServerCursor);
-        _ = command.Parameters.AddWithValue("$committedAtUtc", SqliteLocalCommitSql.FormatDateTimeOffset(remoteEvent.CommittedAtUtc));
-        _ = command.ExecuteNonQuery();
+            """);
+        _ = command.Bind(StoreIdentityParameter, StoreIdentity);
+        _ = command.Bind(StreamIdParameter, remoteEvent.StreamId.Value);
+        _ = command.Bind("$eventId", remoteEvent.EventId.ToString("D"));
+        _ = command.Bind(ServerCursorParameter, remoteEvent.ServerCursor);
+        _ = command.Bind("$committedAtUtc", SqliteLocalCommitSql.FormatDateTimeOffset(remoteEvent.CommittedAtUtc));
+        _ = command.Execute();
     }
 
     /// <summary>Inserts a malformed remote inbox event directly.</summary>
@@ -224,18 +224,18 @@ public sealed partial class SqliteLocalCommitStoreTests
     private static void InsertMalformedInboxEvent(string path, Guid eventId)
     {
         using var connection = OpenRawConnection(path);
-        using var command = connection.CreateCommand();
-        command.CommandText = """
+        using var command = connection.CreateStatement();
+        command.SetSql("""
             INSERT INTO oc_inbox
                 (store_identity, stream_id, event_id, server_cursor, committed_at_utc)
             VALUES
                 ($storeIdentity, $streamId, $eventId, $serverCursor, 'not-a-date');
-            """;
-        _ = command.Parameters.AddWithValue(StoreIdentityParameter, StoreIdentity);
-        _ = command.Parameters.AddWithValue(StreamIdParameter, Stream.Value);
-        _ = command.Parameters.AddWithValue("$eventId", eventId.ToString("D"));
-        _ = command.Parameters.AddWithValue(ServerCursorParameter, FirstRemoteCursor);
-        _ = command.ExecuteNonQuery();
+            """);
+        _ = command.Bind(StoreIdentityParameter, StoreIdentity);
+        _ = command.Bind(StreamIdParameter, Stream.Value);
+        _ = command.Bind("$eventId", eventId.ToString("D"));
+        _ = command.Bind(ServerCursorParameter, FirstRemoteCursor);
+        _ = command.Execute();
     }
 
     /// <summary>Drops the commit rollback trigger.</summary>
@@ -243,9 +243,9 @@ public sealed partial class SqliteLocalCommitStoreTests
     private static void DropRollbackTrigger(string path)
     {
         using var connection = OpenRawConnection(path);
-        using var command = connection.CreateCommand();
-        command.CommandText = "DROP TRIGGER oc_outbox_commit_abort;";
-        _ = command.ExecuteNonQuery();
+        using var command = connection.CreateStatement();
+        command.SetSql("DROP TRIGGER oc_outbox_commit_abort;");
+        _ = command.Execute();
     }
 
     /// <summary>Deletes local stream rows to simulate an interrupted schema backfill.</summary>
@@ -253,9 +253,9 @@ public sealed partial class SqliteLocalCommitStoreTests
     private static void DeleteStreams(string path)
     {
         using var connection = OpenRawConnection(path);
-        using var command = connection.CreateCommand();
-        command.CommandText = "DELETE FROM oc_streams;";
-        _ = command.ExecuteNonQuery();
+        using var command = connection.CreateStatement();
+        command.SetSql("DELETE FROM oc_streams;");
+        _ = command.Execute();
     }
 
     /// <summary>Deletes the stream row without cascading dependent rows.</summary>
@@ -263,14 +263,14 @@ public sealed partial class SqliteLocalCommitStoreTests
     private static void DeleteStreamWithoutCascade(string path)
     {
         using var connection = OpenRawConnection(path);
-        using var command = connection.CreateCommand();
-        command.CommandText = """
+        using var command = connection.CreateStatement();
+        command.SetSql("""
             PRAGMA foreign_keys = OFF;
             DELETE FROM oc_streams WHERE store_identity = $storeIdentity AND stream_id = $streamId;
-            """;
-        _ = command.Parameters.AddWithValue(StoreIdentityParameter, StoreIdentity);
-        _ = command.Parameters.AddWithValue(StreamIdParameter, Stream.Value);
-        _ = command.ExecuteNonQuery();
+            """);
+        _ = command.Bind(StoreIdentityParameter, StoreIdentity);
+        _ = command.Bind(StreamIdParameter, Stream.Value);
+        _ = command.Execute();
     }
 
     /// <summary>Sets the stream next client sequence directly.</summary>
@@ -279,16 +279,16 @@ public sealed partial class SqliteLocalCommitStoreTests
     private static void SetStreamNextClientSequence(string path, long nextClientSequence)
     {
         using var connection = OpenRawConnection(path);
-        using var command = connection.CreateCommand();
-        command.CommandText = """
+        using var command = connection.CreateStatement();
+        command.SetSql("""
             UPDATE oc_streams
             SET next_client_sequence = $nextClientSequence
             WHERE store_identity = $storeIdentity AND stream_id = $streamId;
-            """;
-        _ = command.Parameters.AddWithValue("$nextClientSequence", nextClientSequence);
-        _ = command.Parameters.AddWithValue(StoreIdentityParameter, StoreIdentity);
-        _ = command.Parameters.AddWithValue(StreamIdParameter, Stream.Value);
-        _ = command.ExecuteNonQuery();
+            """);
+        _ = command.Bind("$nextClientSequence", nextClientSequence);
+        _ = command.Bind(StoreIdentityParameter, StoreIdentity);
+        _ = command.Bind(StreamIdParameter, Stream.Value);
+        _ = command.Execute();
     }
 
     /// <summary>Sets the stored snapshot server cursor directly.</summary>
@@ -297,16 +297,16 @@ public sealed partial class SqliteLocalCommitStoreTests
     private static void SetSnapshotServerCursor(string path, string serverCursor)
     {
         using var connection = OpenRawConnection(path);
-        using var command = connection.CreateCommand();
-        command.CommandText = """
+        using var command = connection.CreateStatement();
+        command.SetSql("""
             UPDATE oc_snapshots
             SET server_cursor = $serverCursor
             WHERE store_identity = $storeIdentity AND stream_id = $streamId;
-            """;
-        _ = command.Parameters.AddWithValue(ServerCursorParameter, serverCursor);
-        _ = command.Parameters.AddWithValue(StoreIdentityParameter, StoreIdentity);
-        _ = command.Parameters.AddWithValue(StreamIdParameter, Stream.Value);
-        _ = command.ExecuteNonQuery();
+            """);
+        _ = command.Bind(ServerCursorParameter, serverCursor);
+        _ = command.Bind(StoreIdentityParameter, StoreIdentity);
+        _ = command.Bind(StreamIdParameter, Stream.Value);
+        _ = command.Execute();
     }
 
     /// <summary>Creates or updates a snapshot with the supplied revision.</summary>
@@ -315,9 +315,9 @@ public sealed partial class SqliteLocalCommitStoreTests
     private static void SetSnapshotRevision(string path, long revision)
     {
         using var connection = OpenRawConnection(path);
-        using var command = connection.CreateCommand();
+        using var command = connection.CreateStatement();
         var payload = CreatePayload(SnapshotPayloadText);
-        command.CommandText = """
+        command.SetSql("""
             INSERT INTO oc_snapshots
                 (store_identity, stream_id, format_version, server_cursor, payload_contract_id, payload_schema_version,
                  payload_content_type, payload, payload_hash, revision, saved_at_utc)
@@ -325,17 +325,17 @@ public sealed partial class SqliteLocalCommitStoreTests
                 ($storeIdentity, $streamId, 1, NULL, $payloadContractId, $payloadSchemaVersion,
                  $payloadContentType, $payload, $payloadHash, $revision, '2026-01-02T03:04:05.0000000+00:00')
             ON CONFLICT (store_identity, stream_id) DO UPDATE SET revision = excluded.revision;
-            """;
-        _ = command.Parameters.AddWithValue(StoreIdentityParameter, StoreIdentity);
-        _ = command.Parameters.AddWithValue(StreamIdParameter, Stream.Value);
-        _ = command.Parameters.AddWithValue("$payloadContractId", payload.ContractId);
-        _ = command.Parameters.AddWithValue("$payloadSchemaVersion", payload.SchemaVersion);
-        _ = command.Parameters.AddWithValue("$payloadContentType", payload.ContentType);
-        _ = command.Parameters.Add("$payload", SqliteType.Blob);
-        command.Parameters["$payload"].Value = payload.Payload.ToArray();
-        _ = command.Parameters.AddWithValue("$payloadHash", payload.PayloadHash);
-        _ = command.Parameters.AddWithValue("$revision", revision);
-        _ = command.ExecuteNonQuery();
+            """);
+        _ = command.Bind(StoreIdentityParameter, StoreIdentity);
+        _ = command.Bind(StreamIdParameter, Stream.Value);
+        _ = command.Bind("$payloadContractId", payload.ContractId);
+        _ = command.Bind("$payloadSchemaVersion", payload.SchemaVersion);
+        _ = command.Bind("$payloadContentType", payload.ContentType);
+
+        _ = command.Bind("$payload", payload.Payload.ToArray());
+        _ = command.Bind("$payloadHash", payload.PayloadHash);
+        _ = command.Bind("$revision", revision);
+        _ = command.Execute();
     }
 
     /// <summary>Marks the snapshot timestamp malformed.</summary>
@@ -343,9 +343,9 @@ public sealed partial class SqliteLocalCommitStoreTests
     private static void SetSnapshotSavedAtMalformed(string path)
     {
         using var connection = OpenRawConnection(path);
-        using var command = connection.CreateCommand();
-        command.CommandText = "UPDATE oc_snapshots SET saved_at_utc = 'not-a-date';";
-        _ = command.ExecuteNonQuery();
+        using var command = connection.CreateStatement();
+        command.SetSql("UPDATE oc_snapshots SET saved_at_utc = 'not-a-date';");
+        _ = command.Execute();
     }
 
     /// <summary>Restores the snapshot timestamp to a valid ISO value.</summary>
@@ -353,9 +353,9 @@ public sealed partial class SqliteLocalCommitStoreTests
     private static void SetSnapshotSavedAtValid(string path)
     {
         using var connection = OpenRawConnection(path);
-        using var command = connection.CreateCommand();
-        command.CommandText = "UPDATE oc_snapshots SET saved_at_utc = '2026-01-02T03:04:05.0000000+00:00';";
-        _ = command.ExecuteNonQuery();
+        using var command = connection.CreateStatement();
+        command.SetSql("UPDATE oc_snapshots SET saved_at_utc = '2026-01-02T03:04:05.0000000+00:00';");
+        _ = command.Execute();
     }
 
     /// <summary>Marks the outbox operation id malformed.</summary>
@@ -363,9 +363,9 @@ public sealed partial class SqliteLocalCommitStoreTests
     private static void SetOutboxOperationIdMalformed(string path)
     {
         using var connection = OpenRawConnection(path);
-        using var command = connection.CreateCommand();
-        command.CommandText = "UPDATE oc_outbox SET operation_id = 'not-a-guid';";
-        _ = command.ExecuteNonQuery();
+        using var command = connection.CreateStatement();
+        command.SetSql("UPDATE oc_outbox SET operation_id = 'not-a-guid';");
+        _ = command.Execute();
     }
 
     /// <summary>Restores the outbox operation id.</summary>
@@ -374,10 +374,10 @@ public sealed partial class SqliteLocalCommitStoreTests
     private static void SetOutboxOperationId(string path, OperationId operationId)
     {
         using var connection = OpenRawConnection(path);
-        using var command = connection.CreateCommand();
-        command.CommandText = "UPDATE oc_outbox SET operation_id = $operationId;";
-        _ = command.Parameters.AddWithValue("$operationId", operationId.Value.ToString("D"));
-        _ = command.ExecuteNonQuery();
+        using var command = connection.CreateStatement();
+        command.SetSql("UPDATE oc_outbox SET operation_id = $operationId;");
+        _ = command.Bind("$operationId", operationId.Value.ToString("D"));
+        _ = command.Execute();
     }
 
     /// <summary>Sets the outbox client sequence to zero.</summary>
@@ -385,9 +385,9 @@ public sealed partial class SqliteLocalCommitStoreTests
     private static void SetOutboxClientSequenceZero(string path)
     {
         using var connection = OpenRawConnection(path);
-        using var command = connection.CreateCommand();
-        command.CommandText = "UPDATE oc_outbox SET client_sequence = 0;";
-        _ = command.ExecuteNonQuery();
+        using var command = connection.CreateStatement();
+        command.SetSql("UPDATE oc_outbox SET client_sequence = 0;");
+        _ = command.Execute();
     }
 
     /// <summary>Sets the outbox client sequence.</summary>
@@ -396,10 +396,10 @@ public sealed partial class SqliteLocalCommitStoreTests
     private static void SetOutboxClientSequence(string path, long clientSequence)
     {
         using var connection = OpenRawConnection(path);
-        using var command = connection.CreateCommand();
-        command.CommandText = "UPDATE oc_outbox SET client_sequence = $clientSequence;";
-        _ = command.Parameters.AddWithValue("$clientSequence", clientSequence);
-        _ = command.ExecuteNonQuery();
+        using var command = connection.CreateStatement();
+        command.SetSql("UPDATE oc_outbox SET client_sequence = $clientSequence;");
+        _ = command.Bind("$clientSequence", clientSequence);
+        _ = command.Execute();
     }
 
     /// <summary>Sets the outbox operation type to an invalid enum value.</summary>
@@ -407,9 +407,9 @@ public sealed partial class SqliteLocalCommitStoreTests
     private static void SetOutboxOperationTypeInvalid(string path)
     {
         using var connection = OpenRawConnection(path);
-        using var command = connection.CreateCommand();
-        command.CommandText = "UPDATE oc_outbox SET operation_type = 2147483647;";
-        _ = command.ExecuteNonQuery();
+        using var command = connection.CreateStatement();
+        command.SetSql("UPDATE oc_outbox SET operation_type = 2147483647;");
+        _ = command.Execute();
     }
 
     /// <summary>Sets the outbox operation type.</summary>
@@ -418,10 +418,10 @@ public sealed partial class SqliteLocalCommitStoreTests
     private static void SetOutboxOperationType(string path, SyncOperationType operationType)
     {
         using var connection = OpenRawConnection(path);
-        using var command = connection.CreateCommand();
-        command.CommandText = "UPDATE oc_outbox SET operation_type = $operationType;";
-        _ = command.Parameters.AddWithValue("$operationType", (int)operationType);
-        _ = command.ExecuteNonQuery();
+        using var command = connection.CreateStatement();
+        command.SetSql("UPDATE oc_outbox SET operation_type = $operationType;");
+        _ = command.Bind("$operationType", (int)operationType);
+        _ = command.Execute();
     }
 
     /// <summary>Sets the outbox snapshot revision to a corrupt negative value.</summary>
@@ -429,9 +429,9 @@ public sealed partial class SqliteLocalCommitStoreTests
     private static void SetOutboxSnapshotRevisionNegative(string path)
     {
         using var connection = OpenRawConnection(path);
-        using var command = connection.CreateCommand();
-        command.CommandText = "UPDATE oc_outbox SET snapshot_revision = -1;";
-        _ = command.ExecuteNonQuery();
+        using var command = connection.CreateStatement();
+        command.SetSql("UPDATE oc_outbox SET snapshot_revision = -1;");
+        _ = command.Execute();
     }
 
     /// <summary>Sets the stored commit fingerprint to an invalid value.</summary>
@@ -439,9 +439,9 @@ public sealed partial class SqliteLocalCommitStoreTests
     private static void SetOutboxCommitFingerprintMalformed(string path)
     {
         using var connection = OpenRawConnection(path);
-        using var command = connection.CreateCommand();
-        command.CommandText = "UPDATE oc_outbox SET commit_fingerprint = X'00';";
-        _ = command.ExecuteNonQuery();
+        using var command = connection.CreateStatement();
+        command.SetSql("UPDATE oc_outbox SET commit_fingerprint = X'00';");
+        _ = command.Execute();
     }
 
     /// <summary>Creates a trigger that removes the stream row during sequence update.</summary>
@@ -449,16 +449,16 @@ public sealed partial class SqliteLocalCommitStoreTests
     private static void CreateSequenceUpdateRollbackTrigger(string path)
     {
         using var connection = OpenRawConnection(path);
-        using var command = connection.CreateCommand();
-        command.CommandText = """
+        using var command = connection.CreateStatement();
+        command.SetSql("""
             CREATE TRIGGER oc_stream_update_abort
             BEFORE UPDATE OF next_client_sequence ON oc_streams
             BEGIN
                 DELETE FROM oc_streams WHERE store_identity = NEW.store_identity AND stream_id = NEW.stream_id;
                 SELECT RAISE(IGNORE);
             END;
-            """;
-        _ = command.ExecuteNonQuery();
+            """);
+        _ = command.Execute();
     }
 
     /// <summary>Drops the sequence update rollback trigger.</summary>
@@ -466,9 +466,9 @@ public sealed partial class SqliteLocalCommitStoreTests
     private static void DropSequenceUpdateRollbackTrigger(string path)
     {
         using var connection = OpenRawConnection(path);
-        using var command = connection.CreateCommand();
-        command.CommandText = "DROP TRIGGER oc_stream_update_abort;";
-        _ = command.ExecuteNonQuery();
+        using var command = connection.CreateStatement();
+        command.SetSql("DROP TRIGGER oc_stream_update_abort;");
+        _ = command.Execute();
     }
 
     /// <summary>Creates an unexpected user table.</summary>
@@ -476,9 +476,9 @@ public sealed partial class SqliteLocalCommitStoreTests
     private static void CreateUnexpectedTable(string path)
     {
         using var connection = OpenRawConnection(path);
-        using var command = connection.CreateCommand();
-        command.CommandText = "CREATE TABLE unexpected_table (id INTEGER NOT NULL);";
-        _ = command.ExecuteNonQuery();
+        using var command = connection.CreateStatement();
+        command.SetSql("CREATE TABLE unexpected_table (id INTEGER NOT NULL);");
+        _ = command.Execute();
     }
 
     /// <summary>Sets the user version to a newer unsupported schema value.</summary>
@@ -486,19 +486,18 @@ public sealed partial class SqliteLocalCommitStoreTests
     private static void SetUserVersionToNewer(string path)
     {
         using var connection = OpenRawConnection(path);
-        using var command = connection.CreateCommand();
-        command.CommandText = "PRAGMA user_version = 10;";
-        _ = command.ExecuteNonQuery();
+        using var command = connection.CreateStatement();
+        command.SetSql("PRAGMA user_version = 10;");
+        _ = command.Execute();
     }
 
     /// <summary>Opens a raw SQLite connection with pooling disabled.</summary>
     /// <param name="path">The SQLite database path.</param>
     /// <returns>The open connection.</returns>
-    private static SqliteConnection OpenRawConnection(string path)
+    private static SqliteDatabase OpenRawConnection(string path)
     {
-        var connectionString = new SqliteConnectionStringBuilder { DataSource = path, Pooling = false }.ToString();
-        var connection = new SqliteConnection(connectionString);
-        connection.Open();
+        var connection = new SqliteDatabase(path);
+
         return connection;
     }
 

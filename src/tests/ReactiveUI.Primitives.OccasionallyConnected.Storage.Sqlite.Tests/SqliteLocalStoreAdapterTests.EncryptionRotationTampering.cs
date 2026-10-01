@@ -45,8 +45,8 @@ public sealed partial class SqliteLocalStoreAdapterTests
     private static byte[] ReadSnapshotPayloadEnvelope(string path)
     {
         using var connection = OpenRawConnection(path);
-        using var command = connection.CreateCommand();
-        command.CommandText = "SELECT payload FROM oc_snapshots WHERE stream_id = 'sensor/temperature';";
-        return (byte[])command.ExecuteScalar()!;
+        using var command = connection.CreateStatement();
+        command.SetSql("SELECT payload FROM oc_snapshots WHERE stream_id = 'sensor/temperature';");
+        return (byte[])command.Scalar()!;
     }
 }

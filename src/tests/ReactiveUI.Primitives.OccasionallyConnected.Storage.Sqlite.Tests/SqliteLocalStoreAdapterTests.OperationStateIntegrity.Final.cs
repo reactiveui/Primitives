@@ -2,7 +2,7 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
-using Microsoft.Data.Sqlite;
+using ReactiveUI.Primitives.OccasionallyConnected.Sqlite;
 using ReactiveUI.Primitives.OccasionallyConnected.Storage.Sqlite;
 
 namespace ReactiveUI.Primitives.OccasionallyConnected.Storage.Sqlite.Tests;
@@ -21,22 +21,22 @@ public sealed partial class SqliteLocalStoreAdapterTests
     {
         using var database = TempDatabase.Create();
         _ = await SeedEncryptedDatabaseAsync(database.Path);
-        await using var connection = OpenProtectedIntegrityConnection(database.Path);
+        using var connection = OpenProtectedIntegrityConnection(database.Path);
         SqliteOperationStateIntegrity.InstallJournal(connection);
-        await using var transaction = await connection.BeginTransactionAsync();
-        await using (var command = connection.CreateCommand())
+        using var transaction = connection.BeginTransaction();
+        using (var command = connection.CreateStatement())
         {
-            command.Transaction = (SqliteTransaction)transaction;
-            command.CommandText = """
+            command.UseTransaction(transaction);
+            command.SetSql("""
                 DELETE FROM oc_operation_state_proofs
                 WHERE operation_id = (SELECT operation_id FROM oc_outbox WHERE client_sequence = 2);
                 UPDATE oc_outbox_operation_states SET attempt_count = attempt_count + 1
                 WHERE operation_id = (SELECT operation_id FROM oc_outbox WHERE client_sequence = 2);
-                """;
-            _ = await command.ExecuteNonQueryAsync();
+                """);
+            _ = command.Execute();
         }
 
-        Action write = () => SqliteOperationStateIntegrity.WriteChanges(connection, (SqliteTransaction)transaction);
+        Action write = () => SqliteOperationStateIntegrity.WriteChanges(connection, transaction);
         await Assert.That(write).ThrowsExactly<LocalStoreRecordAuthenticationException>();
     }
 
@@ -59,19 +59,19 @@ public sealed partial class SqliteLocalStoreAdapterTests
             await adapter.InitializeAsync(CreateEncryptedInitialization(), CancellationToken.None);
         }
 
-        await using var connection = OpenProtectedIntegrityConnection(database.Path);
+        using var connection = OpenProtectedIntegrityConnection(database.Path);
         var cipher = new SqliteRecordCipher(SqliteRecordProtection.Create(CreateFirstKeyProvider()), string.Empty);
         var stored = cipher.ProtectText(invalidManifest, SqliteRecordContext.KeyCheck(), IntegrityManifestColumn);
-        await using var transaction = await connection.BeginTransactionAsync();
-        await using (var command = connection.CreateCommand())
+        using var transaction = connection.BeginTransaction();
+        using (var command = connection.CreateStatement())
         {
-            command.Transaction = (SqliteTransaction)transaction;
-            command.CommandText = "UPDATE oc_metadata SET value = $value WHERE key = 'rxui.localstore.operation_state_manifest';";
-            _ = command.Parameters.AddWithValue("$value", stored);
-            await Assert.That(await command.ExecuteNonQueryAsync()).IsEqualTo(1);
+            command.UseTransaction(transaction);
+            command.SetSql("UPDATE oc_metadata SET value = $value WHERE key = 'rxui.localstore.operation_state_manifest';");
+            _ = command.Bind("$value", stored);
+            await Assert.That(command.Execute()).IsEqualTo(1);
         }
 
-        Action write = () => SqliteOperationStateIntegrity.WriteChanges(connection, (SqliteTransaction)transaction);
+        Action write = () => SqliteOperationStateIntegrity.WriteChanges(connection, transaction);
         await Assert.That(write).ThrowsExactly<LocalStoreRecordAuthenticationException>();
     }
 
@@ -86,16 +86,16 @@ public sealed partial class SqliteLocalStoreAdapterTests
             await adapter.InitializeAsync(CreateEncryptedInitialization(), CancellationToken.None);
         }
 
-        await using var connection = OpenProtectedIntegrityConnection(database.Path);
-        await using var transaction = await connection.BeginTransactionAsync();
-        await using (var command = connection.CreateCommand())
+        using var connection = OpenProtectedIntegrityConnection(database.Path);
+        using var transaction = connection.BeginTransaction();
+        using (var command = connection.CreateStatement())
         {
-            command.Transaction = (SqliteTransaction)transaction;
-            command.CommandText = "DELETE FROM oc_metadata WHERE key = 'rxui.localstore.operation_state_manifest';";
-            await Assert.That(await command.ExecuteNonQueryAsync()).IsEqualTo(1);
+            command.UseTransaction(transaction);
+            command.SetSql("DELETE FROM oc_metadata WHERE key = 'rxui.localstore.operation_state_manifest';");
+            await Assert.That(command.Execute()).IsEqualTo(1);
         }
 
-        Action write = () => SqliteOperationStateIntegrity.WriteChanges(connection, (SqliteTransaction)transaction);
+        Action write = () => SqliteOperationStateIntegrity.WriteChanges(connection, transaction);
         await Assert.That(write).ThrowsExactly<LocalStoreRecordAuthenticationException>();
     }
 
@@ -106,32 +106,32 @@ public sealed partial class SqliteLocalStoreAdapterTests
     {
         using var database = TempDatabase.Create();
         _ = await SeedEncryptedDatabaseAsync(database.Path);
-        await using var connection = OpenProtectedIntegrityConnection(database.Path);
+        using var connection = OpenProtectedIntegrityConnection(database.Path);
         SqliteOperationStateIntegrity.InstallJournal(connection);
         var cipher = new SqliteRecordCipher(SqliteRecordProtection.Create(CreateFirstKeyProvider()), string.Empty);
-        await using var transaction = await connection.BeginTransactionAsync();
-        await using (var command = connection.CreateCommand())
+        using var transaction = connection.BeginTransaction();
+        using (var command = connection.CreateStatement())
         {
-            command.Transaction = (SqliteTransaction)transaction;
-            command.CommandText = "SELECT value FROM oc_metadata WHERE key = 'rxui.localstore.operation_state_manifest';";
-            var stored = await command.ExecuteScalarAsync() as string;
+            command.UseTransaction(transaction);
+            command.SetSql("SELECT value FROM oc_metadata WHERE key = 'rxui.localstore.operation_state_manifest';");
+            var stored = command.Scalar() as string;
             await Assert.That(stored).IsNotNull();
             var plaintext = cipher.UnprotectText(stored!, SqliteRecordContext.KeyCheck(), IntegrityManifestColumn);
-            command.CommandText = "UPDATE oc_metadata SET value = $value WHERE key = 'rxui.localstore.operation_state_manifest';";
-            _ = command.Parameters.AddWithValue(
+            command.SetSql("UPDATE oc_metadata SET value = $value WHERE key = 'rxui.localstore.operation_state_manifest';");
+            _ = command.Bind(
                 "$value",
                 cipher.ProtectText(plaintext.ToLowerInvariant(), SqliteRecordContext.KeyCheck(), IntegrityManifestColumn));
-            await Assert.That(await command.ExecuteNonQueryAsync()).IsEqualTo(1);
-            command.Parameters.Clear();
-            command.CommandText = """
+            await Assert.That(command.Execute()).IsEqualTo(1);
+            command.ClearBindings();
+            command.SetSql("""
                 UPDATE oc_outbox_operation_states SET attempt_count = attempt_count + 1
                 WHERE operation_id = (SELECT operation_id FROM oc_outbox WHERE client_sequence = 2);
-                """;
-            await Assert.That(await command.ExecuteNonQueryAsync()).IsEqualTo(1);
+                """);
+            await Assert.That(command.Execute()).IsEqualTo(1);
         }
 
-        SqliteOperationStateIntegrity.WriteChanges(connection, (SqliteTransaction)transaction);
-        await transaction.CommitAsync();
+        SqliteOperationStateIntegrity.WriteChanges(connection, transaction);
+        transaction.Commit();
 
         await using var reopened = CreateEncryptedAdapter(database.Path, CreateFirstKeyProvider());
         await reopened.InitializeAsync(CreateEncryptedInitialization(), CancellationToken.None);
@@ -143,21 +143,18 @@ public sealed partial class SqliteLocalStoreAdapterTests
     public async Task WhenPlaintextConnectionWritesJournal_ThenItReturnsWithoutProofWork()
     {
         using var database = TempDatabase.Create();
-        await using var connection = OpenRawConnection(database.Path);
-        await using var transaction = await connection.BeginTransactionAsync();
-        SqliteOperationStateIntegrity.WriteChanges(connection, (SqliteTransaction)transaction);
+        using var connection = OpenRawConnection(database.Path);
+        using var transaction = connection.BeginTransaction();
+        SqliteOperationStateIntegrity.WriteChanges(connection, transaction);
         await Assert.That(transaction.Connection).IsNotNull();
     }
 
     /// <summary>Opens a protected connection with the same database scoped cipher as the adapter.</summary>
     /// <param name="path">The database path.</param>
     /// <returns>The opened connection.</returns>
-    private static SqliteProtectedConnection OpenProtectedIntegrityConnection(string path)
+    private static SqliteDatabase OpenProtectedIntegrityConnection(string path)
     {
-        var connectionString = new SqliteConnectionStringBuilder { DataSource = path, Pooling = false }.ToString();
         var cipher = new SqliteRecordCipher(SqliteRecordProtection.Create(CreateFirstKeyProvider()), StoreIdentity);
-        var connection = new SqliteProtectedConnection(connectionString, cipher);
-        connection.Open();
-        return connection;
+        return SqliteLocalCommitConnection.OpenConnection(path, cipher);
     }
 }

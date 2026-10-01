@@ -30,5 +30,10 @@ jobs:
             # Keep both normal runs and reruns free of synchronous per-event trace writes.
             enableDetailedTestLogging: false
             testTimeout: '15m'
+            # OccasionallyConnected runs in the required per-OS, per-TFM coverage matrix.
+            # Do not repeat its full matrix inside this job's single test-run deadline.
+            testProjects: |
+                tests/**/*.csproj
+                !tests/ReactiveUI.Primitives.OccasionallyConnected*/*.csproj
         secrets:
             CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}

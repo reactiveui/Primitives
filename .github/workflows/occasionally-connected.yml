@@ -1,16 +1,10 @@
 name: OccasionallyConnected coverage
 
 on:
+  push:
+    branches: [main]
   pull_request:
     branches: [main]
-    paths:
-      - 'src/ReactiveUI.Primitives.OccasionallyConnected*/**'
-      - 'src/tests/ReactiveUI.Primitives.OccasionallyConnected*/**'
-      - 'src/examples/OccasionallyConnected.*/**'
-      - 'src/Directory.*'
-      - 'src/occasionally-connected.testconfig.json'
-      - 'tools/OccasionallyConnected.Ci/**'
-      - '.github/workflows/occasionally-connected.yml'
   workflow_dispatch:
 
 permissions:

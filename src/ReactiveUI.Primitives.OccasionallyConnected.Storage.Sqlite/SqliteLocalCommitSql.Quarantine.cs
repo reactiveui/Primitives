@@ -4,8 +4,8 @@
 
 using System.Runtime.CompilerServices;
 using System.Text;
-using Microsoft.Data.Sqlite;
 using ReactiveUI.Primitives.OccasionallyConnected;
+using ReactiveUI.Primitives.OccasionallyConnected.Sqlite;
 
 namespace ReactiveUI.Primitives.OccasionallyConnected.Storage.Sqlite;
 
@@ -97,15 +97,15 @@ internal static partial class SqliteLocalCommitSql
     /// <returns>The durable quarantine result.</returns>
     /// <exception cref="InvalidOperationException">The quarantine marker cannot be read after insertion.</exception>
     internal static LocalPayloadQuarantineResult InsertPayloadQuarantine(
-        SqliteConnection connection,
+        SqliteDatabase connection,
         SqliteTransaction transaction,
         string storeIdentity,
         SqliteNormalizedPayloadQuarantineRequest request,
         Guid quarantineId)
     {
-        using var command = connection.CreateCommand();
-        command.Transaction = transaction;
-        command.CommandText = """
+        using var command = connection.CreateStatement();
+        command.UseTransaction(transaction);
+        command.SetSql("""
             INSERT INTO oc_payload_quarantine
                 (store_identity, stream_id, quarantine_id, subscription_id, operation_id, event_id, source, reason,
                  reason_code, cursor, evidence_contract_id, evidence_schema_version, evidence_content_type,
@@ -115,9 +115,9 @@ internal static partial class SqliteLocalCommitSql
                  $reasonCode, $cursor, $evidenceContractId, $evidenceSchemaVersion, $evidenceContentType,
                  $evidencePayloadLength, $evidencePayloadHash, $evidencePayloadPrefix, $observedAtUtc)
             ON CONFLICT (store_identity, stream_id) DO NOTHING;
-            """;
+            """);
         AddQuarantineParameters(command, storeIdentity, request, quarantineId);
-        var created = command.ExecuteNonQuery() > 0;
+        var created = command.Execute() > 0;
         var record = ReadPayloadQuarantine(connection, transaction, storeIdentity, request.Request.StreamId)
             ?? throw new InvalidOperationException("The SQLite payload quarantine marker was not persisted.");
         return new(record, created);
@@ -130,22 +130,22 @@ internal static partial class SqliteLocalCommitSql
     /// <param name="streamId">The stream identifier.</param>
     /// <returns>The quarantine record, if present.</returns>
     internal static LocalPayloadQuarantineRecord? ReadPayloadQuarantine(
-        SqliteConnection connection,
+        SqliteDatabase connection,
         SqliteTransaction transaction,
         string storeIdentity,
         StreamId streamId)
     {
-        using var command = connection.CreateCommand();
-        command.Transaction = transaction;
-        command.CommandText = """
+        using var command = connection.CreateStatement();
+        command.UseTransaction(transaction);
+        command.SetSql("""
             SELECT quarantine_id, stream_id, subscription_id, operation_id, event_id, source, reason, reason_code,
                    cursor, evidence_contract_id, evidence_schema_version, evidence_content_type,
                    evidence_payload_length, evidence_payload_hash, evidence_payload_prefix, observed_at_utc
             FROM oc_payload_quarantine
             WHERE store_identity = $storeIdentity AND stream_id = $streamId;
-            """;
+            """);
         AddStreamParameters(command, storeIdentity, streamId);
-        using var reader = command.ExecuteReader();
+        using var reader = command.Query();
         return reader.Read() ? ReadQuarantineRecord(connection, reader) : null;
     }
 
@@ -156,7 +156,7 @@ internal static partial class SqliteLocalCommitSql
     /// <param name="streamId">The stream identifier.</param>
     /// <exception cref="InvalidOperationException">The stream is quarantined.</exception>
     internal static void ThrowIfStreamQuarantined(
-        SqliteConnection connection,
+        SqliteDatabase connection,
         SqliteTransaction transaction,
         string storeIdentity,
         StreamId streamId)
@@ -176,14 +176,14 @@ internal static partial class SqliteLocalCommitSql
     /// <param name="operationId">The operation identifier.</param>
     /// <exception cref="InvalidOperationException">The stream is quarantined.</exception>
     internal static void ThrowIfOperationStreamQuarantined(
-        SqliteConnection connection,
+        SqliteDatabase connection,
         SqliteTransaction transaction,
         string storeIdentity,
         OperationId operationId)
     {
-        using var command = connection.CreateCommand();
-        command.Transaction = transaction;
-        command.CommandText = """
+        using var command = connection.CreateStatement();
+        command.UseTransaction(transaction);
+        command.SetSql("""
             SELECT 1
             FROM oc_outbox AS outbox
             INNER JOIN oc_payload_quarantine AS quarantine
@@ -191,10 +191,10 @@ internal static partial class SqliteLocalCommitSql
                 AND quarantine.stream_id = outbox.stream_id
             WHERE outbox.store_identity = $storeIdentity AND outbox.operation_id = $operationId
             LIMIT 1;
-            """;
-        _ = command.Parameters.AddWithValue("$storeIdentity", storeIdentity);
-        _ = command.Parameters.AddWithValue("$operationId", operationId.Value.ToString("D"));
-        if (command.ExecuteScalar() is null)
+            """);
+        _ = command.Bind("$storeIdentity", storeIdentity);
+        _ = command.Bind("$operationId", operationId.Value.ToString("D"));
+        if (command.Scalar() is null)
         {
             return;
         }
@@ -209,14 +209,14 @@ internal static partial class SqliteLocalCommitSql
     /// <param name="leaseId">The lease identifier.</param>
     /// <exception cref="InvalidOperationException">The stream is quarantined.</exception>
     internal static void ThrowIfLeaseQuarantined(
-        SqliteConnection connection,
+        SqliteDatabase connection,
         SqliteTransaction transaction,
         string storeIdentity,
         Guid leaseId)
     {
-        using var command = connection.CreateCommand();
-        command.Transaction = transaction;
-        command.CommandText = """
+        using var command = connection.CreateStatement();
+        command.UseTransaction(transaction);
+        command.SetSql("""
             SELECT 1
             FROM oc_outbox_leases AS lease
             INNER JOIN oc_payload_quarantine AS quarantine
@@ -224,9 +224,9 @@ internal static partial class SqliteLocalCommitSql
                 AND quarantine.stream_id = lease.stream_id
             WHERE lease.store_identity = $storeIdentity AND lease.lease_id = $leaseId
             LIMIT 1;
-            """;
+            """);
         AddLeaseParameters(command, storeIdentity, leaseId);
-        if (command.ExecuteScalar() is null)
+        if (command.Scalar() is null)
         {
             return;
         }
@@ -241,21 +241,21 @@ internal static partial class SqliteLocalCommitSql
     /// <param name="streamId">The stream identifier.</param>
     /// <returns>Whether a quarantine marker exists.</returns>
     internal static bool IsStreamQuarantined(
-        SqliteConnection connection,
+        SqliteDatabase connection,
         SqliteTransaction transaction,
         string storeIdentity,
         StreamId streamId)
     {
-        using var command = connection.CreateCommand();
-        command.Transaction = transaction;
-        command.CommandText = """
+        using var command = connection.CreateStatement();
+        command.UseTransaction(transaction);
+        command.SetSql("""
             SELECT 1
             FROM oc_payload_quarantine
             WHERE store_identity = $storeIdentity AND stream_id = $streamId
             LIMIT 1;
-            """;
+            """);
         AddStreamParameters(command, storeIdentity, streamId);
-        return command.ExecuteScalar() is not null;
+        return command.Scalar() is not null;
     }
 
     /// <summary>Captures bounded raw evidence from the current payload row without requiring a valid envelope.</summary>
@@ -263,7 +263,7 @@ internal static partial class SqliteLocalCommitSql
     /// <param name="columns">The bounded evidence projection columns.</param>
     /// <returns>The bounded raw evidence.</returns>
     internal static LocalPayloadQuarantineEvidence CapturePayloadEvidence(
-        SqliteDataReader reader,
+        SqliteRows reader,
         SqlitePayloadEvidenceColumns columns)
     {
         var (payloadLength, payloadPrefix) = TryReadPayloadEvidenceBytes(reader, columns);
@@ -280,7 +280,7 @@ internal static partial class SqliteLocalCommitSql
     /// <param name="reader">The reader.</param>
     /// <param name="columns">The evidence projection columns.</param>
     /// <exception cref="InvalidOperationException">The stored payload has an unexpected storage class.</exception>
-    internal static void ValidatePayloadStorageTypes(SqliteDataReader reader, SqlitePayloadEvidenceColumns columns)
+    internal static void ValidatePayloadStorageTypes(SqliteRows reader, SqlitePayloadEvidenceColumns columns)
     {
         ValidateStorageType(reader, columns.ContractStorageTypeIndex, TextStorageType, "The SQLite payload contract is invalid.");
         ValidateStorageType(reader, columns.SchemaStorageTypeIndex, IntegerStorageType, "The SQLite payload schema version is invalid.");
@@ -295,43 +295,43 @@ internal static partial class SqliteLocalCommitSql
     /// <param name="request">The normalized request.</param>
     /// <param name="quarantineId">The quarantine identifier.</param>
     private static void AddQuarantineParameters(
-        SqliteCommand command,
+        SqliteStatement command,
         string storeIdentity,
         SqliteNormalizedPayloadQuarantineRequest request,
         Guid quarantineId)
     {
         AddStreamParameters(command, storeIdentity, request.Request.StreamId);
-        _ = command.Parameters.AddWithValue("$quarantineId", quarantineId.ToString("D"));
+        _ = command.Bind("$quarantineId", quarantineId.ToString("D"));
         AddNullableGuidParameter(command, "$subscriptionId", request.Request.SubscriptionId?.Value);
         AddNullableGuidParameter(command, "$operationId", request.Request.OperationId?.Value);
         AddNullableGuidParameter(command, "$eventId", request.Request.EventId);
-        _ = command.Parameters.AddWithValue("$source", (int)request.Request.Source);
-        _ = command.Parameters.AddWithValue("$reason", (int)request.Request.Reason);
+        _ = command.Bind("$source", (int)request.Request.Source);
+        _ = command.Bind("$reason", (int)request.Request.Reason);
         var context = SqliteRecordContext.Quarantine(request.Request.StreamId, quarantineId);
-        _ = command.Parameters.AddWithValue(
+        _ = command.Bind(
             "$reasonCode",
             ProtectNullableText(command, request.Request.ReasonCode, context, SqliteRecordContext.ReasonCodeColumn));
-        _ = command.Parameters.AddWithValue(
+        _ = command.Bind(
             "$cursor",
             ProtectNullableText(command, request.Request.Cursor, context, SqliteRecordContext.CursorColumn));
-        _ = command.Parameters.AddWithValue(
+        _ = command.Bind(
             "$evidenceContractId",
             ProtectNullableText(command, request.Evidence.ContractId, context, SqliteRecordContext.EvidenceContractColumn));
         AddNullableIntParameter(command, "$evidenceSchemaVersion", request.Evidence.SchemaVersion);
-        _ = command.Parameters.AddWithValue(
+        _ = command.Bind(
             "$evidenceContentType",
             ProtectNullableText(command, request.Evidence.ContentType, context, SqliteRecordContext.EvidenceContentTypeColumn));
-        _ = command.Parameters.AddWithValue("$evidencePayloadLength", request.Evidence.PayloadLength);
-        _ = command.Parameters.AddWithValue(
+        _ = command.Bind("$evidencePayloadLength", request.Evidence.PayloadLength);
+        _ = command.Bind(
             "$evidencePayloadHash",
             ProtectNullableText(command, request.Evidence.PayloadHash, context, SqliteRecordContext.EvidencePayloadHashColumn));
-        _ = command.Parameters.Add("$evidencePayloadPrefix", SqliteType.Blob);
-        command.Parameters["$evidencePayloadPrefix"].Value = ProtectBytes(
+
+        _ = command.Bind("$evidencePayloadPrefix", ProtectBytes(
             command,
             request.Evidence.PayloadPrefix.Span,
             context,
-            SqliteRecordContext.EvidencePayloadPrefixColumn);
-        _ = command.Parameters.AddWithValue("$observedAtUtc", FormatDateTimeOffset(request.Request.ObservedAtUtc));
+            SqliteRecordContext.EvidencePayloadPrefixColumn));
+        _ = command.Bind("$observedAtUtc", FormatDateTimeOffset(request.Request.ObservedAtUtc));
     }
 
     /// <summary>Reads a bounded projected text evidence value.</summary>
@@ -339,7 +339,7 @@ internal static partial class SqliteLocalCommitSql
     /// <param name="storageTypeIndex">The projected storage type column index.</param>
     /// <param name="bytesIndex">The projected bounded bytes column index.</param>
     /// <returns>The string value, or null when the column cannot be read as a string.</returns>
-    private static string? TryReadTextEvidence(SqliteDataReader reader, int storageTypeIndex, int bytesIndex)
+    private static string? TryReadTextEvidence(SqliteRows reader, int storageTypeIndex, int bytesIndex)
     {
         if (!IsStorageType(reader, storageTypeIndex, TextStorageType) || reader.IsDBNull(bytesIndex))
         {
@@ -503,7 +503,7 @@ internal static partial class SqliteLocalCommitSql
     /// <param name="storageTypeIndex">The projected storage type column index.</param>
     /// <param name="valueIndex">The value column index.</param>
     /// <returns>The integer value, or null when the column cannot be read as an integer.</returns>
-    private static int? TryReadIntEvidence(SqliteDataReader reader, int storageTypeIndex, int valueIndex)
+    private static int? TryReadIntEvidence(SqliteRows reader, int storageTypeIndex, int valueIndex)
     {
         if (!IsStorageType(reader, storageTypeIndex, IntegerStorageType))
         {
@@ -525,7 +525,7 @@ internal static partial class SqliteLocalCommitSql
     /// <param name="columns">The bounded evidence projection columns.</param>
     /// <returns>The original payload length and bounded prefix.</returns>
     private static (int PayloadLength, byte[] PayloadPrefix) TryReadPayloadEvidenceBytes(
-        SqliteDataReader reader,
+        SqliteRows reader,
         SqlitePayloadEvidenceColumns columns) =>
         reader.IsDBNull(columns.PayloadLengthIndex) || reader.IsDBNull(columns.PayloadPrefixIndex)
             ? (0, EmptyPayloadPrefix)
@@ -537,7 +537,7 @@ internal static partial class SqliteLocalCommitSql
     /// <param name="expected">The expected storage type.</param>
     /// <param name="message">The failure message.</param>
     /// <exception cref="InvalidOperationException">The storage class does not match.</exception>
-    private static void ValidateStorageType(SqliteDataReader reader, int storageTypeIndex, string expected, string message) =>
+    private static void ValidateStorageType(SqliteRows reader, int storageTypeIndex, string expected, string message) =>
         _ = IsStorageType(reader, storageTypeIndex, expected) ? true : throw new InvalidOperationException(message);
 
     /// <summary>Determines whether a projected storage class matches an expected value.</summary>
@@ -545,7 +545,7 @@ internal static partial class SqliteLocalCommitSql
     /// <param name="storageTypeIndex">The storage type column index.</param>
     /// <param name="expected">The expected storage type.</param>
     /// <returns>Whether the storage type matches.</returns>
-    private static bool IsStorageType(SqliteDataReader reader, int storageTypeIndex, string expected) =>
+    private static bool IsStorageType(SqliteRows reader, int storageTypeIndex, string expected) =>
         !reader.IsDBNull(storageTypeIndex)
         && string.Equals(reader.GetString(storageTypeIndex), expected, StringComparison.OrdinalIgnoreCase);
 
@@ -554,7 +554,7 @@ internal static partial class SqliteLocalCommitSql
     /// <param name="reader">The reader.</param>
     /// <returns>The quarantine record.</returns>
     /// <exception cref="InvalidOperationException">Stored SQLite data is invalid or fails authentication.</exception>
-    private static LocalPayloadQuarantineRecord ReadQuarantineRecord(SqliteConnection connection, SqliteDataReader reader)
+    private static LocalPayloadQuarantineRecord ReadQuarantineRecord(SqliteDatabase connection, SqliteRows reader)
     {
         var quarantineId = ReadGuid(reader, QuarantineIdIndex, "The SQLite quarantine id is invalid.");
         var streamId = new StreamId(ReadString(reader, QuarantineStreamIndex, "The SQLite quarantine stream is invalid."));
@@ -600,28 +600,28 @@ internal static partial class SqliteLocalCommitSql
     /// <param name="command">The command.</param>
     /// <param name="parameterName">The parameter name.</param>
     /// <param name="value">The value.</param>
-    private static void AddNullableGuidParameter(SqliteCommand command, string parameterName, Guid? value) =>
-        _ = command.Parameters.AddWithValue(parameterName, value.HasValue ? value.Value.ToString("D") : DBNull.Value);
+    private static void AddNullableGuidParameter(SqliteStatement command, string parameterName, Guid? value) =>
+        _ = command.Bind(parameterName, value.HasValue ? value.Value.ToString("D") : DBNull.Value);
 
     /// <summary>Adds a nullable integer parameter.</summary>
     /// <param name="command">The command.</param>
     /// <param name="parameterName">The parameter name.</param>
     /// <param name="value">The value.</param>
-    private static void AddNullableIntParameter(SqliteCommand command, string parameterName, int? value) =>
-        _ = command.Parameters.AddWithValue(parameterName, value.HasValue ? value.Value : DBNull.Value);
+    private static void AddNullableIntParameter(SqliteStatement command, string parameterName, int? value) =>
+        _ = command.Bind(parameterName, value.HasValue ? value.Value : DBNull.Value);
 
     /// <summary>Reads a nullable integer column.</summary>
     /// <param name="reader">The reader.</param>
     /// <param name="index">The column index.</param>
     /// <returns>The nullable integer.</returns>
-    private static int? ReadNullableInt(SqliteDataReader reader, int index) =>
+    private static int? ReadNullableInt(SqliteRows reader, int index) =>
         reader.IsDBNull(index) ? null : reader.GetInt32(index);
 
     /// <summary>Reads a nullable operation identifier.</summary>
     /// <param name="reader">The reader.</param>
     /// <param name="index">The column index.</param>
     /// <returns>The nullable operation identifier.</returns>
-    private static OperationId? ReadNullableOperationId(SqliteDataReader reader, int index)
+    private static OperationId? ReadNullableOperationId(SqliteRows reader, int index)
     {
         var value = ReadNullableGuid(reader, index);
         return value.HasValue ? new(value.Value) : null;
@@ -631,7 +631,7 @@ internal static partial class SqliteLocalCommitSql
     /// <param name="reader">The reader.</param>
     /// <param name="index">The column index.</param>
     /// <returns>The nullable subscription identifier.</returns>
-    private static SubscriptionId? ReadNullableSubscriptionId(SqliteDataReader reader, int index) =>
+    private static SubscriptionId? ReadNullableSubscriptionId(SqliteRows reader, int index) =>
         ReadNullableGuid(reader, index) is { } value ? new(value) : null;
 
     /// <summary>Reads a nullable GUID column.</summary>
@@ -639,7 +639,7 @@ internal static partial class SqliteLocalCommitSql
     /// <param name="index">The column index.</param>
     /// <returns>The nullable GUID.</returns>
     /// <exception cref="InvalidOperationException">Stored SQLite data is invalid.</exception>
-    private static Guid? ReadNullableGuid(SqliteDataReader reader, int index)
+    private static Guid? ReadNullableGuid(SqliteRows reader, int index)
     {
         if (reader.IsDBNull(index))
         {

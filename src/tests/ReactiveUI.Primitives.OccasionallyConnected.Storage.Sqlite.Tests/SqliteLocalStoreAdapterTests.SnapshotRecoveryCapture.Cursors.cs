@@ -129,9 +129,9 @@ public sealed partial class SqliteLocalStoreAdapterTests
     private static void SetStreamServerCursorText(string path, string cursor)
     {
         using var connection = OpenRawConnection(path);
-        using var command = connection.CreateCommand();
-        command.CommandText = "UPDATE oc_streams SET server_cursor = $serverCursor;";
-        _ = command.Parameters.AddWithValue("$serverCursor", cursor);
-        _ = command.ExecuteNonQuery();
+        using var command = connection.CreateStatement();
+        command.SetSql("UPDATE oc_streams SET server_cursor = $serverCursor;");
+        _ = command.Bind("$serverCursor", cursor);
+        _ = command.Execute();
     }
 }

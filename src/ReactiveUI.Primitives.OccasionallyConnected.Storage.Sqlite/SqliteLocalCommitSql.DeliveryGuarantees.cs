@@ -2,7 +2,7 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
-using Microsoft.Data.Sqlite;
+using ReactiveUI.Primitives.OccasionallyConnected.Sqlite;
 
 namespace ReactiveUI.Primitives.OccasionallyConnected.Storage.Sqlite;
 
@@ -22,7 +22,7 @@ internal static partial class SqliteLocalCommitSql
     /// <returns>The durable status after the transition.</returns>
     /// <exception cref="InvalidOperationException">The lease does not own an eligible exactly-once operation.</exception>
     internal static SyncOperationStatus ExpireDeliveryGuarantee(
-        SqliteConnection connection,
+        SqliteDatabase connection,
         SqliteTransaction transaction,
         string storeIdentity,
         Guid leaseId,
@@ -53,7 +53,7 @@ internal static partial class SqliteLocalCommitSql
     /// <returns>The durable status after the transition.</returns>
     /// <exception cref="InvalidOperationException">The lease does not own an eligible exactly-once operation.</exception>
     internal static SyncOperationStatus DowngradeDeliveryGuarantee(
-        SqliteConnection connection,
+        SqliteDatabase connection,
         SqliteTransaction transaction,
         string storeIdentity,
         Guid leaseId,
@@ -62,9 +62,9 @@ internal static partial class SqliteLocalCommitSql
         DateTimeOffset changedAtUtc)
     {
         ValidateGuaranteeTransition(ReadLeasedOperationState(connection, transaction, storeIdentity, leaseId, operationId));
-        using var command = connection.CreateCommand();
-        command.Transaction = transaction;
-        command.CommandText = """
+        using var command = connection.CreateStatement();
+        command.UseTransaction(transaction);
+        command.SetSql("""
             UPDATE oc_outbox_operation_states
             SET changed_at_utc = $changedAtUtc,
                 reason_code = $reasonCode,
@@ -75,13 +75,13 @@ internal static partial class SqliteLocalCommitSql
                 retry_authentication_state = $retryAuthenticationState,
                 retry_credentials_version = $retryCredentialsVersion
             WHERE store_identity = $storeIdentity AND operation_id = $operationId;
-            """;
-        _ = command.Parameters.AddWithValue(ChangedAtUtcParameter, FormatDateTimeOffset(changedAtUtc));
-        _ = command.Parameters.AddWithValue(ReasonCodeParameter, SyncReasonCodes.GuaranteeDowngraded);
+            """);
+        _ = command.Bind(ChangedAtUtcParameter, FormatDateTimeOffset(changedAtUtc));
+        _ = command.Bind(ReasonCodeParameter, SyncReasonCodes.GuaranteeDowngraded);
         AddRetryStateParameters(command, retryState);
-        _ = command.Parameters.AddWithValue(StoreIdentityParameter, storeIdentity);
-        _ = command.Parameters.AddWithValue(OperationIdParameter, operationId.Value.ToString("D"));
-        if (command.ExecuteNonQuery() != 1)
+        _ = command.Bind(StoreIdentityParameter, storeIdentity);
+        _ = command.Bind(OperationIdParameter, operationId.Value.ToString("D"));
+        if (command.Execute() != 1)
         {
             throw new InvalidOperationException(MissingOperationStateMessage);
         }
@@ -92,22 +92,22 @@ internal static partial class SqliteLocalCommitSql
 
     /// <summary>Adds the parameter used to keep a durable downgrade marker across in-flight state changes.</summary>
     /// <param name="command">The command.</param>
-    private static void AddDowngradedReasonCodeParameter(SqliteCommand command) =>
-        _ = command.Parameters.AddWithValue(DowngradedReasonCodeParameter, SyncReasonCodes.GuaranteeDowngraded);
+    private static void AddDowngradedReasonCodeParameter(SqliteStatement command) =>
+        _ = command.Bind(DowngradedReasonCodeParameter, SyncReasonCodes.GuaranteeDowngraded);
 
     /// <summary>Adds the persisted retry-state parameters.</summary>
     /// <param name="command">The command.</param>
     /// <param name="retryState">The retry state.</param>
-    private static void AddRetryStateParameters(SqliteCommand command, RetryState retryState)
+    private static void AddRetryStateParameters(SqliteStatement command, RetryState retryState)
     {
-        _ = command.Parameters.AddWithValue("$retryStartedUtc", FormatDateTimeOffset(retryState.StartedUtc));
-        _ = command.Parameters.AddWithValue("$retryDueUtc", (object?)FormatNullableDateTimeOffset(retryState.DueUtc) ?? DBNull.Value);
-        _ = command.Parameters.AddWithValue(
+        _ = command.Bind("$retryStartedUtc", FormatDateTimeOffset(retryState.StartedUtc));
+        _ = command.Bind("$retryDueUtc", (object?)FormatNullableDateTimeOffset(retryState.DueUtc) ?? DBNull.Value);
+        _ = command.Bind(
             "$retryPreviousDelayTicks",
             retryState.PreviousDelay.HasValue ? retryState.PreviousDelay.GetValueOrDefault().Ticks : DBNull.Value);
-        _ = command.Parameters.AddWithValue("$retryTransientAttemptCount", retryState.TransientAttemptCount);
-        _ = command.Parameters.AddWithValue("$retryAuthenticationState", (int)retryState.AuthenticationState);
-        _ = command.Parameters.AddWithValue("$retryCredentialsVersion", (object?)retryState.CredentialsVersion ?? DBNull.Value);
+        _ = command.Bind("$retryTransientAttemptCount", retryState.TransientAttemptCount);
+        _ = command.Bind("$retryAuthenticationState", (int)retryState.AuthenticationState);
+        _ = command.Bind("$retryCredentialsVersion", (object?)retryState.CredentialsVersion ?? DBNull.Value);
     }
 
     /// <summary>Validates that a leased operation may change its exactly-once guarantee.</summary>

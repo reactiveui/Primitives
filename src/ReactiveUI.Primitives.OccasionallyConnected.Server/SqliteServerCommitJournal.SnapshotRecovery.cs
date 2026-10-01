@@ -5,7 +5,7 @@
 #nullable enable
 
 using System.Runtime.CompilerServices;
-using Microsoft.Data.Sqlite;
+using ReactiveUI.Primitives.OccasionallyConnected.Sqlite;
 
 namespace ReactiveUI.Primitives.OccasionallyConnected.Server;
 
@@ -106,13 +106,13 @@ internal sealed partial class SqliteServerCommitJournal
     /// <param name="transaction">The transaction.</param>
     /// <param name="context">The validated insert context.</param>
     private static void InsertSnapshotOffer(
-        SqliteConnection connection,
+        SqliteDatabase connection,
         SqliteTransaction transaction,
         in SnapshotOfferInsertContext context)
     {
-        using var command = connection.CreateCommand();
-        command.Transaction = transaction;
-        command.CommandText = """
+        using var command = connection.CreateStatement();
+        command.UseTransaction(transaction);
+        command.SetSql("""
             INSERT INTO oc_server_journal_subscription_offers
                 (subscription_id, cursor, group_sequence, offered_at_utc, logical_bytes,
                  snapshot_stream_revision, snapshot_last_event_sequence, snapshot_subscription_generation,
@@ -125,20 +125,20 @@ internal sealed partial class SqliteServerCommitJournal
                  $snapshotOriginatingSubscriptionRevision, $snapshotIssuedSubscriptionRevision, $snapshotFormatVersion,
                  $snapshotClientStatePayloadContractId, $snapshotClientStatePayloadSchemaVersion,
                  $snapshotClientStatePayloadContentType, $snapshotClientStatePayload, $snapshotClientStatePayloadHash);
-            """;
+            """);
         AddSubscriptionIdParameter(command, context.SubscriptionId);
-        _ = command.Parameters.AddWithValue(CursorParameterName, context.Checkpoint.FrontierCursor);
-        _ = command.Parameters.AddWithValue(GroupSequenceParameterName, context.Request.View.Snapshot.LastGroupSequence);
-        _ = command.Parameters.AddWithValue("$offeredAtUtc", FormatDateTimeOffset(context.OfferedAtUtc));
-        _ = command.Parameters.AddWithValue("$logicalBytes", context.LogicalBytes);
-        _ = command.Parameters.AddWithValue("$snapshotStreamRevision", context.Request.View.Snapshot.Revision);
-        _ = command.Parameters.AddWithValue("$snapshotLastEventSequence", context.Request.View.Snapshot.LastEventSequence);
-        _ = command.Parameters.AddWithValue("$snapshotSubscriptionGeneration", context.ViewState.Generation);
-        _ = command.Parameters.AddWithValue("$snapshotOriginatingSubscriptionRevision", context.ViewState.Revision);
-        _ = command.Parameters.AddWithValue("$snapshotIssuedSubscriptionRevision", context.IssuedRevision);
-        _ = command.Parameters.AddWithValue("$snapshotFormatVersion", context.Checkpoint.SnapshotFormatVersion);
+        _ = command.Bind(CursorParameterName, context.Checkpoint.FrontierCursor);
+        _ = command.Bind(GroupSequenceParameterName, context.Request.View.Snapshot.LastGroupSequence);
+        _ = command.Bind("$offeredAtUtc", FormatDateTimeOffset(context.OfferedAtUtc));
+        _ = command.Bind("$logicalBytes", context.LogicalBytes);
+        _ = command.Bind("$snapshotStreamRevision", context.Request.View.Snapshot.Revision);
+        _ = command.Bind("$snapshotLastEventSequence", context.Request.View.Snapshot.LastEventSequence);
+        _ = command.Bind("$snapshotSubscriptionGeneration", context.ViewState.Generation);
+        _ = command.Bind("$snapshotOriginatingSubscriptionRevision", context.ViewState.Revision);
+        _ = command.Bind("$snapshotIssuedSubscriptionRevision", context.IssuedRevision);
+        _ = command.Bind("$snapshotFormatVersion", context.Checkpoint.SnapshotFormatVersion);
         AddPayloadParameters(command, "snapshotClientState", context.Checkpoint.ClientState);
-        _ = command.ExecuteNonQuery();
+        _ = command.Execute();
     }
 
     /// <summary>Creates a capacity-exceeded snapshot offer result from current durable state.</summary>
@@ -147,7 +147,7 @@ internal sealed partial class SqliteServerCommitJournal
     /// <param name="record">The retained subscription record.</param>
     /// <returns>The capacity-exceeded result.</returns>
     private static ServerSnapshotOfferResult CreateCapacityExceededSnapshotOfferResult(
-        SqliteConnection connection,
+        SqliteDatabase connection,
         SqliteTransaction transaction,
         ServerSubscriptionRecord record)
     {
@@ -167,7 +167,7 @@ internal sealed partial class SqliteServerCommitJournal
     /// <param name="offeredUtc">The offer timestamp.</param>
     /// <returns>The offered snapshot result.</returns>
     private static ServerSnapshotOfferResult CreateOfferedSnapshotResult(
-        SqliteConnection connection,
+        SqliteDatabase connection,
         SqliteTransaction transaction,
         ServerSubscriptionRecord record,
         string cursor,
@@ -189,7 +189,7 @@ internal sealed partial class SqliteServerCommitJournal
     /// <param name="observedUtc">The caller-independent timestamp sampled before the transaction.</param>
     /// <returns>The durable offer result.</returns>
     private ServerSnapshotOfferResult TryOfferSnapshot(
-        SqliteConnection connection,
+        SqliteDatabase connection,
         SqliteTransaction transaction,
         ServerSnapshotOfferRequest request,
         DateTimeOffset observedUtc)
@@ -213,7 +213,7 @@ internal sealed partial class SqliteServerCommitJournal
     /// <param name="record">The retained subscription record.</param>
     /// <returns>The durable offer result.</returns>
     private ServerSnapshotOfferResult TryOfferSnapshotForRecord(
-        SqliteConnection connection,
+        SqliteDatabase connection,
         SqliteTransaction transaction,
         ServerSnapshotOfferRequest request,
         DateTimeOffset observedUtc,
@@ -255,7 +255,7 @@ internal sealed partial class SqliteServerCommitJournal
     /// <param name="checkpoint">The recovered snapshot checkpoint.</param>
     /// <returns>The durable offer result.</returns>
     private ServerSnapshotOfferResult TryPersistSnapshotOffer(
-        SqliteConnection connection,
+        SqliteDatabase connection,
         SqliteTransaction transaction,
         ServerSnapshotOfferRequest request,
         DateTimeOffset observedUtc,
@@ -316,7 +316,7 @@ internal sealed partial class SqliteServerCommitJournal
     /// <param name="addedLogicalBytes">The logical bytes required by the offer.</param>
     /// <returns>Whether the snapshot offer can fit.</returns>
     private bool HasSnapshotOfferCapacity(
-        SqliteConnection connection,
+        SqliteDatabase connection,
         SqliteTransaction transaction,
         DateTimeOffset offeredUtc,
         long addedLogicalBytes)

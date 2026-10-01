@@ -4,8 +4,8 @@
 
 using System.Runtime.CompilerServices;
 using System.Text;
-using Microsoft.Data.Sqlite;
 using ReactiveUI.Primitives.OccasionallyConnected;
+using ReactiveUI.Primitives.OccasionallyConnected.Sqlite;
 
 namespace ReactiveUI.Primitives.OccasionallyConnected.Storage.Sqlite;
 
@@ -47,7 +47,7 @@ internal sealed class SqliteRecordCipher
     /// <param name="connection">The connection.</param>
     /// <returns>The cipher, or null for a plaintext store.</returns>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    internal static SqliteRecordCipher? For(SqliteConnection? connection) => (connection as SqliteProtectedConnection)?.Cipher;
+    internal static SqliteRecordCipher? For(SqliteDatabase? connection) => (connection?.Context as SqliteRecordConnectionState)?.Cipher;
 
     /// <summary>Gets a Base64 text length that can hold a protected value with the supplied plaintext byte count.</summary>
     /// <param name="plaintextBytes">The plaintext byte count.</param>

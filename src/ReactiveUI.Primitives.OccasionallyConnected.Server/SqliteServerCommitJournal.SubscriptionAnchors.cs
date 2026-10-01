@@ -4,7 +4,7 @@
 
 #nullable enable
 
-using Microsoft.Data.Sqlite;
+using ReactiveUI.Primitives.OccasionallyConnected.Sqlite;
 
 namespace ReactiveUI.Primitives.OccasionallyConnected.Server;
 
@@ -21,7 +21,7 @@ internal sealed partial class SqliteServerCommitJournal
     /// <param name="observedUtc">The sampled timestamp.</param>
     /// <returns>The resolved read-cursor decision.</returns>
     private (bool HasReadCursor, string? ReadCursor, ServerReceivePageResult PendingResult) ResolveInitialReadCursor(
-        SqliteConnection connection,
+        SqliteDatabase connection,
         SqliteTransaction transaction,
         ServerSubscriptionRecord record,
         string? clientCursor,
@@ -61,7 +61,7 @@ internal sealed partial class SqliteServerCommitJournal
     /// <param name="observedUtc">The sampled timestamp.</param>
     /// <exception cref="QueueCapacityExceededException">The anchor exceeds the retained byte limit.</exception>
     private void ApplyInitialAnchor(
-        SqliteConnection connection,
+        SqliteDatabase connection,
         SqliteTransaction transaction,
         ServerSubscriptionRecord record,
         ServerSubscriptionInitialAnchor anchor,

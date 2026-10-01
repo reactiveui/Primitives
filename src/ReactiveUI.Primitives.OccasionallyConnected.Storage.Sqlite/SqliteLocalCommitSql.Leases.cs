@@ -2,8 +2,8 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
-using Microsoft.Data.Sqlite;
 using ReactiveUI.Primitives.OccasionallyConnected;
+using ReactiveUI.Primitives.OccasionallyConnected.Sqlite;
 
 namespace ReactiveUI.Primitives.OccasionallyConnected.Storage.Sqlite;
 
@@ -60,7 +60,7 @@ internal static partial class SqliteLocalCommitSql
     /// <returns>The operation rows selected for lease membership.</returns>
     /// <exception cref="OperationCanceledException">The operation is canceled while traversing candidates.</exception>
     internal static IReadOnlyList<SqliteOutboxLeaseMember> SelectLeaseableOperationIds(
-        SqliteConnection connection,
+        SqliteDatabase connection,
         SqliteTransaction transaction,
         string storeIdentity,
         OutboxLeaseRequest request,
@@ -108,16 +108,16 @@ internal static partial class SqliteLocalCommitSql
     /// <returns>The future not-before timestamp, or <see langword="null"/> when the recovered head is not time-blocked.</returns>
     /// <exception cref="OperationCanceledException">The operation is canceled while traversing candidates.</exception>
     internal static DateTimeOffset? SelectRecoveredPendingUploadNotBeforeUtc(
-        SqliteConnection connection,
+        SqliteDatabase connection,
         SqliteTransaction transaction,
         string storeIdentity,
         StreamId streamId,
         DateTimeOffset nowUtc,
         CancellationToken cancellationToken)
     {
-        using var command = connection.CreateCommand();
-        command.Transaction = transaction;
-        command.CommandText = """
+        using var command = connection.CreateStatement();
+        command.UseTransaction(transaction);
+        command.SetSql("""
             SELECT outbox.operation_id, outbox.stream_id, outbox.client_sequence, length(outbox.payload),
                    lease.lease_id, lease.lease_expires_at_utc, state.operation_state,
                    state.attempt_count, outbox.policy_delivery_guarantee, state.retry_due_utc
@@ -137,10 +137,10 @@ internal static partial class SqliteLocalCommitSql
                         AND quarantine.stream_id = outbox.stream_id)
             ORDER BY outbox.client_sequence ASC
             LIMIT 1;
-            """;
-        _ = command.Parameters.AddWithValue(StoreIdentityParameter, storeIdentity);
-        _ = command.Parameters.AddWithValue(StreamIdParameter, streamId.Value);
-        using var reader = command.ExecuteReader();
+            """);
+        _ = command.Bind(StoreIdentityParameter, storeIdentity);
+        _ = command.Bind(StreamIdParameter, streamId.Value);
+        using var reader = command.Query();
         cancellationToken.ThrowIfCancellationRequested();
         return reader.Read() ? ReadLeaseCandidateRow(reader, nowUtc).NotBeforeUtc : null;
     }
@@ -153,7 +153,7 @@ internal static partial class SqliteLocalCommitSql
     /// <param name="expiresAtUtc">The expiry timestamp.</param>
     /// <param name="operations">The selected operation rows.</param>
     internal static void InsertLeaseMembership(
-        SqliteConnection connection,
+        SqliteDatabase connection,
         SqliteTransaction transaction,
         string storeIdentity,
         Guid leaseId,
@@ -163,21 +163,21 @@ internal static partial class SqliteLocalCommitSql
         for (var index = 0; index < operations.Count; index++)
         {
             var operation = operations[index];
-            using var command = connection.CreateCommand();
-            command.Transaction = transaction;
-            command.CommandText = """
+            using var command = connection.CreateStatement();
+            command.UseTransaction(transaction);
+            command.SetSql("""
                 INSERT INTO oc_outbox_leases
                     (store_identity, lease_id, operation_id, stream_id, client_sequence, lease_expires_at_utc, lease_member_count)
                 VALUES
                     ($storeIdentity, $leaseId, $operationId, $streamId, $clientSequence, $leaseExpiresAtUtc, $leaseMemberCount);
-                """;
+                """);
             AddLeaseParameters(command, storeIdentity, leaseId);
-            _ = command.Parameters.AddWithValue(OperationIdParameter, operation.OperationId.Value.ToString("D"));
-            _ = command.Parameters.AddWithValue(StreamIdParameter, operation.StreamId.Value);
-            _ = command.Parameters.AddWithValue("$clientSequence", operation.ClientSequence);
-            _ = command.Parameters.AddWithValue("$leaseExpiresAtUtc", FormatDateTimeOffset(expiresAtUtc));
-            _ = command.Parameters.AddWithValue("$leaseMemberCount", operations.Count);
-            _ = command.ExecuteNonQuery();
+            _ = command.Bind(OperationIdParameter, operation.OperationId.Value.ToString("D"));
+            _ = command.Bind(StreamIdParameter, operation.StreamId.Value);
+            _ = command.Bind("$clientSequence", operation.ClientSequence);
+            _ = command.Bind("$leaseExpiresAtUtc", FormatDateTimeOffset(expiresAtUtc));
+            _ = command.Bind("$leaseMemberCount", operations.Count);
+            _ = command.Execute();
         }
     }
 
@@ -187,22 +187,22 @@ internal static partial class SqliteLocalCommitSql
     /// <param name="storeIdentity">The store identity.</param>
     /// <param name="operations">The selected operations.</param>
     internal static void ReclaimSelectedLeaseRows(
-        SqliteConnection connection,
+        SqliteDatabase connection,
         SqliteTransaction transaction,
         string storeIdentity,
         IReadOnlyList<SqliteOutboxLeaseMember> operations)
     {
         for (var index = 0; index < operations.Count; index++)
         {
-            using var command = connection.CreateCommand();
-            command.Transaction = transaction;
-            command.CommandText = """
+            using var command = connection.CreateStatement();
+            command.UseTransaction(transaction);
+            command.SetSql("""
                 DELETE FROM oc_outbox_leases
                 WHERE store_identity = $storeIdentity AND operation_id = $operationId;
-                """;
-            _ = command.Parameters.AddWithValue(StoreIdentityParameter, storeIdentity);
-            _ = command.Parameters.AddWithValue(OperationIdParameter, operations[index].OperationId.Value.ToString("D"));
-            _ = command.ExecuteNonQuery();
+                """);
+            _ = command.Bind(StoreIdentityParameter, storeIdentity);
+            _ = command.Bind(OperationIdParameter, operations[index].OperationId.Value.ToString("D"));
+            _ = command.Execute();
         }
     }
 
@@ -215,15 +215,15 @@ internal static partial class SqliteLocalCommitSql
     /// <returns>The leased operations.</returns>
     /// <exception cref="SqlitePayloadQuarantineException">Stored SQLite payload data is invalid.</exception>
     internal static List<SyncOperation> ReadLeasedOperations(
-        SqliteConnection connection,
+        SqliteDatabase connection,
         SqliteTransaction transaction,
         string storeIdentity,
         Guid leaseId,
         long maximumPayloadBytes)
     {
-        using var command = connection.CreateCommand();
-        command.Transaction = transaction;
-        command.CommandText = """
+        using var command = connection.CreateStatement();
+        command.UseTransaction(transaction);
+        command.SetSql("""
             SELECT outbox.operation_id, outbox.stream_id, outbox.client_sequence, outbox.timestamp_utc,
                    outbox.base_version, outbox.operation_type, outbox.payload_contract_id, outbox.payload_schema_version,
                    outbox.payload_content_type, outbox.payload, outbox.payload_hash, outbox.policy_delivery_guarantee,
@@ -242,9 +242,9 @@ internal static partial class SqliteLocalCommitSql
                 AND lease.operation_id = outbox.operation_id
             WHERE lease.store_identity = $storeIdentity AND lease.lease_id = $leaseId
             ORDER BY lease.client_sequence ASC;
-            """;
+            """);
         AddLeaseParameters(command, storeIdentity, leaseId);
-        using var reader = command.ExecuteReader();
+        using var reader = command.Query();
         List<SyncOperation> operations = [];
         while (reader.Read())
         {
@@ -264,16 +264,16 @@ internal static partial class SqliteLocalCommitSql
     /// <returns>The leased operation.</returns>
     /// <exception cref="InvalidOperationException">The lease does not own the operation or stored data is invalid.</exception>
     internal static SyncOperation ReadLeasedOperation(
-        SqliteConnection connection,
+        SqliteDatabase connection,
         SqliteTransaction transaction,
         string storeIdentity,
         Guid leaseId,
         OperationId operationId,
         long maximumPayloadBytes)
     {
-        using var command = connection.CreateCommand();
-        command.Transaction = transaction;
-        command.CommandText = """
+        using var command = connection.CreateStatement();
+        command.UseTransaction(transaction);
+        command.SetSql("""
             SELECT outbox.operation_id, outbox.stream_id, outbox.client_sequence, outbox.timestamp_utc,
                    outbox.base_version, outbox.operation_type, outbox.payload_contract_id, outbox.payload_schema_version,
                    outbox.payload_content_type, outbox.payload, outbox.payload_hash, outbox.policy_delivery_guarantee,
@@ -293,10 +293,10 @@ internal static partial class SqliteLocalCommitSql
             WHERE lease.store_identity = $storeIdentity
                 AND lease.lease_id = $leaseId
                 AND lease.operation_id = $operationId;
-            """;
+            """);
         AddLeaseParameters(command, storeIdentity, leaseId);
-        _ = command.Parameters.AddWithValue(OperationIdParameter, operationId.Value.ToString("D"));
-        using var reader = command.ExecuteReader();
+        _ = command.Bind(OperationIdParameter, operationId.Value.ToString("D"));
+        using var reader = command.Query();
         if (!reader.Read())
         {
             throw new InvalidOperationException("The SQLite outbox lease does not own the operation.");
@@ -313,21 +313,21 @@ internal static partial class SqliteLocalCommitSql
     /// <returns>The lease expiry timestamp.</returns>
     /// <exception cref="InvalidOperationException">The lease is missing or incomplete.</exception>
     internal static DateTimeOffset ValidateLeaseMembership(
-        SqliteConnection connection,
+        SqliteDatabase connection,
         SqliteTransaction transaction,
         string storeIdentity,
         Guid leaseId)
     {
-        using var command = connection.CreateCommand();
-        command.Transaction = transaction;
-        command.CommandText = """
+        using var command = connection.CreateStatement();
+        command.UseTransaction(transaction);
+        command.SetSql("""
             SELECT COUNT(*), MIN(lease_member_count), MAX(lease_member_count),
                    MIN(lease_expires_at_utc), MAX(lease_expires_at_utc)
             FROM oc_outbox_leases
             WHERE store_identity = $storeIdentity AND lease_id = $leaseId;
-            """;
+            """);
         AddLeaseParameters(command, storeIdentity, leaseId);
-        using var reader = command.ExecuteReader();
+        using var reader = command.Query();
         _ = reader.Read();
         var count = ReadPositiveLong(reader, 0, MissingLeaseMessage);
         var minimumMemberCount = ReadPositiveLong(reader, LeaseMemberCountMinimumIndex, "The SQLite outbox lease member count is invalid.");
@@ -355,22 +355,22 @@ internal static partial class SqliteLocalCommitSql
     /// <param name="expiresAtUtc">The new expiry timestamp.</param>
     /// <exception cref="InvalidOperationException">The lease is missing.</exception>
     internal static void RenewLease(
-        SqliteConnection connection,
+        SqliteDatabase connection,
         SqliteTransaction transaction,
         string storeIdentity,
         Guid leaseId,
         DateTimeOffset expiresAtUtc)
     {
-        using var command = connection.CreateCommand();
-        command.Transaction = transaction;
-        command.CommandText = """
+        using var command = connection.CreateStatement();
+        command.UseTransaction(transaction);
+        command.SetSql("""
             UPDATE oc_outbox_leases
             SET lease_expires_at_utc = $leaseExpiresAtUtc
             WHERE store_identity = $storeIdentity AND lease_id = $leaseId;
-            """;
+            """);
         AddLeaseParameters(command, storeIdentity, leaseId);
-        _ = command.Parameters.AddWithValue("$leaseExpiresAtUtc", FormatDateTimeOffset(expiresAtUtc));
-        if (command.ExecuteNonQuery() > 0)
+        _ = command.Bind("$leaseExpiresAtUtc", FormatDateTimeOffset(expiresAtUtc));
+        if (command.Execute() > 0)
         {
             return;
         }
@@ -384,16 +384,16 @@ internal static partial class SqliteLocalCommitSql
     /// <param name="storeIdentity">The store identity.</param>
     /// <param name="leaseId">The lease identifier.</param>
     /// <exception cref="InvalidOperationException">The lease is missing.</exception>
-    internal static void ReleaseLease(SqliteConnection connection, SqliteTransaction transaction, string storeIdentity, Guid leaseId)
+    internal static void ReleaseLease(SqliteDatabase connection, SqliteTransaction transaction, string storeIdentity, Guid leaseId)
     {
-        using var command = connection.CreateCommand();
-        command.Transaction = transaction;
-        command.CommandText = """
+        using var command = connection.CreateStatement();
+        command.UseTransaction(transaction);
+        command.SetSql("""
             DELETE FROM oc_outbox_leases
             WHERE store_identity = $storeIdentity AND lease_id = $leaseId;
-            """;
+            """);
         AddLeaseParameters(command, storeIdentity, leaseId);
-        if (command.ExecuteNonQuery() > 0)
+        if (command.Execute() > 0)
         {
             return;
         }
@@ -409,38 +409,38 @@ internal static partial class SqliteLocalCommitSql
     /// <param name="operationId">The operation identifier.</param>
     /// <exception cref="InvalidOperationException">The lease does not own the operation.</exception>
     internal static void ReleaseLeaseOperation(
-        SqliteConnection connection,
+        SqliteDatabase connection,
         SqliteTransaction transaction,
         string storeIdentity,
         Guid leaseId,
         OperationId operationId)
     {
-        using (var delete = connection.CreateCommand())
+        using (var delete = connection.CreateStatement())
         {
-            delete.Transaction = transaction;
-            delete.CommandText = """
+            delete.UseTransaction(transaction);
+            delete.SetSql("""
                 DELETE FROM oc_outbox_leases
                 WHERE store_identity = $storeIdentity
                     AND lease_id = $leaseId
                     AND operation_id = $operationId;
-                """;
+                """);
             AddLeaseParameters(delete, storeIdentity, leaseId);
-            _ = delete.Parameters.AddWithValue(OperationIdParameter, operationId.Value.ToString("D"));
-            if (delete.ExecuteNonQuery() != 1)
+            _ = delete.Bind(OperationIdParameter, operationId.Value.ToString("D"));
+            if (delete.Execute() != 1)
             {
                 throw new InvalidOperationException("The SQLite outbox lease does not own the operation.");
             }
         }
 
-        using var update = connection.CreateCommand();
-        update.Transaction = transaction;
-        update.CommandText = """
+        using var update = connection.CreateStatement();
+        update.UseTransaction(transaction);
+        update.SetSql("""
             UPDATE oc_outbox_leases
             SET lease_member_count = lease_member_count - 1
             WHERE store_identity = $storeIdentity AND lease_id = $leaseId;
-            """;
+            """);
         AddLeaseParameters(update, storeIdentity, leaseId);
-        _ = update.ExecuteNonQuery();
+        _ = update.Execute();
     }
 
     /// <summary>Reads one operation from a leased batch row.</summary>
@@ -453,10 +453,10 @@ internal static partial class SqliteLocalCommitSql
     /// <exception cref="InvalidOperationException">Stored SQLite data is invalid.</exception>
     /// <exception cref="SqlitePayloadQuarantineException">Stored SQLite payload data is invalid.</exception>
     private static SyncOperation ReadLeasedOperation(
-        SqliteConnection connection,
+        SqliteDatabase connection,
         SqliteTransaction transaction,
         string storeIdentity,
-        SqliteDataReader reader,
+        SqliteRows reader,
         long maximumPayloadBytes)
     {
         const int OperationIdIndex = 0;
@@ -537,7 +537,7 @@ internal static partial class SqliteLocalCommitSql
     /// <returns>The selected operation rows.</returns>
     /// <exception cref="OperationCanceledException">The operation is canceled while traversing candidates.</exception>
     private static List<SqliteOutboxLeaseMember> SelectLeaseableOperationIdsForStream(
-        SqliteConnection connection,
+        SqliteDatabase connection,
         SqliteTransaction transaction,
         string storeIdentity,
         StreamId streamId,
@@ -545,9 +545,9 @@ internal static partial class SqliteLocalCommitSql
         DateTimeOffset nowUtc,
         CancellationToken cancellationToken)
     {
-        using var command = connection.CreateCommand();
-        command.Transaction = transaction;
-        command.CommandText = """
+        using var command = connection.CreateStatement();
+        command.UseTransaction(transaction);
+        command.SetSql("""
             SELECT outbox.operation_id, outbox.stream_id, outbox.client_sequence, length(outbox.payload),
                    lease.lease_id, lease.lease_expires_at_utc, state.operation_state,
                    state.attempt_count, outbox.policy_delivery_guarantee, state.retry_due_utc
@@ -567,11 +567,11 @@ internal static partial class SqliteLocalCommitSql
                         AND quarantine.stream_id = outbox.stream_id)
             ORDER BY outbox.client_sequence ASC
             LIMIT $maximumOperations;
-            """;
-        _ = command.Parameters.AddWithValue(StoreIdentityParameter, storeIdentity);
-        _ = command.Parameters.AddWithValue(StreamIdParameter, streamId.Value);
-        _ = command.Parameters.AddWithValue("$maximumOperations", request.MaximumOperations);
-        using var reader = command.ExecuteReader();
+            """);
+        _ = command.Bind(StoreIdentityParameter, storeIdentity);
+        _ = command.Bind(StreamIdParameter, streamId.Value);
+        _ = command.Bind("$maximumOperations", request.MaximumOperations);
+        using var reader = command.Query();
         List<SqliteOutboxLeaseMember> selected = [];
         var payloadBytes = 0L;
         while (reader.Read())
@@ -600,16 +600,16 @@ internal static partial class SqliteLocalCommitSql
     /// <returns>The first leaseable stream head, if any.</returns>
     /// <exception cref="OperationCanceledException">The operation is canceled while traversing stream heads.</exception>
     private static LeaseCandidateRow? SelectFirstLeaseableStreamHead(
-        SqliteConnection connection,
+        SqliteDatabase connection,
         SqliteTransaction transaction,
         string storeIdentity,
         OutboxLeaseRequest request,
         DateTimeOffset nowUtc,
         CancellationToken cancellationToken)
     {
-        using var command = connection.CreateCommand();
-        command.Transaction = transaction;
-        command.CommandText = """
+        using var command = connection.CreateStatement();
+        command.UseTransaction(transaction);
+        command.SetSql("""
             SELECT outbox.operation_id, outbox.stream_id, outbox.client_sequence, length(outbox.payload),
                    lease.lease_id, lease.lease_expires_at_utc, state.operation_state,
                    state.attempt_count, outbox.policy_delivery_guarantee, state.retry_due_utc
@@ -642,9 +642,9 @@ internal static partial class SqliteLocalCommitSql
                             WHERE head_quarantine.store_identity = head.store_identity
                                 AND head_quarantine.stream_id = head.stream_id))
             ORDER BY outbox.stream_id ASC;
-            """;
-        _ = command.Parameters.AddWithValue(StoreIdentityParameter, storeIdentity);
-        using var reader = command.ExecuteReader();
+            """);
+        _ = command.Bind(StoreIdentityParameter, storeIdentity);
+        using var reader = command.Query();
         while (reader.Read())
         {
             cancellationToken.ThrowIfCancellationRequested();
@@ -663,7 +663,7 @@ internal static partial class SqliteLocalCommitSql
     /// <param name="nowUtc">The current UTC timestamp.</param>
     /// <returns>The candidate row.</returns>
     /// <exception cref="InvalidOperationException">Stored SQLite data is invalid.</exception>
-    private static LeaseCandidateRow ReadLeaseCandidateRow(SqliteDataReader reader, DateTimeOffset nowUtc)
+    private static LeaseCandidateRow ReadLeaseCandidateRow(SqliteRows reader, DateTimeOffset nowUtc)
     {
         var operationId = ReadOperationId(reader, LeaseOperationIdIndex);
         var streamId = new StreamId(ReadString(reader, LeaseStreamIdIndex, InvalidOperationStreamMessage));
@@ -692,7 +692,7 @@ internal static partial class SqliteLocalCommitSql
     /// <returns>The lease candidate timing.</returns>
     /// <exception cref="InvalidOperationException">Stored SQLite data is invalid.</exception>
     private static LeaseCandidateTiming ReadLeaseCandidateTiming(
-        SqliteDataReader reader,
+        SqliteRows reader,
         DateTimeOffset nowUtc,
         DateTimeOffset? retryDueUtc)
     {
@@ -734,7 +734,7 @@ internal static partial class SqliteLocalCommitSql
     /// <param name="index">The column index.</param>
     /// <returns>The lease identifier.</returns>
     /// <exception cref="InvalidOperationException">Stored SQLite data is invalid.</exception>
-    private static Guid ReadLeaseId(SqliteDataReader reader, int index)
+    private static Guid ReadLeaseId(SqliteRows reader, int index)
     {
         var value = ReadString(reader, index, InvalidLeaseIdMessage);
         return Guid.TryParseExact(value, "D", out var leaseId)

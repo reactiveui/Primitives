@@ -108,11 +108,11 @@ public sealed partial class SqliteLocalStoreAdapterTests
         using var database = TempDatabase.Create();
         _ = await SeedEncryptedDatabaseAsync(database.Path);
         var originalKeyId = ReadPendingPayloadKeyId(database.Path);
-        await using (var connection = OpenRawConnection(database.Path))
-        await using (var command = connection.CreateCommand())
+        using (var connection = OpenRawConnection(database.Path))
+        using (var command = connection.CreateStatement())
         {
-            command.CommandText = "DELETE FROM oc_metadata WHERE key = 'rxui.localstore.record_protection';";
-            await Assert.That(await command.ExecuteNonQueryAsync()).IsEqualTo(1);
+            command.SetSql("DELETE FROM oc_metadata WHERE key = 'rxui.localstore.record_protection';");
+            await Assert.That(command.Execute()).IsEqualTo(1);
         }
 
         var metadataBefore = ReadProtectedMetadata(database.Path);
@@ -151,11 +151,11 @@ public sealed partial class SqliteLocalStoreAdapterTests
     private static string ReadProtectedMetadata(string path)
     {
         using var connection = OpenRawConnection(path);
-        using var command = connection.CreateCommand();
-        command.CommandText = """
+        using var command = connection.CreateStatement();
+        command.SetSql("""
             SELECT group_concat(key || '=' || quote(value), ';')
             FROM (SELECT key, value FROM oc_metadata WHERE key LIKE 'rxui.localstore.%' ORDER BY key);
-            """;
-        return command.ExecuteScalar() as string ?? string.Empty;
+            """);
+        return command.Scalar() as string ?? string.Empty;
     }
 }

@@ -2,8 +2,8 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
-using Microsoft.Data.Sqlite;
 using ReactiveUI.Primitives.OccasionallyConnected;
+using ReactiveUI.Primitives.OccasionallyConnected.Sqlite;
 
 namespace ReactiveUI.Primitives.OccasionallyConnected.Storage.Sqlite;
 
@@ -21,7 +21,7 @@ internal static partial class SqliteLocalCommitSql
     /// <param name="reasonCode">The optional terminal reason code.</param>
     /// <exception cref="InvalidOperationException">The operation state row is missing.</exception>
     internal static void ApplySnapshotRecoveryOperationState(
-        SqliteConnection connection,
+        SqliteDatabase connection,
         SqliteTransaction transaction,
         string storeIdentity,
         OperationId operationId,
@@ -29,9 +29,9 @@ internal static partial class SqliteLocalCommitSql
         DateTimeOffset changedAtUtc,
         string? reasonCode)
     {
-        using var command = connection.CreateCommand();
-        command.Transaction = transaction;
-        command.CommandText = """
+        using var command = connection.CreateStatement();
+        command.UseTransaction(transaction);
+        command.SetSql("""
             UPDATE oc_outbox_operation_states
             SET operation_state = $operationState,
                 changed_at_utc = $changedAtUtc,
@@ -43,13 +43,13 @@ internal static partial class SqliteLocalCommitSql
                 retry_authentication_state = NULL,
                 retry_credentials_version = NULL
             WHERE store_identity = $storeIdentity AND operation_id = $operationId;
-            """;
-        _ = command.Parameters.AddWithValue(StoreIdentityParameter, storeIdentity);
-        _ = command.Parameters.AddWithValue(OperationIdParameter, operationId.Value.ToString("D"));
-        _ = command.Parameters.AddWithValue("$operationState", (int)state);
-        _ = command.Parameters.AddWithValue("$changedAtUtc", FormatDateTimeOffset(changedAtUtc));
-        _ = command.Parameters.AddWithValue("$reasonCode", (object?)reasonCode ?? DBNull.Value);
-        if (command.ExecuteNonQuery() == 1)
+            """);
+        _ = command.Bind(StoreIdentityParameter, storeIdentity);
+        _ = command.Bind(OperationIdParameter, operationId.Value.ToString("D"));
+        _ = command.Bind("$operationState", (int)state);
+        _ = command.Bind("$changedAtUtc", FormatDateTimeOffset(changedAtUtc));
+        _ = command.Bind("$reasonCode", (object?)reasonCode ?? DBNull.Value);
+        if (command.Execute() == 1)
         {
             return;
         }

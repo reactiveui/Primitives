@@ -2,7 +2,6 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
-using Microsoft.Data.Sqlite;
 using ReactiveUI.Primitives.OccasionallyConnected;
 using ReactiveUI.Primitives.OccasionallyConnected.Storage.Sqlite;
 
@@ -26,8 +25,8 @@ public sealed partial class SqliteStoreSchemaTests
             store.Initialize(initialization, CancellationToken.None);
         }
 
-        await using (var connection = OpenRawConnection(database.Path))
-        await using (var transaction = (SqliteTransaction)await connection.BeginTransactionAsync())
+        using (var connection = OpenRawConnection(database.Path))
+        using (var transaction = connection.BeginTransaction())
         {
             await Assert.That(SqliteSchemaChecksum.TrySelect(connection, transaction)).StartsWith(SqliteSchemaChecksum.AlgorithmPrefix);
             SqliteSchemaChecksum.Verify(connection, transaction);
@@ -49,11 +48,11 @@ public sealed partial class SqliteStoreSchemaTests
             store.Initialize(initialization, CancellationToken.None);
         }
 
-        await using (var connection = OpenRawConnection(database.Path))
-        await using (var command = connection.CreateCommand())
+        using (var connection = OpenRawConnection(database.Path))
+        using (var command = connection.CreateStatement())
         {
-            command.CommandText = "CREATE INDEX external_stream_index ON oc_streams (stream_id);";
-            _ = await command.ExecuteNonQueryAsync();
+            command.SetSql("CREATE INDEX external_stream_index ON oc_streams (stream_id);");
+            _ = command.Execute();
         }
 
         using var reopened = new SqliteLocalCommitStore(database.Path);
@@ -73,19 +72,19 @@ public sealed partial class SqliteStoreSchemaTests
             store.Initialize(initialization, CancellationToken.None);
         }
 
-        await using (var connection = OpenRawConnection(database.Path))
-        await using (var command = connection.CreateCommand())
+        using (var connection = OpenRawConnection(database.Path))
+        using (var command = connection.CreateStatement())
         {
-            command.CommandText = "DELETE FROM oc_metadata WHERE key = 'schema_checksum';";
-            await Assert.That(await command.ExecuteNonQueryAsync()).IsEqualTo(1);
+            command.SetSql("DELETE FROM oc_metadata WHERE key = 'schema_checksum';");
+            await Assert.That(command.Execute()).IsEqualTo(1);
         }
 
         using var reopened = new SqliteLocalCommitStore(database.Path);
         Action initialize = () => reopened.Initialize(initialization, CancellationToken.None);
         await Assert.That(initialize).ThrowsExactly<InvalidOperationException>();
 
-        await using var inspection = OpenRawConnection(database.Path);
-        await using var transaction = (SqliteTransaction)await inspection.BeginTransactionAsync();
+        using var inspection = OpenRawConnection(database.Path);
+        using var transaction = inspection.BeginTransaction();
         await Assert.That(SelectUserVersion(inspection, transaction)).IsEqualTo(SqliteStoreSchema.LocalCommitSchemaVersion);
         await Assert.That(SqliteSchemaChecksum.TrySelect(inspection, transaction)).IsNull();
         SqliteStoreSchema.ValidateLocalCommitSchema(inspection, transaction);
@@ -97,8 +96,8 @@ public sealed partial class SqliteStoreSchemaTests
     public async Task WhenSchemaChecksumIsRecordedTwice_ThenSecondRecordDoesNotWrite()
     {
         using var database = TempDatabase.Create();
-        await using var connection = OpenRawConnection(database.Path);
-        await using var transaction = (SqliteTransaction)await connection.BeginTransactionAsync();
+        using var connection = OpenRawConnection(database.Path);
+        using var transaction = connection.BeginTransaction();
         SqliteStoreSchema.CreateLocalCommitSchema(connection, transaction);
 
         await Assert.That(SqliteSchemaChecksum.Record(connection, transaction)).IsTrue();
@@ -112,15 +111,15 @@ public sealed partial class SqliteStoreSchemaTests
     public async Task WhenRecordedChecksumIsTruncated_ThenValidationFailsClosed()
     {
         using var database = TempDatabase.Create();
-        await using var connection = OpenRawConnection(database.Path);
-        await using var transaction = (SqliteTransaction)await connection.BeginTransactionAsync();
+        using var connection = OpenRawConnection(database.Path);
+        using var transaction = connection.BeginTransaction();
         SqliteStoreSchema.CreateLocalCommitSchema(connection, transaction);
         _ = SqliteSchemaChecksum.Record(connection, transaction);
-        await using (var command = connection.CreateCommand())
+        using (var command = connection.CreateStatement())
         {
-            command.Transaction = transaction;
-            command.CommandText = "UPDATE oc_metadata SET value = 'sha256:' WHERE key = 'schema_checksum';";
-            _ = await command.ExecuteNonQueryAsync();
+            command.UseTransaction(transaction);
+            command.SetSql("UPDATE oc_metadata SET value = 'sha256:' WHERE key = 'schema_checksum';");
+            _ = command.Execute();
         }
 
         Action action = () => SqliteSchemaChecksum.Verify(connection, transaction);

@@ -4,8 +4,8 @@
 
 using System.Runtime.CompilerServices;
 using System.Text;
-using Microsoft.Data.Sqlite;
 using ReactiveUI.Primitives.OccasionallyConnected;
+using ReactiveUI.Primitives.OccasionallyConnected.Sqlite;
 
 namespace ReactiveUI.Primitives.OccasionallyConnected.Storage.Sqlite;
 
@@ -271,7 +271,7 @@ internal static partial class SqliteLocalCommitSql
     /// <exception cref="InvalidOperationException">The stored stream state is invalid.</exception>
     /// <exception cref="SnapshotRecoveryCapacityExceededException">The capture exceeds a configured limit.</exception>
     internal static SqliteLocalStreamState? PreflightSnapshotRecoveryCapture(
-        SqliteConnection connection,
+        SqliteDatabase connection,
         SqliteTransaction transaction,
         string storeIdentity,
         LocalSnapshotRecoveryCaptureRequest request,
@@ -314,21 +314,21 @@ internal static partial class SqliteLocalCommitSql
     /// <returns>The subscription identifier.</returns>
     /// <exception cref="InvalidOperationException">The stored subscription identity is invalid.</exception>
     private static SubscriptionId ReadSnapshotRecoveryCaptureSubscriptionId(
-        SqliteConnection connection,
+        SqliteDatabase connection,
         SqliteTransaction transaction,
         string storeIdentity,
         StreamId streamId)
     {
-        using var command = connection.CreateCommand();
-        command.Transaction = transaction;
-        command.CommandText = """
+        using var command = connection.CreateStatement();
+        command.UseTransaction(transaction);
+        command.SetSql("""
             SELECT typeof(subscription_id), length(CAST(subscription_id AS BLOB)), substr(subscription_id, 1, $subscriptionIdTextLength)
             FROM oc_subscription_identities
             WHERE store_identity = $storeIdentity AND stream_id = $streamId;
-            """;
+            """);
         AddStreamParameters(command, storeIdentity, streamId);
-        _ = command.Parameters.AddWithValue("$subscriptionIdTextLength", SnapshotRecoverySubscriptionIdTextLength);
-        using var reader = command.ExecuteReader();
+        _ = command.Bind("$subscriptionIdTextLength", SnapshotRecoverySubscriptionIdTextLength);
+        using var reader = command.Query();
         if (!reader.Read())
         {
             throw new InvalidOperationException("The SQLite subscription identity is missing.");
@@ -356,14 +356,14 @@ internal static partial class SqliteLocalCommitSql
     /// <exception cref="InvalidOperationException">The stored stream state is invalid.</exception>
     /// <exception cref="SnapshotRecoveryCapacityExceededException">The capture exceeds a configured limit.</exception>
     private static SqliteLocalStreamState? ReadSnapshotRecoveryCaptureStream(
-        SqliteConnection connection,
+        SqliteDatabase connection,
         SqliteTransaction transaction,
         string storeIdentity,
         LocalSnapshotRecoveryCaptureRequest request)
     {
-        using var command = connection.CreateCommand();
-        command.Transaction = transaction;
-        command.CommandText = """
+        using var command = connection.CreateStatement();
+        command.UseTransaction(transaction);
+        command.SetSql("""
             SELECT CASE WHEN typeof(stream.next_client_sequence) = 'integer' THEN stream.next_client_sequence ELSE NULL END,
                    typeof(stream.server_cursor),
                    CASE WHEN stream.server_cursor IS NULL THEN 0 ELSE length(CAST(stream.server_cursor AS BLOB)) END,
@@ -378,15 +378,15 @@ internal static partial class SqliteLocalCommitSql
             INNER JOIN oc_subscription_identities AS identity
                 ON identity.store_identity = stream.store_identity AND identity.stream_id = stream.stream_id
             WHERE stream.store_identity = $storeIdentity AND stream.stream_id = $streamId;
-        """;
+        """);
         var isProtected = SqliteRecordCipher.For(connection) is not null;
         var storedCursorLimit = isProtected
             ? SqliteRecordCipher.ProtectedTextLengthUpperBound(request.Limits.MaximumCursorUtf8Bytes)
             : request.Limits.MaximumCursorUtf8Bytes;
         AddStreamParameters(command, storeIdentity, request.StreamId);
-        _ = command.Parameters.AddWithValue("$cursorLimit", storedCursorLimit);
-        _ = command.Parameters.AddWithValue("$subscriptionIdTextLength", SnapshotRecoverySubscriptionIdTextLength);
-        using var reader = command.ExecuteReader();
+        _ = command.Bind("$cursorLimit", storedCursorLimit);
+        _ = command.Bind("$subscriptionIdTextLength", SnapshotRecoverySubscriptionIdTextLength);
+        using var reader = command.Query();
         if (!reader.Read())
         {
             return null;
@@ -420,8 +420,8 @@ internal static partial class SqliteLocalCommitSql
     /// <exception cref="InvalidOperationException">The stored cursor is invalid or fails authentication.</exception>
     /// <exception cref="SnapshotRecoveryCapacityExceededException">The cursor exceeds the configured limit.</exception>
     private static string? ReadSnapshotRecoveryCaptureCursor(
-        SqliteConnection connection,
-        SqliteDataReader reader,
+        SqliteDatabase connection,
+        SqliteRows reader,
         LocalSnapshotRecoveryCaptureRequest request,
         long storedCursorLimit)
     {
@@ -461,21 +461,21 @@ internal static partial class SqliteLocalCommitSql
     /// <param name="streamId">The stream identifier.</param>
     /// <returns>Whether a quarantine marker exists.</returns>
     private static bool SnapshotRecoveryCaptureQuarantineExists(
-        SqliteConnection connection,
+        SqliteDatabase connection,
         SqliteTransaction transaction,
         string storeIdentity,
         StreamId streamId)
     {
-        using var command = connection.CreateCommand();
-        command.Transaction = transaction;
-        command.CommandText = """
+        using var command = connection.CreateStatement();
+        command.UseTransaction(transaction);
+        command.SetSql("""
             SELECT 1
             FROM oc_payload_quarantine
             WHERE store_identity = $storeIdentity AND stream_id = $streamId
             LIMIT 1;
-            """;
+            """);
         AddStreamParameters(command, storeIdentity, streamId);
-        return command.ExecuteScalar() is not null;
+        return command.Scalar() is not null;
     }
 
     /// <summary>Adds snapshot and authoritative snapshot logical bytes from bounded scalar evidence.</summary>
@@ -486,15 +486,15 @@ internal static partial class SqliteLocalCommitSql
     /// <param name="logicalBytes">The current logical byte count.</param>
     /// <returns>The updated logical byte count.</returns>
     private static long AddSnapshotRecoveryCaptureSnapshotBytes(
-        SqliteConnection connection,
+        SqliteDatabase connection,
         SqliteTransaction transaction,
         string storeIdentity,
         LocalSnapshotRecoveryCaptureRequest request,
         long logicalBytes)
     {
-        using var command = connection.CreateCommand();
-        command.Transaction = transaction;
-        command.CommandText = """
+        using var command = connection.CreateStatement();
+        command.UseTransaction(transaction);
+        command.SetSql("""
             SELECT typeof(server_cursor),
                    CASE WHEN server_cursor IS NULL THEN 0 ELSE length(CAST(server_cursor AS BLOB)) END,
                    length(CAST(payload_contract_id AS BLOB)),
@@ -510,9 +510,9 @@ internal static partial class SqliteLocalCommitSql
                    length(CAST(saved_at_utc AS BLOB))
             FROM oc_snapshots
             WHERE store_identity = $storeIdentity AND stream_id = $streamId;
-            """;
+            """);
         AddStreamParameters(command, storeIdentity, request.StreamId);
-        using var reader = command.ExecuteReader();
+        using var reader = command.Query();
         if (!reader.Read())
         {
             return logicalBytes;
@@ -551,15 +551,15 @@ internal static partial class SqliteLocalCommitSql
     /// <param name="logicalBytes">The current logical byte count.</param>
     /// <returns>The updated logical byte count.</returns>
     private static long AddSnapshotRecoveryCaptureAuthoritativeSnapshotBytes(
-        SqliteConnection connection,
+        SqliteDatabase connection,
         SqliteTransaction transaction,
         string storeIdentity,
         LocalSnapshotRecoveryCaptureRequest request,
         long logicalBytes)
     {
-        using var command = connection.CreateCommand();
-        command.Transaction = transaction;
-        command.CommandText = """
+        using var command = connection.CreateStatement();
+        command.UseTransaction(transaction);
+        command.SetSql("""
             SELECT length(CAST(payload_contract_id AS BLOB)),
                    length(CAST(payload_content_type AS BLOB)),
                    length(CAST(payload_hash AS BLOB)),
@@ -567,9 +567,9 @@ internal static partial class SqliteLocalCommitSql
                    typeof(payload_schema_version)
             FROM oc_snapshot_authoritative_states
             WHERE store_identity = $storeIdentity AND stream_id = $streamId;
-            """;
+            """);
         AddStreamParameters(command, storeIdentity, request.StreamId);
-        using var reader = command.ExecuteReader();
+        using var reader = command.Query();
         if (!reader.Read())
         {
             return logicalBytes;
@@ -600,19 +600,19 @@ internal static partial class SqliteLocalCommitSql
     /// <param name="cancellationToken">The cancellation token.</param>
     /// <returns>The updated logical byte count.</returns>
     private static long AddSnapshotRecoveryCaptureOperationBytes(
-        SqliteConnection connection,
+        SqliteDatabase connection,
         SqliteTransaction transaction,
         string storeIdentity,
         LocalSnapshotRecoveryCaptureRequest request,
         long logicalBytes,
         CancellationToken cancellationToken)
     {
-        using var command = connection.CreateCommand();
-        command.Transaction = transaction;
-        command.CommandText = SnapshotRecoveryCaptureOperationBytesSql;
+        using var command = connection.CreateStatement();
+        command.UseTransaction(transaction);
+        command.SetSql(SnapshotRecoveryCaptureOperationBytesSql);
         AddStreamParameters(command, storeIdentity, request.StreamId);
-        _ = command.Parameters.AddWithValue("$maximumRows", (long)request.Limits.MaximumPendingOperations + 1L);
-        using var reader = command.ExecuteReader();
+        _ = command.Bind("$maximumRows", (long)request.Limits.MaximumPendingOperations + 1L);
+        using var reader = command.Query();
         long count = 0;
         var streamIdBytes = Encoding.UTF8.GetByteCount(request.StreamId.Value);
         var isProtected = SqliteRecordCipher.For(connection) is not null;
@@ -668,7 +668,7 @@ internal static partial class SqliteLocalCommitSql
     /// <param name="isProtected">Whether the store encrypts the hash and payload columns.</param>
     /// <returns>The payload logical byte count.</returns>
     private static long GetSnapshotRecoveryCapturePayloadLogicalBytes(
-        SqliteDataReader reader,
+        SqliteRows reader,
         int contractLengthIndex,
         int contentTypeLengthIndex,
         int hashLengthIndex,
@@ -704,7 +704,7 @@ internal static partial class SqliteLocalCommitSql
     /// <param name="reader">The reader.</param>
     /// <param name="metadataCount">The metadata entry count.</param>
     /// <returns>The logical metadata byte upper bound.</returns>
-    private static long GetProtectedMetadataBytes(SqliteDataReader reader, long metadataCount)
+    private static long GetProtectedMetadataBytes(SqliteRows reader, long metadataCount)
     {
         const long MetadataCountBytes = 4;
         var keyBytes = ReadNonNegativeLong(reader, OperationMetadataKeyBytesIndex, InvalidMetadataBytesMessage);
@@ -719,7 +719,7 @@ internal static partial class SqliteLocalCommitSql
     /// <param name="message">The failure message.</param>
     /// <returns>The nullable text.</returns>
     /// <exception cref="InvalidOperationException">The stored text projection is invalid.</exception>
-    private static string? ReadSnapshotRecoveryCaptureNullableText(SqliteDataReader reader, int typeIndex, int valueIndex, string message)
+    private static string? ReadSnapshotRecoveryCaptureNullableText(SqliteRows reader, int typeIndex, int valueIndex, string message)
     {
         var storageType = ReadString(reader, typeIndex, message);
         if (string.Equals(storageType, "null", StringComparison.Ordinal))
@@ -740,7 +740,7 @@ internal static partial class SqliteLocalCommitSql
     /// <returns>The subscription identifier.</returns>
     /// <exception cref="InvalidOperationException">The stored subscription identity is invalid.</exception>
     private static SubscriptionId ReadSnapshotRecoveryCaptureProjectedSubscriptionId(
-        SqliteDataReader reader,
+        SqliteRows reader,
         int typeIndex,
         int lengthIndex,
         int valueIndex)
@@ -761,7 +761,7 @@ internal static partial class SqliteLocalCommitSql
     /// <summary>Validates operation scalar columns that the later decoder will read.</summary>
     /// <param name="reader">The reader.</param>
     /// <exception cref="InvalidOperationException">The stored operation scalar is invalid.</exception>
-    private static void ValidateSnapshotRecoveryCaptureOperationScalars(SqliteDataReader reader)
+    private static void ValidateSnapshotRecoveryCaptureOperationScalars(SqliteRows reader)
     {
         ValidateSnapshotRecoveryCapturePayloadSchemaType(reader, OperationPayloadSchemaTypeIndex, "The SQLite operation payload schema version is invalid.");
         ValidateSnapshotRecoveryCaptureTextLength(
@@ -791,7 +791,7 @@ internal static partial class SqliteLocalCommitSql
     /// <summary>Validates snapshot scalar columns that the later decoder will read.</summary>
     /// <param name="reader">The reader.</param>
     /// <exception cref="InvalidOperationException">The stored snapshot scalar is invalid.</exception>
-    private static void ValidateSnapshotRecoveryCaptureSnapshotScalars(SqliteDataReader reader)
+    private static void ValidateSnapshotRecoveryCaptureSnapshotScalars(SqliteRows reader)
     {
         ValidateSnapshotRecoveryCaptureIntegerType(reader, SnapshotFormatTypeIndex, "The SQLite snapshot format version is invalid.");
         _ = ReadPositiveInt(reader, SnapshotFormatValueIndex, "The SQLite snapshot format version is invalid.");
@@ -812,7 +812,7 @@ internal static partial class SqliteLocalCommitSql
     /// <param name="message">The failure message.</param>
     /// <exception cref="InvalidOperationException">The storage type is invalid.</exception>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static void ValidateSnapshotRecoveryCapturePayloadSchemaType(SqliteDataReader reader, int typeIndex, string message) =>
+    private static void ValidateSnapshotRecoveryCapturePayloadSchemaType(SqliteRows reader, int typeIndex, string message) =>
         ValidateSnapshotRecoveryCaptureIntegerType(reader, typeIndex, message);
 
     /// <summary>Validates integer storage type without materializing the stored value.</summary>
@@ -820,7 +820,7 @@ internal static partial class SqliteLocalCommitSql
     /// <param name="typeIndex">The storage type column index.</param>
     /// <param name="message">The failure message.</param>
     /// <exception cref="InvalidOperationException">The storage type is invalid.</exception>
-    private static void ValidateSnapshotRecoveryCaptureIntegerType(SqliteDataReader reader, int typeIndex, string message)
+    private static void ValidateSnapshotRecoveryCaptureIntegerType(SqliteRows reader, int typeIndex, string message)
     {
         var storageType = ReadString(reader, typeIndex, message);
         if (!string.Equals(storageType, "integer", StringComparison.Ordinal))
@@ -837,7 +837,7 @@ internal static partial class SqliteLocalCommitSql
     /// <param name="message">The failure message.</param>
     /// <exception cref="InvalidOperationException">The storage type or length is invalid.</exception>
     private static void ValidateSnapshotRecoveryCaptureTextLength(
-        SqliteDataReader reader,
+        SqliteRows reader,
         int typeIndex,
         int lengthIndex,
         long maximumLength,
@@ -856,7 +856,7 @@ internal static partial class SqliteLocalCommitSql
     /// <param name="typeIndex">The storage type column index.</param>
     /// <param name="message">The failure message.</param>
     /// <exception cref="InvalidOperationException">The storage type is invalid.</exception>
-    private static void ValidateSnapshotRecoveryCaptureNullableTextType(SqliteDataReader reader, int typeIndex, string message)
+    private static void ValidateSnapshotRecoveryCaptureNullableTextType(SqliteRows reader, int typeIndex, string message)
     {
         var storageType = ReadString(reader, typeIndex, message);
         if (!string.Equals(storageType, "null", StringComparison.Ordinal) && !string.Equals(storageType, "text", StringComparison.Ordinal))

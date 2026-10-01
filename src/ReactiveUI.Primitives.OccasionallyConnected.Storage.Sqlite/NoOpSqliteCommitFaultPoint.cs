@@ -2,6 +2,8 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using ReactiveUI.Primitives.OccasionallyConnected.Sqlite;
+
 namespace ReactiveUI.Primitives.OccasionallyConnected.Storage.Sqlite;
 
 /// <summary>Ignores every SQLite write checkpoint.</summary>
@@ -16,7 +18,7 @@ internal sealed class NoOpSqliteCommitFaultPoint : ISqliteCommitFaultPoint
     internal static NoOpSqliteCommitFaultPoint Instance { get; } = new();
 
     /// <inheritdoc/>
-    public void BeforeLocalCommitTransaction(Microsoft.Data.Sqlite.SqliteConnection connection)
+    public void BeforeLocalCommitTransaction(SqliteDatabase connection)
     {
     }
 

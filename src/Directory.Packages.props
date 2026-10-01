@@ -21,13 +21,7 @@
   </ItemGroup>
   <!-- OccasionallyConnected SQLite storage -->
   <ItemGroup>
-    <!--
-      Microsoft.Data.Sqlite.Core supplies the ADO.NET provider without a bundled
-      native SQLite build, so the Multiple Ciphers build below is the only
-      native provider registered (per SQLitePCLRaw guidance: never combine
-      multiple bundles in the same project).
-    -->
-    <PackageVersion Include="Microsoft.Data.Sqlite.Core" Version="10.0.12"/>
+    <!-- Direct native access uses one Multiple Ciphers provider. Never combine SQLite bundles. -->
     <PackageVersion Include="SQLitePCLRaw.core" Version="3.0.5"/>
     <PackageVersion Include="SQLite3MC.PCLRaw.bundle" Version="2.4.0"/>
   </ItemGroup>

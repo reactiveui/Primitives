@@ -2,7 +2,6 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
-using Microsoft.Data.Sqlite;
 using ReactiveUI.Primitives.OccasionallyConnected;
 using ReactiveUI.Primitives.OccasionallyConnected.Storage.Sqlite;
 
@@ -256,7 +255,7 @@ public sealed partial class SqliteLocalCommitStoreTests
             CompactionRetention,
             CancellationToken.None);
 
-        await Assert.That(action).ThrowsExactly<SqliteException>();
+        await Assert.That(action).ThrowsExactly<SqliteDatabaseException>();
         DropCompactionRollbackTrigger(database.Path);
         await Assert.That(OutboxOperationExists(database.Path, first.OperationId)).IsTrue();
         await Assert.That(OutboxOperationExists(database.Path, current.OperationId)).IsTrue();
@@ -403,17 +402,17 @@ public sealed partial class SqliteLocalCommitStoreTests
     private static void SetOperationStateAt(string path, OperationId operationId, SyncOperationState state, DateTimeOffset changedAtUtc)
     {
         using var connection = OpenRawConnection(path);
-        using var command = connection.CreateCommand();
-        command.CommandText = """
+        using var command = connection.CreateStatement();
+        command.SetSql("""
             UPDATE oc_outbox_operation_states
             SET operation_state = $state,
                 changed_at_utc = $changedAtUtc
             WHERE operation_id = $operationId;
-        """;
-        _ = command.Parameters.AddWithValue("$state", (int)state);
-        _ = command.Parameters.AddWithValue("$changedAtUtc", SqliteLocalCommitSql.FormatDateTimeOffset(changedAtUtc));
-        _ = command.Parameters.AddWithValue(OperationIdParameter, operationId.Value.ToString("D"));
-        _ = command.ExecuteNonQuery();
+        """);
+        _ = command.Bind("$state", (int)state);
+        _ = command.Bind("$changedAtUtc", SqliteLocalCommitSql.FormatDateTimeOffset(changedAtUtc));
+        _ = command.Bind(OperationIdParameter, operationId.Value.ToString("D"));
+        _ = command.Execute();
     }
 
     /// <summary>Sets an inbox row local committed timestamp.</summary>
@@ -423,15 +422,15 @@ public sealed partial class SqliteLocalCommitStoreTests
     private static void SetInboxCommittedAt(string path, Guid eventId, DateTimeOffset committedAtUtc)
     {
         using var connection = OpenRawConnection(path);
-        using var command = connection.CreateCommand();
-        command.CommandText = """
+        using var command = connection.CreateStatement();
+        command.SetSql("""
             UPDATE oc_inbox
             SET committed_at_utc = $committedAtUtc
             WHERE event_id = $eventId;
-            """;
-        _ = command.Parameters.AddWithValue("$committedAtUtc", SqliteLocalCommitSql.FormatDateTimeOffset(committedAtUtc));
-        _ = command.Parameters.AddWithValue("$eventId", eventId.ToString("D"));
-        _ = command.ExecuteNonQuery();
+            """);
+        _ = command.Bind("$committedAtUtc", SqliteLocalCommitSql.FormatDateTimeOffset(committedAtUtc));
+        _ = command.Bind("$eventId", eventId.ToString("D"));
+        _ = command.Execute();
     }
 
     /// <summary>Returns whether an outbox row exists.</summary>
@@ -441,10 +440,10 @@ public sealed partial class SqliteLocalCommitStoreTests
     private static bool OutboxOperationExists(string path, OperationId operationId)
     {
         using var connection = OpenRawConnection(path);
-        using var command = connection.CreateCommand();
-        command.CommandText = "SELECT COUNT(*) FROM oc_outbox WHERE operation_id = $operationId;";
-        _ = command.Parameters.AddWithValue(OperationIdParameter, operationId.Value.ToString("D"));
-        return command.ExecuteScalar() is long count && count == 1;
+        using var command = connection.CreateStatement();
+        command.SetSql("SELECT COUNT(*) FROM oc_outbox WHERE operation_id = $operationId;");
+        _ = command.Bind(OperationIdParameter, operationId.Value.ToString("D"));
+        return command.Scalar() is long count && count == 1;
     }
 
     /// <summary>Reads outbox payload and metadata bytes for one stream.</summary>
@@ -455,8 +454,8 @@ public sealed partial class SqliteLocalCommitStoreTests
     private static long ReadOutboxEncodedBytes(string path, StreamId streamId)
     {
         using var connection = OpenRawConnection(path);
-        using var command = connection.CreateCommand();
-        command.CommandText = """
+        using var command = connection.CreateStatement();
+        command.SetSql("""
             SELECT COALESCE(SUM(
                 length(outbox.payload) + COALESCE((
                     SELECT SUM(length(CAST(metadata.key AS BLOB)) + length(CAST(metadata.value AS BLOB)))
@@ -465,10 +464,10 @@ public sealed partial class SqliteLocalCommitStoreTests
                         AND metadata.operation_id = outbox.operation_id), 0)), 0)
             FROM oc_outbox AS outbox
             WHERE outbox.store_identity = $storeIdentity AND outbox.stream_id = $streamId;
-            """;
-        _ = command.Parameters.AddWithValue(StoreIdentityParameter, StoreIdentity);
-        _ = command.Parameters.AddWithValue(StreamIdParameter, streamId.Value);
-        return command.ExecuteScalar() is long bytes ? bytes : throw new InvalidOperationException("The outbox byte count could not be read.");
+            """);
+        _ = command.Bind(StoreIdentityParameter, StoreIdentity);
+        _ = command.Bind(StreamIdParameter, streamId.Value);
+        return command.Scalar() is long bytes ? bytes : throw new InvalidOperationException("The outbox byte count could not be read.");
     }
 
     /// <summary>Reads outbox payload and metadata bytes for one operation.</summary>
@@ -479,8 +478,8 @@ public sealed partial class SqliteLocalCommitStoreTests
     private static long ReadOutboxEncodedBytes(string path, OperationId operationId)
     {
         using var connection = OpenRawConnection(path);
-        using var command = connection.CreateCommand();
-        command.CommandText = """
+        using var command = connection.CreateStatement();
+        command.SetSql("""
             SELECT length(outbox.payload) + COALESCE((
                 SELECT SUM(length(CAST(metadata.key AS BLOB)) + length(CAST(metadata.value AS BLOB)))
                 FROM oc_outbox_metadata AS metadata
@@ -488,10 +487,10 @@ public sealed partial class SqliteLocalCommitStoreTests
                     AND metadata.operation_id = outbox.operation_id), 0)
             FROM oc_outbox AS outbox
             WHERE outbox.store_identity = $storeIdentity AND outbox.operation_id = $operationId;
-        """;
-        _ = command.Parameters.AddWithValue(StoreIdentityParameter, StoreIdentity);
-        _ = command.Parameters.AddWithValue(OperationIdParameter, operationId.Value.ToString("D"));
-        return command.ExecuteScalar() is long bytes ? bytes : throw new InvalidOperationException("The operation byte count could not be read.");
+        """);
+        _ = command.Bind(StoreIdentityParameter, StoreIdentity);
+        _ = command.Bind(OperationIdParameter, operationId.Value.ToString("D"));
+        return command.Scalar() is long bytes ? bytes : throw new InvalidOperationException("The operation byte count could not be read.");
     }
 
     /// <summary>Returns whether an inbox row exists.</summary>
@@ -501,10 +500,10 @@ public sealed partial class SqliteLocalCommitStoreTests
     private static bool InboxEventExists(string path, Guid eventId)
     {
         using var connection = OpenRawConnection(path);
-        using var command = connection.CreateCommand();
-        command.CommandText = "SELECT COUNT(*) FROM oc_inbox WHERE event_id = $eventId;";
-        _ = command.Parameters.AddWithValue("$eventId", eventId.ToString("D"));
-        return command.ExecuteScalar() is long count && count == 1;
+        using var command = connection.CreateStatement();
+        command.SetSql("SELECT COUNT(*) FROM oc_inbox WHERE event_id = $eventId;");
+        _ = command.Bind("$eventId", eventId.ToString("D"));
+        return command.Scalar() is long count && count == 1;
     }
 
     /// <summary>Creates a trigger that ignores outbox compaction deletes.</summary>
@@ -512,15 +511,15 @@ public sealed partial class SqliteLocalCommitStoreTests
     private static void CreateCompactionIgnoreOutboxDeleteTrigger(string path)
     {
         using var connection = OpenRawConnection(path);
-        using var command = connection.CreateCommand();
-        command.CommandText = """
+        using var command = connection.CreateStatement();
+        command.SetSql("""
             CREATE TRIGGER oc_outbox_compaction_ignore
             BEFORE DELETE ON oc_outbox
             BEGIN
                 SELECT RAISE(IGNORE);
             END;
-            """;
-        _ = command.ExecuteNonQuery();
+            """);
+        _ = command.Execute();
     }
 
     /// <summary>Drops the outbox compaction ignore trigger.</summary>
@@ -528,9 +527,9 @@ public sealed partial class SqliteLocalCommitStoreTests
     private static void DropCompactionIgnoreOutboxDeleteTrigger(string path)
     {
         using var connection = OpenRawConnection(path);
-        using var command = connection.CreateCommand();
-        command.CommandText = "DROP TRIGGER oc_outbox_compaction_ignore;";
-        _ = command.ExecuteNonQuery();
+        using var command = connection.CreateStatement();
+        command.SetSql("DROP TRIGGER oc_outbox_compaction_ignore;");
+        _ = command.Execute();
     }
 
     /// <summary>Creates a trigger that ignores inbox compaction deletes.</summary>
@@ -538,15 +537,15 @@ public sealed partial class SqliteLocalCommitStoreTests
     private static void CreateCompactionIgnoreInboxDeleteTrigger(string path)
     {
         using var connection = OpenRawConnection(path);
-        using var command = connection.CreateCommand();
-        command.CommandText = """
+        using var command = connection.CreateStatement();
+        command.SetSql("""
             CREATE TRIGGER oc_inbox_compaction_ignore
             BEFORE DELETE ON oc_inbox
             BEGIN
                 SELECT RAISE(IGNORE);
             END;
-            """;
-        _ = command.ExecuteNonQuery();
+            """);
+        _ = command.Execute();
     }
 
     /// <summary>Drops the inbox compaction ignore trigger.</summary>
@@ -554,9 +553,9 @@ public sealed partial class SqliteLocalCommitStoreTests
     private static void DropCompactionIgnoreInboxDeleteTrigger(string path)
     {
         using var connection = OpenRawConnection(path);
-        using var command = connection.CreateCommand();
-        command.CommandText = "DROP TRIGGER oc_inbox_compaction_ignore;";
-        _ = command.ExecuteNonQuery();
+        using var command = connection.CreateStatement();
+        command.SetSql("DROP TRIGGER oc_inbox_compaction_ignore;");
+        _ = command.Execute();
     }
 
     /// <summary>Creates a trigger that aborts compaction deletes.</summary>
@@ -564,15 +563,15 @@ public sealed partial class SqliteLocalCommitStoreTests
     private static void CreateCompactionRollbackTrigger(string path)
     {
         using var connection = OpenRawConnection(path);
-        using var command = connection.CreateCommand();
-        command.CommandText = """
+        using var command = connection.CreateStatement();
+        command.SetSql("""
             CREATE TRIGGER oc_outbox_compaction_abort
             BEFORE DELETE ON oc_outbox
             BEGIN
                 SELECT RAISE(ABORT, 'rollback compaction delete');
             END;
-            """;
-        _ = command.ExecuteNonQuery();
+            """);
+        _ = command.Execute();
     }
 
     /// <summary>Drops the compaction rollback trigger.</summary>
@@ -580,8 +579,8 @@ public sealed partial class SqliteLocalCommitStoreTests
     private static void DropCompactionRollbackTrigger(string path)
     {
         using var connection = OpenRawConnection(path);
-        using var command = connection.CreateCommand();
-        command.CommandText = "DROP TRIGGER oc_outbox_compaction_abort;";
-        _ = command.ExecuteNonQuery();
+        using var command = connection.CreateStatement();
+        command.SetSql("DROP TRIGGER oc_outbox_compaction_abort;");
+        _ = command.Execute();
     }
 }

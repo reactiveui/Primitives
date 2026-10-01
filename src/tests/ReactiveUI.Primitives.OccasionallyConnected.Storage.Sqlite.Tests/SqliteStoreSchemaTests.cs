@@ -2,7 +2,7 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
-using Microsoft.Data.Sqlite;
+using ReactiveUI.Primitives.OccasionallyConnected.Sqlite;
 using ReactiveUI.Primitives.OccasionallyConnected.Storage.Sqlite;
 
 namespace ReactiveUI.Primitives.OccasionallyConnected.Storage.Sqlite.Tests;
@@ -19,8 +19,8 @@ public sealed partial class SqliteStoreSchemaTests
     public async Task WhenLocalCommitSchemaIsCreated_ThenAllStateTablesStartAtVersionOne()
     {
         using var database = TempDatabase.Create();
-        await using var connection = OpenRawConnection(database.Path);
-        await using var transaction = (SqliteTransaction)await connection.BeginTransactionAsync();
+        using var connection = OpenRawConnection(database.Path);
+        using var transaction = connection.BeginTransaction();
         SqliteStoreSchema.CreateLocalCommitSchema(connection, transaction);
 
         await Assert.That(SelectUserVersion(connection, transaction)).IsEqualTo(1);
@@ -37,8 +37,8 @@ public sealed partial class SqliteStoreSchemaTests
     public async Task WhenLocalCommitMetadataVersionDrifts_ThenValidationFailsClosed()
     {
         using var database = TempDatabase.Create();
-        await using var connection = OpenRawConnection(database.Path);
-        await using var transaction = (SqliteTransaction)await connection.BeginTransactionAsync();
+        using var connection = OpenRawConnection(database.Path);
+        using var transaction = connection.BeginTransaction();
         SqliteStoreSchema.CreateLocalCommitSchema(connection, transaction);
         SetMetadataVersion(connection, transaction, UnsupportedSchemaVersion);
 
@@ -53,8 +53,8 @@ public sealed partial class SqliteStoreSchemaTests
     public async Task WhenTableDefinitionIsMissingSqlText_ThenValidationFailsClosed()
     {
         using var database = TempDatabase.Create();
-        await using var connection = OpenRawConnection(database.Path);
-        await using var transaction = (SqliteTransaction)await connection.BeginTransactionAsync();
+        using var connection = OpenRawConnection(database.Path);
+        using var transaction = connection.BeginTransaction();
         SqliteStoreSchema.CreateLocalCommitSchema(connection, transaction);
         ClearTableDefinition(connection, transaction, SqliteStoreSchema.MetadataTableName);
 
@@ -69,14 +69,14 @@ public sealed partial class SqliteStoreSchemaTests
     public async Task WhenOwnedTableIsMissing_ThenValidationFailsClosed()
     {
         using var database = TempDatabase.Create();
-        await using var connection = OpenRawConnection(database.Path);
-        await using var transaction = (SqliteTransaction)await connection.BeginTransactionAsync();
+        using var connection = OpenRawConnection(database.Path);
+        using var transaction = connection.BeginTransaction();
         SqliteStoreSchema.CreateLocalCommitSchema(connection, transaction);
-        await using (var command = connection.CreateCommand())
+        using (var command = connection.CreateStatement())
         {
-            command.Transaction = transaction;
-            command.CommandText = "DROP TABLE oc_payload_quarantine;";
-            _ = await command.ExecuteNonQueryAsync();
+            command.UseTransaction(transaction);
+            command.SetSql("DROP TABLE oc_payload_quarantine;");
+            _ = command.Execute();
         }
 
         Action action = () => SqliteStoreSchema.ValidateLocalCommitSchema(connection, transaction);
@@ -89,18 +89,18 @@ public sealed partial class SqliteStoreSchemaTests
     public async Task WhenOwnedTableDefinitionChanges_ThenValidationFailsClosed()
     {
         using var database = TempDatabase.Create();
-        await using var connection = OpenRawConnection(database.Path);
-        await using var transaction = (SqliteTransaction)await connection.BeginTransactionAsync();
+        using var connection = OpenRawConnection(database.Path);
+        using var transaction = connection.BeginTransaction();
         SqliteStoreSchema.CreateLocalCommitSchema(connection, transaction);
-        await using (var command = connection.CreateCommand())
+        using (var command = connection.CreateStatement())
         {
-            command.Transaction = transaction;
-            command.CommandText = """
+            command.UseTransaction(transaction);
+            command.SetSql("""
                 PRAGMA writable_schema = ON;
                 UPDATE sqlite_master SET sql = sql || ' CHECK (1)' WHERE type = 'table' AND name = 'oc_metadata';
                 PRAGMA writable_schema = OFF;
-                """;
-            _ = await command.ExecuteNonQueryAsync();
+                """);
+            _ = command.Execute();
         }
 
         Action action = () => SqliteStoreSchema.ValidateLocalCommitSchema(connection, transaction);
@@ -111,30 +111,30 @@ public sealed partial class SqliteStoreSchemaTests
     /// <param name="connection">The connection.</param>
     /// <param name="transaction">The transaction.</param>
     /// <param name="schemaVersion">The schema version.</param>
-    private static void SetMetadataVersion(SqliteConnection connection, SqliteTransaction transaction, int schemaVersion)
+    private static void SetMetadataVersion(SqliteDatabase connection, SqliteTransaction transaction, int schemaVersion)
     {
-        using var command = connection.CreateCommand();
-        command.Transaction = transaction;
-        command.CommandText = "UPDATE oc_metadata SET value = $value WHERE key = 'schema_version';";
-        _ = command.Parameters.AddWithValue("$value", schemaVersion.ToString(System.Globalization.CultureInfo.InvariantCulture));
-        _ = command.ExecuteNonQuery();
+        using var command = connection.CreateStatement();
+        command.UseTransaction(transaction);
+        command.SetSql("UPDATE oc_metadata SET value = $value WHERE key = 'schema_version';");
+        _ = command.Bind("$value", schemaVersion.ToString(System.Globalization.CultureInfo.InvariantCulture));
+        _ = command.Execute();
     }
 
     /// <summary>Removes a table definition from SQLite metadata to simulate catalog corruption.</summary>
     /// <param name="connection">The connection.</param>
     /// <param name="transaction">The transaction.</param>
     /// <param name="tableName">The table name.</param>
-    private static void ClearTableDefinition(SqliteConnection connection, SqliteTransaction transaction, string tableName)
+    private static void ClearTableDefinition(SqliteDatabase connection, SqliteTransaction transaction, string tableName)
     {
-        using var command = connection.CreateCommand();
-        command.Transaction = transaction;
-        command.CommandText = """
+        using var command = connection.CreateStatement();
+        command.UseTransaction(transaction);
+        command.SetSql("""
             PRAGMA writable_schema = ON;
             UPDATE sqlite_master SET sql = NULL WHERE type = 'table' AND name = $tableName;
             PRAGMA writable_schema = OFF;
-            """;
-        _ = command.Parameters.AddWithValue("$tableName", tableName);
-        _ = command.ExecuteNonQuery();
+            """);
+        _ = command.Bind("$tableName", tableName);
+        _ = command.Execute();
     }
 
     /// <summary>Selects the current SQLite user version.</summary>
@@ -142,12 +142,12 @@ public sealed partial class SqliteStoreSchemaTests
     /// <param name="transaction">The transaction.</param>
     /// <returns>The user version.</returns>
     /// <exception cref="InvalidOperationException">SQLite returns an unexpected user version.</exception>
-    private static long SelectUserVersion(SqliteConnection connection, SqliteTransaction transaction)
+    private static long SelectUserVersion(SqliteDatabase connection, SqliteTransaction transaction)
     {
-        using var command = connection.CreateCommand();
-        command.Transaction = transaction;
-        command.CommandText = "PRAGMA user_version;";
-        return command.ExecuteScalar() is long value
+        using var command = connection.CreateStatement();
+        command.UseTransaction(transaction);
+        command.SetSql("PRAGMA user_version;");
+        return command.Scalar() is long value
             ? value
             : throw new InvalidOperationException("SQLite user_version returned an unexpected value.");
     }
@@ -157,23 +157,22 @@ public sealed partial class SqliteStoreSchemaTests
     /// <param name="transaction">The transaction.</param>
     /// <param name="tableName">The table name.</param>
     /// <returns>Whether the table exists.</returns>
-    private static bool TableExists(SqliteConnection connection, SqliteTransaction transaction, string tableName)
+    private static bool TableExists(SqliteDatabase connection, SqliteTransaction transaction, string tableName)
     {
-        using var command = connection.CreateCommand();
-        command.Transaction = transaction;
-        command.CommandText = "SELECT COUNT(*) FROM sqlite_master WHERE type = 'table' AND name = $tableName;";
-        _ = command.Parameters.AddWithValue("$tableName", tableName);
-        return Convert.ToInt64(command.ExecuteScalar(), System.Globalization.CultureInfo.InvariantCulture) == 1;
+        using var command = connection.CreateStatement();
+        command.UseTransaction(transaction);
+        command.SetSql("SELECT COUNT(*) FROM sqlite_master WHERE type = 'table' AND name = $tableName;");
+        _ = command.Bind("$tableName", tableName);
+        return Convert.ToInt64(command.Scalar(), System.Globalization.CultureInfo.InvariantCulture) == 1;
     }
 
     /// <summary>Opens a raw SQLite connection with pooling disabled.</summary>
     /// <param name="path">The SQLite database path.</param>
     /// <returns>The open connection.</returns>
-    private static SqliteConnection OpenRawConnection(string path)
+    private static SqliteDatabase OpenRawConnection(string path)
     {
-        var connectionString = new SqliteConnectionStringBuilder { DataSource = path, Pooling = false }.ToString();
-        var connection = new SqliteConnection(connectionString);
-        connection.Open();
+        var connection = new SqliteDatabase(path);
+
         return connection;
     }
 

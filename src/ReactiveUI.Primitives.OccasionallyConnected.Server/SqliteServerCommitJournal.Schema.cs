@@ -6,7 +6,7 @@
 
 using System.Runtime.CompilerServices;
 using System.Text;
-using Microsoft.Data.Sqlite;
+using ReactiveUI.Primitives.OccasionallyConnected.Sqlite;
 
 namespace ReactiveUI.Primitives.OccasionallyConnected.Server;
 
@@ -17,124 +17,124 @@ internal sealed partial class SqliteServerCommitJournal
     /// <summary>Sets the current SQLite user version.</summary>
     /// <param name="connection">The connection.</param>
     /// <param name="transaction">The transaction.</param>
-    private static void SetUserVersion(SqliteConnection connection, SqliteTransaction transaction)
+    private static void SetUserVersion(SqliteDatabase connection, SqliteTransaction transaction)
     {
-        using var command = connection.CreateCommand();
-        command.Transaction = transaction;
-        command.CommandText = "PRAGMA user_version = 1;";
-        _ = command.ExecuteNonQuery();
+        using var command = connection.CreateStatement();
+        command.UseTransaction(transaction);
+        command.SetSql("PRAGMA user_version = 1;");
+        _ = command.Execute();
     }
 
     /// <summary>Creates the metadata table.</summary>
     /// <param name="connection">The connection.</param>
     /// <param name="transaction">The transaction.</param>
-    private static void CreateMetadataTable(SqliteConnection connection, SqliteTransaction transaction)
+    private static void CreateMetadataTable(SqliteDatabase connection, SqliteTransaction transaction)
     {
-        using var command = connection.CreateCommand();
-        command.Transaction = transaction;
-        command.CommandText = MetadataTableSql;
-        _ = command.ExecuteNonQuery();
+        using var command = connection.CreateStatement();
+        command.UseTransaction(transaction);
+        command.SetSql(MetadataTableSql);
+        _ = command.Execute();
     }
 
     /// <summary>Creates the stream table.</summary>
     /// <param name="connection">The connection.</param>
     /// <param name="transaction">The transaction.</param>
-    private static void CreateStreamsTable(SqliteConnection connection, SqliteTransaction transaction)
+    private static void CreateStreamsTable(SqliteDatabase connection, SqliteTransaction transaction)
     {
-        using var command = connection.CreateCommand();
-        command.Transaction = transaction;
-        command.CommandText = StreamsTableSql;
-        _ = command.ExecuteNonQuery();
+        using var command = connection.CreateStatement();
+        command.UseTransaction(transaction);
+        command.SetSql(StreamsTableSql);
+        _ = command.Execute();
     }
 
     /// <summary>Creates the ledger table.</summary>
     /// <param name="connection">The connection.</param>
     /// <param name="transaction">The transaction.</param>
-    private static void CreateLedgerTable(SqliteConnection connection, SqliteTransaction transaction)
+    private static void CreateLedgerTable(SqliteDatabase connection, SqliteTransaction transaction)
     {
-        using var command = connection.CreateCommand();
-        command.Transaction = transaction;
-        command.CommandText = LedgerTableSql;
-        _ = command.ExecuteNonQuery();
+        using var command = connection.CreateStatement();
+        command.UseTransaction(transaction);
+        command.SetSql(LedgerTableSql);
+        _ = command.Execute();
     }
 
     /// <summary>Creates the conflicts table.</summary>
     /// <param name="connection">The connection.</param>
     /// <param name="transaction">The transaction.</param>
-    private static void CreateConflictsTable(SqliteConnection connection, SqliteTransaction transaction)
+    private static void CreateConflictsTable(SqliteDatabase connection, SqliteTransaction transaction)
     {
-        using var command = connection.CreateCommand();
-        command.Transaction = transaction;
-        command.CommandText = ConflictsTableSql;
-        _ = command.ExecuteNonQuery();
+        using var command = connection.CreateStatement();
+        command.UseTransaction(transaction);
+        command.SetSql(ConflictsTableSql);
+        _ = command.Execute();
     }
 
     /// <summary>Creates the events table.</summary>
     /// <param name="connection">The connection.</param>
     /// <param name="transaction">The transaction.</param>
-    private static void CreateEventsTable(SqliteConnection connection, SqliteTransaction transaction)
+    private static void CreateEventsTable(SqliteDatabase connection, SqliteTransaction transaction)
     {
-        using var command = connection.CreateCommand();
-        command.Transaction = transaction;
-        command.CommandText = EventsTableSql;
-        _ = command.ExecuteNonQuery();
+        using var command = connection.CreateStatement();
+        command.UseTransaction(transaction);
+        command.SetSql(EventsTableSql);
+        _ = command.Execute();
     }
 
     /// <summary>Creates the event metadata table.</summary>
     /// <param name="connection">The connection.</param>
     /// <param name="transaction">The transaction.</param>
-    private static void CreateEventMetadataTable(SqliteConnection connection, SqliteTransaction transaction)
+    private static void CreateEventMetadataTable(SqliteDatabase connection, SqliteTransaction transaction)
     {
-        using var command = connection.CreateCommand();
-        command.Transaction = transaction;
-        command.CommandText = EventMetadataTableSql;
-        _ = command.ExecuteNonQuery();
+        using var command = connection.CreateStatement();
+        command.UseTransaction(transaction);
+        command.SetSql(EventMetadataTableSql);
+        _ = command.Execute();
     }
 
     /// <summary>Creates the subscription acknowledgement table.</summary>
     /// <param name="connection">The connection.</param>
     /// <param name="transaction">The transaction.</param>
-    private static void CreateSubscriptionsTable(SqliteConnection connection, SqliteTransaction transaction)
+    private static void CreateSubscriptionsTable(SqliteDatabase connection, SqliteTransaction transaction)
     {
-        using var command = connection.CreateCommand();
-        command.Transaction = transaction;
-        command.CommandText = SubscriptionsTableSql;
-        _ = command.ExecuteNonQuery();
+        using var command = connection.CreateStatement();
+        command.UseTransaction(transaction);
+        command.SetSql(SubscriptionsTableSql);
+        _ = command.Execute();
     }
 
     /// <summary>Creates the subscription offer table.</summary>
     /// <param name="connection">The connection.</param>
     /// <param name="transaction">The transaction.</param>
-    private static void CreateSubscriptionOffersTable(SqliteConnection connection, SqliteTransaction transaction)
+    private static void CreateSubscriptionOffersTable(SqliteDatabase connection, SqliteTransaction transaction)
     {
-        using var command = connection.CreateCommand();
-        command.Transaction = transaction;
-        command.CommandText = SubscriptionOffersTableSql;
-        _ = command.ExecuteNonQuery();
+        using var command = connection.CreateStatement();
+        command.UseTransaction(transaction);
+        command.SetSql(SubscriptionOffersTableSql);
+        _ = command.Execute();
     }
 
     /// <summary>Reads the retained event count.</summary>
     /// <param name="connection">The connection.</param>
     /// <param name="transaction">The transaction.</param>
     /// <returns>The event count.</returns>
-    private static int ReadEventCount(SqliteConnection connection, SqliteTransaction transaction)
+    private static int ReadEventCount(SqliteDatabase connection, SqliteTransaction transaction)
     {
-        using var command = connection.CreateCommand();
-        command.Transaction = transaction;
-        command.CommandText = "SELECT COUNT(*) FROM oc_server_journal_events;";
-        return ReadCount(command.ExecuteScalar(), "The SQLite server journal count is invalid.");
+        using var command = connection.CreateStatement();
+        command.UseTransaction(transaction);
+        command.SetSql("SELECT COUNT(*) FROM oc_server_journal_events;");
+        return ReadCount(command.Scalar(), "The SQLite server journal count is invalid.");
     }
 
     /// <summary>Returns whether user tables exist.</summary>
     /// <param name="connection">The connection.</param>
     /// <param name="transaction">The transaction.</param>
     /// <returns>Whether user tables exist.</returns>
-    private static bool HasUserTables(SqliteConnection connection, SqliteTransaction transaction)
+    private static bool HasUserTables(SqliteDatabase connection, SqliteTransaction transaction)
     {
-        using var command = connection.CreateCommand();
-        command.Transaction = transaction;
-        command.CommandText = "SELECT COUNT(*) FROM sqlite_master WHERE type = 'table' AND name NOT LIKE 'sqlite_%';";
-        return ReadCount(command.ExecuteScalar(), "The SQLite server journal count is invalid.") > 0;
+        using var command = connection.CreateStatement();
+        command.UseTransaction(transaction);
+        command.SetSql("SELECT COUNT(*) FROM sqlite_master WHERE type = 'table' AND name NOT LIKE 'sqlite_%';");
+        return ReadCount(command.Scalar(), "The SQLite server journal count is invalid.") > 0;
     }
 
     /// <summary>Gets the SQLite schema version.</summary>
@@ -142,12 +142,12 @@ internal sealed partial class SqliteServerCommitJournal
     /// <param name="transaction">The transaction.</param>
     /// <returns>The user version.</returns>
     /// <exception cref="InvalidOperationException">Thrown when SQLite data or schema validation fails.</exception>
-    private static long GetUserVersion(SqliteConnection connection, SqliteTransaction transaction)
+    private static long GetUserVersion(SqliteDatabase connection, SqliteTransaction transaction)
     {
-        using var command = connection.CreateCommand();
-        command.Transaction = transaction;
-        command.CommandText = "PRAGMA user_version;";
-        return ReadStorage<long>(command.ExecuteScalar(), "The SQLite server journal schema version could not be read.");
+        using var command = connection.CreateStatement();
+        command.UseTransaction(transaction);
+        command.SetSql("PRAGMA user_version;");
+        return ReadStorage<long>(command.Scalar(), "The SQLite server journal schema version could not be read.");
     }
 
     /// <summary>Validates the exact owned user table set.</summary>
@@ -155,12 +155,12 @@ internal sealed partial class SqliteServerCommitJournal
     /// <param name="transaction">The transaction.</param>
     /// <param name="expectedNames">The expected table names.</param>
     /// <exception cref="InvalidOperationException">Thrown when SQLite data or schema validation fails.</exception>
-    private static void ValidateUserTableNames(SqliteConnection connection, SqliteTransaction transaction, string[] expectedNames)
+    private static void ValidateUserTableNames(SqliteDatabase connection, SqliteTransaction transaction, string[] expectedNames)
     {
-        using var command = connection.CreateCommand();
-        command.Transaction = transaction;
-        command.CommandText = "SELECT name FROM sqlite_master WHERE type = 'table' AND name NOT LIKE 'sqlite_%' ORDER BY name;";
-        using var reader = command.ExecuteReader();
+        using var command = connection.CreateStatement();
+        command.UseTransaction(transaction);
+        command.SetSql("SELECT name FROM sqlite_master WHERE type = 'table' AND name NOT LIKE 'sqlite_%' ORDER BY name;");
+        using var reader = command.Query();
         var found = 0;
         while (reader.Read())
         {
@@ -192,7 +192,7 @@ internal sealed partial class SqliteServerCommitJournal
     /// <param name="expectedSql">The expected SQL definition.</param>
     /// <exception cref="InvalidOperationException">Thrown when SQLite data or schema validation fails.</exception>
     private static void ValidateTableDefinition(
-        SqliteConnection connection,
+        SqliteDatabase connection,
         SqliteTransaction transaction,
         string tableName,
         string expectedSql) =>
@@ -226,13 +226,13 @@ internal sealed partial class SqliteServerCommitJournal
     /// <param name="tableName">The table name.</param>
     /// <returns>The normalized table definition.</returns>
     /// <exception cref="InvalidOperationException">Thrown when SQLite data or schema validation fails.</exception>
-    private static string ReadTableDefinition(SqliteConnection connection, SqliteTransaction transaction, string tableName)
+    private static string ReadTableDefinition(SqliteDatabase connection, SqliteTransaction transaction, string tableName)
     {
-        using var command = connection.CreateCommand();
-        command.Transaction = transaction;
-        command.CommandText = "SELECT sql FROM sqlite_master WHERE type = 'table' AND name = $name;";
-        _ = command.Parameters.AddWithValue("$name", tableName);
-        return NormalizeCreateTableSql(ReadStorage<string>(command.ExecuteScalar(), InvalidSchemaMessage));
+        using var command = connection.CreateStatement();
+        command.UseTransaction(transaction);
+        command.SetSql("SELECT sql FROM sqlite_master WHERE type = 'table' AND name = $name;");
+        _ = command.Bind("$name", tableName);
+        return NormalizeCreateTableSql(ReadStorage<string>(command.Scalar(), InvalidSchemaMessage));
     }
 
     /// <summary>Normalizes create-table SQL for schema comparison.</summary>
@@ -264,47 +264,46 @@ internal sealed partial class SqliteServerCommitJournal
 
     /// <summary>Applies the connection busy timeout.</summary>
     /// <param name="connection">The open connection.</param>
-    private static void ConfigureBusyTimeout(SqliteConnection connection)
+    private static void ConfigureBusyTimeout(SqliteDatabase connection)
     {
-        using var command = connection.CreateCommand();
-        command.CommandText = "PRAGMA busy_timeout = 30000;";
-        _ = command.ExecuteNonQuery();
+        using var command = connection.CreateStatement();
+        connection.SetBusyTimeout(SqliteDatabase.DefaultBusyTimeoutMilliseconds);
     }
 
     /// <summary>Applies per-connection settings required before operational transactions.</summary>
     /// <param name="connection">The open connection.</param>
-    private static void ConfigureOperationalConnection(SqliteConnection connection)
+    private static void ConfigureOperationalConnection(SqliteDatabase connection)
     {
-        using (var foreignKeysCommand = connection.CreateCommand())
+        using (var foreignKeysCommand = connection.CreateStatement())
         {
-            foreignKeysCommand.CommandText = "PRAGMA foreign_keys = ON;";
-            _ = foreignKeysCommand.ExecuteNonQuery();
+            foreignKeysCommand.SetSql("PRAGMA foreign_keys = ON;");
+            _ = foreignKeysCommand.Execute();
         }
 
-        using (var synchronousCommand = connection.CreateCommand())
+        using (var synchronousCommand = connection.CreateStatement())
         {
-            synchronousCommand.CommandText = "PRAGMA synchronous = FULL;";
-            _ = synchronousCommand.ExecuteNonQuery();
+            synchronousCommand.SetSql("PRAGMA synchronous = FULL;");
+            _ = synchronousCommand.Execute();
         }
 
-        using (var verifyForeignKeysCommand = connection.CreateCommand())
+        using (var verifyForeignKeysCommand = connection.CreateStatement())
         {
-            verifyForeignKeysCommand.CommandText = "PRAGMA foreign_keys;";
-            VerifyForeignKeys(verifyForeignKeysCommand.ExecuteScalar());
+            verifyForeignKeysCommand.SetSql("PRAGMA foreign_keys;");
+            VerifyForeignKeys(verifyForeignKeysCommand.Scalar());
         }
 
-        using var verifySynchronousCommand = connection.CreateCommand();
-        verifySynchronousCommand.CommandText = "PRAGMA synchronous;";
-        VerifyFullSynchronous(verifySynchronousCommand.ExecuteScalar());
+        using var verifySynchronousCommand = connection.CreateStatement();
+        verifySynchronousCommand.SetSql("PRAGMA synchronous;");
+        VerifyFullSynchronous(verifySynchronousCommand.Scalar());
     }
 
     /// <summary>Applies durability pragmas after schema validation.</summary>
     /// <param name="connection">The open connection.</param>
-    private static void ConfigureDurability(SqliteConnection connection)
+    private static void ConfigureDurability(SqliteDatabase connection)
     {
-        using var command = connection.CreateCommand();
-        command.CommandText = "PRAGMA journal_mode = WAL;";
-        VerifyWalJournalMode(command.ExecuteScalar());
+        using var command = connection.CreateStatement();
+        command.SetSql("PRAGMA journal_mode = WAL;");
+        VerifyWalJournalMode(command.Scalar());
     }
 
     /// <summary>Verifies SQLite enabled foreign key enforcement for the current connection.</summary>

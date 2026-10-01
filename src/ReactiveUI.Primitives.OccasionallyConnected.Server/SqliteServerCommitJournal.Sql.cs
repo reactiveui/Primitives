@@ -6,7 +6,7 @@
 
 using System.Globalization;
 using System.Runtime.CompilerServices;
-using Microsoft.Data.Sqlite;
+using ReactiveUI.Primitives.OccasionallyConnected.Sqlite;
 
 namespace ReactiveUI.Primitives.OccasionallyConnected.Server;
 
@@ -26,7 +26,7 @@ internal sealed partial class SqliteServerCommitJournal
     /// <param name="transaction">The transaction.</param>
     /// <returns>The current high-water value.</returns>
     /// <exception cref="InvalidOperationException">The stored generation value is invalid.</exception>
-    private static long ReadSubscriptionGenerationHighWater(SqliteConnection connection, SqliteTransaction transaction)
+    private static long ReadSubscriptionGenerationHighWater(SqliteDatabase connection, SqliteTransaction transaction)
     {
         var value = SelectMetadata(connection, transaction, SubscriptionGenerationHighWaterKey);
         return long.TryParse(value, NumberStyles.None, CultureInfo.InvariantCulture, out var generation) && generation >= 0
@@ -40,7 +40,7 @@ internal sealed partial class SqliteServerCommitJournal
     /// <param name="generation">The high-water value.</param>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static void WriteSubscriptionGenerationHighWater(
-        SqliteConnection connection,
+        SqliteDatabase connection,
         SqliteTransaction transaction,
         long generation) =>
         WriteMetadataValue(connection, transaction, SubscriptionGenerationHighWaterKey, generation.ToString(CultureInfo.InvariantCulture));
@@ -48,7 +48,7 @@ internal sealed partial class SqliteServerCommitJournal
     /// <summary>Creates the SQLite schema.</summary>
     /// <param name="connection">The connection.</param>
     /// <param name="transaction">The transaction.</param>
-    private static void CreateSchema(SqliteConnection connection, SqliteTransaction transaction)
+    private static void CreateSchema(SqliteDatabase connection, SqliteTransaction transaction)
     {
         SetUserVersion(connection, transaction);
         CreateMetadataTable(connection, transaction);
@@ -69,7 +69,7 @@ internal sealed partial class SqliteServerCommitJournal
     /// <param name="transaction">The transaction.</param>
     /// <exception cref="InvalidOperationException">Thrown when SQLite data or schema validation fails.</exception>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static void ValidateExistingSchema(SqliteConnection connection, SqliteTransaction transaction) =>
+    private static void ValidateExistingSchema(SqliteDatabase connection, SqliteTransaction transaction) =>
         ValidateExistingSchema(connection, transaction, GetUserVersion(connection, transaction));
 
     /// <summary>Validates the current durable schema.</summary>
@@ -77,7 +77,7 @@ internal sealed partial class SqliteServerCommitJournal
     /// <param name="transaction">The transaction.</param>
     /// <param name="userVersion">The SQLite user version.</param>
     /// <exception cref="InvalidOperationException">Thrown when SQLite data or schema validation fails.</exception>
-    private static void ValidateExistingSchema(SqliteConnection connection, SqliteTransaction transaction, long userVersion)
+    private static void ValidateExistingSchema(SqliteDatabase connection, SqliteTransaction transaction, long userVersion)
     {
         if (userVersion != CurrentSchemaVersion)
         {
@@ -123,7 +123,7 @@ internal sealed partial class SqliteServerCommitJournal
     /// <param name="commit">The validated commit.</param>
     /// <exception cref="InvalidOperationException">Thrown when SQLite data or schema validation fails.</exception>
     private static void UpsertStream(
-        SqliteConnection connection,
+        SqliteDatabase connection,
         SqliteTransaction transaction,
         ServerStreamKey streamKey,
         ServerCommitStreamRecord stream,
@@ -132,9 +132,9 @@ internal sealed partial class SqliteServerCommitJournal
         ServerCommitJournalOperations.ApplyState(stream, commit);
         var lastCursor = commit.LastCursor ?? stream.LastCursor;
         var lastCursorBytes = commit.LastCursor is null ? stream.LastCursorBytes : commit.LastCursorBytes;
-        using var command = connection.CreateCommand();
-        command.Transaction = transaction;
-        command.CommandText = """
+        using var command = connection.CreateStatement();
+        command.UseTransaction(transaction);
+        command.SetSql("""
             UPDATE oc_server_journal_streams
             SET revision = $revision,
                 state_version = $stateVersion,
@@ -153,17 +153,17 @@ internal sealed partial class SqliteServerCommitJournal
                 last_group_sequence = $lastGroupSequence,
                 receive_history_incomplete = $receiveHistoryIncomplete
             WHERE tenant_id = $tenantId AND stream_id = $streamId;
-            """;
+            """);
         AddStreamParameters(command, streamKey);
         AddNullableStateParameters(command, stream.State, stream.StateBytes);
         AddNullableWriteStampParameters(command, stream.LastWriteStamp);
-        _ = command.Parameters.AddWithValue("$revision", checked(stream.Revision + 1));
-        _ = command.Parameters.AddWithValue("$lastCursor", (object?)lastCursor ?? DBNull.Value);
-        _ = command.Parameters.AddWithValue("$lastEventSequence", checked(stream.LastEventSequence + commit.EventCount));
-        _ = command.Parameters.AddWithValue("$lastCursorBytes", lastCursorBytes);
-        _ = command.Parameters.AddWithValue("$lastGroupSequence", checked(stream.LastGroupSequence + commit.Entries.Length));
-        _ = command.Parameters.AddWithValue("$receiveHistoryIncomplete", Convert.ToInt32(stream.HasReceiveHistoryGap));
-        if (command.ExecuteNonQuery() == 1)
+        _ = command.Bind("$revision", checked(stream.Revision + 1));
+        _ = command.Bind("$lastCursor", (object?)lastCursor ?? DBNull.Value);
+        _ = command.Bind("$lastEventSequence", checked(stream.LastEventSequence + commit.EventCount));
+        _ = command.Bind("$lastCursorBytes", lastCursorBytes);
+        _ = command.Bind("$lastGroupSequence", checked(stream.LastGroupSequence + commit.Entries.Length));
+        _ = command.Bind("$receiveHistoryIncomplete", Convert.ToInt32(stream.HasReceiveHistoryGap));
+        if (command.Execute() == 1)
         {
             return;
         }
@@ -175,11 +175,11 @@ internal sealed partial class SqliteServerCommitJournal
     /// <param name="connection">The connection.</param>
     /// <param name="transaction">The transaction.</param>
     /// <param name="streamKey">The stream key.</param>
-    private static void InsertStream(SqliteConnection connection, SqliteTransaction transaction, ServerStreamKey streamKey)
+    private static void InsertStream(SqliteDatabase connection, SqliteTransaction transaction, ServerStreamKey streamKey)
     {
-        using var command = connection.CreateCommand();
-        command.Transaction = transaction;
-        command.CommandText = """
+        using var command = connection.CreateStatement();
+        command.UseTransaction(transaction);
+        command.SetSql("""
             INSERT INTO oc_server_journal_streams
                 (tenant_id, stream_id, revision, state_version, state_payload_contract_id, state_payload_schema_version,
                  state_payload_content_type, state_payload, state_payload_hash, write_stamp_committed_at_utc, write_stamp_client_id,
@@ -187,9 +187,9 @@ internal sealed partial class SqliteServerCommitJournal
                  last_group_sequence, receive_history_incomplete)
             VALUES
                 ($tenantId, $streamId, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, 0, 0, 0, 0);
-            """;
+            """);
         AddStreamParameters(command, streamKey);
-        _ = command.ExecuteNonQuery();
+        _ = command.Execute();
     }
 
     /// <summary>Inserts committed ledger rows and sidecars.</summary>
@@ -199,7 +199,7 @@ internal sealed partial class SqliteServerCommitJournal
     /// <param name="entries">The committed entries.</param>
     /// <param name="entryBytes">The logical bytes per entry.</param>
     private static void InsertLedger(
-        SqliteConnection connection,
+        SqliteDatabase connection,
         SqliteTransaction transaction,
         ServerStreamKey streamKey,
         ServerLedgerEntry[] entries,
@@ -224,34 +224,34 @@ internal sealed partial class SqliteServerCommitJournal
     /// <param name="logicalBytes">The retained logical bytes.</param>
     /// <param name="groupSequence">The receive group sequence.</param>
     private static void InsertLedgerEntry(
-        SqliteConnection connection,
+        SqliteDatabase connection,
         SqliteTransaction transaction,
         ServerStreamKey streamKey,
         ServerLedgerEntry entry,
         long logicalBytes,
         long groupSequence)
     {
-        using var command = connection.CreateCommand();
-        command.Transaction = transaction;
-        command.CommandText = """
+        using var command = connection.CreateStatement();
+        command.UseTransaction(transaction);
+        command.SetSql("""
             INSERT INTO oc_server_journal_ledger
                 (tenant_id, stream_id, client_id, operation_id, fingerprint, result_kind, result_reason_code,
                  result_server_version, committed_at_utc, expires_at_utc, logical_bytes, group_sequence)
             VALUES
                 ($tenantId, $streamId, $clientId, $operationId, $fingerprint, $resultKind, $resultReasonCode,
                  $resultServerVersion, $committedAtUtc, $expiresAtUtc, $logicalBytes, $groupSequence);
-            """;
+            """);
         AddStreamParameters(command, streamKey);
         AddOperationParameters(command, entry.OperationKey);
         AddFingerprintParameter(command, entry.Fingerprint);
-        _ = command.Parameters.AddWithValue("$resultKind", (int)entry.Result.Kind);
-        _ = command.Parameters.AddWithValue("$resultReasonCode", (object?)entry.Result.ReasonCode ?? DBNull.Value);
-        _ = command.Parameters.AddWithValue("$resultServerVersion", (object?)entry.Result.ServerVersion ?? DBNull.Value);
-        _ = command.Parameters.AddWithValue("$committedAtUtc", FormatDateTimeOffset(entry.CommittedAtUtc));
-        _ = command.Parameters.AddWithValue("$expiresAtUtc", FormatDateTimeOffset(entry.ExpiresAtUtc));
-        _ = command.Parameters.AddWithValue("$logicalBytes", logicalBytes);
-        _ = command.Parameters.AddWithValue("$groupSequence", groupSequence);
-        _ = command.ExecuteNonQuery();
+        _ = command.Bind("$resultKind", (int)entry.Result.Kind);
+        _ = command.Bind("$resultReasonCode", (object?)entry.Result.ReasonCode ?? DBNull.Value);
+        _ = command.Bind("$resultServerVersion", (object?)entry.Result.ServerVersion ?? DBNull.Value);
+        _ = command.Bind("$committedAtUtc", FormatDateTimeOffset(entry.CommittedAtUtc));
+        _ = command.Bind("$expiresAtUtc", FormatDateTimeOffset(entry.ExpiresAtUtc));
+        _ = command.Bind("$logicalBytes", logicalBytes);
+        _ = command.Bind("$groupSequence", groupSequence);
+        _ = command.Execute();
     }
 
     /// <summary>Inserts conflict sidecars for one ledger row.</summary>
@@ -259,14 +259,14 @@ internal sealed partial class SqliteServerCommitJournal
     /// <param name="transaction">The transaction.</param>
     /// <param name="streamKey">The stream key.</param>
     /// <param name="entry">The entry.</param>
-    private static void InsertConflicts(SqliteConnection connection, SqliteTransaction transaction, ServerStreamKey streamKey, ServerLedgerEntry entry)
+    private static void InsertConflicts(SqliteDatabase connection, SqliteTransaction transaction, ServerStreamKey streamKey, ServerLedgerEntry entry)
     {
         for (var index = 0; index < entry.Conflicts.Count; index++)
         {
             var conflict = entry.Conflicts[index];
-            using var command = connection.CreateCommand();
-            command.Transaction = transaction;
-            command.CommandText = """
+            using var command = connection.CreateStatement();
+            command.UseTransaction(transaction);
+            command.SetSql("""
                 INSERT INTO oc_server_journal_conflicts
                     (tenant_id, stream_id, client_id, operation_id, conflict_index, resolution_code,
                      resolved_payload_contract_id, resolved_payload_schema_version, resolved_payload_content_type,
@@ -275,13 +275,13 @@ internal sealed partial class SqliteServerCommitJournal
                     ($tenantId, $streamId, $clientId, $operationId, $conflictIndex, $resolutionCode,
                      $resolvedPayloadContractId, $resolvedPayloadSchemaVersion, $resolvedPayloadContentType,
                      $resolvedPayload, $resolvedPayloadHash);
-                """;
+                """);
             AddStreamParameters(command, streamKey);
             AddOperationParameters(command, entry.OperationKey);
-            _ = command.Parameters.AddWithValue("$conflictIndex", index);
-            _ = command.Parameters.AddWithValue("$resolutionCode", conflict.ResolutionCode);
+            _ = command.Bind("$conflictIndex", index);
+            _ = command.Bind("$resolutionCode", conflict.ResolutionCode);
             AddNullablePayloadParameters(command, "resolved", conflict.ResolvedPayload);
-            _ = command.ExecuteNonQuery();
+            _ = command.Execute();
         }
     }
 
@@ -293,7 +293,7 @@ internal sealed partial class SqliteServerCommitJournal
     /// <param name="nextEventSequence">The last event sequence.</param>
     /// <returns>The new last event sequence.</returns>
     private static long InsertEvents(
-        SqliteConnection connection,
+        SqliteDatabase connection,
         SqliteTransaction transaction,
         ServerStreamKey streamKey,
         ServerLedgerEntry entry,
@@ -319,7 +319,7 @@ internal sealed partial class SqliteServerCommitJournal
     /// <param name="eventIndex">The event index inside the entry.</param>
     /// <param name="eventSequence">The stream event sequence.</param>
     private static void InsertEvent(
-        SqliteConnection connection,
+        SqliteDatabase connection,
         SqliteTransaction transaction,
         ServerStreamKey streamKey,
         ServerOperationKey operationKey,
@@ -327,9 +327,9 @@ internal sealed partial class SqliteServerCommitJournal
         int eventIndex,
         long eventSequence)
     {
-        using var command = connection.CreateCommand();
-        command.Transaction = transaction;
-        command.CommandText = """
+        using var command = connection.CreateStatement();
+        command.UseTransaction(transaction);
+        command.SetSql("""
             INSERT INTO oc_server_journal_events
                 (tenant_id, stream_id, event_sequence, client_id, operation_id, event_index, event_id, server_cursor,
                  committed_at_utc, caused_by_operation_id, origin_client_id, origin_operation_id, payload_contract_id,
@@ -338,19 +338,19 @@ internal sealed partial class SqliteServerCommitJournal
                 ($tenantId, $streamId, $eventSequence, $clientId, $operationId, $eventIndex, $eventId, $serverCursor,
                  $committedAtUtc, $causedByOperationId, $originClientId, $originOperationId, $payloadContractId,
                  $payloadSchemaVersion, $payloadContentType, $payload, $payloadHash);
-            """;
+            """);
         AddStreamParameters(command, streamKey);
         AddOperationParameters(command, operationKey);
-        _ = command.Parameters.AddWithValue(EventSequenceParameterName, eventSequence);
-        _ = command.Parameters.AddWithValue("$eventIndex", eventIndex);
-        _ = command.Parameters.AddWithValue("$eventId", remoteEvent.EventId.ToString("D"));
-        _ = command.Parameters.AddWithValue("$serverCursor", remoteEvent.ServerCursor);
-        _ = command.Parameters.AddWithValue("$committedAtUtc", FormatDateTimeOffset(remoteEvent.CommittedAtUtc));
-        _ = command.Parameters.AddWithValue("$causedByOperationId", remoteEvent.CausedByOperationId.HasValue ? remoteEvent.CausedByOperationId.Value.Value.ToString("D") : DBNull.Value);
-        _ = command.Parameters.AddWithValue("$originClientId", (object?)remoteEvent.Origin?.ClientId ?? DBNull.Value);
-        _ = command.Parameters.AddWithValue("$originOperationId", remoteEvent.Origin is null ? DBNull.Value : remoteEvent.Origin.OperationId.Value.ToString("D"));
+        _ = command.Bind(EventSequenceParameterName, eventSequence);
+        _ = command.Bind("$eventIndex", eventIndex);
+        _ = command.Bind("$eventId", remoteEvent.EventId.ToString("D"));
+        _ = command.Bind("$serverCursor", remoteEvent.ServerCursor);
+        _ = command.Bind("$committedAtUtc", FormatDateTimeOffset(remoteEvent.CommittedAtUtc));
+        _ = command.Bind("$causedByOperationId", remoteEvent.CausedByOperationId.HasValue ? remoteEvent.CausedByOperationId.Value.Value.ToString("D") : DBNull.Value);
+        _ = command.Bind("$originClientId", (object?)remoteEvent.Origin?.ClientId ?? DBNull.Value);
+        _ = command.Bind("$originOperationId", remoteEvent.Origin is null ? DBNull.Value : remoteEvent.Origin.OperationId.Value.ToString("D"));
         AddPayloadParameters(command, remoteEvent.Payload);
-        _ = command.ExecuteNonQuery();
+        _ = command.Execute();
     }
 
     /// <summary>Inserts event metadata rows.</summary>
@@ -360,7 +360,7 @@ internal sealed partial class SqliteServerCommitJournal
     /// <param name="eventSequence">The event sequence.</param>
     /// <param name="remoteEvent">The event.</param>
     private static void InsertEventMetadata(
-        SqliteConnection connection,
+        SqliteDatabase connection,
         SqliteTransaction transaction,
         ServerStreamKey streamKey,
         long eventSequence,
@@ -368,19 +368,19 @@ internal sealed partial class SqliteServerCommitJournal
     {
         foreach (var pair in remoteEvent.Metadata)
         {
-            using var command = connection.CreateCommand();
-            command.Transaction = transaction;
-            command.CommandText = """
+            using var command = connection.CreateStatement();
+            command.UseTransaction(transaction);
+            command.SetSql("""
                 INSERT INTO oc_server_journal_event_metadata
                     (tenant_id, stream_id, event_sequence, key, value)
                 VALUES
                     ($tenantId, $streamId, $eventSequence, $key, $value);
-                """;
+                """);
             AddStreamParameters(command, streamKey);
-            _ = command.Parameters.AddWithValue(EventSequenceParameterName, eventSequence);
-            _ = command.Parameters.AddWithValue("$key", pair.Key);
-            _ = command.Parameters.AddWithValue(ValueParameterName, pair.Value);
-            _ = command.ExecuteNonQuery();
+            _ = command.Bind(EventSequenceParameterName, eventSequence);
+            _ = command.Bind("$key", pair.Key);
+            _ = command.Bind(ValueParameterName, pair.Value);
+            _ = command.Execute();
         }
     }
 }

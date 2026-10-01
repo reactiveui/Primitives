@@ -2,7 +2,6 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
-using Microsoft.Data.Sqlite;
 using ReactiveUI.Primitives.OccasionallyConnected.Storage.Sqlite;
 
 namespace ReactiveUI.Primitives.OccasionallyConnected.Storage.Sqlite.Tests;
@@ -29,7 +28,7 @@ public sealed partial class SqliteLocalCommitConnectionTests
 
         Action action = () => SqliteLocalCommitConnection.OpenConnection(database.Path);
 
-        await Assert.That(action).ThrowsExactly<SqliteException>();
+        await Assert.That(action).ThrowsExactly<SqliteDatabaseException>();
     }
 
     /// <summary>Verifies only busy and locked SQLite errors are classified as retryable lock contention.</summary>
@@ -37,9 +36,9 @@ public sealed partial class SqliteLocalCommitConnectionTests
     [Test]
     public async Task WhenSqliteErrorIsBusyOrLocked_ThenItIsRetryableContention()
     {
-        var busy = new SqliteException("busy", SqliteBusy);
-        var locked = new SqliteException("locked", SqliteLocked);
-        var constraint = new SqliteException("constraint", SqliteConstraint);
+        var busy = new SqliteDatabaseException("busy", SqliteBusy);
+        var locked = new SqliteDatabaseException("locked", SqliteLocked);
+        var constraint = new SqliteDatabaseException("constraint", SqliteConstraint);
 
         await Assert.That(SqliteLocalCommitConnection.IsBusyOrLocked(busy)).IsTrue();
         await Assert.That(SqliteLocalCommitConnection.IsBusyOrLocked(locked)).IsTrue();

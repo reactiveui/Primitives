@@ -4,7 +4,6 @@
 
 using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
-using Microsoft.Data.Sqlite;
 using ReactiveUI.Primitives.OccasionallyConnected.Crdt;
 using ReactiveUI.Primitives.OccasionallyConnected.Storage.Sqlite;
 using ReactiveUI.Primitives.OccasionallyConnected.Transport.Http;
@@ -294,14 +293,6 @@ internal static partial class DurableHttpLostAckScenario
     /// <param name="path">The path.</param>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static void DeleteDirectory(string path) => Directory.Delete(path, recursive: true);
-
-    /// <summary>Creates a SQLite connection string.</summary>
-    /// <param name="databasePath">The database path.</param>
-    /// <param name="mode">The mode.</param>
-    /// <returns>The result.</returns>
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static string CreateSqliteConnectionString(string databasePath, SqliteOpenMode mode) =>
-        new SqliteConnectionStringBuilder { DataSource = databasePath, Mode = mode, Pooling = false }.ToString();
 
     /// <summary>Waits for a sampled asynchronous proof to satisfy a predicate.</summary>
     /// <typeparam name="T">The sampled proof type.</typeparam>

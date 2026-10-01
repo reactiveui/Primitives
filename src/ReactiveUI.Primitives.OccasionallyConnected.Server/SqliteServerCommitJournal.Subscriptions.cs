@@ -6,7 +6,7 @@
 
 using System.Runtime.CompilerServices;
 
-using Microsoft.Data.Sqlite;
+using ReactiveUI.Primitives.OccasionallyConnected.Sqlite;
 
 namespace ReactiveUI.Primitives.OccasionallyConnected.Server;
 
@@ -141,7 +141,7 @@ internal sealed partial class SqliteServerCommitJournal
     /// <exception cref="InvalidOperationException">The subscription identity conflicts with retained state.</exception>
     /// <exception cref="QueueCapacityExceededException">The subscription storage is full.</exception>
     private static ServerSubscriptionState RegisterSubscription(
-        SqliteConnection connection,
+        SqliteDatabase connection,
         SqliteTransaction transaction,
         ServerSubscriptionRegistrationRequest request,
         DateTimeOffset updatedUtc,
@@ -190,7 +190,7 @@ internal sealed partial class SqliteServerCommitJournal
     /// <returns>The subscription record.</returns>
     /// <exception cref="InvalidOperationException">The subscription is missing or bound to another identity.</exception>
     private static ServerSubscriptionRecord ReadRegisteredSubscription(
-        SqliteConnection connection,
+        SqliteDatabase connection,
         SqliteTransaction transaction,
         ServerSubscriptionIdentity identity)
     {
@@ -207,13 +207,13 @@ internal sealed partial class SqliteServerCommitJournal
     /// <param name="subscriptionId">The subscription identifier.</param>
     /// <returns>The subscription record or null.</returns>
     private static ServerSubscriptionRecord? ReadSubscriptionRecord(
-        SqliteConnection connection,
+        SqliteDatabase connection,
         SqliteTransaction transaction,
         SubscriptionId subscriptionId)
     {
-        using var command = connection.CreateCommand();
-        command.Transaction = transaction;
-        command.CommandText = """
+        using var command = connection.CreateStatement();
+        command.UseTransaction(transaction);
+        command.SetSql("""
             SELECT subscription_id, tenant_id, stream_id, client_id, initial_position_kind, initial_sequence,
                    initial_timestamp_utc, initial_cursor, initial_anchor_cursor, initial_anchor_group_sequence,
                    initial_anchor_resolved, acknowledged_cursor, acknowledged_group_sequence, latest_offered_cursor,
@@ -221,9 +221,9 @@ internal sealed partial class SqliteServerCommitJournal
                    generation, revision
             FROM oc_server_journal_subscriptions
             WHERE subscription_id = $subscriptionId;
-            """;
+            """);
         AddSubscriptionIdParameter(command, subscriptionId);
-        using var reader = command.ExecuteReader();
+        using var reader = command.Query();
         if (!reader.Read())
         {
             return null;
@@ -262,13 +262,13 @@ internal sealed partial class SqliteServerCommitJournal
     /// <param name="transaction">The transaction.</param>
     /// <param name="record">The subscription record.</param>
     private static void ReadOffers(
-        SqliteConnection connection,
+        SqliteDatabase connection,
         SqliteTransaction transaction,
         ServerSubscriptionRecord record)
     {
-        using var command = connection.CreateCommand();
-        command.Transaction = transaction;
-        command.CommandText = """
+        using var command = connection.CreateStatement();
+        command.UseTransaction(transaction);
+        command.SetSql("""
             SELECT cursor, group_sequence, offered_at_utc, logical_bytes, snapshot_stream_revision,
                    snapshot_last_event_sequence, snapshot_subscription_generation, snapshot_originating_subscription_revision,
                    snapshot_issued_subscription_revision, snapshot_format_version, snapshot_client_state_payload_contract_id,
@@ -277,9 +277,9 @@ internal sealed partial class SqliteServerCommitJournal
             FROM oc_server_journal_subscription_offers
             WHERE subscription_id = $subscriptionId
             ORDER BY group_sequence ASC, cursor ASC;
-            """;
+            """);
         AddSubscriptionIdParameter(command, record.Identity.SubscriptionId);
-        using var reader = command.ExecuteReader();
+        using var reader = command.Query();
         while (reader.Read())
         {
             var cursor = ReadCursor(reader, OfferCursorColumn, "The SQLite server subscription offer cursor is invalid.");
@@ -323,7 +323,7 @@ internal sealed partial class SqliteServerCommitJournal
     /// <param name="name">The proof field name.</param>
     /// <returns>The nullable sequence value.</returns>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static long? ReadOfferSnapshotLong(SqliteDataReader reader, int ordinal, string name) =>
+    private static long? ReadOfferSnapshotLong(SqliteRows reader, int ordinal, string name) =>
         ReadNullableNonNegativeLong(reader, ordinal, $"The SQLite server subscription offer snapshot {name} is invalid.");
 
     /// <summary>Inserts a subscription row.</summary>
@@ -335,7 +335,7 @@ internal sealed partial class SqliteServerCommitJournal
     /// <param name="logicalBytes">The logical bytes.</param>
     /// <param name="generation">The assigned subscription generation.</param>
     private static void InsertSubscription(
-        SqliteConnection connection,
+        SqliteDatabase connection,
         SqliteTransaction transaction,
         ServerSubscriptionRegistrationRequest request,
         ServerSubscriptionInitialAnchor anchor,
@@ -343,9 +343,9 @@ internal sealed partial class SqliteServerCommitJournal
         long logicalBytes,
         long generation)
     {
-        using var command = connection.CreateCommand();
-        command.Transaction = transaction;
-        command.CommandText = """
+        using var command = connection.CreateStatement();
+        command.UseTransaction(transaction);
+        command.SetSql("""
             INSERT INTO oc_server_journal_subscriptions
                 (subscription_id, tenant_id, stream_id, client_id, initial_position_kind, initial_sequence, initial_timestamp_utc,
                  initial_cursor, initial_anchor_cursor, initial_anchor_group_sequence, initial_anchor_resolved,
@@ -355,18 +355,18 @@ internal sealed partial class SqliteServerCommitJournal
                 ($subscriptionId, $tenantId, $streamId, $clientId, $initialPositionKind, $initialSequence, $initialTimestampUtc,
                  $initialCursor, $initialAnchorCursor, $initialAnchorGroupSequence, $initialAnchorResolved,
                  NULL, 0, NULL, 0, NULL, $updatedAtUtc, $updatedAtUtc, $logicalBytes, $generation, 0);
-            """;
+            """);
         AddSubscriptionIdParameter(command, request.Identity.SubscriptionId);
         AddStreamParameters(command, request.Identity.StreamKey);
-        _ = command.Parameters.AddWithValue("$clientId", request.Identity.ClientId);
+        _ = command.Bind("$clientId", request.Identity.ClientId);
         AddStartPositionParameters(command, request.StartPosition);
-        _ = command.Parameters.AddWithValue("$initialAnchorCursor", (object?)anchor.Cursor ?? DBNull.Value);
-        _ = command.Parameters.AddWithValue("$initialAnchorGroupSequence", anchor.GroupSequence);
-        _ = command.Parameters.AddWithValue("$initialAnchorResolved", anchor.IsResolved ? 1 : 0);
-        _ = command.Parameters.AddWithValue(UpdatedAtUtcParameterName, FormatDateTimeOffset(updatedUtc));
-        _ = command.Parameters.AddWithValue("$logicalBytes", logicalBytes);
-        _ = command.Parameters.AddWithValue("$generation", generation);
-        _ = command.ExecuteNonQuery();
+        _ = command.Bind("$initialAnchorCursor", (object?)anchor.Cursor ?? DBNull.Value);
+        _ = command.Bind("$initialAnchorGroupSequence", anchor.GroupSequence);
+        _ = command.Bind("$initialAnchorResolved", anchor.IsResolved ? 1 : 0);
+        _ = command.Bind(UpdatedAtUtcParameterName, FormatDateTimeOffset(updatedUtc));
+        _ = command.Bind("$logicalBytes", logicalBytes);
+        _ = command.Bind("$generation", generation);
+        _ = command.Execute();
     }
 
     /// <summary>Allocates the next durable subscription generation inside the open transaction.</summary>
@@ -374,7 +374,7 @@ internal sealed partial class SqliteServerCommitJournal
     /// <param name="transaction">The transaction.</param>
     /// <returns>The allocated generation.</returns>
     /// <exception cref="InvalidOperationException">The generation allocator overflowed.</exception>
-    private static long AllocateSubscriptionGeneration(SqliteConnection connection, SqliteTransaction transaction)
+    private static long AllocateSubscriptionGeneration(SqliteDatabase connection, SqliteTransaction transaction)
     {
         var current = ReadSubscriptionGenerationHighWater(connection, transaction);
         var next = ServerSubscriptionJournalOperations.GetNextSubscriptionGeneration(current);
@@ -389,7 +389,7 @@ internal sealed partial class SqliteServerCommitJournal
     /// <param name="stream">The retained stream.</param>
     /// <returns>The captured anchor.</returns>
     private static ServerSubscriptionInitialAnchor CaptureInitialAnchor(
-        SqliteConnection connection,
+        SqliteDatabase connection,
         SqliteTransaction transaction,
         ServerSubscriptionRegistrationRequest request,
         ServerCommitStreamRecord? stream)
@@ -415,7 +415,7 @@ internal sealed partial class SqliteServerCommitJournal
     /// <exception cref="ArgumentOutOfRangeException">The position kind is invalid.</exception>
     /// <exception cref="ArgumentException">The cursor does not identify a complete group.</exception>
     private static ServerSubscriptionAnchorResolution TryResolveInitialAnchor(
-        SqliteConnection connection,
+        SqliteDatabase connection,
         SqliteTransaction transaction,
         ServerSubscriptionRecord record,
         ServerCommitStreamRecord? stream,
@@ -443,7 +443,7 @@ internal sealed partial class SqliteServerCommitJournal
     /// <param name="anchor">The resolved anchor.</param>
     /// <returns>The resolution outcome.</returns>
     private static ServerSubscriptionAnchorResolution TryResolveSequenceAnchor(
-        SqliteConnection connection,
+        SqliteDatabase connection,
         SqliteTransaction transaction,
         ServerStreamKey streamKey,
         long sequence,
@@ -462,9 +462,9 @@ internal sealed partial class SqliteServerCommitJournal
             return ServerSubscriptionAnchorResolution.Pending;
         }
 
-        using var command = connection.CreateCommand();
-        command.Transaction = transaction;
-        command.CommandText = """
+        using var command = connection.CreateStatement();
+        command.UseTransaction(transaction);
+        command.SetSql("""
             SELECT e.event_sequence, l.group_sequence
             FROM oc_server_journal_events e
             INNER JOIN oc_server_journal_ledger l
@@ -474,10 +474,10 @@ internal sealed partial class SqliteServerCommitJournal
                 AND e.event_sequence >= $eventSequence AND l.group_sequence IS NOT NULL
             ORDER BY e.event_sequence ASC
             LIMIT 1;
-            """;
+            """);
         AddStreamParameters(command, streamKey);
-        _ = command.Parameters.AddWithValue(EventSequenceParameterName, sequence);
-        using var reader = command.ExecuteReader();
+        _ = command.Bind(EventSequenceParameterName, sequence);
+        using var reader = command.Query();
         if (!reader.Read())
         {
             return ServerSubscriptionAnchorResolution.RetentionGap;
@@ -512,7 +512,7 @@ internal sealed partial class SqliteServerCommitJournal
     /// <param name="reader">The row reader.</param>
     /// <returns>The start position.</returns>
     /// <exception cref="InvalidOperationException">The position kind is invalid.</exception>
-    private static StartPosition ReadStartPosition(SqliteDataReader reader)
+    private static StartPosition ReadStartPosition(SqliteRows reader)
     {
         var kind = (StartPositionKind)ReadNonNegativeLong(reader, SubscriptionInitialPositionKindColumn, "The SQLite server subscription initial position kind is invalid.");
         return kind switch
@@ -531,12 +531,12 @@ internal sealed partial class SqliteServerCommitJournal
     /// <summary>Adds initial start position parameters.</summary>
     /// <param name="command">The command.</param>
     /// <param name="startPosition">The start position.</param>
-    private static void AddStartPositionParameters(SqliteCommand command, StartPosition startPosition)
+    private static void AddStartPositionParameters(SqliteStatement command, StartPosition startPosition)
     {
-        _ = command.Parameters.AddWithValue("$initialPositionKind", (int)startPosition.Kind);
-        _ = command.Parameters.AddWithValue("$initialSequence", startPosition.Sequence.HasValue ? (object)startPosition.Sequence.Value : DBNull.Value);
-        _ = command.Parameters.AddWithValue("$initialTimestampUtc", startPosition.Timestamp.HasValue ? FormatDateTimeOffset(startPosition.Timestamp.Value) : DBNull.Value);
-        _ = command.Parameters.AddWithValue("$initialCursor", (object?)startPosition.Cursor ?? DBNull.Value);
+        _ = command.Bind("$initialPositionKind", (int)startPosition.Kind);
+        _ = command.Bind("$initialSequence", startPosition.Sequence.HasValue ? (object)startPosition.Sequence.Value : DBNull.Value);
+        _ = command.Bind("$initialTimestampUtc", startPosition.Timestamp.HasValue ? FormatDateTimeOffset(startPosition.Timestamp.Value) : DBNull.Value);
+        _ = command.Bind("$initialCursor", (object?)startPosition.Cursor ?? DBNull.Value);
     }
 
     /// <summary>Updates a deferred initial anchor on the subscription row.</summary>
@@ -549,7 +549,7 @@ internal sealed partial class SqliteServerCommitJournal
     /// <param name="revision">The assigned semantic revision.</param>
     /// <exception cref="InvalidOperationException">The subscription row is missing.</exception>
     private static void UpdateInitialAnchor(
-        SqliteConnection connection,
+        SqliteDatabase connection,
         SqliteTransaction transaction,
         SubscriptionId subscriptionId,
         ServerSubscriptionInitialAnchor anchor,
@@ -557,9 +557,9 @@ internal sealed partial class SqliteServerCommitJournal
         long logicalBytesDelta,
         long revision)
     {
-        using var command = connection.CreateCommand();
-        command.Transaction = transaction;
-        command.CommandText = """
+        using var command = connection.CreateStatement();
+        command.UseTransaction(transaction);
+        command.SetSql("""
             UPDATE oc_server_journal_subscriptions
             SET initial_anchor_cursor = $cursor,
                 initial_anchor_group_sequence = $groupSequence,
@@ -569,14 +569,14 @@ internal sealed partial class SqliteServerCommitJournal
                 last_touched_utc = $updatedAtUtc,
                 logical_bytes = logical_bytes + $logicalBytesDelta
             WHERE subscription_id = $subscriptionId;
-            """;
+            """);
         AddSubscriptionIdParameter(command, subscriptionId);
-        _ = command.Parameters.AddWithValue(CursorParameterName, (object?)anchor.Cursor ?? DBNull.Value);
-        _ = command.Parameters.AddWithValue(GroupSequenceParameterName, anchor.GroupSequence);
-        _ = command.Parameters.AddWithValue(RevisionParameterName, revision);
-        _ = command.Parameters.AddWithValue(UpdatedAtUtcParameterName, FormatDateTimeOffset(updatedUtc));
-        _ = command.Parameters.AddWithValue(LogicalBytesDeltaParameterName, logicalBytesDelta);
-        if (command.ExecuteNonQuery() == 1)
+        _ = command.Bind(CursorParameterName, (object?)anchor.Cursor ?? DBNull.Value);
+        _ = command.Bind(GroupSequenceParameterName, anchor.GroupSequence);
+        _ = command.Bind(RevisionParameterName, revision);
+        _ = command.Bind(UpdatedAtUtcParameterName, FormatDateTimeOffset(updatedUtc));
+        _ = command.Bind(LogicalBytesDeltaParameterName, logicalBytesDelta);
+        if (command.Execute() == 1)
         {
             return;
         }
@@ -595,7 +595,7 @@ internal sealed partial class SqliteServerCommitJournal
     /// <exception cref="InvalidOperationException">An offer row is missing.</exception>
     /// <exception cref="QueueCapacityExceededException">The offer storage is full.</exception>
     private static void AddOffer(
-        SqliteConnection connection,
+        SqliteDatabase connection,
         SqliteTransaction transaction,
         ServerSubscriptionRecord record,
         string cursor,
@@ -640,7 +640,7 @@ internal sealed partial class SqliteServerCommitJournal
     /// <param name="offeredUtc">The offer timestamp.</param>
     /// <param name="revision">The assigned subscription revision.</param>
     private static void UpdatePersistedOfferState(
-        SqliteConnection connection,
+        SqliteDatabase connection,
         SqliteTransaction transaction,
         ServerSubscriptionRecord record,
         string cursor,
@@ -677,7 +677,7 @@ internal sealed partial class SqliteServerCommitJournal
     /// <param name="offeredUtc">The offered timestamp.</param>
     /// <param name="logicalBytes">The logical bytes.</param>
     private static void InsertOffer(
-        SqliteConnection connection,
+        SqliteDatabase connection,
         SqliteTransaction transaction,
         SubscriptionId subscriptionId,
         string cursor,
@@ -685,20 +685,20 @@ internal sealed partial class SqliteServerCommitJournal
         DateTimeOffset offeredUtc,
         long logicalBytes)
     {
-        using var command = connection.CreateCommand();
-        command.Transaction = transaction;
-        command.CommandText = """
+        using var command = connection.CreateStatement();
+        command.UseTransaction(transaction);
+        command.SetSql("""
             INSERT INTO oc_server_journal_subscription_offers
                 (subscription_id, cursor, group_sequence, offered_at_utc, logical_bytes)
             VALUES
                 ($subscriptionId, $cursor, $groupSequence, $offeredAtUtc, $logicalBytes);
-            """;
+            """);
         AddSubscriptionIdParameter(command, subscriptionId);
-        _ = command.Parameters.AddWithValue(CursorParameterName, cursor);
-        _ = command.Parameters.AddWithValue(GroupSequenceParameterName, groupSequence);
-        _ = command.Parameters.AddWithValue("$offeredAtUtc", FormatDateTimeOffset(offeredUtc));
-        _ = command.Parameters.AddWithValue("$logicalBytes", logicalBytes);
-        _ = command.ExecuteNonQuery();
+        _ = command.Bind(CursorParameterName, cursor);
+        _ = command.Bind(GroupSequenceParameterName, groupSequence);
+        _ = command.Bind("$offeredAtUtc", FormatDateTimeOffset(offeredUtc));
+        _ = command.Bind("$logicalBytes", logicalBytes);
+        _ = command.Execute();
     }
 
     /// <summary>Refreshes an offered cursor timestamp.</summary>
@@ -709,23 +709,23 @@ internal sealed partial class SqliteServerCommitJournal
     /// <param name="offeredUtc">The offered timestamp.</param>
     /// <exception cref="InvalidOperationException">The offer row is missing.</exception>
     private static void UpdateOffer(
-        SqliteConnection connection,
+        SqliteDatabase connection,
         SqliteTransaction transaction,
         SubscriptionId subscriptionId,
         string cursor,
         DateTimeOffset offeredUtc)
     {
-        using var command = connection.CreateCommand();
-        command.Transaction = transaction;
-        command.CommandText = """
+        using var command = connection.CreateStatement();
+        command.UseTransaction(transaction);
+        command.SetSql("""
             UPDATE oc_server_journal_subscription_offers
             SET offered_at_utc = $offeredAtUtc
             WHERE subscription_id = $subscriptionId AND cursor = $cursor;
-            """;
+            """);
         AddSubscriptionIdParameter(command, subscriptionId);
-        _ = command.Parameters.AddWithValue(CursorParameterName, cursor);
-        _ = command.Parameters.AddWithValue("$offeredAtUtc", FormatDateTimeOffset(offeredUtc));
-        if (command.ExecuteNonQuery() == 1)
+        _ = command.Bind(CursorParameterName, cursor);
+        _ = command.Bind("$offeredAtUtc", FormatDateTimeOffset(offeredUtc));
+        if (command.Execute() == 1)
         {
             return;
         }
@@ -743,7 +743,7 @@ internal sealed partial class SqliteServerCommitJournal
     /// <param name="logicalBytesDelta">The subscription logical byte delta.</param>
     /// <exception cref="InvalidOperationException">The subscription row is missing.</exception>
     private static void UpdateLatestOffer(
-        SqliteConnection connection,
+        SqliteDatabase connection,
         SqliteTransaction transaction,
         SubscriptionId subscriptionId,
         string cursor,
@@ -751,9 +751,9 @@ internal sealed partial class SqliteServerCommitJournal
         DateTimeOffset updatedUtc,
         long logicalBytesDelta)
     {
-        using var command = connection.CreateCommand();
-        command.Transaction = transaction;
-        command.CommandText = """
+        using var command = connection.CreateStatement();
+        command.UseTransaction(transaction);
+        command.SetSql("""
             UPDATE oc_server_journal_subscriptions
             SET latest_offered_cursor = $cursor,
                 latest_offered_group_sequence = $groupSequence,
@@ -761,13 +761,13 @@ internal sealed partial class SqliteServerCommitJournal
                 last_touched_utc = $updatedAtUtc,
                 logical_bytes = logical_bytes + $logicalBytesDelta
             WHERE subscription_id = $subscriptionId;
-            """;
+            """);
         AddSubscriptionIdParameter(command, subscriptionId);
-        _ = command.Parameters.AddWithValue(CursorParameterName, cursor);
-        _ = command.Parameters.AddWithValue(GroupSequenceParameterName, groupSequence);
-        _ = command.Parameters.AddWithValue(UpdatedAtUtcParameterName, FormatDateTimeOffset(updatedUtc));
-        _ = command.Parameters.AddWithValue(LogicalBytesDeltaParameterName, logicalBytesDelta);
-        if (command.ExecuteNonQuery() == 1)
+        _ = command.Bind(CursorParameterName, cursor);
+        _ = command.Bind(GroupSequenceParameterName, groupSequence);
+        _ = command.Bind(UpdatedAtUtcParameterName, FormatDateTimeOffset(updatedUtc));
+        _ = command.Bind(LogicalBytesDeltaParameterName, logicalBytesDelta);
+        if (command.Execute() == 1)
         {
             return;
         }
@@ -784,7 +784,7 @@ internal sealed partial class SqliteServerCommitJournal
     /// <returns>The subscription state.</returns>
     /// <exception cref="InvalidOperationException">The acknowledgement is not valid for the subscription.</exception>
     private static ServerSubscriptionState Acknowledge(
-        SqliteConnection connection,
+        SqliteDatabase connection,
         SqliteTransaction transaction,
         ServerSubscriptionRecord record,
         string cursor,
@@ -855,7 +855,7 @@ internal sealed partial class SqliteServerCommitJournal
     /// <param name="revision">The assigned semantic revision.</param>
     /// <exception cref="InvalidOperationException">The subscription row is missing.</exception>
     private static void UpdateAcknowledgement(
-        SqliteConnection connection,
+        SqliteDatabase connection,
         SqliteTransaction transaction,
         SubscriptionId subscriptionId,
         ServerSubscriptionOffer offer,
@@ -863,9 +863,9 @@ internal sealed partial class SqliteServerCommitJournal
         long logicalBytesDelta,
         long revision)
     {
-        using var command = connection.CreateCommand();
-        command.Transaction = transaction;
-        command.CommandText = """
+        using var command = connection.CreateStatement();
+        command.UseTransaction(transaction);
+        command.SetSql("""
             UPDATE oc_server_journal_subscriptions
             SET acknowledged_cursor = $cursor,
                 acknowledged_group_sequence = $groupSequence,
@@ -875,14 +875,14 @@ internal sealed partial class SqliteServerCommitJournal
                 last_touched_utc = $acknowledgedAtUtc,
                 logical_bytes = logical_bytes + $logicalBytesDelta
             WHERE subscription_id = $subscriptionId;
-            """;
+            """);
         AddSubscriptionIdParameter(command, subscriptionId);
-        _ = command.Parameters.AddWithValue(CursorParameterName, offer.Cursor);
-        _ = command.Parameters.AddWithValue(GroupSequenceParameterName, offer.GroupSequence);
-        _ = command.Parameters.AddWithValue("$acknowledgedAtUtc", FormatDateTimeOffset(acknowledgedUtc));
-        _ = command.Parameters.AddWithValue(RevisionParameterName, revision);
-        _ = command.Parameters.AddWithValue(LogicalBytesDeltaParameterName, logicalBytesDelta);
-        if (command.ExecuteNonQuery() == 1)
+        _ = command.Bind(CursorParameterName, offer.Cursor);
+        _ = command.Bind(GroupSequenceParameterName, offer.GroupSequence);
+        _ = command.Bind("$acknowledgedAtUtc", FormatDateTimeOffset(acknowledgedUtc));
+        _ = command.Bind(RevisionParameterName, revision);
+        _ = command.Bind(LogicalBytesDeltaParameterName, logicalBytesDelta);
+        if (command.Execute() == 1)
         {
             return;
         }
@@ -896,20 +896,20 @@ internal sealed partial class SqliteServerCommitJournal
     /// <param name="subscriptionId">The subscription id.</param>
     /// <param name="acknowledgedGroupSequence">The acknowledged sequence.</param>
     private static void DeleteAcknowledgedOffers(
-        SqliteConnection connection,
+        SqliteDatabase connection,
         SqliteTransaction transaction,
         SubscriptionId subscriptionId,
         long acknowledgedGroupSequence)
     {
-        using var command = connection.CreateCommand();
-        command.Transaction = transaction;
-        command.CommandText = """
+        using var command = connection.CreateStatement();
+        command.UseTransaction(transaction);
+        command.SetSql("""
             DELETE FROM oc_server_journal_subscription_offers
             WHERE subscription_id = $subscriptionId AND group_sequence <= $groupSequence;
-            """;
+            """);
         AddSubscriptionIdParameter(command, subscriptionId);
-        _ = command.Parameters.AddWithValue(GroupSequenceParameterName, acknowledgedGroupSequence);
-        _ = command.ExecuteNonQuery();
+        _ = command.Bind(GroupSequenceParameterName, acknowledgedGroupSequence);
+        _ = command.Execute();
     }
 
     /// <summary>Deletes expired offers and offers already covered by durable acknowledgements.</summary>
@@ -918,14 +918,14 @@ internal sealed partial class SqliteServerCommitJournal
     /// <param name="utcNow">The compaction timestamp.</param>
     /// <param name="options">The journal options.</param>
     private static void DeleteExpiredOffers(
-        SqliteConnection connection,
+        SqliteDatabase connection,
         SqliteTransaction transaction,
         DateTimeOffset utcNow,
         ServerCommitJournalOptions options)
     {
-        using var command = connection.CreateCommand();
-        command.Transaction = transaction;
-        command.CommandText = """
+        using var command = connection.CreateStatement();
+        command.UseTransaction(transaction);
+        command.SetSql("""
             DELETE FROM oc_server_journal_subscription_offers
             WHERE rowid IN (
                 SELECT offer.rowid
@@ -934,9 +934,9 @@ internal sealed partial class SqliteServerCommitJournal
                     ON subscription.subscription_id = offer.subscription_id
                 WHERE offer.group_sequence <= subscription.acknowledged_group_sequence
                    OR offer.offered_at_utc < $expiredBeforeUtc);
-            """;
-        _ = command.Parameters.AddWithValue("$expiredBeforeUtc", FormatDateTimeOffset(GetExpiryBoundary(utcNow, options)));
-        _ = command.ExecuteNonQuery();
+            """);
+        _ = command.Bind("$expiredBeforeUtc", FormatDateTimeOffset(GetExpiryBoundary(utcNow, options)));
+        _ = command.Execute();
     }
 
     /// <summary>Deletes subscription bindings after their binding retention horizon.</summary>
@@ -945,20 +945,20 @@ internal sealed partial class SqliteServerCommitJournal
     /// <param name="utcNow">The compaction timestamp.</param>
     /// <param name="options">The journal options.</param>
     private static void DeleteExpiredSubscriptions(
-        SqliteConnection connection,
+        SqliteDatabase connection,
         SqliteTransaction transaction,
         DateTimeOffset utcNow,
         ServerCommitJournalOptions options)
     {
         DeleteExpiredOffers(connection, transaction, utcNow, options);
-        using var command = connection.CreateCommand();
-        command.Transaction = transaction;
-        command.CommandText = """
+        using var command = connection.CreateStatement();
+        command.UseTransaction(transaction);
+        command.SetSql("""
             DELETE FROM oc_server_journal_subscriptions
             WHERE last_touched_utc < $expiredBeforeUtc;
-            """;
-        _ = command.Parameters.AddWithValue("$expiredBeforeUtc", FormatDateTimeOffset(GetSubscriptionExpiryBoundary(utcNow, options)));
-        _ = command.ExecuteNonQuery();
+            """);
+        _ = command.Bind("$expiredBeforeUtc", FormatDateTimeOffset(GetSubscriptionExpiryBoundary(utcNow, options)));
+        _ = command.Execute();
     }
 
     /// <summary>Updates the retained subscription row timestamp.</summary>
@@ -969,25 +969,25 @@ internal sealed partial class SqliteServerCommitJournal
     /// <param name="revision">The optional assigned semantic revision.</param>
     /// <exception cref="InvalidOperationException">The subscription row is missing.</exception>
     private static void UpdateSubscriptionUpdatedAt(
-        SqliteConnection connection,
+        SqliteDatabase connection,
         SqliteTransaction transaction,
         SubscriptionId subscriptionId,
         DateTimeOffset updatedUtc,
         long? revision = null)
     {
-        using var command = connection.CreateCommand();
-        command.Transaction = transaction;
-        command.CommandText = """
+        using var command = connection.CreateStatement();
+        command.UseTransaction(transaction);
+        command.SetSql("""
             UPDATE oc_server_journal_subscriptions
             SET updated_at_utc = $updatedAtUtc,
                 last_touched_utc = $updatedAtUtc,
                 revision = COALESCE($revision, revision)
             WHERE subscription_id = $subscriptionId;
-            """;
+            """);
         AddSubscriptionIdParameter(command, subscriptionId);
-        _ = command.Parameters.AddWithValue(UpdatedAtUtcParameterName, FormatDateTimeOffset(updatedUtc));
-        _ = command.Parameters.AddWithValue(RevisionParameterName, revision.HasValue ? revision.Value : DBNull.Value);
-        if (command.ExecuteNonQuery() == 1)
+        _ = command.Bind(UpdatedAtUtcParameterName, FormatDateTimeOffset(updatedUtc));
+        _ = command.Bind(RevisionParameterName, revision.HasValue ? revision.Value : DBNull.Value);
+        if (command.Execute() == 1)
         {
             return;
         }
@@ -1002,21 +1002,21 @@ internal sealed partial class SqliteServerCommitJournal
     /// <param name="revision">The assigned semantic revision.</param>
     /// <exception cref="InvalidOperationException">The subscription row is missing.</exception>
     private static void UpdateSubscriptionRevision(
-        SqliteConnection connection,
+        SqliteDatabase connection,
         SqliteTransaction transaction,
         SubscriptionId subscriptionId,
         long revision)
     {
-        using var command = connection.CreateCommand();
-        command.Transaction = transaction;
-        command.CommandText = """
+        using var command = connection.CreateStatement();
+        command.UseTransaction(transaction);
+        command.SetSql("""
             UPDATE oc_server_journal_subscriptions
             SET revision = $revision
             WHERE subscription_id = $subscriptionId;
-            """;
+            """);
         AddSubscriptionIdParameter(command, subscriptionId);
-        _ = command.Parameters.AddWithValue(RevisionParameterName, revision);
-        if (command.ExecuteNonQuery() == 1)
+        _ = command.Bind(RevisionParameterName, revision);
+        if (command.Execute() == 1)
         {
             return;
         }
@@ -1033,7 +1033,7 @@ internal sealed partial class SqliteServerCommitJournal
     /// <param name="options">The journal options.</param>
     /// <returns>Whether capacity remains.</returns>
     private static bool HasSubscriptionCapacity(
-        SqliteConnection connection,
+        SqliteDatabase connection,
         SqliteTransaction transaction,
         int addedSubscriptions,
         int addedOffers,
@@ -1112,7 +1112,7 @@ internal sealed partial class SqliteServerCommitJournal
     /// <param name="index">The index.</param>
     /// <param name="message">The failure message.</param>
     /// <returns>The timestamp or null.</returns>
-    private static DateTimeOffset? ReadNullableDateTimeOffset(SqliteDataReader reader, int index, string message) =>
+    private static DateTimeOffset? ReadNullableDateTimeOffset(SqliteRows reader, int index, string message) =>
         reader.IsDBNull(index) ? null : ReadDateTimeOffset(reader, index, message);
 
     /// <summary>Reads an optional positive integer column.</summary>
@@ -1120,14 +1120,14 @@ internal sealed partial class SqliteServerCommitJournal
     /// <param name="index">The index.</param>
     /// <param name="message">The failure message.</param>
     /// <returns>The integer or null.</returns>
-    private static int? ReadNullablePositiveInt(SqliteDataReader reader, int index, string message) =>
+    private static int? ReadNullablePositiveInt(SqliteRows reader, int index, string message) =>
         reader.IsDBNull(index) ? null : ReadPositiveInt(reader, index, message);
 
     /// <summary>Adds a subscription id parameter.</summary>
     /// <param name="command">The command.</param>
     /// <param name="subscriptionId">The subscription id.</param>
-    private static void AddSubscriptionIdParameter(SqliteCommand command, SubscriptionId subscriptionId) =>
-        _ = command.Parameters.AddWithValue("$subscriptionId", subscriptionId.Value.ToString("D"));
+    private static void AddSubscriptionIdParameter(SqliteStatement command, SubscriptionId subscriptionId) =>
+        _ = command.Bind("$subscriptionId", subscriptionId.Value.ToString("D"));
 
     /// <summary>Gets the oldest retained offer timestamp allowed at a compaction instant.</summary>
     /// <param name="utcNow">The compaction timestamp.</param>

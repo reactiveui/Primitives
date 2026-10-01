@@ -2,8 +2,8 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
-using Microsoft.Data.Sqlite;
 using ReactiveUI.Primitives.OccasionallyConnected;
+using ReactiveUI.Primitives.OccasionallyConnected.Sqlite;
 
 namespace ReactiveUI.Primitives.OccasionallyConnected.Storage.Sqlite;
 
@@ -29,7 +29,7 @@ internal static partial class SqliteLocalCommitSql
     /// <exception cref="InvalidOperationException">Stored SQLite data is invalid.</exception>
     /// <exception cref="OperationCanceledException">The operation is canceled while scanning rows.</exception>
     internal static List<SqliteSnapshotRecoveryPendingOperation> ReadSnapshotRecoveryPendingOperations(
-        SqliteConnection connection,
+        SqliteDatabase connection,
         SqliteTransaction transaction,
         string storeIdentity,
         StreamId streamId,
@@ -41,9 +41,9 @@ internal static partial class SqliteLocalCommitSql
             throw new ArgumentOutOfRangeException(nameof(maximumRows), maximumRows, "The snapshot recovery pending row bound must be positive.");
         }
 
-        using var command = connection.CreateCommand();
-        command.Transaction = transaction;
-        command.CommandText = """
+        using var command = connection.CreateStatement();
+        command.UseTransaction(transaction);
+        command.SetSql("""
             SELECT state.operation_state,
                    typeof(outbox.operation_id), length(CAST(outbox.operation_id AS BLOB)),
                    IFNULL(substr(CAST(outbox.operation_id AS BLOB), 1, $operationIdTextLength), x'')
@@ -56,11 +56,11 @@ internal static partial class SqliteLocalCommitSql
                 AND (state.operation_state IS NULL OR state.operation_state NOT IN (4, 5, 6))
             ORDER BY outbox.client_sequence ASC
             LIMIT $maximumRows;
-            """;
+            """);
         AddStreamParameters(command, storeIdentity, streamId);
-        _ = command.Parameters.AddWithValue("$maximumRows", maximumRows);
-        _ = command.Parameters.AddWithValue("$operationIdTextLength", SnapshotRecoveryOperationIdTextLength);
-        using var reader = command.ExecuteReader();
+        _ = command.Bind("$maximumRows", maximumRows);
+        _ = command.Bind("$operationIdTextLength", SnapshotRecoveryOperationIdTextLength);
+        using var reader = command.Query();
         var operations = new List<SqliteSnapshotRecoveryPendingOperation>();
         while (reader.Read())
         {
@@ -92,7 +92,7 @@ internal static partial class SqliteLocalCommitSql
     /// <exception cref="InvalidOperationException">Stored SQLite data is invalid.</exception>
     /// <exception cref="OperationCanceledException">The operation is canceled while scanning rows.</exception>
     internal static List<OperationId> ReadSnapshotRecoveryReplayOnlyOperationIds(
-        SqliteConnection connection,
+        SqliteDatabase connection,
         SqliteTransaction transaction,
         string storeIdentity,
         StreamId streamId,
@@ -104,9 +104,9 @@ internal static partial class SqliteLocalCommitSql
             throw new ArgumentOutOfRangeException(nameof(maximumRows), maximumRows, "The snapshot recovery replay row bound must be positive.");
         }
 
-        using var command = connection.CreateCommand();
-        command.Transaction = transaction;
-        command.CommandText = """
+        using var command = connection.CreateStatement();
+        command.UseTransaction(transaction);
+        command.SetSql("""
             SELECT typeof(outbox.operation_id), length(CAST(outbox.operation_id AS BLOB)),
                    IFNULL(substr(CAST(outbox.operation_id AS BLOB), 1, $operationIdTextLength), x'')
             FROM oc_outbox AS outbox
@@ -122,11 +122,11 @@ internal static partial class SqliteLocalCommitSql
                 AND inclusion.operation_id IS NULL
             ORDER BY outbox.client_sequence ASC
             LIMIT $maximumRows;
-            """;
+            """);
         AddStreamParameters(command, storeIdentity, streamId);
-        _ = command.Parameters.AddWithValue("$maximumRows", maximumRows);
-        _ = command.Parameters.AddWithValue("$operationIdTextLength", SnapshotRecoveryOperationIdTextLength);
-        using var reader = command.ExecuteReader();
+        _ = command.Bind("$maximumRows", maximumRows);
+        _ = command.Bind("$operationIdTextLength", SnapshotRecoveryOperationIdTextLength);
+        using var reader = command.Query();
         var operations = new List<OperationId>();
         while (reader.Read())
         {
@@ -148,7 +148,7 @@ internal static partial class SqliteLocalCommitSql
     /// <returns>The operation identifier.</returns>
     /// <exception cref="InvalidOperationException">Stored SQLite data is invalid.</exception>
     private static OperationId ReadSnapshotRecoveryOperationId(
-        SqliteDataReader reader,
+        SqliteRows reader,
         int valueIndex,
         int typeIndex,
         int lengthIndex)
@@ -171,7 +171,7 @@ internal static partial class SqliteLocalCommitSql
     /// <param name="index">The column index.</param>
     /// <returns>The operation state.</returns>
     /// <exception cref="InvalidOperationException">Stored SQLite data is invalid.</exception>
-    private static SyncOperationState ReadSnapshotRecoveryOperationState(SqliteDataReader reader, int index)
+    private static SyncOperationState ReadSnapshotRecoveryOperationState(SqliteRows reader, int index)
     {
         var state = (SyncOperationState)ReadInt(reader, index, "The SQLite operation state is invalid.");
         return IsSnapshotRecoveryPendingOperationState(state)

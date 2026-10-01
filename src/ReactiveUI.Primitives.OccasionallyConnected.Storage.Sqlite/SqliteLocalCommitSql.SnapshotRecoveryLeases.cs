@@ -2,8 +2,8 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
-using Microsoft.Data.Sqlite;
 using ReactiveUI.Primitives.OccasionallyConnected;
+using ReactiveUI.Primitives.OccasionallyConnected.Sqlite;
 
 namespace ReactiveUI.Primitives.OccasionallyConnected.Storage.Sqlite;
 
@@ -20,7 +20,7 @@ internal static partial class SqliteLocalCommitSql
     /// <returns>The expired leased operation identifiers.</returns>
     /// <exception cref="InvalidOperationException">A pending operation is actively leased or its lease metadata is invalid.</exception>
     internal static HashSet<OperationId> ReadSnapshotRecoveryExpiredLeaseOperationIds(
-        SqliteConnection connection,
+        SqliteDatabase connection,
         SqliteTransaction transaction,
         string storeIdentity,
         List<SqliteSnapshotRecoveryPendingOperation> pending,
@@ -53,20 +53,20 @@ internal static partial class SqliteLocalCommitSql
     /// <param name="storeIdentity">The store identity.</param>
     /// <param name="operationId">The operation identifier.</param>
     internal static void ReleaseSnapshotRecoveryLeaseOperation(
-        SqliteConnection connection,
+        SqliteDatabase connection,
         SqliteTransaction transaction,
         string storeIdentity,
         OperationId operationId)
     {
-        using var command = connection.CreateCommand();
-        command.Transaction = transaction;
-        command.CommandText = """
+        using var command = connection.CreateStatement();
+        command.UseTransaction(transaction);
+        command.SetSql("""
             DELETE FROM oc_outbox_leases
             WHERE store_identity = $storeIdentity AND operation_id = $operationId;
-            """;
-        _ = command.Parameters.AddWithValue(StoreIdentityParameter, storeIdentity);
-        _ = command.Parameters.AddWithValue(OperationIdParameter, operationId.Value.ToString("D"));
-        _ = command.ExecuteNonQuery();
+            """);
+        _ = command.Bind(StoreIdentityParameter, storeIdentity);
+        _ = command.Bind(OperationIdParameter, operationId.Value.ToString("D"));
+        _ = command.Execute();
     }
 
     /// <summary>Reads the lease expiry for an operation when the operation is leased.</summary>
@@ -77,21 +77,21 @@ internal static partial class SqliteLocalCommitSql
     /// <returns>The lease expiry, or <see langword="null" /> when the operation is not leased.</returns>
     /// <exception cref="InvalidOperationException">The durable lease expiry is invalid or inconsistent.</exception>
     private static DateTimeOffset? ReadSnapshotRecoveryLeaseExpiry(
-        SqliteConnection connection,
+        SqliteDatabase connection,
         SqliteTransaction transaction,
         string storeIdentity,
         OperationId operationId)
     {
-        using var command = connection.CreateCommand();
-        command.Transaction = transaction;
-        command.CommandText = """
+        using var command = connection.CreateStatement();
+        command.UseTransaction(transaction);
+        command.SetSql("""
             SELECT lease_expires_at_utc
             FROM oc_outbox_leases
             WHERE store_identity = $storeIdentity AND operation_id = $operationId;
-            """;
-        _ = command.Parameters.AddWithValue(StoreIdentityParameter, storeIdentity);
-        _ = command.Parameters.AddWithValue(OperationIdParameter, operationId.Value.ToString("D"));
-        using var reader = command.ExecuteReader();
+            """);
+        _ = command.Bind(StoreIdentityParameter, storeIdentity);
+        _ = command.Bind(OperationIdParameter, operationId.Value.ToString("D"));
+        using var reader = command.Query();
         return reader.Read()
             ? ReadDateTimeOffset(reader, 0, "The SQLite outbox lease expiry is invalid.")
             : null;

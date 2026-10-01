@@ -3,8 +3,8 @@
 // See the LICENSE file in the project root for full license information.
 
 using System.Runtime.CompilerServices;
-using Microsoft.Data.Sqlite;
 using ReactiveUI.Primitives.OccasionallyConnected;
+using ReactiveUI.Primitives.OccasionallyConnected.Sqlite;
 
 namespace ReactiveUI.Primitives.OccasionallyConnected.Storage.Sqlite.Tests;
 
@@ -286,13 +286,13 @@ public sealed partial class SqliteLocalCommitStoreTests
         using var attemptStore = CreateInitializedStore(attemptDatabase.Path);
         var attemptOperation = CommitOperation(attemptStore, Stream, clientSequence: 1, OperationPayloadText);
         var attemptLease = RequireBatch(await LeaseSingleBatch(attemptStore, new(Stream, 1, DefaultLeaseBytes, TimeSpan.FromMinutes(1))));
-        await using var attemptBlocker = OpenRawConnection(attemptDatabase.Path);
-        await using var attemptTransaction = (SqliteTransaction)await attemptBlocker.BeginTransactionAsync(System.Data.IsolationLevel.Serializable);
+        using var attemptBlocker = OpenRawConnection(attemptDatabase.Path);
+        using var attemptTransaction = attemptBlocker.BeginTransaction();
         InsertBlockingIdentity(attemptBlocker, attemptTransaction);
 
         await Assert.That(() => attemptStore.TryBeginRemoteAttempt(attemptLease.LeaseId, attemptOperation.OperationId, FirstAttempt, CancellationToken.None))
             .ThrowsExactly<TimeoutException>();
-        await attemptTransaction.RollbackAsync();
+        attemptTransaction.Rollback();
 
         using var resultDatabase = TempDatabase.Create();
         using var resultStore = CreateInitializedStore(resultDatabase.Path);
@@ -301,13 +301,13 @@ public sealed partial class SqliteLocalCommitStoreTests
         var result = CreateSyncResult(
             resultLease.LeaseId,
             new OperationSyncResult(resultOperation.OperationId, OperationResultKind.Accepted, null, "v1"));
-        await using var resultBlocker = OpenRawConnection(resultDatabase.Path);
-        await using var resultTransaction = (SqliteTransaction)await resultBlocker.BeginTransactionAsync(System.Data.IsolationLevel.Serializable);
+        using var resultBlocker = OpenRawConnection(resultDatabase.Path);
+        using var resultTransaction = resultBlocker.BeginTransaction();
         InsertBlockingIdentity(resultBlocker, resultTransaction);
 
         await Assert.That(async () => await resultStore.ApplySyncResultAsync(resultLease.LeaseId, result, CancellationToken.None))
             .ThrowsExactly<TimeoutException>();
-        await resultTransaction.RollbackAsync();
+        resultTransaction.Rollback();
 
         await Assert.That(attemptStore.GetOperationStatus(attemptOperation.OperationId, CancellationToken.None)?.Attempt).IsEqualTo(0);
         await Assert.That(resultStore.GetOperationStatus(resultOperation.OperationId, CancellationToken.None)?.State)
@@ -324,14 +324,14 @@ public sealed partial class SqliteLocalCommitStoreTests
         using var store = CreateInitializedStore(database.Path, clock);
         var operation = CommitOperation(store, Stream, clientSequence: 1, OperationPayloadText);
         var lease = RequireBatch(await LeaseSingleBatch(store, new(Stream, 1, DefaultLeaseBytes, TimeSpan.FromMinutes(1))));
-        await using var blocker = OpenRawConnection(database.Path);
-        await using var transaction = (SqliteTransaction)await blocker.BeginTransactionAsync();
+        using var blocker = OpenRawConnection(database.Path);
+        using var transaction = blocker.BeginTransaction();
         InsertBlockingIdentity(blocker, transaction);
         var validationSample = clock.SignalNextRead();
         var blockedAttempt = Task.Run(() => store.TryBeginRemoteAttempt(lease.LeaseId, operation.OperationId, FirstAttempt, CancellationToken.None));
 
         clock.Advance(TimeSpan.FromMinutes(LeaseExpiryAdvanceMinutes));
-        await transaction.RollbackAsync();
+        transaction.Rollback();
         await validationSample.WaitAsync(TestTimeout);
 
         await Assert.That(async () => await blockedAttempt).ThrowsExactly<InvalidOperationException>();
@@ -351,14 +351,14 @@ public sealed partial class SqliteLocalCommitStoreTests
         var result = CreateSyncResult(
             lease.LeaseId,
             new OperationSyncResult(operation.OperationId, OperationResultKind.Accepted, null, "v1"));
-        await using var blocker = OpenRawConnection(database.Path);
-        await using var transaction = (SqliteTransaction)await blocker.BeginTransactionAsync();
+        using var blocker = OpenRawConnection(database.Path);
+        using var transaction = blocker.BeginTransaction();
         InsertBlockingIdentity(blocker, transaction);
         var validationSample = clock.SignalNextRead();
         var blockedApply = Task.Run(async () => await store.ApplySyncResultAsync(lease.LeaseId, result, CancellationToken.None));
 
         clock.Advance(TimeSpan.FromMinutes(LeaseExpiryAdvanceMinutes));
-        await transaction.RollbackAsync();
+        transaction.Rollback();
         await validationSample.WaitAsync(TestTimeout);
 
         await Assert.That(async () => await blockedApply).ThrowsExactly<InvalidOperationException>();
@@ -683,8 +683,8 @@ public sealed partial class SqliteLocalCommitStoreTests
         using var database = TempDatabase.Create();
         using var store = CreateInitializedStore(database.Path);
         var operation = CommitOperation(store, Stream, clientSequence: 1, OperationPayloadText);
-        await using var connection = OpenRawConnection(database.Path);
-        await using var transaction = (SqliteTransaction)await connection.BeginTransactionAsync();
+        using var connection = OpenRawConnection(database.Path);
+        using var transaction = connection.BeginTransaction();
         var result = CreateSyncResult(
             Guid.NewGuid(),
             new OperationSyncResult(operation.OperationId, (OperationResultKind)UndefinedEnumValue, "OC.Invalid", null));
@@ -729,18 +729,18 @@ public sealed partial class SqliteLocalCommitStoreTests
     {
         var leaseId = Guid.NewGuid();
         using var connection = OpenRawConnection(path);
-        using var command = connection.CreateCommand();
-        command.CommandText = """
+        using var command = connection.CreateStatement();
+        command.SetSql("""
             INSERT INTO oc_outbox_leases
                 (store_identity, lease_id, operation_id, stream_id, client_sequence, lease_expires_at_utc, lease_member_count)
             VALUES
                 ($storeIdentity, $leaseId, $operationId, $streamId, 1, '2099-01-01T00:00:00.0000000+00:00', 1);
-            """;
-        _ = command.Parameters.AddWithValue(StoreIdentityParameter, StoreIdentity);
-        _ = command.Parameters.AddWithValue("$leaseId", leaseId.ToString("D"));
-        _ = command.Parameters.AddWithValue(OperationIdParameter, operationId.Value.ToString("D"));
-        _ = command.Parameters.AddWithValue(StreamIdParameter, streamId.Value);
-        _ = command.ExecuteNonQuery();
+            """);
+        _ = command.Bind(StoreIdentityParameter, StoreIdentity);
+        _ = command.Bind("$leaseId", leaseId.ToString("D"));
+        _ = command.Bind(OperationIdParameter, operationId.Value.ToString("D"));
+        _ = command.Bind(StreamIdParameter, streamId.Value);
+        _ = command.Execute();
         return leaseId;
     }
 
@@ -759,15 +759,15 @@ public sealed partial class SqliteLocalCommitStoreTests
     private static void SetOperationStateValue(string path, OperationId operationId, int state)
     {
         using var connection = OpenRawConnection(path);
-        using var command = connection.CreateCommand();
-        command.CommandText = """
+        using var command = connection.CreateStatement();
+        command.SetSql("""
             UPDATE oc_outbox_operation_states
             SET operation_state = $state
             WHERE operation_id = $operationId;
-            """;
-        _ = command.Parameters.AddWithValue("$state", state);
-        _ = command.Parameters.AddWithValue(OperationIdParameter, operationId.Value.ToString("D"));
-        _ = command.ExecuteNonQuery();
+            """);
+        _ = command.Bind("$state", state);
+        _ = command.Bind(OperationIdParameter, operationId.Value.ToString("D"));
+        _ = command.Execute();
     }
 
     /// <summary>Sets the operation attempt count.</summary>
@@ -777,11 +777,11 @@ public sealed partial class SqliteLocalCommitStoreTests
     private static void SetOperationAttempt(string path, OperationId operationId, int attempt)
     {
         using var connection = OpenRawConnection(path);
-        using var command = connection.CreateCommand();
-        command.CommandText = "UPDATE oc_outbox_operation_states SET attempt_count = $attempt WHERE operation_id = $operationId;";
-        _ = command.Parameters.AddWithValue("$attempt", attempt);
-        _ = command.Parameters.AddWithValue(OperationIdParameter, operationId.Value.ToString("D"));
-        _ = command.ExecuteNonQuery();
+        using var command = connection.CreateStatement();
+        command.SetSql("UPDATE oc_outbox_operation_states SET attempt_count = $attempt WHERE operation_id = $operationId;");
+        _ = command.Bind("$attempt", attempt);
+        _ = command.Bind(OperationIdParameter, operationId.Value.ToString("D"));
+        _ = command.Execute();
     }
 
     /// <summary>Sets the delivery guarantee value.</summary>
@@ -791,11 +791,11 @@ public sealed partial class SqliteLocalCommitStoreTests
     private static void SetDeliveryGuaranteeValue(string path, OperationId operationId, int guarantee)
     {
         using var connection = OpenRawConnection(path);
-        using var command = connection.CreateCommand();
-        command.CommandText = "UPDATE oc_outbox SET policy_delivery_guarantee = $guarantee WHERE operation_id = $operationId;";
-        _ = command.Parameters.AddWithValue("$guarantee", guarantee);
-        _ = command.Parameters.AddWithValue(OperationIdParameter, operationId.Value.ToString("D"));
-        _ = command.ExecuteNonQuery();
+        using var command = connection.CreateStatement();
+        command.SetSql("UPDATE oc_outbox SET policy_delivery_guarantee = $guarantee WHERE operation_id = $operationId;");
+        _ = command.Bind("$guarantee", guarantee);
+        _ = command.Bind(OperationIdParameter, operationId.Value.ToString("D"));
+        _ = command.Execute();
     }
 
     /// <summary>Updates the lease member count for one operation.</summary>
@@ -806,12 +806,12 @@ public sealed partial class SqliteLocalCommitStoreTests
     private static void UpdateLeaseMemberCount(string path, Guid leaseId, OperationId operationId, int memberCount)
     {
         using var connection = OpenRawConnection(path);
-        using var command = connection.CreateCommand();
-        command.CommandText = "UPDATE oc_outbox_leases SET lease_member_count = $memberCount WHERE lease_id = $leaseId AND operation_id = $operationId;";
-        _ = command.Parameters.AddWithValue("$memberCount", memberCount);
-        _ = command.Parameters.AddWithValue("$leaseId", leaseId.ToString("D"));
-        _ = command.Parameters.AddWithValue(OperationIdParameter, operationId.Value.ToString("D"));
-        _ = command.ExecuteNonQuery();
+        using var command = connection.CreateStatement();
+        command.SetSql("UPDATE oc_outbox_leases SET lease_member_count = $memberCount WHERE lease_id = $leaseId AND operation_id = $operationId;");
+        _ = command.Bind("$memberCount", memberCount);
+        _ = command.Bind("$leaseId", leaseId.ToString("D"));
+        _ = command.Bind(OperationIdParameter, operationId.Value.ToString("D"));
+        _ = command.Execute();
     }
 
     /// <summary>Sets the operation reason code.</summary>
@@ -821,15 +821,15 @@ public sealed partial class SqliteLocalCommitStoreTests
     private static void SetOperationReasonCode(string path, OperationId operationId, string reasonCode)
     {
         using var connection = OpenRawConnection(path);
-        using var command = connection.CreateCommand();
-        command.CommandText = """
+        using var command = connection.CreateStatement();
+        command.SetSql("""
             UPDATE oc_outbox_operation_states
             SET reason_code = $reasonCode
             WHERE operation_id = $operationId;
-            """;
-        _ = command.Parameters.AddWithValue(ReasonCodeParameter, reasonCode);
-        _ = command.Parameters.AddWithValue(OperationIdParameter, operationId.Value.ToString("D"));
-        _ = command.ExecuteNonQuery();
+            """);
+        _ = command.Bind(ReasonCodeParameter, reasonCode);
+        _ = command.Bind(OperationIdParameter, operationId.Value.ToString("D"));
+        _ = command.Execute();
     }
 
     /// <summary>Sets the retry authentication state.</summary>
@@ -839,15 +839,15 @@ public sealed partial class SqliteLocalCommitStoreTests
     private static void SetRetryAuthenticationState(string path, OperationId operationId, int state)
     {
         using var connection = OpenRawConnection(path);
-        using var command = connection.CreateCommand();
-        command.CommandText = """
+        using var command = connection.CreateStatement();
+        command.SetSql("""
             UPDATE oc_outbox_operation_states
             SET retry_authentication_state = $state
             WHERE operation_id = $operationId;
-            """;
-        _ = command.Parameters.AddWithValue("$state", state);
-        _ = command.Parameters.AddWithValue(OperationIdParameter, operationId.Value.ToString("D"));
-        _ = command.ExecuteNonQuery();
+            """);
+        _ = command.Bind("$state", state);
+        _ = command.Bind(OperationIdParameter, operationId.Value.ToString("D"));
+        _ = command.Execute();
     }
 
     /// <summary>Sets retry previous delay ticks.</summary>
@@ -857,15 +857,15 @@ public sealed partial class SqliteLocalCommitStoreTests
     private static void SetRetryPreviousDelayTicks(string path, OperationId operationId, long ticks)
     {
         using var connection = OpenRawConnection(path);
-        using var command = connection.CreateCommand();
-        command.CommandText = """
+        using var command = connection.CreateStatement();
+        command.SetSql("""
             UPDATE oc_outbox_operation_states
             SET retry_previous_delay_ticks = $ticks
             WHERE operation_id = $operationId;
-            """;
-        _ = command.Parameters.AddWithValue("$ticks", ticks);
-        _ = command.Parameters.AddWithValue(OperationIdParameter, operationId.Value.ToString("D"));
-        _ = command.ExecuteNonQuery();
+            """);
+        _ = command.Bind("$ticks", ticks);
+        _ = command.Bind(OperationIdParameter, operationId.Value.ToString("D"));
+        _ = command.Execute();
     }
 
     /// <summary>Deletes an operation state row.</summary>
@@ -874,13 +874,13 @@ public sealed partial class SqliteLocalCommitStoreTests
     private static void DeleteOperationState(string path, OperationId operationId)
     {
         using var connection = OpenRawConnection(path);
-        using var command = connection.CreateCommand();
-        command.CommandText = """
+        using var command = connection.CreateStatement();
+        command.SetSql("""
             DELETE FROM oc_outbox_operation_states
             WHERE operation_id = $operationId;
-            """;
-        _ = command.Parameters.AddWithValue(OperationIdParameter, operationId.Value.ToString("D"));
-        _ = command.ExecuteNonQuery();
+            """);
+        _ = command.Bind(OperationIdParameter, operationId.Value.ToString("D"));
+        _ = command.Execute();
     }
 
     /// <summary>Creates a trigger that removes an operation state before it is updated.</summary>
@@ -888,16 +888,16 @@ public sealed partial class SqliteLocalCommitStoreTests
     private static void CreateDeleteStateBeforeUpdateTrigger(string path)
     {
         using var connection = OpenRawConnection(path);
-        using var command = connection.CreateCommand();
-        command.CommandText = """
+        using var command = connection.CreateStatement();
+        command.SetSql("""
             CREATE TRIGGER oc_operation_state_delete_before_update
             BEFORE UPDATE ON oc_outbox_operation_states
             BEGIN
                 DELETE FROM oc_outbox_operation_states
                 WHERE store_identity = OLD.store_identity AND operation_id = OLD.operation_id;
             END;
-            """;
-        _ = command.ExecuteNonQuery();
+            """);
+        _ = command.Execute();
     }
 
     /// <summary>A manual clock that signals after capturing a timestamp to return.</summary>

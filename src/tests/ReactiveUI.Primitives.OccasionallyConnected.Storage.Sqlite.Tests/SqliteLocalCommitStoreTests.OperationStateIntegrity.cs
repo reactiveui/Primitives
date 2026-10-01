@@ -117,14 +117,14 @@ public sealed partial class SqliteLocalCommitStoreTests
     private static void IgnoreInitialOperationStateInsert(string path)
     {
         using var connection = OpenRawConnection(path);
-        using var command = connection.CreateCommand();
-        command.CommandText = """
+        using var command = connection.CreateStatement();
+        command.SetSql("""
             CREATE TRIGGER ignore_initial_operation_state
             BEFORE INSERT ON oc_outbox_operation_states
             BEGIN
                 SELECT RAISE(IGNORE);
             END;
-            """;
-        _ = command.ExecuteNonQuery();
+            """);
+        _ = command.Execute();
     }
 }

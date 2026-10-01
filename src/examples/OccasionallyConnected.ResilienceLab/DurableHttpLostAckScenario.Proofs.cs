@@ -3,8 +3,8 @@
 // See the LICENSE file in the project root for full license information.
 
 using System.Globalization;
-using Microsoft.Data.Sqlite;
 using ReactiveUI.Primitives.OccasionallyConnected.Crdt;
+using ReactiveUI.Primitives.OccasionallyConnected.Sqlite;
 using ReactiveUI.Primitives.OccasionallyConnected.Storage.Sqlite;
 using static ReactiveUI.Primitives.OccasionallyConnected.ResilienceLab.DurableHttpLostAckProofEvaluator;
 
@@ -208,22 +208,22 @@ internal static partial class DurableHttpLostAckScenario
     /// <returns>The result.</returns>
     private static int ReadServerEffectCount(string databasePath, OperationId operationId)
     {
-        using var connection = new SqliteConnection(CreateSqliteConnectionString(databasePath, SqliteOpenMode.ReadOnly));
-        connection.Open();
-        using var command = connection.CreateCommand();
-        command.CommandText = """
+        using var connection = new SqliteDatabase(databasePath, readOnly: true);
+
+        using var command = connection.CreateStatement();
+        command.SetSql("""
             SELECT COUNT(*)
             FROM oc_server_journal_events
             WHERE tenant_id = $tenantId
               AND stream_id = $streamId
               AND client_id = $clientId
               AND operation_id = $operationId;
-            """;
-        _ = command.Parameters.AddWithValue("$tenantId", TenantId);
-        _ = command.Parameters.AddWithValue("$streamId", Stream.Value);
-        _ = command.Parameters.AddWithValue("$clientId", WriterClientId);
-        _ = command.Parameters.AddWithValue("$operationId", operationId.Value.ToString("D"));
-        return Convert.ToInt32(command.ExecuteScalar(), CultureInfo.InvariantCulture);
+            """);
+        _ = command.Bind("$tenantId", TenantId);
+        _ = command.Bind("$streamId", Stream.Value);
+        _ = command.Bind("$clientId", WriterClientId);
+        _ = command.Bind("$operationId", operationId.Value.ToString("D"));
+        return Convert.ToInt32(command.Scalar(), CultureInfo.InvariantCulture);
     }
 
     /// <summary>Reads durable receive inbox rows for one client store.</summary>
@@ -232,18 +232,18 @@ internal static partial class DurableHttpLostAckScenario
     /// <returns>The result.</returns>
     private static int ReadInboxCount(string databasePath, string storeIdentity)
     {
-        using var connection = new SqliteConnection(CreateSqliteConnectionString(databasePath, SqliteOpenMode.ReadOnly));
-        connection.Open();
-        using var command = connection.CreateCommand();
-        command.CommandText = """
+        using var connection = new SqliteDatabase(databasePath, readOnly: true);
+
+        using var command = connection.CreateStatement();
+        command.SetSql("""
             SELECT COUNT(*)
             FROM oc_inbox
             WHERE store_identity = $storeIdentity
               AND stream_id = $streamId;
-            """;
-        _ = command.Parameters.AddWithValue("$storeIdentity", storeIdentity);
-        _ = command.Parameters.AddWithValue("$streamId", Stream.Value);
-        return Convert.ToInt32(command.ExecuteScalar(), CultureInfo.InvariantCulture);
+            """);
+        _ = command.Bind("$storeIdentity", storeIdentity);
+        _ = command.Bind("$streamId", Stream.Value);
+        return Convert.ToInt32(command.Scalar(), CultureInfo.InvariantCulture);
     }
 
     /// <summary>Gets the single pending operation id when present.</summary>
