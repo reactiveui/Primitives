@@ -236,7 +236,7 @@ public static partial class Coverage
             {
                 StartInfo = new ProcessStartInfo("dotnet")
                 {
-                    WorkingDirectory = Path.GetDirectoryName(Path.GetFullPath(projectFile))!,
+                    WorkingDirectory = Environment.CurrentDirectory,
                     UseShellExecute = false,
                     RedirectStandardOutput = true,
                     RedirectStandardError = true,
@@ -244,7 +244,7 @@ public static partial class Coverage
             };
             foreach (var argument in new[]
             {
-                "msbuild", Path.GetFullPath(projectFile), "-nologo",
+                "msbuild", Path.GetFullPath(projectFile), "-nologo", "-nodeReuse:false",
                 "-getProperty:TargetFramework,TargetFrameworks",
                 "-p:AndroidPrimitivesTargetFrameworks=", "-p:ApplePrimitivesTargetFrameworks=",
             })
