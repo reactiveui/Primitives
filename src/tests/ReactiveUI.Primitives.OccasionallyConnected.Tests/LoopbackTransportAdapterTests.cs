@@ -456,10 +456,17 @@ public sealed partial class LoopbackTransportAdapterTests
         {
             ApplyHandler = async (_, _, cancellationToken) =>
             {
+                TaskCompletionSource canceled = new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+                // Cancellation runs callbacks LIFO; release only after the reentrant callback has run.
+                await using var release = cancellationToken.UnsafeRegister(
+                    static state => _ = ((TaskCompletionSource)state!).TrySetResult(),
+                    canceled);
                 var context = new ReentrantAcknowledgeContext(capturedSession, acknowledgement, callbackCompleted);
                 await using var registration = cancellationToken.UnsafeRegister(CompleteReentrantAcknowledge, context);
                 _ = entered.TrySetResult();
-                await Task.Delay(TimeSpan.FromMinutes(1), cancellationToken).ConfigureAwait(false);
+                await canceled.Task.ConfigureAwait(false);
+                cancellationToken.ThrowIfCancellationRequested();
                 return new(CreateResult(CreateBatch()), []);
             },
         };
@@ -486,11 +493,18 @@ public sealed partial class LoopbackTransportAdapterTests
         {
             ApplyHandler = async (_, _, cancellationToken) =>
             {
+                TaskCompletionSource canceled = new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+                // Keep the faulting registration alive until cancellation has invoked it.
+                await using var release = cancellationToken.UnsafeRegister(
+                    static state => _ = ((TaskCompletionSource)state!).TrySetResult(),
+                    canceled);
                 await using var registration = cancellationToken.UnsafeRegister(
                     static _ => throw new InvalidOperationException("callback failed"),
                     null);
                 _ = entered.TrySetResult();
-                await Task.Delay(TimeSpan.FromMinutes(1), cancellationToken).ConfigureAwait(false);
+                await canceled.Task.ConfigureAwait(false);
+                cancellationToken.ThrowIfCancellationRequested();
                 return new(CreateResult(batch), []);
             },
         };
