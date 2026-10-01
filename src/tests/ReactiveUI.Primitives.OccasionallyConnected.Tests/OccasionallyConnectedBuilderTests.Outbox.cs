@@ -87,6 +87,7 @@ public sealed partial class OccasionallyConnectedBuilderTests
     /// <summary>Verifies a durable acknowledgement frees shared SQLite capacity for another stream's publisher.</summary>
     /// <returns>The assertion task.</returns>
     [Test]
+    [NotInParallel]
     public async Task ConfiguredOutboxDurableAcknowledgementAdmitsWaitingStream()
     {
         var databasePath = Path.Combine(SqliteTestDirectory.Create("oc-shared-outbox-").FullName, RecoveredUploadDatabaseFileName);
