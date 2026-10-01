@@ -438,11 +438,10 @@ public sealed partial class HttpReplayCoordinatorTests
     public async Task AdmitAsyncWaitsForInFlightCachedCompletionAfterReauthorization()
     {
         await using HttpReplayCoordinator coordinator = new(CreateOptions(SentAtUtc));
-        using var replayTimeout = new CancellationTokenSource(TimeSpan.FromMilliseconds(WaitTimeoutMilliseconds));
         var request = CreateRequest(HttpReplayOperationKind.Connect);
         var first = await coordinator.AdmitAsync(request, static _ => new(HttpReplayAuthorizationResult.Allowed), CancellationToken.None);
         var replayAuthorizationCalls = 0;
-        var replayAdmission = coordinator.AdmitAsync(request, AuthorizeReplayAsync, replayTimeout.Token).AsTask();
+        var replayAdmission = coordinator.AdmitAsync(request, AuthorizeReplayAsync, CancellationToken.None).AsTask();
         await Assert.That(first.Owner).IsNotNull();
         if (first.Owner is null)
         {
@@ -576,12 +575,11 @@ public sealed partial class HttpReplayCoordinatorTests
     {
         var options = CreateOptions(SentAtUtc) with { MaximumReplaySessions = SingleAuthorizationCall };
         await using HttpReplayCoordinator coordinator = new(options);
-        using var replayTimeout = new CancellationTokenSource(TimeSpan.FromMilliseconds(WaitTimeoutMilliseconds));
         _ = coordinator.Sessions.Issue(new(TenantId, ClientId), SentAtUtc);
         var request = CreateRequest(HttpReplayOperationKind.Connect);
         var session = new HttpReplayIssuedSession { SessionId = ReplaySessionId, SessionSecret = SessionSecret, ExpiresAtUtc = SentAtUtc.Add(Window + Window) };
         var first = await coordinator.AdmitAsync(request, static _ => new(HttpReplayAuthorizationResult.Allowed), CancellationToken.None);
-        var replayAdmission = coordinator.AdmitAsync(request, static _ => new(HttpReplayAuthorizationResult.Allowed), replayTimeout.Token).AsTask();
+        var replayAdmission = coordinator.AdmitAsync(request, static _ => new(HttpReplayAuthorizationResult.Allowed), CancellationToken.None).AsTask();
         await Assert.That(first.Owner).IsNotNull();
         if (first.Owner is null)
         {
@@ -602,11 +600,10 @@ public sealed partial class HttpReplayCoordinatorTests
     public async Task CompleteAsyncRegistrationExceptionDrainsWaitersAfterAtomicOwnerClose()
     {
         await using HttpReplayCoordinator coordinator = new(CreateOptions(SentAtUtc));
-        using var replayTimeout = new CancellationTokenSource(TimeSpan.FromMilliseconds(WaitTimeoutMilliseconds));
         var request = CreateRequest(HttpReplayOperationKind.Connect);
         var session = new HttpReplayIssuedSession { SessionId = ReplaySessionId, SessionSecret = SessionSecret, ExpiresAtUtc = SentAtUtc.Add(Window + Window) };
         var first = await coordinator.AdmitAsync(request, static _ => new(HttpReplayAuthorizationResult.Allowed), CancellationToken.None);
-        var replayAdmission = coordinator.AdmitAsync(request, static _ => new(HttpReplayAuthorizationResult.Allowed), replayTimeout.Token).AsTask();
+        var replayAdmission = coordinator.AdmitAsync(request, static _ => new(HttpReplayAuthorizationResult.Allowed), CancellationToken.None).AsTask();
         await Assert.That(first.Owner).IsNotNull();
         if (first.Owner is null)
         {
@@ -867,11 +864,10 @@ public sealed partial class HttpReplayCoordinatorTests
     public async Task DisposeAsyncDrainsInFlightWaitersBeforeLateConnectCompletion()
     {
         await using HttpReplayCoordinator coordinator = new(CreateOptions(SentAtUtc));
-        using var replayTimeout = new CancellationTokenSource(TimeSpan.FromMilliseconds(WaitTimeoutMilliseconds));
         var request = CreateRequest(HttpReplayOperationKind.Connect);
         var session = new HttpReplayIssuedSession { SessionId = ReplaySessionId, SessionSecret = SessionSecret, ExpiresAtUtc = SentAtUtc.Add(Window + Window) };
         var first = await coordinator.AdmitAsync(request, static _ => new(HttpReplayAuthorizationResult.Allowed), CancellationToken.None);
-        var replayAdmission = coordinator.AdmitAsync(request, static _ => new(HttpReplayAuthorizationResult.Allowed), replayTimeout.Token).AsTask();
+        var replayAdmission = coordinator.AdmitAsync(request, static _ => new(HttpReplayAuthorizationResult.Allowed), CancellationToken.None).AsTask();
         await Assert.That(first.Owner).IsNotNull();
         if (first.Owner is null)
         {
