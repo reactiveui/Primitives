@@ -152,6 +152,7 @@ public sealed partial class ServerStreamHub : IServerStreamHub, IServerSnapshotR
         CancellationToken cancellationToken)
     {
         EnterActiveCall();
+        var signalSubscribers = false;
         try
         {
             using var linked = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, _disposeCancellation.Token);
@@ -162,12 +163,12 @@ public sealed partial class ServerStreamHub : IServerStreamHub, IServerSnapshotR
             var authorizer = new PreAuthorizedOperationAuthorizer(scopes);
             var processor = new ServerOperationProcessor(_commitJournal, authorizer, _handler, options: _processorOptions);
             var result = await processor.ProcessAsync(batch, new(client.ClientId), token).ConfigureAwait(false);
-            SignalSubscribers();
+            signalSubscribers = true;
             return result;
         }
         finally
         {
-            ReleaseActiveCall();
+            ReleaseActiveCall(signalSubscribers);
         }
     }
 
@@ -708,12 +709,19 @@ public sealed partial class ServerStreamHub : IServerStreamHub, IServerSnapshotR
     }
 
     /// <summary>Releases one active journal call and completes disposal drain when appropriate.</summary>
-    private void ReleaseActiveCall()
+    /// <param name="signalSubscribers">Whether the completed call should wake subscription polls.</param>
+    private void ReleaseActiveCall(bool signalSubscribers = false)
     {
         TaskCompletionSource<bool>? drained = null;
         lock (_lifecycleGate)
         {
             _activeCalls--;
+            if (signalSubscribers)
+            {
+                // Wake after capacity is free, but before disposal can close the semaphore.
+                SignalSubscribers();
+            }
+
             if (IsDrainedUnderGate())
             {
                 drained = _drained;
