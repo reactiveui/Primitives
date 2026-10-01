@@ -51,10 +51,13 @@ public sealed partial class SqliteLocalStoreAdapterTests
 
     /// <summary>Verifies independent database initialization safely shares native filesystem discovery.</summary>
     /// <returns>The asynchronous assertion task.</returns>
+    /// <remarks>The four owners run concurrently without competing with unrelated synchronous database fixtures.</remarks>
     [Test]
+    [NotInParallel]
     public async Task ConcurrentOwnershipDiscoveryInitializesIndependentDatabases()
     {
         using var database = TempDatabase.Create();
+        using CancellationTokenSource cancellation = new();
         var tasks = new Task[ConcurrentOwnershipCount];
         for (var index = 0; index < tasks.Length; index++)
         {
@@ -63,14 +66,29 @@ public sealed partial class SqliteLocalStoreAdapterTests
                 async () =>
                 {
                     await using var adapter = CreateAdapter(path);
-                    await adapter.InitializeAsync(new(StoreIdentity, SchemaVersion, false), CancellationToken.None);
-                    var subscription = await adapter.GetOrCreateSubscriptionIdAsync(Stream, null, CancellationToken.None);
+                    await adapter.InitializeAsync(new(StoreIdentity, SchemaVersion, false), cancellation.Token);
+                    var subscription = await adapter.GetOrCreateSubscriptionIdAsync(Stream, null, cancellation.Token);
                     await Assert.That(subscription.Value).IsNotEqualTo(Guid.Empty);
                 },
                 CancellationToken.None);
         }
 
-        await Task.WhenAll(tasks).WaitAsync(GuardTimeout);
+        var completion = Task.WhenAll(tasks);
+        try
+        {
+            await completion.WaitAsync(GuardTimeout);
+        }
+        finally
+        {
+            await cancellation.CancelAsync();
+            try
+            {
+                await completion;
+            }
+            catch (OperationCanceledException) when (cancellation.IsCancellationRequested)
+            {
+            }
+        }
     }
 
     /// <summary>Verifies one process can have only one initialized writer for an adapter without multi-process coordination.</summary>
