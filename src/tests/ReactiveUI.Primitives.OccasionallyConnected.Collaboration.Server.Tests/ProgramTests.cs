@@ -4,8 +4,9 @@
 
 using System.Diagnostics;
 using System.Net;
-using System.Net.Sockets;
 using System.Runtime.CompilerServices;
+using System.Text;
+using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.DependencyInjection;
 using ReactiveUI.Primitives.OccasionallyConnected.Collaboration.Server;
 
@@ -41,19 +42,41 @@ public sealed class ProgramTests
     /// <summary>The readiness poll interval in milliseconds.</summary>
     private const int ReadyPollMilliseconds = 50;
 
+    /// <summary>The endpoint requested for atomic operating-system port allocation.</summary>
+    private const string DynamicLoopbackAddress = "http://127.0.0.1:0";
+
     /// <summary>Verifies the public runner owns startup, cancellation shutdown and journal disposal.</summary>
     /// <returns>The assertion task.</returns>
+    /// <exception cref="InvalidOperationException">The runner exits before binding its endpoint.</exception>
     [Test]
     public async Task RunAsyncStopsHostAndReleasesJournalWhenCancellationIsRequested()
     {
         using var lease = new ProcessDatabaseLease();
         using var cancellation = new CancellationTokenSource();
-        var address = $"http://127.0.0.1:{GetAvailableLoopbackPort()}";
-        var options = CreateOptions(address, lease.Path);
-        var runTask = CollaborationServerExample.RunAsync(options, cancellation.Token);
+        using var readiness = new CancellationTokenSource(TimeSpan.FromSeconds(ReadyTimeoutSeconds));
+        var options = CreateOptions(DynamicLoopbackAddress, lease.Path);
+        var application = CollaborationServerExample.CreateWebApplication(options);
+        TaskCompletionSource<string> boundAddress = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        await using var started = application.Lifetime.ApplicationStarted.UnsafeRegister(
+            static state =>
+            {
+                var startup = ((WebApplication Application, TaskCompletionSource<string> BoundAddress))state!;
+                _ = startup.BoundAddress.TrySetResult(startup.Application.Urls.Single());
+            },
+            (application, boundAddress));
+        var runTask = CollaborationServerExample.RunApplicationAsync(() => application, cancellation.Token);
         try
         {
-            var body = await WaitForRunnerHealthAsync(runTask, CreateMountedAddress(address), cancellation.Token).ConfigureAwait(false);
+            _ = await Task.WhenAny(runTask, boundAddress.Task).WaitAsync(readiness.Token).ConfigureAwait(false);
+            if (runTask.IsCompleted)
+            {
+                await runTask.ConfigureAwait(false);
+                throw new InvalidOperationException("The example server runner completed before binding its endpoint.");
+            }
+
+            var address = await boundAddress.Task.ConfigureAwait(false);
+            await Assert.That(new Uri(address).Port).IsGreaterThan(0);
+            var body = await WaitForRunnerHealthAsync(runTask, CreateMountedAddress(address), readiness.Token).ConfigureAwait(false);
 
             await Assert.That(body).IsEqualTo(HealthBody);
             await Assert.That(File.Exists(lease.Path)).IsTrue();
@@ -74,11 +97,13 @@ public sealed class ProgramTests
     public async Task ProgramMainStartsHostProcessFromCommandLineArguments()
     {
         using var lease = new ProcessDatabaseLease();
-        var address = $"http://127.0.0.1:{GetAvailableLoopbackPort()}";
-        using var server = StartServerProcess(address, lease.Path);
+        using var readiness = new CancellationTokenSource(TimeSpan.FromSeconds(ReadyTimeoutSeconds));
+        using var server = StartServerProcess(DynamicLoopbackAddress, lease.Path);
         try
         {
-            var body = await WaitForProcessHealthAsync(server, CreateMountedAddress(address), CancellationToken.None).ConfigureAwait(false);
+            var address = await server.BoundAddress.WaitAsync(readiness.Token).ConfigureAwait(false);
+            await Assert.That(new Uri(address).Port).IsGreaterThan(0);
+            var body = await WaitForProcessHealthAsync(server, CreateMountedAddress(address), readiness.Token).ConfigureAwait(false);
 
             await Assert.That(body).IsEqualTo(HealthBody);
             await Assert.That(File.Exists(lease.Path)).IsTrue();
@@ -123,6 +148,7 @@ public sealed class ProgramTests
         startInfo.ArgumentList.Add(PathBase);
 
         startInfo.Environment["DOTNET_NOLOGO"] = "1";
+        startInfo.Environment["Logging__LogLevel__Microsoft.Hosting.Lifetime"] = "Information";
         var process = Process.Start(startInfo)
             ?? throw new InvalidOperationException("The example server process did not start.");
         return new(process);
@@ -369,18 +395,15 @@ public sealed class ProgramTests
     private static string EnsureTrailingSlash(string address) =>
         address.EndsWith('/') ? address : $"{address}/";
 
-    /// <summary>Reserves and releases an available loopback TCP port for the child server process.</summary>
-    /// <returns>The selected port.</returns>
-    private static int GetAvailableLoopbackPort()
-    {
-        using var listener = new TcpListener(IPAddress.Loopback, 0);
-        listener.Start();
-        return ((IPEndPoint)listener.LocalEndpoint).Port;
-    }
-
     /// <summary>Owns a started server process and its drained output streams.</summary>
     private sealed class CapturedServerProcess : IDisposable
     {
+        /// <summary>The host log prefix that reports the bound endpoint.</summary>
+        private const string ListeningPrefix = "Now listening on:";
+
+        /// <summary>Completes when the child reports its actual bound endpoint.</summary>
+        private readonly TaskCompletionSource<string> _boundAddress = new(TaskCreationOptions.RunContinuationsAsynchronously);
+
         /// <summary>The standard output read task.</summary>
         private readonly Task<string> _standardOutput;
 
@@ -392,12 +415,15 @@ public sealed class ProgramTests
         internal CapturedServerProcess(Process process)
         {
             Process = process;
-            _standardOutput = process.StandardOutput.ReadToEndAsync();
+            _standardOutput = ReadStandardOutputAsync(process.StandardOutput);
             _standardError = process.StandardError.ReadToEndAsync();
         }
 
         /// <summary>Gets the captured process.</summary>
         internal Process Process { get; }
+
+        /// <summary>Gets the actual endpoint selected by the child server.</summary>
+        internal Task<string> BoundAddress => _boundAddress.Task;
 
         /// <summary>Creates a diagnostic process-exit message.</summary>
         /// <returns>The diagnostic message.</returns>
@@ -448,6 +474,27 @@ public sealed class ProgramTests
                     return "<output stream did not complete before the cleanup timeout>";
                 }
             }
+        }
+
+        /// <summary>Drains stdout while observing the endpoint without releasing a reserved socket.</summary>
+        /// <param name="reader">The child stdout reader.</param>
+        /// <returns>The complete captured output.</returns>
+        private async Task<string> ReadStandardOutputAsync(StreamReader reader)
+        {
+            StringBuilder output = new();
+            while (await reader.ReadLineAsync().ConfigureAwait(false) is { } line)
+            {
+                _ = output.AppendLine(line);
+                var trimmed = line.Trim();
+                if (trimmed.StartsWith(ListeningPrefix, StringComparison.Ordinal))
+                {
+                    _ = _boundAddress.TrySetResult(trimmed[ListeningPrefix.Length..].Trim());
+                }
+            }
+
+            _ = _boundAddress.TrySetException(new InvalidOperationException(
+                $"The example server process exited without reporting a bound endpoint.{Environment.NewLine}{output}"));
+            return output.ToString();
         }
 
         /// <inheritdoc />

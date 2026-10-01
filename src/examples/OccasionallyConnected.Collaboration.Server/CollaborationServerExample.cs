@@ -52,9 +52,17 @@ public static class CollaborationServerExample
     /// <param name="options">The example options.</param>
     /// <param name="cancellationToken">The cancellation token that stops the host.</param>
     /// <returns>The asynchronous run task.</returns>
-    public static async Task RunAsync(CollaborationServerOptions options, CancellationToken cancellationToken)
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static Task RunAsync(CollaborationServerOptions options, CancellationToken cancellationToken) =>
+        RunApplicationAsync(() => CreateWebApplication(options), cancellationToken);
+
+    /// <summary>Creates and owns an application until cancellation requests shutdown.</summary>
+    /// <param name="applicationFactory">The factory for the application owned by this run.</param>
+    /// <param name="cancellationToken">The cancellation token that stops the host.</param>
+    /// <returns>The asynchronous run task.</returns>
+    internal static async Task RunApplicationAsync(Func<WebApplication> applicationFactory, CancellationToken cancellationToken)
     {
-        await using var app = CreateWebApplication(options);
+        await using var app = applicationFactory();
         await app.RunAsync(cancellationToken).ConfigureAwait(false);
     }
 

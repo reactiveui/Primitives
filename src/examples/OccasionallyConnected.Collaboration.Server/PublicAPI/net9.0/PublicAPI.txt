@@ -36,6 +36,7 @@ public static class CollaborationServerExample
     public static Microsoft.AspNetCore.Builder.WebApplication CreateWebApplication(ReactiveUI.Primitives.OccasionallyConnected.Collaboration.Server.CollaborationServerOptions options) { }
     [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
     public static System.Threading.Tasks.Task RunAsync(ReactiveUI.Primitives.OccasionallyConnected.Collaboration.Server.CollaborationServerOptions options) { }
+    [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
     public static System.Threading.Tasks.Task RunAsync(ReactiveUI.Primitives.OccasionallyConnected.Collaboration.Server.CollaborationServerOptions options, System.Threading.CancellationToken cancellationToken) { }
 }
 [System.Diagnostics.DebuggerDisplay("{ListenUri,nq} {DatabasePath,nq}")]
