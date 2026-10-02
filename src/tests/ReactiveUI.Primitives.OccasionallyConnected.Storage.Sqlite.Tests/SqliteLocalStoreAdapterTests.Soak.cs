@@ -81,7 +81,8 @@ public sealed partial class SqliteLocalStoreAdapterTests
 
         TestContext.Current?.Output.WriteLine($"soak.sqlite operations={SoakOperationCount} commits_per_second={commitsPerSecond:F1} "
             + $"allocated_bytes_per_commit={bytesPerCommit} recovery_ms={recoveryTime.TotalMilliseconds:F1} "
-            + $"compaction_ms={compactionTime.TotalMilliseconds:F1} records_removed={compacted.RecordsRemoved}");
+            + $"compaction_ms={compactionTime.TotalMilliseconds:F1} records_removed={compacted.RecordsRemoved} "
+            + $"database_path={database.Path}");
         await Assert.That(drained.PendingOperations).IsEmpty();
         await Assert.That(compacted.RecordsRemoved).IsGreaterThan(0);
         return (commitsPerSecond, bytesPerCommit, recoveryTime, compactionTime);

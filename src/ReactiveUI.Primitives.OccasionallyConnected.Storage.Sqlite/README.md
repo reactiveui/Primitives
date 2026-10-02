@@ -69,3 +69,10 @@ Keep that checkpoint outside the database and outside backups that an attacker c
 Compare it before accepting recovered state. Fail closed when it does not match.
 The adapter does not provide that external checkpoint.
 Do not use this adapter alone when your threat model requires rollback or deletion resistance.
+
+## Performance checks
+
+CI measures durable commit throughput, allocated memory, recovery and compaction.
+It creates the measurement database in the hosted runner's temporary work directory.
+The test reports that path with its results.
+FULL synchronous writes remain enabled. The release budgets do not change with the selected directory.

@@ -85,6 +85,10 @@ jobs:
             11.0.x
       - name: Check durable queue performance budgets
         working-directory: src
+        env:
+          TMP: ${{ runner.temp }}
+          TEMP: ${{ runner.temp }}
+          TMPDIR: ${{ runner.temp }}
         run: >-
           dotnet test
           tests/ReactiveUI.Primitives.OccasionallyConnected.Storage.Sqlite.Tests/ReactiveUI.Primitives.OccasionallyConnected.Storage.Sqlite.Tests.csproj
