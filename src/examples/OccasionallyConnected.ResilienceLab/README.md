@@ -16,8 +16,9 @@ These examples accompany the first v1 release of OccasionallyConnected. The feat
 - `corruption-quarantine` corrupts one SQLite snapshot row and checks that recovery quarantines that stream while a healthy stream still recovers.
 - `retention-gap-recovery` advances a manual server clock beyond the retention window and checks recovery from a cursor gap by fetching a snapshot and resuming from its frontier.
 
-The lost-ACK lab advances its manual clock while the observer converges.
-This lets receive retries wake if a parked HTTP request times out before the host releases it.
+The lost-ACK lab advances its manual clock while the writer stores receive progress.
+It also advances the clock while the observer converges.
+This lets empty polls and receive retries wake after the host releases parked HTTP requests.
 
 ## Run a scenario
 

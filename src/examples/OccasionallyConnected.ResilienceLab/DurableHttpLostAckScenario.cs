@@ -363,13 +363,14 @@ internal static partial class DurableHttpLostAckScenario
         var retryOperationId = await host.WaitForRetryPushOperationIdAsync(cancellationToken).ConfigureAwait(false);
         host.ReleaseSubscribeResponses();
         _ = await host.WaitForRetryPushResponseAsync(cancellationToken).ConfigureAwait(false);
-        _ = await WaitForWriterDurableSynchronizationAsync(
+        var durableProof = WaitForWriterDurableSynchronizationAsync(
             session.Store,
             writerStorePath,
             first.BeforeRestart,
             first.Receipt.OperationId,
             session.Telemetry,
-            cancellationToken).ConfigureAwait(false);
+            cancellationToken).AsTask();
+        await AdvanceClockUntilObservedAsync(durableProof, clock, cancellationToken).ConfigureAwait(false);
         var observed = await session.Telemetry.WaitForOperationStateAsync(
             first.Receipt.OperationId,
             SyncOperationState.Synchronized,

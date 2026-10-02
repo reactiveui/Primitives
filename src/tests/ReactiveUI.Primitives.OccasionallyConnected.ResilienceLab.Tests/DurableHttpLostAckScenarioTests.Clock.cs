@@ -49,4 +49,20 @@ public sealed partial class DurableHttpLostAckScenarioTests
             .Throws<OperationCanceledException>();
         await Assert.That(clock.GetUtcNow()).IsEqualTo(DateTimeOffset.UnixEpoch);
     }
+
+    /// <summary>Verifies driving receive retry time preserves a failed durable writer proof.</summary>
+    /// <returns>The assertion task.</returns>
+    [Test]
+    public async Task WriterSynchronizationPreservesDurableProofFailure()
+    {
+        var clock = new DurableHttpLostAckScenario.MutableTimeProvider(DateTimeOffset.UnixEpoch);
+        var expected = new InvalidOperationException("The durable writer proof failed.");
+        var proof = Task.FromException<ClientStoreProof>(expected);
+
+        var failure = await Assert.ThrowsExactlyAsync<InvalidOperationException>(
+            () => DurableHttpLostAckScenario.AdvanceClockUntilObservedAsync(proof, clock, CancellationToken.None));
+
+        await Assert.That(failure).IsSameReferenceAs(expected);
+        await Assert.That(clock.GetUtcNow()).IsEqualTo(DateTimeOffset.UnixEpoch);
+    }
 }
