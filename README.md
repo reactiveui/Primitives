@@ -1154,8 +1154,9 @@ share one subscription instead of starting the work over each time.
 | `SubscribePrimitives()` and its 4 overloads | Gives you the same five methods under a name that cannot clash with another library. | `Subscribe` |
 | `SubscribeSafe(observer)` | Subscribes and keeps your observer's exceptions away from the producer. | `SubscribeSafe` |
 | `SubscribeSafePrimitives(observer)` | Gives you the same method under a name that cannot clash. | `SubscribeSafe` |
-| `SubscribeSafe(onNext, onError)`, `SubscribeSafe(onNext, onError, onCompleted)`, `SubscribeSafe(onError)`, `SubscribeSafe(onError, onCompleted)` | Callback forms of `SubscribeSafe`. | `SubscribeSafe` |
-| `LinqExtensions.SubscribeSafe(source, ...)`, 14 static overloads | Lets a nullable source pick one overload without ambiguity; the `params` array is a marker and is never read. | `SubscribeSafe` |
+| `SubscribeSafe(onNext)`, `SubscribeSafe(onNext, onError)`, `SubscribeSafe(onNext, onError, onCompleted)` | Callback forms of `SubscribeSafe`. A lone delegate is `onNext`. With no error handler, a source error is rethrown. | `SubscribeSafe` |
+| `SubscribeSafeErrors(onError)`, `SubscribeSafeErrors(onError, onCompleted)` | Subscribes with error and completion callbacks only. Values are ignored. | None |
+| `LinqExtensions.SubscribeSafe(source, ...)`, 12 static overloads, and `LinqExtensions.SubscribeSafeErrors(source, ...)`, 6 static overloads | Lets a nullable source pick one overload without ambiguity; the `params` array is a marker and is never read. | `SubscribeSafe` |
 | `IObserver<T>.FastForEach(source)` | Pushes a whole collection into an observer and indexes arrays and lists directly. | - |
 | `ObserveOn(sequencer)` | Delivers notifications to subscribers on the sequencer you name. | `ObserveOn` |
 | `WitnessOn(sequencer)` | Another name for `ObserveOn`. | `ObserveOn` |

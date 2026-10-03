@@ -25,6 +25,9 @@ public partial class LinqExtensionsTests
     /// <summary>The second non-null test value.</summary>
     private const int Two = 2;
 
+    /// <summary>The number of completing subscriptions made by the SubscribeSafeErrors dispatch test.</summary>
+    private const int CompletingSubscriptionCount = 4;
+
     /// <summary>The string value used by nullable object subscription tests.</summary>
     private const string SubscribeSafeValue = "value";
 
@@ -195,11 +198,11 @@ public partial class LinqExtensionsTests
             (byte)0);
 
         InvalidOperationException expected = new("expected");
-        using var errorSubscription = ReactiveLinqExtensions.SubscribeSafe(
+        using var errorSubscription = ReactiveLinqExtensions.SubscribeSafeErrors(
             Observable.Throw<Unit>(expected),
             OnError,
             (byte)0);
-        using var terminalSubscription = ReactiveLinqExtensions.SubscribeSafe(
+        using var terminalSubscription = ReactiveLinqExtensions.SubscribeSafeErrors(
             source,
             OnError,
             () => completed++,
@@ -318,15 +321,70 @@ public partial class LinqExtensionsTests
         Exception? observedReferenceError = null;
         Exception? observedValueError = null;
 
-        using var referenceSubscription = ReactiveLinqExtensions.SubscribeSafe(
+        using var referenceSubscription = ReactiveLinqExtensions.SubscribeSafeErrors(
             Signal.Fail<object?>(referenceError),
             error => observedReferenceError = error);
-        using var valueSubscription = ReactiveLinqExtensions.SubscribeSafe(
+        using var valueSubscription = ReactiveLinqExtensions.SubscribeSafeErrors(
             Signal.Fail<int?>(valueError),
             error => observedValueError = error);
 
         await Assert.That(observedReferenceError).IsSameReferenceAs(referenceError);
         await Assert.That(observedValueError).IsSameReferenceAs(valueError);
+    }
+
+    /// <summary>Verifies a lone delegate passed to <c>SubscribeSafe</c> receives values for every dispatch variant.</summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    [Test]
+    public async Task SubscribeSafeLoneDelegateReceivesValuesForEveryDispatchVariant()
+    {
+        List<int> fluentValues = [];
+        List<string?> referenceValues = [];
+        List<int?> nullableValues = [];
+        List<int> valueTypeValues = [];
+
+        using var fluentSubscription = Signal.FromEnumerable([One, Two]).SubscribeSafe(fluentValues.Add);
+        using var referenceSubscription = ReactiveLinqExtensions.SubscribeSafe(
+            Signal.FromEnumerable<string?>([SubscribeSafeValue]),
+            referenceValues.Add);
+        using var nullableSubscription = ReactiveLinqExtensions.SubscribeSafe(
+            Signal.FromEnumerable<int?>([null, One]),
+            nullableValues.Add);
+        using var valueTypeSubscription = ReactiveLinqExtensions.SubscribeSafe(
+            Signal.FromEnumerable([One, Two]),
+            valueTypeValues.Add);
+
+        await Assert.That(fluentValues.SequenceEqual([One, Two])).IsTrue();
+        await Assert.That(referenceValues.SequenceEqual([SubscribeSafeValue])).IsTrue();
+        await Assert.That(nullableValues.SequenceEqual([null, One])).IsTrue();
+        await Assert.That(valueTypeValues.SequenceEqual([One, Two])).IsTrue();
+    }
+
+    /// <summary>Verifies <c>SubscribeSafeErrors</c> receives errors and completion for every dispatch variant.</summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    [Test]
+    public async Task SubscribeSafeErrorsReceivesErrorsAndCompletionForEveryDispatchVariant()
+    {
+        InvalidOperationException expected = new("expected");
+        Exception? fluentError = null;
+        var completed = 0;
+
+        using var fluentSubscription = Signal.Fail<int>(expected).SubscribeSafeErrors(error => fluentError = error);
+        using var fluentCompleted = Signal.FromEnumerable([One]).SubscribeSafeErrors(static _ => { }, () => completed++);
+        using var referenceCompleted = ReactiveLinqExtensions.SubscribeSafeErrors(
+            Signal.FromEnumerable<string?>([SubscribeSafeValue]),
+            static _ => { },
+            () => completed++);
+        using var nullableCompleted = ReactiveLinqExtensions.SubscribeSafeErrors(
+            Signal.FromEnumerable<int?>([One]),
+            static _ => { },
+            () => completed++);
+        using var valueTypeCompleted = ReactiveLinqExtensions.SubscribeSafeErrors(
+            Signal.FromEnumerable([One]),
+            static _ => { },
+            () => completed++);
+
+        await Assert.That(fluentError).IsSameReferenceAs(expected);
+        await Assert.That(completed).IsEqualTo(CompletingSubscriptionCount);
     }
 
     /// <summary>Verifies static alias <c>SubscribeSafe</c> accepts nullable terminal completion overloads with Rx imports present.</summary>
@@ -339,11 +397,11 @@ public partial class LinqExtensionsTests
         var referenceCompleted = 0;
         var valueCompleted = 0;
 
-        using var referenceSubscription = ReactiveLinqExtensions.SubscribeSafe(
+        using var referenceSubscription = ReactiveLinqExtensions.SubscribeSafeErrors(
             Signal.FromEnumerable<object?>([null, SubscribeSafeValue]),
             error => referenceObserved = error,
             () => referenceCompleted++);
-        using var valueSubscription = ReactiveLinqExtensions.SubscribeSafe(
+        using var valueSubscription = ReactiveLinqExtensions.SubscribeSafeErrors(
             Signal.FromEnumerable<int?>([null, One, null, Two]),
             error => valueObserved = error,
             () => valueCompleted++);
