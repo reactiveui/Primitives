@@ -237,7 +237,7 @@ public partial class RxNamesTests
         {
             observer.OnError(expected);
             observer.OnError(new InvalidOperationException("late"));
-        }).SubscribeSafe(error => errorOnlyCount += ReferenceEquals(error, expected) ? One : 0);
+        }).SubscribeSafeErrors(error => errorOnlyCount += ReferenceEquals(error, expected) ? One : 0);
 
         await Assert.That(errorOnlyCount).IsEqualTo(One);
 
@@ -247,7 +247,7 @@ public partial class RxNamesTests
             observer.OnCompleted();
             observer.OnNext(Two);
             observer.OnCompleted();
-        }).SubscribeSafe(static _ => { }, () => completed++);
+        }).SubscribeSafeErrors(static _ => { }, () => completed++);
 
         await Assert.That(completed).IsEqualTo(One);
 
