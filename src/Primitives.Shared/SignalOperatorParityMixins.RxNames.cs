@@ -149,21 +149,30 @@ public static partial class LinqExtensions
         public IDisposable SubscribeSafe(Action<T> onNext, Action<Exception> onError, Action onCompleted) =>
             SubscribeSafeCore(source, Witness.Create(onNext, onError, onCompleted));
 
-        /// <summary>Subscribes terminal callbacks with downstream exception protection.</summary>
+        /// <summary>Subscribes a value callback with downstream exception protection.</summary>
+        /// <param name="onNext">The action to invoke for each value.</param>
+        /// <returns>A disposable that cancels the subscription.</returns>
+        /// <exception cref="ArgumentNullException">A required argument is <see langword="null"/>.</exception>
+        /// <remarks>With no error handler, a source error is rethrown to the caller of the source's <c>OnError</c>.</remarks>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public IDisposable SubscribeSafe(Action<T> onNext) =>
+            SubscribeSafeCore(source, Witness.Create(onNext));
+
+        /// <summary>Subscribes error callbacks with downstream exception protection.</summary>
         /// <param name="onError">The action to invoke for an error.</param>
         /// <returns>A disposable that cancels the subscription.</returns>
         /// <exception cref="ArgumentNullException">A required argument is <see langword="null"/>.</exception>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public IDisposable SubscribeSafe(Action<Exception> onError) =>
+        public IDisposable SubscribeSafeErrors(Action<Exception> onError) =>
             SubscribeSafeCore(source, Witness.Create<T>(static _ => { }, onError));
 
-        /// <summary>Subscribes terminal callbacks with downstream exception protection.</summary>
+        /// <summary>Subscribes error and completion callbacks with downstream exception protection.</summary>
         /// <param name="onError">The action to invoke for an error.</param>
         /// <param name="onCompleted">The action to invoke when the sequence completes.</param>
         /// <returns>A disposable that cancels the subscription.</returns>
         /// <exception cref="ArgumentNullException">A required argument is <see langword="null"/>.</exception>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public IDisposable SubscribeSafe(Action<Exception> onError, Action onCompleted) =>
+        public IDisposable SubscribeSafeErrors(Action<Exception> onError, Action onCompleted) =>
             SubscribeSafeCore(source, Witness.Create<T>(static _ => { }, onError, onCompleted));
 
         /// <summary>Invokes an action for each value while preserving the sequence.</summary>

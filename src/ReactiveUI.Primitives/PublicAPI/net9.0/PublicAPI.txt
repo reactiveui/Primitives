@@ -48,25 +48,19 @@ namespace ReactiveUI.Primitives
         [System.Runtime.CompilerServices.OverloadResolutionPriority(-2)]
         public static System.IObservable<System.Collections.Generic.IList<T>> CombineLatest<T>(params System.IObservable<T>[] sources) { }
         [System.Runtime.CompilerServices.OverloadResolutionPriority(1)]
-        public static System.IDisposable SubscribeSafe<T>(System.IObservable<T> source, System.Action<System.Exception> onError, params byte[] allowValueType) where T : struct { }
+        public static System.IDisposable SubscribeSafe<T>(System.IObservable<T> source, System.Action<T> onNext, params byte[] allowValueType) where T : struct { }
         [System.Runtime.CompilerServices.OverloadResolutionPriority(1)]
         public static System.IDisposable SubscribeSafe<T>(System.IObservable<T> source, System.IObserver<T> observer, params byte[] allowValueType) where T : struct { }
         [System.Runtime.CompilerServices.OverloadResolutionPriority(1)]
-        public static System.IDisposable SubscribeSafe<T>(System.IObservable<T?> source, System.Action<System.Exception> onError, params bool[] allowNullable) where T : struct { }
+        public static System.IDisposable SubscribeSafe<T>(System.IObservable<T?> source, System.Action<T> onNext, params bool[] allowNullable) where T : class { }
         [System.Runtime.CompilerServices.OverloadResolutionPriority(1)]
-        public static System.IDisposable SubscribeSafe<T>(System.IObservable<T?> source, System.Action<System.Exception> onError, params bool[] allowNullable) where T : class { }
+        public static System.IDisposable SubscribeSafe<T>(System.IObservable<T?> source, System.Action<T?> onNext, params bool[] allowNullable) where T : struct { }
         [System.Runtime.CompilerServices.OverloadResolutionPriority(1)]
         public static System.IDisposable SubscribeSafe<T>(System.IObservable<T?> source, System.IObserver<T> observer, params bool[] allowNullable) where T : class { }
         [System.Runtime.CompilerServices.OverloadResolutionPriority(1)]
         public static System.IDisposable SubscribeSafe<T>(System.IObservable<T?> source, System.IObserver<T?> observer, params bool[] allowNullable) where T : struct { }
         [System.Runtime.CompilerServices.OverloadResolutionPriority(1)]
-        public static System.IDisposable SubscribeSafe<T>(System.IObservable<T> source, System.Action<System.Exception> onError, System.Action onCompleted, params byte[] allowValueType) where T : struct { }
-        [System.Runtime.CompilerServices.OverloadResolutionPriority(1)]
         public static System.IDisposable SubscribeSafe<T>(System.IObservable<T> source, System.Action<T> onNext, System.Action<System.Exception> onError, params byte[] allowValueType) where T : struct { }
-        [System.Runtime.CompilerServices.OverloadResolutionPriority(1)]
-        public static System.IDisposable SubscribeSafe<T>(System.IObservable<T?> source, System.Action<System.Exception> onError, System.Action onCompleted, params bool[] allowNullable) where T : class { }
-        [System.Runtime.CompilerServices.OverloadResolutionPriority(1)]
-        public static System.IDisposable SubscribeSafe<T>(System.IObservable<T?> source, System.Action<System.Exception> onError, System.Action onCompleted, params bool[] allowNullable) where T : struct { }
         [System.Runtime.CompilerServices.OverloadResolutionPriority(1)]
         public static System.IDisposable SubscribeSafe<T>(System.IObservable<T?> source, System.Action<T> onNext, System.Action<System.Exception> onError, params bool[] allowNullable) where T : class { }
         [System.Runtime.CompilerServices.OverloadResolutionPriority(1)]
@@ -77,6 +71,18 @@ namespace ReactiveUI.Primitives
         public static System.IDisposable SubscribeSafe<T>(System.IObservable<T?> source, System.Action<T> onNext, System.Action<System.Exception> onError, System.Action onCompleted, params bool[] allowNullable) where T : class { }
         [System.Runtime.CompilerServices.OverloadResolutionPriority(1)]
         public static System.IDisposable SubscribeSafe<T>(System.IObservable<T?> source, System.Action<T?> onNext, System.Action<System.Exception> onError, System.Action onCompleted, params bool[] allowNullable) where T : struct { }
+        [System.Runtime.CompilerServices.OverloadResolutionPriority(1)]
+        public static System.IDisposable SubscribeSafeErrors<T>(System.IObservable<T> source, System.Action<System.Exception> onError, params byte[] allowValueType) where T : struct { }
+        [System.Runtime.CompilerServices.OverloadResolutionPriority(1)]
+        public static System.IDisposable SubscribeSafeErrors<T>(System.IObservable<T?> source, System.Action<System.Exception> onError, params bool[] allowNullable) where T : class { }
+        [System.Runtime.CompilerServices.OverloadResolutionPriority(1)]
+        public static System.IDisposable SubscribeSafeErrors<T>(System.IObservable<T?> source, System.Action<System.Exception> onError, params bool[] allowNullable) where T : struct { }
+        [System.Runtime.CompilerServices.OverloadResolutionPriority(1)]
+        public static System.IDisposable SubscribeSafeErrors<T>(System.IObservable<T> source, System.Action<System.Exception> onError, System.Action onCompleted, params byte[] allowValueType) where T : struct { }
+        [System.Runtime.CompilerServices.OverloadResolutionPriority(1)]
+        public static System.IDisposable SubscribeSafeErrors<T>(System.IObservable<T?> source, System.Action<System.Exception> onError, System.Action onCompleted, params bool[] allowNullable) where T : class { }
+        [System.Runtime.CompilerServices.OverloadResolutionPriority(1)]
+        public static System.IDisposable SubscribeSafeErrors<T>(System.IObservable<T?> source, System.Action<System.Exception> onError, System.Action onCompleted, params bool[] allowNullable) where T : struct { }
         extension(System.IDisposable disposable)
         {
             public ReactiveUI.Primitives.Disposables.SingleDisposable DisposeWith() { }
@@ -183,15 +189,17 @@ namespace ReactiveUI.Primitives
             public System.IObservable<T> StartWith(System.Collections.Generic.IEnumerable<T> values) { }
             public System.IObservable<T> StartWith(params T[] values) { }
             [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
-            public System.IDisposable SubscribeSafe(System.Action<System.Exception> onError) { }
+            public System.IDisposable SubscribeSafe(System.Action<T> onNext) { }
             [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
             public System.IDisposable SubscribeSafe(System.IObserver<T> observer) { }
-            [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
-            public System.IDisposable SubscribeSafe(System.Action<System.Exception> onError, System.Action onCompleted) { }
             [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
             public System.IDisposable SubscribeSafe(System.Action<T> onNext, System.Action<System.Exception> onError) { }
             [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
             public System.IDisposable SubscribeSafe(System.Action<T> onNext, System.Action<System.Exception> onError, System.Action onCompleted) { }
+            [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+            public System.IDisposable SubscribeSafeErrors(System.Action<System.Exception> onError) { }
+            [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+            public System.IDisposable SubscribeSafeErrors(System.Action<System.Exception> onError, System.Action onCompleted) { }
             [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
             public System.IDisposable SubscribeSafePrimitives(System.IObserver<T> observer) { }
             public System.IObservable<T> Synchronize() { }

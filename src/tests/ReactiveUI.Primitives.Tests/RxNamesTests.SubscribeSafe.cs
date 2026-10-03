@@ -16,6 +16,9 @@ namespace ReactiveUI.Primitives.Tests;
 /// <summary>SubscribeSafe-specific Rx-name compatibility tests.</summary>
 public partial class RxNamesTests
 {
+    /// <summary>The number of completing subscriptions made by the SubscribeSafeErrors dispatch test.</summary>
+    private const int CompletingSubscriptionCount = 3;
+
     /// <summary>The string value used by nullable object subscription tests.</summary>
     private const string SubscribeSafeValue = "value";
 
@@ -67,14 +70,17 @@ public partial class RxNamesTests
                 Action onCompleted) =>
                 PrimitivesLinqExtensions.SubscribeSafe(source, onNext, onError, onCompleted);
 
+            public static IDisposable SubscribeNext(IObservable<Unit> source, Action<Unit> onNext) =>
+                PrimitivesLinqExtensions.SubscribeSafe(source, onNext);
+
             public static IDisposable SubscribeError(IObservable<Unit> source, Action<Exception> onError) =>
-                PrimitivesLinqExtensions.SubscribeSafe(source, onError);
+                PrimitivesLinqExtensions.SubscribeSafeErrors(source, onError);
 
             public static IDisposable SubscribeTerminal(
                 IObservable<Unit> source,
                 Action<Exception> onError,
                 Action onCompleted) =>
-                PrimitivesLinqExtensions.SubscribeSafe(source, onError, onCompleted);
+                PrimitivesLinqExtensions.SubscribeSafeErrors(source, onError, onCompleted);
 
             public static IDisposable SubscribeNullableObserver(
                 IObservable<int?> source,
@@ -94,16 +100,19 @@ public partial class RxNamesTests
                 Action onCompleted) =>
                 PrimitivesLinqExtensions.SubscribeSafe(source, onNext, onError, onCompleted);
 
+            public static IDisposable SubscribeNullableNext(IObservable<int?> source, Action<int?> onNext) =>
+                PrimitivesLinqExtensions.SubscribeSafe(source, onNext);
+
             public static IDisposable SubscribeNullableError(
                 IObservable<int?> source,
                 Action<Exception> onError) =>
-                PrimitivesLinqExtensions.SubscribeSafe(source, onError);
+                PrimitivesLinqExtensions.SubscribeSafeErrors(source, onError);
 
             public static IDisposable SubscribeNullableTerminal(
                 IObservable<int?> source,
                 Action<Exception> onError,
                 Action onCompleted) =>
-                PrimitivesLinqExtensions.SubscribeSafe(source, onError, onCompleted);
+                PrimitivesLinqExtensions.SubscribeSafeErrors(source, onError, onCompleted);
         }
         """;
 
@@ -189,11 +198,11 @@ public partial class RxNamesTests
             (byte)0);
 
         InvalidOperationException expected = new("expected");
-        using var errorSubscription = PrimitivesLinqExtensions.SubscribeSafe(
+        using var errorSubscription = PrimitivesLinqExtensions.SubscribeSafeErrors(
             Observable.Throw<Unit>(expected),
             OnError,
             (byte)0);
-        using var terminalSubscription = PrimitivesLinqExtensions.SubscribeSafe(
+        using var terminalSubscription = PrimitivesLinqExtensions.SubscribeSafeErrors(
             source,
             OnError,
             () => completed++,
@@ -343,10 +352,10 @@ public partial class RxNamesTests
         Exception? observedReferenceError = null;
         Exception? observedValueError = null;
 
-        using var referenceSubscription = PrimitivesLinqExtensions.SubscribeSafe(
+        using var referenceSubscription = PrimitivesLinqExtensions.SubscribeSafeErrors(
             Signal.Fail<object?>(referenceError),
             error => observedReferenceError = error);
-        using var valueSubscription = PrimitivesLinqExtensions.SubscribeSafe(
+        using var valueSubscription = PrimitivesLinqExtensions.SubscribeSafeErrors(
             Signal.Fail<int?>(valueError),
             error => observedValueError = error);
 
@@ -364,11 +373,11 @@ public partial class RxNamesTests
         var referenceCompleted = 0;
         var valueCompleted = 0;
 
-        using var referenceSubscription = PrimitivesLinqExtensions.SubscribeSafe(
+        using var referenceSubscription = PrimitivesLinqExtensions.SubscribeSafeErrors(
             Signal.FromEnumerable<object?>([null, SubscribeSafeValue]),
             error => referenceObserved = error,
             () => referenceCompleted++);
-        using var valueSubscription = PrimitivesLinqExtensions.SubscribeSafe(
+        using var valueSubscription = PrimitivesLinqExtensions.SubscribeSafeErrors(
             Signal.FromEnumerable<int?>([null, One, null, Two]),
             error => valueObserved = error,
             () => valueCompleted++);
@@ -377,6 +386,140 @@ public partial class RxNamesTests
         await Assert.That(referenceCompleted).IsEqualTo(1);
         await Assert.That(valueObserved).IsNull();
         await Assert.That(valueCompleted).IsEqualTo(1);
+    }
+
+    /// <summary>Verifies a method group passed alone to <c>SubscribeSafe</c> receives the values.</summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    [Test]
+    public async Task SubscribeSafe_MethodGroupAlone_ReceivesValues()
+    {
+        List<int> values = [];
+
+        using var subscription = Signal.FromEnumerable([One, Two]).SubscribeSafe(values.Add);
+
+        await Assert.That(values.SequenceEqual([One, Two])).IsTrue();
+    }
+
+    /// <summary>Verifies a lambda passed alone to <c>SubscribeSafe</c> receives the values.</summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    [Test]
+    public async Task SubscribeSafe_LambdaAlone_ReceivesValues()
+    {
+        List<int> values = [];
+
+        using var subscription = Signal.FromEnumerable([One, Two]).SubscribeSafe(x =>
+        {
+            values.Add(x);
+        });
+
+        await Assert.That(values.SequenceEqual([One, Two])).IsTrue();
+    }
+
+    /// <summary>Verifies a discarding lambda passed alone to <c>SubscribeSafe</c> counts the values.</summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    [Test]
+    public async Task SubscribeSafe_DiscardLambdaAlone_CountsValues()
+    {
+        int[] emitted = [One, Two, Three];
+        var count = 0;
+
+        using var subscription = Signal.FromEnumerable(emitted).SubscribeSafe(_ => count++);
+
+        await Assert.That(count).IsEqualTo(emitted.Length);
+    }
+
+    /// <summary>Verifies the onNext-only form rethrows a source error because no error handler exists.</summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    [Test]
+    public async Task SubscribeSafe_LoneOnNextWithSourceError_RethrowsTheError()
+    {
+        InvalidOperationException expected = new(Boom);
+        var source = Signal.Fail<int>(expected);
+
+        var thrown = Assert.Throws<InvalidOperationException>(() => source.SubscribeSafe(static _ => { }));
+
+        await Assert.That(thrown).IsSameReferenceAs(expected);
+    }
+
+    /// <summary>Verifies the static onNext-only forms deliver values for reference, nullable value and value types.</summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    [Test]
+    public async Task SubscribeSafe_StaticLoneOnNext_ReceivesValuesForEveryDispatchVariant()
+    {
+        List<string?> referenceValues = [];
+        List<int?> nullableValues = [];
+        List<int> valueTypeValues = [];
+
+        using var referenceSubscription = PrimitivesLinqExtensions.SubscribeSafe(
+            Signal.FromEnumerable<string?>([SubscribeSafeValue]),
+            referenceValues.Add);
+        using var nullableSubscription = PrimitivesLinqExtensions.SubscribeSafe(
+            Signal.FromEnumerable<int?>([null, One]),
+            nullableValues.Add);
+        using var valueTypeSubscription = PrimitivesLinqExtensions.SubscribeSafe(
+            Signal.FromEnumerable([One, Two]),
+            valueTypeValues.Add);
+
+        await Assert.That(referenceValues.SequenceEqual([SubscribeSafeValue])).IsTrue();
+        await Assert.That(nullableValues.SequenceEqual([null, One])).IsTrue();
+        await Assert.That(valueTypeValues.SequenceEqual([One, Two])).IsTrue();
+    }
+
+    /// <summary>Verifies the fluent <c>SubscribeSafeErrors</c> forms receive the error and complete.</summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    [Test]
+    public async Task SubscribeSafeErrors_Fluent_ReceivesErrorAndCompletion()
+    {
+        InvalidOperationException expected = new(Boom);
+        Exception? observed = null;
+        var completed = 0;
+
+        using var errorSubscription = Signal.Fail<int>(expected).SubscribeSafeErrors(error => observed = error);
+        using var completionSubscription = Signal.FromEnumerable([One]).SubscribeSafeErrors(
+            static _ => { },
+            () => completed++);
+
+        await Assert.That(observed).IsSameReferenceAs(expected);
+        await Assert.That(completed).IsEqualTo(One);
+    }
+
+    /// <summary>Verifies the static <c>SubscribeSafeErrors</c> forms receive the error and complete for every dispatch variant.</summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    [Test]
+    public async Task SubscribeSafeErrors_Static_ReceivesErrorAndCompletionForEveryDispatchVariant()
+    {
+        InvalidOperationException expected = new(Boom);
+        Exception? referenceError = null;
+        Exception? nullableError = null;
+        Exception? valueTypeError = null;
+        var completed = 0;
+
+        using var referenceSubscription = PrimitivesLinqExtensions.SubscribeSafeErrors(
+            Signal.Fail<string?>(expected),
+            error => referenceError = error);
+        using var nullableSubscription = PrimitivesLinqExtensions.SubscribeSafeErrors(
+            Signal.Fail<int?>(expected),
+            error => nullableError = error);
+        using var valueTypeSubscription = PrimitivesLinqExtensions.SubscribeSafeErrors(
+            Signal.Fail<int>(expected),
+            error => valueTypeError = error);
+        using var referenceCompleted = PrimitivesLinqExtensions.SubscribeSafeErrors(
+            Signal.FromEnumerable<string?>([SubscribeSafeValue]),
+            static _ => { },
+            () => completed++);
+        using var nullableCompleted = PrimitivesLinqExtensions.SubscribeSafeErrors(
+            Signal.FromEnumerable<int?>([One]),
+            static _ => { },
+            () => completed++);
+        using var valueTypeCompleted = PrimitivesLinqExtensions.SubscribeSafeErrors(
+            Signal.FromEnumerable([One]),
+            static _ => { },
+            () => completed++);
+
+        await Assert.That(referenceError).IsSameReferenceAs(expected);
+        await Assert.That(nullableError).IsSameReferenceAs(expected);
+        await Assert.That(valueTypeError).IsSameReferenceAs(expected);
+        await Assert.That(completed).IsEqualTo(CompletingSubscriptionCount);
     }
 
     /// <summary>Verifies the explicit Primitives name delivers the same notifications as the observer overload.</summary>
