@@ -1,0 +1,22 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFrameworks>$(NetTargetFrameworks)</TargetFrameworks>
+    <OutputType>Exe</OutputType>
+    <IsPackable>false</IsPackable>
+    <RootNamespace>OccasionallyConnected.DurableOutbox</RootNamespace>
+    <AssemblyName>ReactiveUI.Primitives.OccasionallyConnected.Examples.DurableOutbox</AssemblyName>
+    <EnableSystemTextJsonSourceGenerator>true</EnableSystemTextJsonSourceGenerator>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="ReactiveUI.Primitives.OccasionallyConnected.Examples.Tests" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\ReactiveUI.Primitives.OccasionallyConnected\ReactiveUI.Primitives.OccasionallyConnected.csproj" />
+    <ProjectReference
+      Include="..\..\ReactiveUI.Primitives.OccasionallyConnected.Storage.Sqlite\ReactiveUI.Primitives.OccasionallyConnected.Storage.Sqlite.csproj" />
+  </ItemGroup>
+
+</Project>

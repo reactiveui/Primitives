@@ -1,0 +1,303 @@
+// Copyright (c) 2019-2026 ReactiveUI Association Incorporated. All rights reserved.
+// ReactiveUI Association Incorporated licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for full license information.
+
+using System.Runtime.CompilerServices;
+
+namespace ReactiveUI.Primitives.OccasionallyConnected.Server;
+
+/// <summary>Provides shared subscription acknowledgement validation and accounting operations.</summary>
+internal static class ServerSubscriptionJournalOperations
+{
+    /// <summary>The logical nullable marker byte count.</summary>
+    private const long NullableMarkerByteCount = 1;
+
+    /// <summary>The logical subscription identifier byte count.</summary>
+    private const long SubscriptionIdByteCount = 16;
+
+    /// <summary>The logical timestamp byte count.</summary>
+    private const long DateTimeOffsetByteCount = 16;
+
+    /// <summary>The retained fixed bytes for one subscription row.</summary>
+    private const long SubscriptionFixedBytes = SubscriptionIdByteCount + (DateTimeOffsetByteCount * 3) + (NullableMarkerByteCount * 7) + (sizeof(int) * 2) + (sizeof(long) * 6);
+
+    /// <summary>The retained fixed bytes for one offered cursor row.</summary>
+    private const long OfferFixedBytes = SubscriptionIdByteCount + DateTimeOffsetByteCount + sizeof(long);
+
+    /// <summary>The retained fixed bytes for one snapshot offer proof.</summary>
+    private const long SnapshotOfferFixedBytes = (NullableMarkerByteCount * 7) + (sizeof(int) * 2) + (sizeof(long) * 5);
+
+    /// <summary>Validates a trusted subscription identity.</summary>
+    /// <param name="identity">The identity.</param>
+    /// <exception cref="ArgumentException">The identity is invalid.</exception>
+    internal static void ValidateIdentity(ServerSubscriptionIdentity identity)
+    {
+        ArgumentExceptionHelper.ThrowIfNull(identity);
+        ServerCommitJournalGuard.ValidateStreamKey(identity.StreamKey);
+        ValidateClientId(identity.ClientId);
+        ValidateSubscriptionId(identity.SubscriptionId);
+    }
+
+    /// <summary>Validates a trusted subscription registration request.</summary>
+    /// <param name="request">The request.</param>
+    /// <exception cref="ArgumentException">The request is invalid.</exception>
+    internal static void ValidateRegistrationRequest(ServerSubscriptionRegistrationRequest request)
+    {
+        ArgumentExceptionHelper.ThrowIfNull(request);
+        ValidateIdentity(request.Identity);
+        ArgumentExceptionHelper.ThrowIfNull(request.StartPosition);
+        if (request.StartPosition.Cursor is null)
+        {
+            return;
+        }
+
+        ServerCommitJournalGuard.ValidateCursor(request.StartPosition.Cursor);
+    }
+
+    /// <summary>Validates a subscription page request.</summary>
+    /// <param name="request">The request.</param>
+    /// <exception cref="ArgumentException">The request is invalid.</exception>
+    /// <exception cref="ArgumentOutOfRangeException">A request bound is invalid.</exception>
+    internal static void ValidatePageRequest(ServerSubscriptionPageRequest request)
+    {
+        ArgumentExceptionHelper.ThrowIfNull(request);
+        ValidateIdentity(request.Identity);
+        if (request.Cursor is not null)
+        {
+            ServerCommitJournalGuard.ValidateCursor(request.Cursor);
+        }
+
+        ArgumentOutOfRangeExceptionHelper.ThrowIfNegativeOrZero(request.MaximumGroups);
+        ArgumentOutOfRangeExceptionHelper.ThrowIfNegativeOrZero(request.MaximumEvents);
+        ThrowIfNonPositiveLogicalBytes(request.MaximumLogicalBytes);
+    }
+
+    /// <summary>Validates an acknowledgement request.</summary>
+    /// <param name="request">The request.</param>
+    /// <exception cref="ArgumentException">The request is invalid.</exception>
+    internal static void ValidateAcknowledgementRequest(ServerSubscriptionAcknowledgementRequest request)
+    {
+        ArgumentExceptionHelper.ThrowIfNull(request);
+        ArgumentExceptionHelper.ThrowIfNull(request.Acknowledgement);
+        ServerCommitJournalGuard.ValidateStreamKey(request.StreamKey);
+        ValidateClientId(request.ClientId);
+        ValidateSubscriptionId(request.Acknowledgement.SubscriptionId);
+        if (request.Acknowledgement.StreamId != request.StreamKey.StreamId)
+        {
+            throw new ArgumentException("The acknowledgement stream does not match the authenticated stream.", nameof(request));
+        }
+
+        ServerCommitJournalGuard.ValidateCursor(request.Acknowledgement.Cursor);
+    }
+
+    /// <summary>Checks whether an identity matches a retained record.</summary>
+    /// <param name="identity">The supplied identity.</param>
+    /// <param name="record">The retained record.</param>
+    /// <returns>Whether the identities match.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    internal static bool IdentityMatches(ServerSubscriptionIdentity identity, ServerSubscriptionRecord record) =>
+        IdentityMatches(identity, record.Identity);
+
+    /// <summary>Checks whether two trusted identities match.</summary>
+    /// <param name="left">The first identity.</param>
+    /// <param name="right">The second identity.</param>
+    /// <returns>Whether the identities match.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    internal static bool IdentityMatches(ServerSubscriptionIdentity left, ServerSubscriptionIdentity right) =>
+        left.SubscriptionId == right.SubscriptionId
+        && string.Equals(left.ClientId, right.ClientId, StringComparison.Ordinal)
+        && left.StreamKey == right.StreamKey;
+
+    /// <summary>Gets the next durable subscription generation from the current high-water value.</summary>
+    /// <param name="currentHighWater">The current highest allocated generation.</param>
+    /// <returns>The next generation.</returns>
+    /// <exception cref="InvalidOperationException">The generation allocator overflowed.</exception>
+    internal static long GetNextSubscriptionGeneration(long currentHighWater)
+    {
+        if (currentHighWater == long.MaxValue)
+        {
+            throw new InvalidOperationException("The server subscription generation allocator overflowed.");
+        }
+
+        return currentHighWater + 1;
+    }
+
+    /// <summary>Gets the next durable semantic revision for a subscription.</summary>
+    /// <param name="record">The subscription record.</param>
+    /// <returns>The next revision.</returns>
+    /// <exception cref="InvalidOperationException">The revision allocator overflowed.</exception>
+    internal static long GetNextSubscriptionRevision(ServerSubscriptionRecord record)
+    {
+        if (record.Revision == long.MaxValue)
+        {
+            throw new InvalidOperationException("The server subscription semantic revision overflowed.");
+        }
+
+        return record.Revision + 1;
+    }
+
+    /// <summary>Checks whether a registration request matches retained immutable initial position state.</summary>
+    /// <param name="request">The supplied request.</param>
+    /// <param name="record">The retained record.</param>
+    /// <returns>Whether the start positions match.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    internal static bool RegistrationMatches(ServerSubscriptionRegistrationRequest request, ServerSubscriptionRecord record) =>
+        IdentityMatches(request.Identity, record.Identity) && StartPositionMatches(request.StartPosition, record.InitialStartPosition);
+
+    /// <summary>Creates a read-only state snapshot.</summary>
+    /// <param name="record">The retained subscription record.</param>
+    /// <returns>The state snapshot.</returns>
+    internal static ServerSubscriptionState CreateState(ServerSubscriptionRecord record) =>
+        new()
+        {
+            Identity = record.Identity,
+            Generation = record.Generation,
+            Revision = record.Revision,
+            LatestOfferedCursor = record.LatestOfferedCursor,
+            LatestOfferedGroupSequence = record.LatestOfferedGroupSequence,
+            AcknowledgedCursor = record.AcknowledgedCursor,
+            AcknowledgedGroupSequence = record.AcknowledgedGroupSequence,
+            OfferCount = record.Offers.Count,
+        };
+
+    /// <summary>Calculates retained logical bytes for a subscription binding row.</summary>
+    /// <param name="identity">The identity.</param>
+    /// <param name="initialStartPosition">The immutable initial start position.</param>
+    /// <param name="initialAnchorCursor">The retained initial anchor cursor.</param>
+    /// <param name="latestOfferedCursor">The latest retained offered cursor.</param>
+    /// <param name="acknowledgedCursor">The latest retained acknowledged cursor.</param>
+    /// <returns>The retained logical byte count.</returns>
+    internal static long GetSubscriptionBytes(
+        ServerSubscriptionIdentity identity,
+        StartPosition? initialStartPosition = null,
+        string? initialAnchorCursor = null,
+        string? latestOfferedCursor = null,
+        string? acknowledgedCursor = null)
+    {
+        var bytes = SubscriptionFixedBytes;
+        bytes = ServerCommitJournalSizer.AddLogicalBytes(bytes, ServerCommitJournalSizer.GetStreamKeyBytes(identity.StreamKey));
+        bytes = ServerCommitJournalSizer.AddLogicalBytes(bytes, ServerCommitJournalGuard.GetTextBytes(identity.ClientId));
+        bytes = ServerCommitJournalSizer.AddLogicalBytes(bytes, GetStartPositionBytes(initialStartPosition ?? StartPosition.FromSequence(0)));
+        bytes = ServerCommitJournalSizer.AddLogicalBytes(bytes, GetOptionalCursorBytes(initialAnchorCursor));
+        bytes = ServerCommitJournalSizer.AddLogicalBytes(bytes, GetOptionalCursorBytes(latestOfferedCursor));
+        bytes = ServerCommitJournalSizer.AddLogicalBytes(bytes, GetOptionalCursorBytes(acknowledgedCursor));
+        return bytes;
+    }
+
+    /// <summary>Calculates the retained logical byte delta for a nullable initial anchor cursor column.</summary>
+    /// <param name="previous">The previously retained cursor.</param>
+    /// <param name="current">The new retained cursor.</param>
+    /// <returns>The logical byte delta.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    internal static long GetInitialAnchorCursorDelta(string? previous, string? current) =>
+        GetOptionalCursorBytes(current) - GetOptionalCursorBytes(previous);
+
+    /// <summary>Calculates the retained logical byte delta for a nullable subscription cursor column.</summary>
+    /// <param name="previous">The previously retained cursor.</param>
+    /// <param name="current">The new retained cursor.</param>
+    /// <returns>The logical byte delta.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    internal static long GetSubscriptionCursorDelta(string? previous, string? current) =>
+        GetInitialAnchorCursorDelta(previous, current);
+
+    /// <summary>Calculates retained logical bytes for one offered cursor row.</summary>
+    /// <param name="cursor">The cursor.</param>
+    /// <returns>The retained logical byte count.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    internal static long GetOfferBytes(string cursor) =>
+        ServerCommitJournalSizer.AddLogicalBytes(OfferFixedBytes, ServerCommitJournalGuard.GetTextBytes(cursor));
+
+    /// <summary>Calculates retained logical bytes for one snapshot offer row.</summary>
+    /// <param name="cursor">The cursor.</param>
+    /// <param name="clientState">The retained client state payload.</param>
+    /// <returns>The retained logical byte count.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    internal static long GetSnapshotOfferBytes(string cursor, PayloadEnvelope clientState) =>
+        ServerCommitJournalSizer.AddLogicalBytes(
+            ServerCommitJournalSizer.AddLogicalBytes(GetOfferBytes(cursor), SnapshotOfferFixedBytes),
+            ServerCommitJournalSizer.GetPayloadBytes(clientState));
+
+    /// <summary>Creates a receive-page request from a subscription page request.</summary>
+    /// <param name="request">The subscription page request.</param>
+    /// <returns>The receive-page request.</returns>
+    internal static ServerReceivePageRequest CreateReceiveRequest(ServerSubscriptionPageRequest request) =>
+        new(
+            request.Identity.StreamKey,
+            request.Cursor,
+            request.MaximumGroups,
+            request.MaximumEvents,
+            request.MaximumLogicalBytes);
+
+    /// <summary>Calculates retained bytes for an optional cursor payload.</summary>
+    /// <param name="cursor">The optional cursor.</param>
+    /// <returns>The cursor bytes or zero.</returns>
+    private static long GetOptionalCursorBytes(string? cursor) =>
+        cursor is null ? 0 : ServerCommitJournalGuard.GetTextBytes(cursor);
+
+    /// <summary>Calculates retained bytes for the initial start position payload.</summary>
+    /// <param name="position">The start position.</param>
+    /// <returns>The logical byte count.</returns>
+    /// <exception cref="ArgumentOutOfRangeException">The position kind is invalid.</exception>
+    private static long GetStartPositionBytes(StartPosition position)
+    {
+        if (position.Kind == StartPositionKind.Latest)
+        {
+            return 0;
+        }
+
+        if (position.Kind == StartPositionKind.FromSequence)
+        {
+            return sizeof(long);
+        }
+
+        return position.Kind == StartPositionKind.FromTimestamp
+            ? DateTimeOffsetByteCount
+            : GetOptionalCursorBytes(position.Cursor);
+    }
+
+    /// <summary>Checks whether two start positions are exactly compatible.</summary>
+    /// <param name="left">The first position.</param>
+    /// <param name="right">The second position.</param>
+    /// <returns>Whether the positions match.</returns>
+    private static bool StartPositionMatches(StartPosition left, StartPosition right) =>
+        left.Kind == right.Kind
+        && Nullable.Equals(left.Timestamp, right.Timestamp)
+        && Nullable.Equals(left.Sequence, right.Sequence)
+        && string.Equals(left.Cursor, right.Cursor, StringComparison.Ordinal);
+
+    /// <summary>Rejects a subscription ID that is not usable for durable binding.</summary>
+    /// <param name="subscriptionId">The subscription identifier.</param>
+    /// <exception cref="ArgumentException">The identifier is empty.</exception>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static void ValidateSubscriptionId(SubscriptionId subscriptionId)
+    {
+        if (subscriptionId.Value != Guid.Empty)
+        {
+            return;
+        }
+
+        throw new ArgumentException("The subscription identifier must be non-empty.", nameof(subscriptionId));
+    }
+
+    /// <summary>Rejects a malformed trusted client identifier.</summary>
+    /// <param name="clientId">The client identifier.</param>
+    /// <exception cref="ArgumentException">The client identifier is invalid.</exception>
+    private static void ValidateClientId(string clientId)
+    {
+        ArgumentExceptionHelper.ThrowIfNull(clientId);
+        if (!string.IsNullOrWhiteSpace(clientId))
+        {
+            _ = ServerCommitJournalGuard.GetTextBytes(clientId);
+            return;
+        }
+
+        throw new ArgumentException("The authenticated client identifier cannot be empty.", nameof(clientId));
+    }
+
+    /// <summary>Rejects a non-positive logical byte budget.</summary>
+    /// <param name="maximumLogicalBytes">The logical byte budget.</param>
+    /// <exception cref="ArgumentOutOfRangeException">The value is not positive.</exception>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static void ThrowIfNonPositiveLogicalBytes(long maximumLogicalBytes) =>
+        _ = maximumLogicalBytes > 0 ? true : throw new ArgumentOutOfRangeException(nameof(maximumLogicalBytes), maximumLogicalBytes, null);
+}

@@ -1,0 +1,42 @@
+namespace ReactiveUI.Primitives.OccasionallyConnected.ResilienceLab;
+
+public static class CrdtLoopbackScenarioShape
+{
+    public static System.Collections.Generic.IReadOnlyList<ReactiveUI.Primitives.OccasionallyConnected.Crdt.CrdtKind> CoveredKinds { get; }
+    public static string ScenarioName { get; }
+    public static ReactiveUI.Primitives.OccasionallyConnected.RemoteTransportCapabilities VolatileLoopbackCapabilities { get; }
+}
+public static class Program
+{
+    public static System.Threading.Tasks.Task<int> Main(string[] args) { }
+}
+[System.Diagnostics.DebuggerDisplay("{Name,nq}; Passed={Succeeded,nq}")]
+public record ResilienceLabCaseResult : System.IEquatable<ReactiveUI.Primitives.OccasionallyConnected.ResilienceLab.ResilienceLabCaseResult>
+{
+    public ResilienceLabCaseResult(string Name, object Expected, object Actual, bool Succeeded) { }
+    public object Actual { get; init; }
+    public object Expected { get; init; }
+    public string Name { get; init; }
+    public bool Succeeded { get; init; }
+    public static ReactiveUI.Primitives.OccasionallyConnected.ResilienceLab.ResilienceLabCaseResult Fail(string name, object expected, object actual) { }
+}
+[System.Diagnostics.DebuggerDisplay("{Scenario,nq}")]
+public record ResilienceLabOptions : System.IEquatable<ReactiveUI.Primitives.OccasionallyConnected.ResilienceLab.ResilienceLabOptions>
+{
+    public ResilienceLabOptions(string Scenario) { }
+    public string Scenario { get; init; }
+    public static ReactiveUI.Primitives.OccasionallyConnected.ResilienceLab.ResilienceLabOptions Parse(System.Collections.Generic.IReadOnlyList<string> args) { }
+}
+[System.Diagnostics.DebuggerDisplay("{Scenario,nq}; Passed={Succeeded,nq}; Cases={Cases.Count,nq}")]
+public sealed class ResilienceLabRunResult
+{
+    public ResilienceLabRunResult(string scenario, System.Collections.Generic.IReadOnlyList<ReactiveUI.Primitives.OccasionallyConnected.ResilienceLab.ResilienceLabCaseResult> cases) { }
+    public System.Collections.Generic.IReadOnlyList<ReactiveUI.Primitives.OccasionallyConnected.ResilienceLab.ResilienceLabCaseResult> Cases { get; }
+    public int ExitCode { get; }
+    public string Scenario { get; }
+    public bool Succeeded { get; }
+}
+public static class ResilienceLabRunner
+{
+    public static System.Threading.Tasks.ValueTask<ReactiveUI.Primitives.OccasionallyConnected.ResilienceLab.ResilienceLabRunResult> RunAsync(ReactiveUI.Primitives.OccasionallyConnected.ResilienceLab.ResilienceLabOptions options, System.IO.TextWriter writer, System.Threading.CancellationToken cancellationToken) { }
+}

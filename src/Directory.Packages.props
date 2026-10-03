@@ -19,6 +19,17 @@
     <PackageVersion Include="Microsoft.CodeAnalysis.BannedApiAnalyzers" Version="5.6.0"/>
     <PackageVersion Include="PublicApiSharp.Analyzers" Version="2.1.0"/>
   </ItemGroup>
+  <!-- OccasionallyConnected SQLite storage -->
+  <ItemGroup>
+    <!-- Direct native access uses one Multiple Ciphers provider. Never combine SQLite bundles. -->
+    <PackageVersion Include="SQLitePCLRaw.core" Version="3.0.5"/>
+    <PackageVersion Include="SQLite3MC.PCLRaw.bundle" Version="2.4.0"/>
+  </ItemGroup>
+  <!-- OccasionallyConnected LiteDb / BliteDb / IndexedDB storage -->
+  <ItemGroup>
+    <PackageVersion Include="LiteDB" Version="5.0.21"/>
+    <PackageVersion Include="BLite" Version="5.1.1"/>
+  </ItemGroup>
   <!-- Benchmarks + tests -->
   <ItemGroup>
     <PackageVersion Include="BenchmarkDotNet" Version="0.16.0-preview.2"/>
@@ -40,14 +51,34 @@
     <PackageVersion Include="Microsoft.AspNetCore.Components.Web" Version="9.0.20" Condition="$([MSBuild]::IsTargetFrameworkCompatible('$(TargetFramework)', 'net9.0')) AND !$([MSBuild]::IsTargetFrameworkCompatible('$(TargetFramework)', 'net10.0'))"/>
     <PackageVersion Include="Microsoft.AspNetCore.Components.Web" Version="10.0.12" Condition="$([MSBuild]::IsTargetFrameworkCompatible('$(TargetFramework)', 'net10.0')) AND !$([MSBuild]::IsTargetFrameworkCompatible('$(TargetFramework)', 'net11.0'))"/>
     <PackageVersion Include="Microsoft.AspNetCore.Components.Web" Version="11.0.0-rc.1.26425.128" Condition="$([MSBuild]::IsTargetFrameworkCompatible('$(TargetFramework)', 'net11.0'))"/>
+    <PackageVersion Include="Microsoft.JSInterop" Version="8.0.31" Condition="$([MSBuild]::IsTargetFrameworkCompatible('$(TargetFramework)', 'net8.0')) AND !$([MSBuild]::IsTargetFrameworkCompatible('$(TargetFramework)', 'net9.0'))"/>
+    <PackageVersion Include="Microsoft.JSInterop" Version="9.0.20" Condition="$([MSBuild]::IsTargetFrameworkCompatible('$(TargetFramework)', 'net9.0')) AND !$([MSBuild]::IsTargetFrameworkCompatible('$(TargetFramework)', 'net10.0'))"/>
+    <PackageVersion Include="Microsoft.JSInterop" Version="10.0.12" Condition="$([MSBuild]::IsTargetFrameworkCompatible('$(TargetFramework)', 'net10.0')) AND !$([MSBuild]::IsTargetFrameworkCompatible('$(TargetFramework)', 'net11.0'))"/>
+    <PackageVersion Include="Microsoft.JSInterop" Version="11.0.0-rc.1.26425.128" Condition="$([MSBuild]::IsTargetFrameworkCompatible('$(TargetFramework)', 'net11.0'))"/>
+    <PackageVersion Include="Microsoft.AspNetCore.SignalR.Client" Version="8.0.31" Condition="$([MSBuild]::IsTargetFrameworkCompatible('$(TargetFramework)', 'net8.0')) AND !$([MSBuild]::IsTargetFrameworkCompatible('$(TargetFramework)', 'net9.0'))"/>
+    <PackageVersion Include="Microsoft.AspNetCore.SignalR.Client" Version="9.0.20" Condition="$([MSBuild]::IsTargetFrameworkCompatible('$(TargetFramework)', 'net9.0')) AND !$([MSBuild]::IsTargetFrameworkCompatible('$(TargetFramework)', 'net10.0'))"/>
+    <PackageVersion Include="Microsoft.AspNetCore.SignalR.Client" Version="10.0.12" Condition="$([MSBuild]::IsTargetFrameworkCompatible('$(TargetFramework)', 'net10.0')) AND !$([MSBuild]::IsTargetFrameworkCompatible('$(TargetFramework)', 'net11.0'))"/>
+    <PackageVersion Include="Microsoft.AspNetCore.SignalR.Client" Version="11.0.0-rc.1.26425.128" Condition="$([MSBuild]::IsTargetFrameworkCompatible('$(TargetFramework)', 'net11.0'))"/>
     <PackageVersion Include="Microsoft.Bcl.TimeProvider" Version="10.0.12"/>
     <PackageVersion Include="Microsoft.Extensions.Configuration" Version="11.0.0-rc.1.26425.128" Condition="$([MSBuild]::IsTargetFrameworkCompatible('$(TargetFramework)', 'net11.0'))"/>
+    <PackageVersion Include="Microsoft.Extensions.DependencyInjection" Version="10.0.12" Condition="!$([MSBuild]::IsTargetFrameworkCompatible('$(TargetFramework)', 'net11.0'))"/>
     <PackageVersion Include="Microsoft.Extensions.DependencyInjection" Version="11.0.0-rc.1.26425.128" Condition="$([MSBuild]::IsTargetFrameworkCompatible('$(TargetFramework)', 'net11.0'))"/>
     <PackageVersion Include="Microsoft.Extensions.Hosting.Abstractions" Version="11.0.0-rc.1.26425.128" Condition="$([MSBuild]::IsTargetFrameworkCompatible('$(TargetFramework)', 'net11.0'))"/>
+    <PackageVersion Include="Microsoft.Extensions.Hosting.Abstractions" Version="10.0.12" Condition="!$([MSBuild]::IsTargetFrameworkCompatible('$(TargetFramework)', 'net11.0'))"/>
+    <PackageVersion Include="Microsoft.Extensions.Diagnostics.HealthChecks" Version="10.0.12" Condition="!$([MSBuild]::IsTargetFrameworkCompatible('$(TargetFramework)', 'net11.0'))"/>
+    <PackageVersion Include="Microsoft.Extensions.Diagnostics.HealthChecks" Version="11.0.0-rc.1.26425.128" Condition="$([MSBuild]::IsTargetFrameworkCompatible('$(TargetFramework)', 'net11.0'))"/>
+    <PackageVersion Include="Microsoft.Extensions.Logging" Version="10.0.12" Condition="!$([MSBuild]::IsTargetFrameworkCompatible('$(TargetFramework)', 'net11.0'))"/>
     <PackageVersion Include="Microsoft.Extensions.Logging" Version="11.0.0-rc.1.26425.128" Condition="$([MSBuild]::IsTargetFrameworkCompatible('$(TargetFramework)', 'net11.0'))"/>
+    <PackageVersion Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.12" Condition="!$([MSBuild]::IsTargetFrameworkCompatible('$(TargetFramework)', 'net11.0'))"/>
     <PackageVersion Include="Microsoft.Extensions.Logging.Abstractions" Version="11.0.0-rc.1.26425.128" Condition="$([MSBuild]::IsTargetFrameworkCompatible('$(TargetFramework)', 'net11.0'))"/>
+    <PackageVersion Include="Microsoft.Extensions.Options" Version="10.0.12" Condition="!$([MSBuild]::IsTargetFrameworkCompatible('$(TargetFramework)', 'net11.0'))"/>
+    <PackageVersion Include="Microsoft.Extensions.Options" Version="11.0.0-rc.1.26425.128" Condition="$([MSBuild]::IsTargetFrameworkCompatible('$(TargetFramework)', 'net11.0'))"/>
     <PackageVersion Include="Microsoft.Maui.Core" Version="10.0.110" Condition="$([MSBuild]::IsTargetFrameworkCompatible('$(TargetFramework)', 'net10.0')) AND !$([MSBuild]::IsTargetFrameworkCompatible('$(TargetFramework)', 'net11.0'))"/>
     <PackageVersion Include="Microsoft.Maui.Core" Version="11.0.0-rc.1.26451.6" Condition="$([MSBuild]::IsTargetFrameworkCompatible('$(TargetFramework)', 'net11.0'))"/>
+    <PackageVersion Include="Microsoft.Maui.Controls.Core" Version="10.0.110" Condition="$([MSBuild]::IsTargetFrameworkCompatible('$(TargetFramework)', 'net10.0')) AND !$([MSBuild]::IsTargetFrameworkCompatible('$(TargetFramework)', 'net11.0'))"/>
+    <PackageVersion Include="Microsoft.Maui.Controls.Core" Version="11.0.0-rc.1.26451.6" Condition="$([MSBuild]::IsTargetFrameworkCompatible('$(TargetFramework)', 'net11.0'))"/>
+    <PackageVersion Include="Microsoft.Maui.Essentials" Version="10.0.110" Condition="$([MSBuild]::IsTargetFrameworkCompatible('$(TargetFramework)', 'net10.0')) AND !$([MSBuild]::IsTargetFrameworkCompatible('$(TargetFramework)', 'net11.0'))"/>
+    <PackageVersion Include="Microsoft.Maui.Essentials" Version="11.0.0-rc.1.26451.6" Condition="$([MSBuild]::IsTargetFrameworkCompatible('$(TargetFramework)', 'net11.0'))"/>
     <PackageVersion Include="Microsoft.WindowsAppSDK" Version="2.5.1"/>
     <!-- The Uno.WinUI release Uno.Sdk in global.json pins; the Uno projects reference it explicitly. -->
     <PackageVersion Include="Uno.WinUI" Version="6.7.135"/>
@@ -72,6 +103,12 @@
     <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="18.10.1"/>
     <PackageVersion Include="TUnit" Version="1.72.4"/>
     <PackageVersion Include="Microsoft.Testing.Extensions.CodeCoverage" Version="18.11.2"/>
+  </ItemGroup>
+  <!-- OccasionallyConnected storage and serialization dependencies. -->
+  <ItemGroup>
+    <PackageVersion Include="Avalonia.Headless" Version="$(AvaloniaVersion)"/>
+    <PackageVersion Include="System.Text.Json" Version="10.0.12"/>
+    <PackageVersion Include="System.Diagnostics.DiagnosticSource" Version="10.0.12"/>
   </ItemGroup>
   <Import Project="$(MSBuildThisFileDirectory)/directory.packages.support.props" Condition="Exists('$(MSBuildThisFileDirectory)/directory.packages.support.props')"/>
 </Project>

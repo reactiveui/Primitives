@@ -1,0 +1,13 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFrameworks>$(TestTargetFrameworks)</TargetFrameworks>
+    <IsPackable>false</IsPackable>
+    <OutputType>Exe</OutputType>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\examples\OccasionallyConnected.ResilienceLab\ReactiveUI.Primitives.OccasionallyConnected.ResilienceLab.csproj" />
+  </ItemGroup>
+
+</Project>

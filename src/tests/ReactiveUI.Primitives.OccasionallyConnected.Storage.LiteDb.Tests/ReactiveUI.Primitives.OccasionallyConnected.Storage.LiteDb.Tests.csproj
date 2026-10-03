@@ -1,0 +1,11 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFrameworks>$(TestTargetFrameworks)</TargetFrameworks>
+    <IsPackable>false</IsPackable>
+    <OutputType>Exe</OutputType>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\ReactiveUI.Primitives.OccasionallyConnected.Storage.LiteDb\ReactiveUI.Primitives.OccasionallyConnected.Storage.LiteDb.csproj" />
+  </ItemGroup>
+</Project>

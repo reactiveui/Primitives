@@ -1,0 +1,25 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <!-- BLite 5.1.1 targets net10.0 and netstandard2.1, so the net4x library targets are excluded. -->
+    <TargetFrameworks>$(NetTargetFrameworks)</TargetFrameworks>
+    <RootNamespace>ReactiveUI.Primitives.OccasionallyConnected.Storage.BliteDb</RootNamespace>
+    <PackageDescription>BLite-backed local storage primitives for durable, occasionally connected reactive streams.</PackageDescription>
+    <EnableSystemTextJsonSourceGenerator>true</EnableSystemTextJsonSourceGenerator>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="$(AssemblyName).Tests" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="BLite" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\ReactiveUI.Primitives.OccasionallyConnected.Core\ReactiveUI.Primitives.OccasionallyConnected.Core.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="README.md" Pack="true" PackagePath="README.md" />
+  </ItemGroup>
+</Project>

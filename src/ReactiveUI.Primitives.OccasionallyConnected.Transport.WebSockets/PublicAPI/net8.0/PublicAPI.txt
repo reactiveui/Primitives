@@ -1,0 +1,31 @@
+[assembly: System.Runtime.CompilerServices.InternalsVisibleTo("ReactiveUI.Primitives.OccasionallyConnected.Transport.WebSockets.Tests")]
+namespace ReactiveUI.Primitives.OccasionallyConnected.Transport.WebSockets;
+
+[System.Diagnostics.DebuggerDisplay("{Capabilities}")]
+public sealed class WebSocketRemoteTransportAdapter : ReactiveUI.Primitives.OccasionallyConnected.IRemoteTransportAdapter
+{
+    public WebSocketRemoteTransportAdapter(ReactiveUI.Primitives.OccasionallyConnected.Transport.WebSockets.WebSocketRemoteTransportOptions options) { }
+    public ReactiveUI.Primitives.OccasionallyConnected.RemoteTransportCapabilities Capabilities { get; }
+    public System.Threading.Tasks.ValueTask<ReactiveUI.Primitives.OccasionallyConnected.IRemoteTransportSession> ConnectAsync(ReactiveUI.Primitives.OccasionallyConnected.TransportConnectRequest request, System.Threading.CancellationToken cancellationToken) { }
+    public System.Threading.Tasks.ValueTask DisposeAsync() { }
+}
+[System.Diagnostics.DebuggerDisplay("{Code}: {Message}")]
+public sealed class WebSocketRemoteTransportException : System.Exception, ReactiveUI.Primitives.OccasionallyConnected.IRemoteTransportFailure
+{
+    public WebSocketRemoteTransportException() { }
+    public WebSocketRemoteTransportException(string message) { }
+    public WebSocketRemoteTransportException(string message, System.Exception innerException) { }
+    public WebSocketRemoteTransportException(string code, string message) { }
+    public WebSocketRemoteTransportException(string code, string message, System.Exception innerException) { }
+    public string Code { get; }
+    public ReactiveUI.Primitives.OccasionallyConnected.RetryFailure RetryFailure { get; }
+}
+[System.Diagnostics.DebuggerDisplay("{Endpoint}")]
+public record WebSocketRemoteTransportOptions : System.IEquatable<ReactiveUI.Primitives.OccasionallyConnected.Transport.WebSockets.WebSocketRemoteTransportOptions>
+{
+    public required System.Uri Endpoint { get; init; }
+    public int MaximumMessageBytes { get; init; }
+    public int ReceiveBufferBytes { get; init; }
+    public int MaximumBufferedSubscriptionBytes { get; init; }
+    public void Validate() { }
+}

@@ -1,0 +1,13 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFrameworks>net10.0;net11.0</TargetFrameworks>
+    <OutputType>Exe</OutputType>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\ReactiveUI.Primitives.OccasionallyConnected.Web\ReactiveUI.Primitives.OccasionallyConnected.Web.csproj" />
+    <None Include="..\..\ReactiveUI.Primitives.OccasionallyConnected.Web\wwwroot\browserLifecycle.js"
+          Link="browserLifecycle.mjs" CopyToOutputDirectory="PreserveNewest" />
+    <None Update="browserLifecycleTests.mjs" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+</Project>

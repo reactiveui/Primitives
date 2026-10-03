@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFrameworks>net8.0;net9.0;net10.0;net11.0</TargetFrameworks>
+    <RootNamespace>ReactiveUI.Primitives.OccasionallyConnected.Transport.WebSockets</RootNamespace>
+    <PackageDescription>Bidirectional WebSocket transport for occasionally connected synchronization.</PackageDescription>
+    <EnableSystemTextJsonSourceGenerator>true</EnableSystemTextJsonSourceGenerator>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\ReactiveUI.Primitives.OccasionallyConnected.Core\ReactiveUI.Primitives.OccasionallyConnected.Core.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="README.md" Pack="true" PackagePath="README.md" />
+    <InternalsVisibleTo Include="ReactiveUI.Primitives.OccasionallyConnected.Transport.WebSockets.Tests" />
+  </ItemGroup>
+
+</Project>

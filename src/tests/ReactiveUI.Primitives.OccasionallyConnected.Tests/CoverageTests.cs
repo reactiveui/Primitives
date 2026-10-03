@@ -1,0 +1,995 @@
+// Copyright (c) 2019-2026 ReactiveUI Association Incorporated. All rights reserved.
+// ReactiveUI Association Incorporated licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for full license information.
+
+using System.Diagnostics;
+using System.Runtime.CompilerServices;
+using System.Security;
+
+namespace ReactiveUI.Primitives.OccasionallyConnected.Tests;
+
+/// <summary>Tests for the OccasionallyConnected coverage gate.</summary>
+[NotInParallel]
+public sealed partial class CoverageTests
+{
+    /// <summary>The package name passed to the coverage gate.</summary>
+    private const string PackageName = "ReactiveUI.Primitives.OccasionallyConnected";
+
+    /// <summary>The package name for filesystem adapter coverage reporting.</summary>
+    private const string FileSystemPackageName = "ReactiveUI.Primitives.OccasionallyConnected.Storage.FileSystem";
+
+    /// <summary>The expected message when handwritten core-runtime coverage misses its thresholds.</summary>
+    private const string HandwrittenCoverageFailure = "requires at least 95% handwritten line coverage and 90% branch coverage";
+
+    /// <summary>The package segment used by fixture source paths.</summary>
+    private const string PackagePath = @"D:\repo\src\ReactiveUI.Primitives.OccasionallyConnected";
+
+    /// <summary>The POSIX package segment used by fixture source paths.</summary>
+    private const string PosixPackagePath = "/repo/src/ReactiveUI.Primitives.OccasionallyConnected";
+
+    /// <summary>A half coverage rate used by mixed handwritten/generated reports.</summary>
+    private const string HalfRate = "0.5000";
+
+    /// <summary>Complete coverage for a two-way branch fixture.</summary>
+    private const string CompleteConditionCoverage = "100% (2/2)";
+
+    /// <summary>Partial coverage for a two-way branch fixture.</summary>
+    private const string HalfConditionCoverage = "50% (1/2)";
+
+    /// <summary>The number of seconds allowed for each CLI process.</summary>
+    private const int CliTimeoutSeconds = 30;
+
+    /// <summary>The number of seconds allowed to clean up a timed-out CLI process.</summary>
+    private const int ProcessCleanupTimeoutSeconds = 5;
+
+    /// <summary>The repeated handwritten fixture class name.</summary>
+    private const string HandwrittenClassName = "Sample.Handwritten";
+
+    /// <summary>The repeated generated JSON context fixture class name.</summary>
+    private const string PayloadJsonContextClassName = "Sample.PayloadJsonContext";
+
+    /// <summary>The first handwritten fixture line.</summary>
+    private const int FirstHandwrittenLine = 10;
+
+    /// <summary>The second handwritten fixture line.</summary>
+    private const int SecondHandwrittenLine = 11;
+
+    /// <summary>The first generated fixture line.</summary>
+    private const int FirstGeneratedLine = 22;
+
+    /// <summary>The second generated fixture line.</summary>
+    private const int SecondGeneratedLine = 23;
+
+    /// <summary>The async branch fixture line.</summary>
+    private const int AsyncBranchLine = 40;
+
+    /// <summary>The total branches represented by a simple condition fixture.</summary>
+    private const int ConditionBranchCount = 2;
+
+    /// <summary>The fixture denominator for exact whole-percent threshold checks.</summary>
+    private const int WholePercentTotal = 100;
+
+    /// <summary>The exact whole-percent line threshold covered count.</summary>
+    private const int ExactLineThresholdCovered = 95;
+
+    /// <summary>The exact whole-percent branch threshold covered count.</summary>
+    private const int ExactBranchThresholdCovered = 90;
+
+    /// <summary>The fixture denominator for fractional-percent threshold checks.</summary>
+    private const int FractionalPercentTotal = 1000;
+
+    /// <summary>The line count just above its threshold.</summary>
+    private const int AboveLineThresholdCovered = 951;
+
+    /// <summary>The branch count just above its threshold.</summary>
+    private const int AboveBranchThresholdCovered = 901;
+
+    /// <summary>The line count just below its threshold.</summary>
+    private const int BelowLineThresholdCovered = 949;
+
+    /// <summary>The branch count just below its threshold.</summary>
+    private const int BelowBranchThresholdCovered = 899;
+
+    /// <summary>The deliberately low storage-adapter line coverage used to verify report-only behavior.</summary>
+    private const int LowAdapterCoverageLines = 800;
+
+    /// <summary>The deliberately low storage-adapter branch coverage used to verify report-only behavior.</summary>
+    private const int LowAdapterCoverageBranches = 700;
+
+    /// <summary>The factor that converts a ratio to a percentage.</summary>
+    private const double PercentFactor = 100.0;
+
+    /// <summary>A source-generated JSON serializer path recognized by the coverage gate.</summary>
+    private const string GeneratedJsonPath =
+        PackagePath
+        + @"\obj\Generated\System.Text.Json.SourceGeneration\System.Text.Json.SourceGeneration.JsonSourceGenerator"
+        + @"\PayloadJsonContext.Value.g.cs";
+
+    /// <summary>A handwritten source file path used by fixture classes.</summary>
+    private const string HandwrittenPath = @"D:\repo\src\ReactiveUI.Primitives.OccasionallyConnected\Serialization\JsonPayloadSerializer.cs";
+
+    /// <summary>A handwritten source file path with a generated-looking suffix.</summary>
+    private const string HandwrittenGeneratedSuffixPath = PackagePath + @"\Serialization\ManualJsonContext.g.cs";
+
+    /// <summary>A source-generated path that traverses back into handwritten source.</summary>
+    private const string TraversalGeneratedPath =
+        PackagePath
+        + @"\obj\Generated\System.Text.Json.SourceGeneration\System.Text.Json.SourceGeneration.JsonSourceGenerator"
+        + @"\..\..\..\Serialization\JsonPayloadSerializer.cs";
+
+    /// <summary>A generated-looking path outside the package source root.</summary>
+    private const string SpoofedGeneratedJsonPath =
+        @"D:\repo\src\OtherProject\obj\Generated\System.Text.Json.SourceGeneration\System.Text.Json.SourceGeneration.JsonSourceGenerator"
+        + @"\PayloadJsonContext.Value.g.cs";
+
+    /// <summary>A POSIX source-generated JSON serializer path recognized by the coverage gate.</summary>
+    private static readonly string PosixGeneratedJsonPath = string.Join(
+        '/',
+        PosixPackagePath,
+        "obj",
+        "Generated",
+        "System.Text.Json.SourceGeneration",
+        "System.Text.Json.SourceGeneration.JsonSourceGenerator",
+        "PayloadJsonContext.Value.g.cs");
+
+    /// <summary>A POSIX source-generated path that traverses back into handwritten source.</summary>
+    private static readonly string PosixTraversalGeneratedPath = string.Join(
+        '/',
+        PosixPackagePath,
+        "obj",
+        "Generated",
+        "System.Text.Json.SourceGeneration",
+        "System.Text.Json.SourceGeneration.JsonSourceGenerator",
+        "..",
+        "..",
+        "..",
+        "Serialization",
+        "JsonPayloadSerializer.cs");
+
+    /// <summary>Verifies generated JSON serializer lines are reported separately and do not fail the handwritten gate.</summary>
+    /// <returns>A task that completes when the test finishes.</returns>
+    [Test]
+    public async Task GeneratedJsonSerializerMissesDoNotFailCompleteHandwrittenLines()
+    {
+        var report = CreateReport(
+            HalfRate,
+            HalfRate,
+            CreateClass(HandwrittenClassName, HandwrittenPath, "1", "1", CreateLine(FirstHandwrittenLine, 1), CreateLine(SecondHandwrittenLine, 1, CompleteConditionCoverage)),
+            CreateClass(PayloadJsonContextClassName, GeneratedJsonPath, "0", "0", CreateLine(FirstGeneratedLine, 0), CreateLine(SecondGeneratedLine, 0, "0% (0/2)")));
+
+        using var directory = TestDirectory.Create();
+        var result = await RunScriptAsync(directory, report);
+
+        await Assert.That(result.ExitCode).IsEqualTo(0);
+        await Assert.That(result.Output).Contains("package totals");
+        await Assert.That(result.Output).Contains("lines 2/4");
+        await Assert.That(result.Output).Contains("branches 2/4");
+        await Assert.That(result.Output).Contains("generated JSON serializer");
+        await Assert.That(result.Output).Contains("handwritten: at least 95% line coverage");
+    }
+
+    /// <summary>Verifies an uncovered handwritten line fails the gate.</summary>
+    /// <returns>A task that completes when the test finishes.</returns>
+    [Test]
+    public async Task HandwrittenMissedLineFails()
+    {
+        var report = CreateReport(
+            HalfRate,
+            "1",
+            CreateClass(HandwrittenClassName, HandwrittenPath, "0.5", "1", CreateLine(FirstHandwrittenLine, 1), CreateLine(SecondHandwrittenLine, 0)));
+
+        using var directory = TestDirectory.Create();
+        var result = await RunScriptAsync(directory, report);
+
+        await Assert.That(result.ExitCode).IsNotEqualTo(0);
+        await Assert.That(result.Output).Contains(HandwrittenCoverageFailure);
+    }
+
+    /// <summary>Verifies a .g.cs suffix alone does not mark a file as source-generated.</summary>
+    /// <returns>A task that completes when the test finishes.</returns>
+    [Test]
+    public async Task GeneratedSuffixWithoutRecognizedPathFailsAsHandwritten()
+    {
+        var report = CreateReport(
+            "0",
+            "1",
+            CreateClass("Sample.ManualJsonContext", HandwrittenGeneratedSuffixPath, "0", "1", CreateLine(FirstHandwrittenLine, 0)));
+
+        using var directory = TestDirectory.Create();
+        var result = await RunScriptAsync(directory, report);
+
+        await Assert.That(result.ExitCode).IsNotEqualTo(0);
+        await Assert.That(result.Output).Contains(HandwrittenCoverageFailure);
+    }
+
+    /// <summary>Verifies compiler async state-machine classes stay gated through their handwritten source path.</summary>
+    /// <returns>A task that completes when the test finishes.</returns>
+    [Test]
+    public async Task AsyncStateMachineMappedToHandwrittenFileFailsPartialBranch()
+    {
+        var report = CreateReport(
+            "1",
+            "0.5",
+            CreateClass("Sample.JsonPayloadSerializer.&lt;DeserializeAsync&gt;d__14", HandwrittenPath, "1", "0.5", CreateLine(AsyncBranchLine, 1, HalfConditionCoverage)));
+
+        using var directory = TestDirectory.Create();
+        var result = await RunScriptAsync(directory, report);
+
+        await Assert.That(result.ExitCode).IsNotEqualTo(0);
+        await Assert.That(result.Output).Contains(HandwrittenCoverageFailure);
+    }
+
+    /// <summary>Verifies branch lines fail closed when condition metadata is absent.</summary>
+    /// <returns>A task that completes when the test finishes.</returns>
+    [Test]
+    public async Task BranchLineWithoutConditionMetadataFails()
+    {
+        var report = CreateReport(
+            "1",
+            "1",
+            CreateClass(HandwrittenClassName, HandwrittenPath, "1", "1", CreateLineWithoutConditionCoverage(FirstHandwrittenLine)));
+
+        using var directory = TestDirectory.Create();
+        var result = await RunScriptAsync(directory, report);
+
+        await Assert.That(result.ExitCode).IsNotEqualTo(0);
+        await Assert.That(result.Output).Contains("missing 'condition-coverage'");
+    }
+
+    /// <summary>Verifies a source-generator-like class without a filename fails closed instead of being exempted.</summary>
+    /// <returns>A task that completes when the test finishes.</returns>
+    [Test]
+    public async Task MissingGeneratedSourcePathFailsClosed()
+    {
+        var report = CreateReportWithClassWithoutFilename(
+            PayloadJsonContextClassName,
+            "1",
+            "1",
+            CreateLine(FirstHandwrittenLine, 1));
+
+        using var directory = TestDirectory.Create();
+        var result = await RunScriptAsync(directory, report);
+
+        await Assert.That(result.ExitCode).IsNotEqualTo(0);
+        await Assert.That(result.Output).Contains("missing 'filename'");
+    }
+
+    /// <summary>Verifies missing, empty and malformed reports fail closed.</summary>
+    /// <returns>A task that completes when the test finishes.</returns>
+    [Test]
+    public async Task MissingEmptyAndMalformedReportsFailClosed()
+    {
+        using var directory = TestDirectory.Create();
+        var missing = await RunScriptAsync(directory, report: null);
+        var empty = await RunScriptAsync(directory, string.Empty, "empty.cobertura.xml");
+        var malformed = await RunScriptAsync(directory, "<coverage>", "malformed.cobertura.xml");
+
+        await Assert.That(missing.ExitCode).IsNotEqualTo(0);
+        await Assert.That(missing.Output).Contains("does not exist");
+        await Assert.That(empty.ExitCode).IsNotEqualTo(0);
+        await Assert.That(empty.Output).Contains("is empty");
+        await Assert.That(malformed.ExitCode).IsNotEqualTo(0);
+        await Assert.That(malformed.Output).Contains("is not valid XML");
+    }
+
+    /// <summary>Verifies non-finite rate metadata fails closed.</summary>
+    /// <returns>A task that completes when the test finishes.</returns>
+    [Test]
+    public async Task NonFiniteRatesFailClosed()
+    {
+        var report = CreateReport(
+            "NaN",
+            "1",
+            CreateClass(HandwrittenClassName, HandwrittenPath, "1", "1", CreateLine(FirstHandwrittenLine, 1)));
+
+        using var directory = TestDirectory.Create();
+        var result = await RunScriptAsync(directory, report);
+
+        await Assert.That(result.ExitCode).IsNotEqualTo(0);
+        await Assert.That(result.Output).Contains("non-finite 'line-rate'");
+    }
+
+    /// <summary>Verifies lost branch metadata cannot hide uncovered handwritten branch rates.</summary>
+    /// <returns>A task that completes when the test finishes.</returns>
+    [Test]
+    public async Task HandwrittenClassBranchRateBelowCompleteFailsWhenLineBranchMetadataIsMissing()
+    {
+        var report = CreateReport(
+            "1",
+            "0.5",
+            CreateClass(HandwrittenClassName, HandwrittenPath, "1", "0.5", CreateLine(FirstHandwrittenLine, 1)));
+
+        using var directory = TestDirectory.Create();
+        var result = await RunScriptAsync(directory, report);
+
+        await Assert.That(result.ExitCode).IsNotEqualTo(0);
+        await Assert.That(result.Output).Contains("class branch-rate on 'Sample.Handwritten' does not match");
+    }
+
+    /// <summary>Verifies present branch lines cannot hide lost uncovered handwritten branch metadata.</summary>
+    /// <returns>A task that completes when the test finishes.</returns>
+    [Test]
+    public async Task HandwrittenClassBranchRateBelowCompleteFailsWhenSomeBranchMetadataIsMissing()
+    {
+        var report = CreateReport(
+            "1",
+            "0.5",
+            CreateClass(
+                HandwrittenClassName,
+                HandwrittenPath,
+                "1",
+                "0.5",
+                CreateLine(FirstHandwrittenLine, 1, CompleteConditionCoverage),
+                CreateLine(SecondHandwrittenLine, 1)));
+
+        using var directory = TestDirectory.Create();
+        var result = await RunScriptAsync(directory, report);
+
+        await Assert.That(result.ExitCode).IsNotEqualTo(0);
+        await Assert.That(result.Output).Contains("class branch-rate on 'Sample.Handwritten' does not match");
+    }
+
+    /// <summary>Verifies handwritten class line-rate is gated even when every line entry reports hits.</summary>
+    /// <returns>A task that completes when the test finishes.</returns>
+    [Test]
+    public async Task HandwrittenClassLineRateBelowCompleteFailsWhenLineHitsArePresent()
+    {
+        var report = CreateReport(
+            "0.5",
+            "1",
+            CreateClass(HandwrittenClassName, HandwrittenPath, "0.5", "1", CreateLine(FirstHandwrittenLine, 1)));
+
+        using var directory = TestDirectory.Create();
+        var result = await RunScriptAsync(directory, report);
+
+        await Assert.That(result.ExitCode).IsNotEqualTo(0);
+        await Assert.That(result.Output).Contains("class line-rate on 'Sample.Handwritten' does not match");
+    }
+
+    /// <summary>Verifies malformed branch attributes fail closed.</summary>
+    /// <returns>A task that completes when the test finishes.</returns>
+    [Test]
+    public async Task MalformedBranchAttributeFailsClosed()
+    {
+        var report = CreateReport(
+            "1",
+            "1",
+            CreateClass(HandwrittenClassName, HandwrittenPath, "1", "1", CreateLineWithBranchAttribute(FirstHandwrittenLine, "maybe")));
+
+        using var directory = TestDirectory.Create();
+        var result = await RunScriptAsync(directory, report);
+
+        await Assert.That(result.ExitCode).IsNotEqualTo(0);
+        await Assert.That(result.Output).Contains("malformed 'branch'");
+    }
+
+    /// <summary>Verifies Cobertura boolean branch attributes are parsed without case sensitivity.</summary>
+    /// <returns>A task that completes when the test finishes.</returns>
+    [Test]
+    public async Task CoberturaBranchAttributeIsCaseInsensitive()
+    {
+        var report = CreateReport(
+            "1",
+            "1",
+            CreateClass(
+                HandwrittenClassName,
+                HandwrittenPath,
+                "1",
+                "1",
+                CreateLineWithBranchAttribute(FirstHandwrittenLine, "True")));
+
+        using var directory = TestDirectory.Create();
+        var result = await RunScriptAsync(directory, report);
+
+        await Assert.That(result.ExitCode).IsEqualTo(0);
+        await Assert.That(result.Output).Contains("line coverage 100.00%");
+        await Assert.That(result.Output).Contains("branch coverage 100.00%");
+    }
+
+    /// <summary>Verifies branch percentages must agree with covered and total branch counts.</summary>
+    /// <returns>A task that completes when the test finishes.</returns>
+    [Test]
+    public async Task BranchPercentageMismatchFailsClosed()
+    {
+        var report = CreateReport(
+            "1",
+            "1",
+            CreateClass(HandwrittenClassName, HandwrittenPath, "1", "1", CreateLine(FirstHandwrittenLine, 1, "0% (2/2)")));
+
+        using var directory = TestDirectory.Create();
+        var result = await RunScriptAsync(directory, report);
+
+        await Assert.That(result.ExitCode).IsNotEqualTo(0);
+        await Assert.That(result.Output).Contains("does not match branch counts");
+    }
+
+    /// <summary>Verifies generated-looking paths outside the package source root fail closed.</summary>
+    /// <returns>A task that completes when the test finishes.</returns>
+    [Test]
+    public async Task GeneratedPathOutsidePackageSourceRootFailsClosed()
+    {
+        var report = CreateReport(
+            HalfRate,
+            "1",
+            CreateClass(HandwrittenClassName, HandwrittenPath, "1", "1", CreateLine(FirstHandwrittenLine, 1)),
+            CreateClass(PayloadJsonContextClassName, SpoofedGeneratedJsonPath, "0", "1", CreateLine(FirstGeneratedLine, 0)));
+
+        using var directory = TestDirectory.Create();
+        var result = await RunScriptAsync(directory, report);
+
+        await Assert.That(result.ExitCode).IsNotEqualTo(0);
+        await Assert.That(result.Output).Contains("does not match recognized generated output shape");
+    }
+
+    /// <summary>Verifies generated path classification rejects traversal into a handwritten file.</summary>
+    /// <returns>A task that completes when the test finishes.</returns>
+    [Test]
+    public async Task GeneratedPathTraversalFailsClosed()
+    {
+        var report = CreateReport(
+            "1",
+            "1",
+            CreateClass(PayloadJsonContextClassName, TraversalGeneratedPath, "1", "1", CreateLine(FirstHandwrittenLine, 1)));
+
+        using var directory = TestDirectory.Create();
+        var result = await RunScriptAsync(directory, report);
+
+        await Assert.That(result.ExitCode).IsNotEqualTo(0);
+        await Assert.That(result.Output).Contains("escapes recognized generated output");
+    }
+
+    /// <summary>Verifies POSIX generated JSON serializer paths are classified without weakening handwritten coverage.</summary>
+    /// <returns>A task that completes when the test finishes.</returns>
+    [Test]
+    public async Task PosixGeneratedJsonSerializerMissesDoNotFailCompleteHandwrittenLines()
+    {
+        var report = CreateReport(
+            HalfRate,
+            HalfRate,
+            CreateClass(HandwrittenClassName, HandwrittenPath, "1", "1", CreateLine(FirstHandwrittenLine, 1)),
+            CreateClass(PayloadJsonContextClassName, PosixGeneratedJsonPath, "0", "1", CreateLine(FirstGeneratedLine, 0)));
+
+        using var directory = TestDirectory.Create();
+        var result = await RunScriptAsync(directory, report);
+
+        await Assert.That(result.ExitCode).IsEqualTo(0);
+        await Assert.That(result.Output).Contains("generated JSON serializer");
+        await Assert.That(result.Output).Contains("handwritten: at least 95% line coverage");
+    }
+
+    /// <summary>Verifies POSIX generated path traversal fails closed.</summary>
+    /// <returns>A task that completes when the test finishes.</returns>
+    [Test]
+    public async Task PosixGeneratedPathTraversalFailsClosed()
+    {
+        var report = CreateReport(
+            "1",
+            "1",
+            CreateClass(PayloadJsonContextClassName, PosixTraversalGeneratedPath, "1", "1", CreateLine(FirstHandwrittenLine, 1)));
+
+        using var directory = TestDirectory.Create();
+        var result = await RunScriptAsync(directory, report);
+
+        await Assert.That(result.ExitCode).IsNotEqualTo(0);
+        await Assert.That(result.Output).Contains("escapes recognized generated output");
+    }
+
+    /// <summary>Verifies decimal parsing remains invariant under a culture that uses comma decimals.</summary>
+    /// <returns>A task that completes when the test finishes.</returns>
+    [Test]
+    public async Task DecimalRatesUseInvariantCulture()
+    {
+        var report = CreateReport(
+            HalfRate,
+            HalfRate,
+            CreateClass(
+                HandwrittenClassName,
+                HandwrittenPath,
+                HalfRate,
+                HalfRate,
+                CreateLine(FirstHandwrittenLine, 1),
+                CreateLine(SecondHandwrittenLine, 0, HalfConditionCoverage)));
+
+        using var directory = TestDirectory.Create();
+        var result = await RunScriptAsync(directory, report, cultureName: "fr-FR");
+
+        await Assert.That(result.ExitCode).IsNotEqualTo(0);
+        await Assert.That(result.Output).Contains(HandwrittenCoverageFailure);
+    }
+
+    /// <summary>Verifies coverage at the exact core-runtime thresholds passes.</summary>
+    /// <returns>A task that completes when the test finishes.</returns>
+    [Test]
+    public async Task CoverageAtExactCoreRuntimeThresholdsPasses()
+    {
+        var report = CreateCoverageThresholdReport(
+            WholePercentTotal,
+            ExactLineThresholdCovered,
+            WholePercentTotal,
+            ExactBranchThresholdCovered);
+
+        using var directory = TestDirectory.Create();
+        var result = await RunScriptAsync(directory, report);
+
+        await Assert.That(result.ExitCode).IsEqualTo(0);
+        await Assert.That(result.Output).Contains("95.00% (95/100)");
+        await Assert.That(result.Output).Contains("90.00% (90/100)");
+    }
+
+    /// <summary>Verifies line coverage below 95% fails even when branch coverage is complete.</summary>
+    /// <returns>A task that completes when the test finishes.</returns>
+    [Test]
+    public async Task LineCoverageBelowThresholdFailsWhenBranchesAreComplete()
+    {
+        var report = CreateCoverageThresholdReport(
+            FractionalPercentTotal,
+            BelowLineThresholdCovered,
+            FractionalPercentTotal,
+            FractionalPercentTotal);
+
+        using var directory = TestDirectory.Create();
+        var result = await RunScriptAsync(directory, report);
+
+        await Assert.That(result.ExitCode).IsNotEqualTo(0);
+        await Assert.That(result.Output).Contains("94.90% (949/1000)");
+    }
+
+    /// <summary>Verifies branch coverage below 90% fails even when line coverage is complete.</summary>
+    /// <returns>A task that completes when the test finishes.</returns>
+    [Test]
+    public async Task BranchCoverageBelowThresholdFailsWhenLinesAreComplete()
+    {
+        var report = CreateCoverageThresholdReport(
+            FractionalPercentTotal,
+            FractionalPercentTotal,
+            FractionalPercentTotal,
+            BelowBranchThresholdCovered);
+
+        using var directory = TestDirectory.Create();
+        var result = await RunScriptAsync(directory, report);
+
+        await Assert.That(result.ExitCode).IsNotEqualTo(0);
+        await Assert.That(result.Output).Contains("handwritten branches: 89.90% (899/1000)");
+    }
+
+    /// <summary>Verifies line and branch coverage just above the core-runtime thresholds passes.</summary>
+    /// <returns>A task that completes when the test finishes.</returns>
+    [Test]
+    public async Task CoverageJustAboveCoreRuntimeThresholdsPasses()
+    {
+        var report = CreateCoverageThresholdReport(
+            FractionalPercentTotal,
+            AboveLineThresholdCovered,
+            FractionalPercentTotal,
+            AboveBranchThresholdCovered);
+
+        using var directory = TestDirectory.Create();
+        var result = await RunScriptAsync(directory, report);
+
+        await Assert.That(result.ExitCode).IsEqualTo(0);
+        await Assert.That(result.Output).Contains("95.10% (951/1000)");
+        await Assert.That(result.Output).Contains("90.10% (901/1000)");
+    }
+
+    /// <summary>Verifies a storage adapter report below core-runtime thresholds remains visible but ungated.</summary>
+    /// <returns>A task that completes when the test finishes.</returns>
+    [Test]
+    public async Task StorageAdapterCoverageIsReportedWithoutCoreRuntimeThresholds()
+    {
+        var report = CreateCoverageThresholdReport(
+            FractionalPercentTotal,
+            LowAdapterCoverageLines,
+            FractionalPercentTotal,
+            LowAdapterCoverageBranches,
+            FileSystemPackageName);
+
+        using var directory = TestDirectory.Create();
+        var result = await RunScriptAsync(directory, report, packageName: FileSystemPackageName);
+
+        await Assert.That(result.ExitCode).IsEqualTo(0);
+        await Assert.That(result.Output).Contains("reported without core-runtime thresholds");
+        await Assert.That(result.Output).Contains("80.00% (800/1000)");
+        await Assert.That(result.Output).Contains("70.00% (700/1000)");
+    }
+
+    /// <summary>Verifies repeated source lines are counted once and a hit in either report covers the line.</summary>
+    /// <returns>A task that completes when the test finishes.</returns>
+    [Test]
+    public async Task MultipleReportsUnionDuplicateLineHits()
+    {
+        var first = CreateReport(
+            HalfRate,
+            "1",
+            CreateClass(HandwrittenClassName, HandwrittenPath, HalfRate, "1", CreateLine(FirstHandwrittenLine, 1), CreateLine(SecondHandwrittenLine, 0)));
+        var second = CreateReport(
+            HalfRate,
+            "1",
+            CreateClass(HandwrittenClassName, HandwrittenPath, HalfRate, "1", CreateLine(FirstHandwrittenLine, 0), CreateLine(SecondHandwrittenLine, 1)));
+
+        using var directory = TestDirectory.Create();
+        var result = await RunScriptAsync(directory, first, additionalReport: second);
+
+        await Assert.That(result.ExitCode).IsEqualTo(0);
+        await Assert.That(result.Output).Contains("lines 2/2");
+    }
+
+    /// <summary>Verifies repeated branch totals are not added and only the highest observed covered count is used.</summary>
+    /// <returns>A task that completes when the test finishes.</returns>
+    [Test]
+    public async Task MultipleReportsKeepConservativeBranchCounts()
+    {
+        var first = CreateReport(
+            "1",
+            HalfRate,
+            CreateClass(HandwrittenClassName, HandwrittenPath, "1", HalfRate, CreateLine(FirstHandwrittenLine, 1, HalfConditionCoverage)));
+        var second = CreateReport(
+            "1",
+            HalfRate,
+            CreateClass(HandwrittenClassName, HandwrittenPath, "1", HalfRate, CreateLine(FirstHandwrittenLine, 1, HalfConditionCoverage)));
+
+        using var directory = TestDirectory.Create();
+        var result = await RunScriptAsync(directory, first, additionalReport: second);
+
+        await Assert.That(result.ExitCode).IsNotEqualTo(0);
+        await Assert.That(result.Output).Contains("handwritten branches: 50.00% (1/2)");
+    }
+
+    /// <summary>Verifies the best observed branch count covers a repeated line without duplicating its total.</summary>
+    /// <returns>A task that completes when the test finishes.</returns>
+    [Test]
+    public async Task MultipleReportsUseMaximumCoveredBranchCount()
+    {
+        var partial = CreateReport(
+            "1",
+            HalfRate,
+            CreateClass(HandwrittenClassName, HandwrittenPath, "1", HalfRate, CreateLine(FirstHandwrittenLine, 1, HalfConditionCoverage)));
+        var complete = CreateReport(
+            "1",
+            "1",
+            CreateClass(HandwrittenClassName, HandwrittenPath, "1", "1", CreateLine(FirstHandwrittenLine, 1, CompleteConditionCoverage)));
+
+        using var directory = TestDirectory.Create();
+        var result = await RunScriptAsync(directory, partial, additionalReport: complete);
+
+        await Assert.That(result.ExitCode).IsEqualTo(0);
+        await Assert.That(result.Output).Contains("branches 2/2");
+    }
+
+    /// <summary>Verifies contradictory branch totals across reports fail closed.</summary>
+    /// <returns>A task that completes when the test finishes.</returns>
+    [Test]
+    public async Task MultipleReportsRejectInconsistentBranchTotals()
+    {
+        var first = CreateReport(
+            "1",
+            "1",
+            CreateClass(HandwrittenClassName, HandwrittenPath, "1", "1", CreateLine(FirstHandwrittenLine, 1, CompleteConditionCoverage)));
+        var second = CreateReport(
+            "1",
+            "1",
+            CreateClass(HandwrittenClassName, HandwrittenPath, "1", "1", CreateLine(FirstHandwrittenLine, 1, "100% (3/3)")));
+
+        using var directory = TestDirectory.Create();
+        var result = await RunScriptAsync(directory, first, additionalReport: second);
+
+        await Assert.That(result.ExitCode).IsNotEqualTo(0);
+        await Assert.That(result.Output).Contains("disagree on branch metadata");
+    }
+
+    /// <summary>Verifies malformed branch metadata in any report fails the aggregate gate.</summary>
+    /// <returns>A task that completes when the test finishes.</returns>
+    [Test]
+    public async Task MultipleReportsFailClosedWhenOneReportLosesBranchMetadata()
+    {
+        var valid = CreateReport(
+            "1",
+            "1",
+            CreateClass(HandwrittenClassName, HandwrittenPath, "1", "1", CreateLine(FirstHandwrittenLine, 1, CompleteConditionCoverage)));
+        var invalid = CreateReport(
+            "1",
+            "1",
+            CreateClass(HandwrittenClassName, HandwrittenPath, "1", "1", CreateLineWithoutConditionCoverage(FirstHandwrittenLine)));
+
+        using var directory = TestDirectory.Create();
+        var result = await RunScriptAsync(directory, valid, additionalReport: invalid);
+
+        await Assert.That(result.ExitCode).IsNotEqualTo(0);
+        await Assert.That(result.Output).Contains("missing 'condition-coverage'");
+    }
+
+    /// <summary>Creates a Cobertura report fixture with one package.</summary>
+    /// <param name="lineRate">The package line rate.</param>
+    /// <param name="branchRate">The package branch rate.</param>
+    /// <param name="classes">The class XML fragments.</param>
+    /// <returns>The report XML.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static string CreateReport(string lineRate, string branchRate, params string[] classes) =>
+        CreateReportForPackage(PackageName, lineRate, branchRate, classes);
+
+    /// <summary>Creates a Cobertura report fixture with a specified package.</summary>
+    /// <param name="packageName">The package represented by the report.</param>
+    /// <param name="lineRate">The package line rate.</param>
+    /// <param name="branchRate">The package branch rate.</param>
+    /// <param name="classes">The class XML fragments.</param>
+    /// <returns>The report XML.</returns>
+    private static string CreateReportForPackage(string packageName, string lineRate, string branchRate, params string[] classes) =>
+        $"""
+         <?xml version="1.0" encoding="utf-8"?>
+         <coverage line-rate="{lineRate}" branch-rate="{branchRate}" version="1.0">
+           <packages>
+             <package name="{packageName}" line-rate="{lineRate}" branch-rate="{branchRate}" complexity="1">
+               <classes>
+         {string.Concat(classes)}
+               </classes>
+             </package>
+           </packages>
+         </coverage>
+         """;
+
+    /// <summary>Creates a report with matching package and class line and branch counts.</summary>
+    /// <param name="totalLines">The measured handwritten lines.</param>
+    /// <param name="coveredLines">The covered handwritten lines.</param>
+    /// <param name="totalBranches">The measured handwritten branches.</param>
+    /// <param name="coveredBranches">The covered handwritten branches.</param>
+    /// <param name="packageName">The package represented by the report.</param>
+    /// <returns>The report XML.</returns>
+    private static string CreateCoverageThresholdReport(
+        int totalLines,
+        int coveredLines,
+        int totalBranches,
+        int coveredBranches,
+        string packageName = PackageName)
+    {
+        var lineRate = FormatRatio(coveredLines, totalLines);
+        var branchRate = FormatRatio(coveredBranches, totalBranches);
+        var branchPercent = (PercentFactor * coveredBranches / totalBranches).ToString("0.00", System.Globalization.CultureInfo.InvariantCulture);
+        var conditionCoverage = $"{branchPercent}% ({coveredBranches}/{totalBranches})";
+        var lines = Enumerable.Range(1, totalLines)
+            .Select(number => CreateLine(
+                number,
+                number <= coveredLines ? 1 : 0,
+                number == 1 ? conditionCoverage : null))
+            .ToArray();
+        var classXml = CreateClass(HandwrittenClassName, HandwrittenPath, lineRate, branchRate, lines);
+        return CreateReportForPackage(packageName, lineRate, branchRate, classXml);
+    }
+
+    /// <summary>Formats a coverage ratio using invariant decimal notation.</summary>
+    /// <param name="covered">The covered item count.</param>
+    /// <param name="total">The measured item count.</param>
+    /// <returns>The decimal coverage ratio.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static string FormatRatio(int covered, int total) =>
+        ((double)covered / total).ToString("0.####", System.Globalization.CultureInfo.InvariantCulture);
+
+    /// <summary>Creates a Cobertura report fixture with a malformed class that has no filename.</summary>
+    /// <param name="name">The class name.</param>
+    /// <param name="lineRate">The class line rate.</param>
+    /// <param name="branchRate">The class branch rate.</param>
+    /// <param name="lines">The line XML fragments.</param>
+    /// <returns>The report XML.</returns>
+    private static string CreateReportWithClassWithoutFilename(string name, string lineRate, string branchRate, params string[] lines) =>
+        $"""
+         <?xml version="1.0" encoding="utf-8"?>
+         <coverage line-rate="{lineRate}" branch-rate="{branchRate}" version="1.0">
+           <packages>
+             <package name="{PackageName}" line-rate="{lineRate}" branch-rate="{branchRate}" complexity="1">
+               <classes>
+                 <class name="{name}" line-rate="{lineRate}" branch-rate="{branchRate}" complexity="1">
+                   <methods />
+                   <lines>
+         {string.Concat(lines)}
+                   </lines>
+                 </class>
+               </classes>
+             </package>
+           </packages>
+         </coverage>
+         """;
+
+    /// <summary>Creates a Cobertura class XML fragment.</summary>
+    /// <param name="name">The class name.</param>
+    /// <param name="filename">The source filename.</param>
+    /// <param name="lineRate">The class line rate.</param>
+    /// <param name="branchRate">The class branch rate.</param>
+    /// <param name="lines">The line XML fragments.</param>
+    /// <returns>The class XML.</returns>
+    private static string CreateClass(string name, string filename, string lineRate, string branchRate, params string[] lines) =>
+        $"""
+                 <class name="{name}" filename="{SecurityElement.Escape(filename)}" line-rate="{lineRate}" branch-rate="{branchRate}" complexity="1">
+                   <methods />
+                   <lines>
+         {string.Concat(lines)}
+                   </lines>
+                 </class>
+         """;
+
+    /// <summary>Creates a Cobertura line XML fragment.</summary>
+    /// <param name="number">The source line number.</param>
+    /// <param name="hits">The hit count.</param>
+    /// <param name="conditionCoverage">The optional branch condition coverage.</param>
+    /// <returns>The line XML.</returns>
+    private static string CreateLine(int number, int hits, string? conditionCoverage = null) =>
+        conditionCoverage is null
+            ? $"""
+                         <line number="{number}" hits="{hits}" branch="false" />
+
+         """
+            : $"""
+                         <line number="{number}" hits="{hits}" branch="true" condition-coverage="{conditionCoverage}">
+                           <conditions>
+                             <condition number="0" type="jump" coverage="{conditionCoverage}" />
+                           </conditions>
+                         </line>
+
+         """;
+
+    /// <summary>Creates a malformed Cobertura branch line without condition coverage.</summary>
+    /// <param name="number">The source line number.</param>
+    /// <returns>The line XML.</returns>
+    private static string CreateLineWithoutConditionCoverage(int number) =>
+        $"""
+                       <line number="{number}" hits="1" branch="true" />
+
+         """;
+
+    /// <summary>Creates a line with a custom branch attribute value.</summary>
+    /// <param name="number">The source line number.</param>
+    /// <param name="branch">The branch attribute value.</param>
+    /// <returns>The line XML.</returns>
+    private static string CreateLineWithBranchAttribute(int number, string branch) =>
+        $"""
+                       <line number="{number}" hits="1" branch="{branch}" condition-coverage="100% ({ConditionBranchCount}/{ConditionBranchCount})" />
+
+         """;
+
+    /// <summary>Runs the coverage CLI against a report fixture.</summary>
+    /// <param name="directory">The temporary test directory.</param>
+    /// <param name="report">The optional report content.</param>
+    /// <param name="reportName">The report file name.</param>
+    /// <param name="cultureName">The optional culture name used by the CLI process.</param>
+    /// <param name="additionalReport">An optional second report to aggregate.</param>
+    /// <param name="packageName">The package name passed to the CLI.</param>
+    /// <returns>The CLI result.</returns>
+    /// <exception cref="InvalidOperationException">Thrown when the .NET CLI cannot be started.</exception>
+    /// <exception cref="TimeoutException">Thrown when the CLI process does not exit in time.</exception>
+    private static async Task<ScriptResult> RunScriptAsync(
+        TestDirectory directory,
+        string? report,
+        string reportName = "coverage.cobertura.xml",
+        string? cultureName = null,
+        string? additionalReport = null,
+        string packageName = PackageName)
+    {
+        var reportPath = Path.Combine(directory.Path, reportName);
+        if (report is not null)
+        {
+            await File.WriteAllTextAsync(reportPath, report);
+        }
+
+        var additionalReportPath = additionalReport is null ? null : Path.Combine(directory.Path, "additional.cobertura.xml");
+        if (additionalReportPath is not null)
+        {
+            await File.WriteAllTextAsync(additionalReportPath, additionalReport);
+        }
+
+        var repositoryRoot = FindRepositoryRoot();
+        var cliAssembly = Path.Combine(AppContext.BaseDirectory, "OccasionallyConnected.Ci.dll");
+        var startInfo = new ProcessStartInfo { FileName = "dotnet", WorkingDirectory = repositoryRoot, RedirectStandardError = true, RedirectStandardOutput = true, UseShellExecute = false, };
+        if (cultureName is not null)
+        {
+            startInfo.Environment["OC_CULTURE"] = cultureName;
+        }
+
+        startInfo.ArgumentList.Add(cliAssembly);
+        startInfo.ArgumentList.Add("coverage");
+        AddReportArguments(startInfo, reportPath, packageName);
+        if (additionalReportPath is not null)
+        {
+            AddReportArguments(startInfo, additionalReportPath, packageName);
+        }
+
+        using var process = Process.Start(startInfo) ?? throw new InvalidOperationException("Could not start dotnet.");
+        using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(CliTimeoutSeconds));
+        var outputTask = ReadToEndAsync(process.StandardOutput);
+        var errorTask = ReadToEndAsync(process.StandardError);
+        int exitCode;
+
+        try
+        {
+            exitCode = await WaitForScriptExitAsync(process, timeout.Token).ConfigureAwait(false);
+        }
+        catch (OperationCanceledException ex)
+        {
+            await StopAndDrainScriptProcessAsync(process, outputTask, errorTask).ConfigureAwait(false);
+            throw new TimeoutException("The coverage CLI did not finish before the test timeout.", ex);
+        }
+
+        var output = await outputTask.ConfigureAwait(false);
+        var error = await errorTask.ConfigureAwait(false);
+
+        return new(exitCode, output + error);
+    }
+
+    /// <summary>Stops an owned CLI process after timeout and observes redirected output drains.</summary>
+    /// <param name="process">The owned CLI process.</param>
+    /// <param name="outputTask">The standard output drain task.</param>
+    /// <param name="errorTask">The standard error drain task.</param>
+    /// <returns>A task that represents the asynchronous cleanup.</returns>
+    private static async Task StopAndDrainScriptProcessAsync(
+        Process process,
+        Task<string> outputTask,
+        Task<string> errorTask)
+    {
+        var cleanupTimeout = TimeSpan.FromSeconds(ProcessCleanupTimeoutSeconds);
+        if (!process.HasExited)
+        {
+            process.Kill(entireProcessTree: true);
+            await process.WaitForExitAsync(CancellationToken.None).WaitAsync(cleanupTimeout, CancellationToken.None).ConfigureAwait(false);
+        }
+
+        _ = await outputTask.WaitAsync(cleanupTimeout, CancellationToken.None).ConfigureAwait(false);
+        _ = await errorTask.WaitAsync(cleanupTimeout, CancellationToken.None).ConfigureAwait(false);
+    }
+
+    /// <summary>Adds a report and package pair to the CLI arguments.</summary>
+    /// <param name="startInfo">The process start information.</param>
+    /// <param name="reportPath">The report path.</param>
+    /// <param name="packageName">The package name.</param>
+    private static void AddReportArguments(ProcessStartInfo startInfo, string reportPath, string packageName)
+    {
+        startInfo.ArgumentList.Add("--report-path");
+        startInfo.ArgumentList.Add(reportPath);
+        startInfo.ArgumentList.Add("--package-name");
+        startInfo.ArgumentList.Add(packageName);
+    }
+
+    /// <summary>Finds the repository root from the test output directory.</summary>
+    /// <returns>The repository root path.</returns>
+    /// <exception cref="InvalidOperationException">Thrown when the repository root cannot be found.</exception>
+    private static string FindRepositoryRoot()
+    {
+        var directory = new DirectoryInfo(AppContext.BaseDirectory);
+        while (directory is not null)
+        {
+            var projectPath = Path.Combine(directory.FullName, "tools", "OccasionallyConnected.Ci", "OccasionallyConnected.Ci.csproj");
+            if (File.Exists(projectPath))
+            {
+                return directory.FullName;
+            }
+
+            directory = directory.Parent;
+        }
+
+        throw new InvalidOperationException("Could not locate tools/OccasionallyConnected.Ci/OccasionallyConnected.Ci.csproj.");
+    }
+
+    /// <summary>Owns a temporary directory for coverage report fixtures.</summary>
+    private sealed class TestDirectory : IDisposable
+    {
+        /// <summary>Initializes a new instance of the <see cref="TestDirectory"/> class.</summary>
+        /// <param name="path">The directory path.</param>
+        private TestDirectory(string path) => Path = path;
+
+        /// <summary>Gets the directory path.</summary>
+        public string Path { get; }
+
+        /// <summary>Creates a temporary test directory.</summary>
+        /// <returns>The created directory wrapper.</returns>
+        public static TestDirectory Create()
+        {
+            var path = System.IO.Path.Combine(System.IO.Path.GetTempPath(), $"oc-coverage-cli-{Guid.NewGuid():N}");
+            _ = Directory.CreateDirectory(path);
+            return new(path);
+        }
+
+        /// <inheritdoc />
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void Dispose() => Directory.Delete(Path, recursive: true);
+    }
+
+    /// <summary>The result from a CLI process.</summary>
+    /// <param name="ExitCode">The process exit code.</param>
+    /// <param name="Output">The combined standard output and error.</param>
+    private sealed record ScriptResult(int ExitCode, string Output);
+}
