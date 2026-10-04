@@ -24,5 +24,6 @@ internal sealed partial class SqliteLocalCommitStore
         }
 
         SqliteOperationStateIntegrity.Write(connection, transaction);
+        SqliteOperationStateIntegrity.Verify(connection, transaction);
     }
 }

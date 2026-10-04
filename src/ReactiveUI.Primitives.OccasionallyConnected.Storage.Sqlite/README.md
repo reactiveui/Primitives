@@ -35,7 +35,13 @@ New stores use the complete schema version 1. The package has no older released 
 
 The adapter calls SQLite directly through internal database, statement, transaction, and BLOB owners.
 BLOB owners read large payloads in small chunks for integrity checks.
-The adapter closes each native handle when its operation ends. It does not pool connections.
+The store owns one operational connection and lends it to one operation at a time.
+It retains up to 128 idle prepared statements on that connection.
+Each cached statement retains at most 16,384 characters of SQL text.
+Each returned statement resets its cursor and clears its native parameters.
+Settings reads check SQLite's current values. Configuration commands do not cache values captured during preparation.
+Operation scopes detach cancellation registrations after commit or rollback.
+Disposal closes the connection and all retained native handles. It does not use a global connection pool.
 Writer transactions take the database lock before changing data.
 Lock waits have a timeout. Cancellation interrupts lock polling and long native queries.
 The adapter stops observing cancellation after a commit succeeds.
@@ -57,6 +63,15 @@ Storage-full and I/O failures still use `DurableStorageException`.
 The adapter authenticates protected values and binds them to their store, record identity and column.
 Changing a protected value or moving it to another record fails authentication.
 The operation-state manifest also detects missing or changed operation-state proofs.
+Initialization authenticates the state set. The store checks it again when an external connection changes the database.
+Point reads reuse that check while the connection's data version stays unchanged.
+The store also tracks changes made by its own connection.
+An unexpected change invalidates the check, even when SQLite's data version stays unchanged.
+Atomic proof updates keep the check current after normal store commits.
+They still authenticate each selected protected value.
+The store caches up to eight derived AES-GCM resources and releases them on disposal.
+Every use checks the provider's current key material, so revocation and key replacement remain effective.
+Each encrypted value still gets a fresh random nonce.
 
 Record authentication does not prove that the database is the newest valid copy.
 Restoring an older complete database also restores its valid authentication proofs.

@@ -8,6 +8,7 @@
 
   <ItemGroup>
     <InternalsVisibleTo Include="$(AssemblyName).Tests" />
+    <InternalsVisibleTo Include="ReactiveUI.Primitives.OccasionallyConnected.Conformance.Tests" />
     <InternalsVisibleTo Include="ReactiveUI.Primitives.OccasionallyConnected.DependencyInjection.Tests" />
     <PackageReference Include="System.Text.Json" />
   </ItemGroup>

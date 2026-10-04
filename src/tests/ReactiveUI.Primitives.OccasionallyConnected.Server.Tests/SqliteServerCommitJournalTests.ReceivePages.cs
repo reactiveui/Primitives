@@ -117,7 +117,8 @@ public sealed partial class SqliteServerCommitJournalTests
     public async Task ReceivePagesUseCommitJournalInterface()
     {
         using var database = new TemporaryDatabase();
-        IServerCommitJournal journal = CreateJournal(database.Path);
+        using var owner = CreateJournal(database.Path);
+        IServerCommitJournal journal = owner;
         var firstKey = OperationKey(FirstOperationSeed);
         _ = journal.TryCommit(Plan(0, State(FirstVersion), Stamp(firstKey), Entry(firstKey, OperationResultKind.Accepted, FirstOperationSeed)));
 

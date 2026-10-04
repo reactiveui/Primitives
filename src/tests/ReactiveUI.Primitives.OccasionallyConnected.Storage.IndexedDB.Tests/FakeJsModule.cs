@@ -26,6 +26,9 @@ internal sealed class FakeJsModule : IJSObjectReference
     /// <summary>Gets or sets a value indicating whether the next compare-exchange should fail.</summary>
     public bool FailNextCompareExchange { get; set; }
 
+    /// <summary>Gets or sets a corrupted document returned by load calls.</summary>
+    public string? LoadedJsonOverride { get; set; }
+
     /// <summary>Gets the invoked module methods.</summary>
     public List<string> Invocations { get; } = [];
 
@@ -112,7 +115,7 @@ internal sealed class FakeJsModule : IJSObjectReference
         var objectStoreName = (string?)args?[1] ?? string.Empty;
         var key = (string?)args?[2] ?? string.Empty;
         var compositeKey = $"{databaseName}|{objectStoreName}|{key}";
-        var value = _records.TryGetValue(compositeKey, out var stored) ? stored.Json : null;
+        var value = LoadedJsonOverride ?? (_records.TryGetValue(compositeKey, out var stored) ? stored.Json : null);
         return value is null ? new(default(TValue)!) : new((TValue)(object)value);
     }
 

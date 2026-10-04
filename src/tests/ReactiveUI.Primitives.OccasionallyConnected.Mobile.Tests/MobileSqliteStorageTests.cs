@@ -178,13 +178,18 @@ public sealed partial class MobileSqliteStorageTests
             _ = await mobile.Store.RotateEncryptionKeyAsync(CancellationToken.None);
         }
 
-        await using var reopened = await CreateAsync(secureStorage, fileSystem);
-        await reopened.Store.InitializeAsync(new(StoreName, 1, true) { ClientId = reopened.Identity.ClientId }, CancellationToken.None);
-        var recovered = await reopened.Store.RecoverStreamAsync(stream, subscription, CancellationToken.None);
-        await Assert.That(recovered.PendingOperations.Count).IsEqualTo(1);
-        await Assert.That(recovered.PendingOperations[0].OperationId).IsEqualTo(operation.OperationId);
-        await Assert.That(Encoding.UTF8.GetString(recovered.PendingOperations[0].Payload.Payload.Span)).IsEqualTo(PayloadText);
-        var databaseBytes = await File.ReadAllBytesAsync(reopened.DatabasePath);
+        string databasePath;
+        await using (var reopened = await CreateAsync(secureStorage, fileSystem))
+        {
+            await reopened.Store.InitializeAsync(new(StoreName, 1, true) { ClientId = reopened.Identity.ClientId }, CancellationToken.None);
+            var recovered = await reopened.Store.RecoverStreamAsync(stream, subscription, CancellationToken.None);
+            await Assert.That(recovered.PendingOperations.Count).IsEqualTo(1);
+            await Assert.That(recovered.PendingOperations[0].OperationId).IsEqualTo(operation.OperationId);
+            await Assert.That(Encoding.UTF8.GetString(recovered.PendingOperations[0].Payload.Payload.Span)).IsEqualTo(PayloadText);
+            databasePath = reopened.DatabasePath;
+        }
+
+        var databaseBytes = await File.ReadAllBytesAsync(databasePath);
         await Assert.That(Encoding.UTF8.GetString(databaseBytes).Contains(PayloadText, StringComparison.Ordinal))
             .IsFalse();
     }

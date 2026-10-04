@@ -112,6 +112,9 @@ public sealed partial class ServerStreamHub
         /// <summary>The next receive cursor.</summary>
         private string? _cursor;
 
+        /// <summary>The binding generation captured before the first receive poll.</summary>
+        private long? _subscriptionGeneration;
+
         /// <summary>The number of active move operations.</summary>
         private int _activeMoves;
 
@@ -191,6 +194,7 @@ public sealed partial class ServerStreamHub
             var moveToken = _moveCancellation.Token;
             while (!disposalObserved && !moveToken.IsCancellationRequested)
             {
+                var wakeTask = Volatile.Read(ref _hub._wakeup).Task;
                 var page = await TryReadSubscriptionPageAsync(moveToken).ConfigureAwait(false);
                 if (page is null)
                 {
@@ -204,7 +208,7 @@ public sealed partial class ServerStreamHub
                     return true;
                 }
 
-                disposalObserved = await WaitForNextPollOrCompletionAsync(moveToken).ConfigureAwait(false);
+                disposalObserved = await WaitForNextPollOrCompletionAsync(wakeTask, moveToken).ConfigureAwait(false);
             }
 
             MarkFinished();
@@ -250,7 +254,9 @@ public sealed partial class ServerStreamHub
             using var linked = CancellationTokenSource.CreateLinkedTokenSource(moveToken, _hub._disposeCancellation.Token);
             try
             {
-                return await _hub.ReadSubscriptionPageAsync(_request, _client, _cursor, linked.Token).ConfigureAwait(false);
+                var result = await _hub.ReadSubscriptionPageAsync(_request, _client, _cursor, _subscriptionGeneration, linked.Token).ConfigureAwait(false);
+                _subscriptionGeneration ??= result.Generation;
+                return result.Page;
             }
             catch (OperationCanceledException) when (_cancellationToken.IsCancellationRequested)
             {
@@ -280,13 +286,14 @@ public sealed partial class ServerStreamHub
         }
 
         /// <summary>Waits for the next poll or observes cancellation that completes the move.</summary>
+        /// <param name="wakeTask">The broadcast epoch captured before reading.</param>
         /// <param name="moveToken">The move cancellation token.</param>
         /// <returns><see langword="true"/> when the current move should complete.</returns>
-        private async ValueTask<bool> WaitForNextPollOrCompletionAsync(CancellationToken moveToken)
+        private async ValueTask<bool> WaitForNextPollOrCompletionAsync(Task wakeTask, CancellationToken moveToken)
         {
             try
             {
-                await _hub.WaitForNextPollAsync(moveToken).ConfigureAwait(false);
+                await _hub.WaitForNextPollAsync(wakeTask, moveToken).ConfigureAwait(false);
                 return false;
             }
             catch (OperationCanceledException) when (_cancellationToken.IsCancellationRequested)

@@ -244,11 +244,12 @@ internal static partial class SqliteLocalCommitSql
             ORDER BY lease.client_sequence ASC;
             """);
         AddLeaseParameters(command, storeIdentity, leaseId);
+        var metadata = ReadLeasedOperationMetadata(connection, transaction, storeIdentity, leaseId);
         using var reader = command.Query();
         List<SyncOperation> operations = [];
         while (reader.Read())
         {
-            operations.Add(ReadLeasedOperation(connection, transaction, storeIdentity, reader, maximumPayloadBytes));
+            operations.Add(ReadLeasedOperation(connection, transaction, storeIdentity, reader, maximumPayloadBytes, metadata));
         }
 
         return operations;
@@ -449,6 +450,7 @@ internal static partial class SqliteLocalCommitSql
     /// <param name="storeIdentity">The store identity.</param>
     /// <param name="reader">The row reader.</param>
     /// <param name="maximumPayloadBytes">The maximum payload bytes this adapter can materialize.</param>
+    /// <param name="selectedMetadata">The preloaded lease metadata, or null for a point lookup.</param>
     /// <returns>The leased operation.</returns>
     /// <exception cref="InvalidOperationException">Stored SQLite data is invalid.</exception>
     /// <exception cref="SqlitePayloadQuarantineException">Stored SQLite payload data is invalid.</exception>
@@ -457,7 +459,8 @@ internal static partial class SqliteLocalCommitSql
         SqliteTransaction transaction,
         string storeIdentity,
         SqliteRows reader,
-        long maximumPayloadBytes)
+        long maximumPayloadBytes,
+        Dictionary<OperationId, Dictionary<string, string>>? selectedMetadata = null)
     {
         const int OperationIdIndex = 0;
         const int StreamIdIndex = 1;
@@ -506,7 +509,7 @@ internal static partial class SqliteLocalCommitSql
                 operationId,
                 maximumPayloadBytes),
             Policy = ReadPolicy(reader, DeliveryIndex, DurabilityIndex, PriorityIndex, ConflictIndex),
-            Metadata = ReadMetadata(connection, transaction, storeIdentity, operationId),
+            Metadata = GetSelectedMetadata(connection, transaction, storeIdentity, operationId, selectedMetadata),
         };
         SqliteLocalCommitValidation.ValidateCommitInput(operation, new(streamId, operation.Payload, FormatVersion: 1, ExpectedRevision: 0));
         return operation;

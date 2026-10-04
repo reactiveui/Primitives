@@ -9,7 +9,7 @@ using ReactiveUI.Primitives.OccasionallyConnected.Sqlite;
 namespace ReactiveUI.Primitives.OccasionallyConnected.Storage.Sqlite;
 
 /// <summary>Owns exact SQLite schema definitions shared by local store components.</summary>
-internal static class SqliteStoreSchema
+internal static partial class SqliteStoreSchema
 {
     /// <summary>The initial full local commit schema version.</summary>
     internal const int LocalCommitSchemaVersion = 1;
@@ -307,6 +307,7 @@ internal static class SqliteStoreSchema
         CreateAuthoritativeStateTables(connection, transaction);
         CreateOutboxReceiveInclusionsTable(connection, transaction);
         CreatePayloadQuarantineTable(connection, transaction);
+        CreateOutboxCapacitySchema(connection, transaction);
         InsertMetadata(connection, transaction, SchemaVersionKey, LocalCommitSchemaVersion.ToString(CultureInfo.InvariantCulture));
     }
 
@@ -344,6 +345,7 @@ internal static class SqliteStoreSchema
                 OperationStateProofsTableName,
                 OutboxTableName,
                 OutboxAuthoritativeMutationsTableName,
+                .. GetOutboxCapacityTableNames(connection, transaction),
                 OutboxLeasesTableName,
                 OutboxMetadataTableName,
                 OutboxOperationStatesTableName,
@@ -374,6 +376,7 @@ internal static class SqliteStoreSchema
         ValidateTableDefinition(connection, transaction, PayloadQuarantineTableName, PayloadQuarantineTableSql);
         ValidateTableDefinition(connection, transaction, SnapshotAuthoritativeStatesTableName, SnapshotAuthoritativeStatesTableSql);
         ValidateTableDefinition(connection, transaction, InboxTableName, InboxTableSql);
+        ValidateOutboxCapacitySchema(connection, transaction);
     }
 
     /// <summary>Selects a metadata value.</summary>

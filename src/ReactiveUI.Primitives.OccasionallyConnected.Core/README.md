@@ -57,3 +57,41 @@ States without a frontier and all mutation inputs keep the existing version-one 
 For a full durable workflow, see the [Durable Outbox example](https://github.com/reactiveui/Primitives/blob/main/src/examples/OccasionallyConnected.DurableOutbox/README.md). For transport and server integration, see the [collaboration client](https://github.com/reactiveui/Primitives/blob/main/src/examples/OccasionallyConnected.Collaboration.Client/README.md) and [ResilienceLab](https://github.com/reactiveui/Primitives/blob/main/src/examples/OccasionallyConnected.ResilienceLab/README.md).
 
 This is the first V1 release of the feature. There is no earlier OccasionallyConnected package version to migrate from.
+
+## Local store conformance kit
+
+The package includes `conformance/LocalStoreConformance.cs`.
+Copy that file into a .NET 8 or later TUnit test project that references this package.
+The kit uses composition. You supply a fresh initialized `ILocalStoreAdapter` to each check.
+It does not require a test base class or add testing dependencies to your app.
+
+```csharp
+using ReactiveUI.Primitives.OccasionallyConnected.Testing;
+
+[Test]
+public async Task LocalCommitIsAtomic()
+{
+    await using var store = CreateFreshStore();
+    await store.InitializeAsync(
+        new(LocalStoreConformance.Identity, 1, false)
+        {
+            ClientId = LocalStoreConformance.Client,
+        },
+        CancellationToken.None);
+    await LocalStoreConformance.AtomicLocalCommitAsync(store);
+}
+```
+
+Run the local commit, cancellation, remote apply, lease and client identity checks on every store.
+Run snapshot recovery checks only when your store advertises `AtomicSnapshotRecovery`.
+Use `SeedDurableAsync` and `AssertDurableAsync` to test closing and reopening the same storage.
+Also kill a writer process without disposing its adapter, then check its acknowledged commits.
+Test your backend's transaction failure points, corruption handling and competing writers separately.
+A clean close or an in-memory fake alone does not prove physical durability.
+
+The repository runs the same assertions on in-memory, SQLite, encrypted SQLite, FileSystem, LiteDB,
+BLite and IndexedDB adapters. Native providers also run process-kill and corruption checks.
+IndexedDB runs both the C# interop contract checks and the shipped JavaScript module in a real browser.
+The browser checks transaction completion, conflicting writes, new pages and browser process restart.
+Browser persistence still depends on the browser's storage and eviction policy.
+None of these checks establish whole-file rollback protection.

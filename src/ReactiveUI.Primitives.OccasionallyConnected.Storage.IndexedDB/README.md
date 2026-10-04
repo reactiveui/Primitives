@@ -72,3 +72,16 @@ await adapter.InitializeAsync(
   requirement.
 - Compaction uses the UTF-8 size of the stored JSON document as its byte
   estimate because IndexedDB does not expose physical page usage.
+
+  ## Conformance
+
+  The shared store suite checks the C# adapter through its interop contract.
+  The shipped JavaScript module also runs in a real Chromium browser.
+  Those checks cover transaction completion, conflicting generation writes, new pages and browser process restart.
+  You can select the browser executable with `RXUI_CONFORMANCE_BROWSER`.
+  The test fails if no supported browser is available. It does not substitute an in-memory database.
+
+  Reinitialization cannot change the bound client or store identity.
+  The first remote apply uses revision zero when no snapshot exists.
+  A persisted document with a missing identity or generation fails recovery instead of creating an empty store.
+  Browser restart checks do not prove protection against storage eviction or whole-profile rollback.

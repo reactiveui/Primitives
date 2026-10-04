@@ -13,6 +13,27 @@ namespace ReactiveUI.Primitives.OccasionallyConnected.Server;
 /// <content>Provides SQLite read and reconstruction helpers for the server commit journal.</content>
 internal sealed partial class SqliteServerCommitJournal
 {
+    /// <summary>The maximum composite keys bound to one reconstruction query.</summary>
+    private const int MaximumSelectionKeys = 128;
+
+    /// <summary>The stream legacy gap query column.</summary>
+    private const int StreamLegacyGapColumn = 16;
+
+    /// <summary>The conflict owner client column.</summary>
+    private const int ConflictClientColumn = 6;
+
+    /// <summary>The conflict owner operation column.</summary>
+    private const int ConflictOperationColumn = 7;
+
+    /// <summary>The event owner client column.</summary>
+    private const int EventClientColumn = 12;
+
+    /// <summary>The event owner operation column.</summary>
+    private const int EventOperationColumn = 13;
+
+    /// <summary>The event metadata value column.</summary>
+    private const int EventMetadataValueColumn = 2;
+
     /// <summary>The stream revision column index.</summary>
     private const int StreamRevisionColumn = 0;
 
@@ -159,12 +180,14 @@ internal sealed partial class SqliteServerCommitJournal
     /// <param name="transaction">The transaction.</param>
     /// <param name="streamKey">The stream key.</param>
     /// <param name="stream">The stream record.</param>
+    /// <param name="operationKeys">The selected replay keys.</param>
     /// <returns>Whether the stream exists.</returns>
     private static bool TryReadStreamRecord(
         SqliteDatabase connection,
         SqliteTransaction transaction,
         ServerStreamKey streamKey,
-        out ServerCommitStreamRecord? stream)
+        out ServerCommitStreamRecord? stream,
+        IReadOnlyList<ServerOperationKey> operationKeys)
     {
         stream = ReadStreamHeader(connection, transaction, streamKey);
         if (stream is null)
@@ -172,7 +195,7 @@ internal sealed partial class SqliteServerCommitJournal
             return false;
         }
 
-        ReadLedger(connection, transaction, streamKey, stream);
+        ReadLedger(connection, transaction, streamKey, stream, operationKeys);
         return true;
     }
 
@@ -180,13 +203,15 @@ internal sealed partial class SqliteServerCommitJournal
     /// <param name="connection">The connection.</param>
     /// <param name="transaction">The transaction.</param>
     /// <param name="streamKey">The stream key.</param>
+    /// <param name="operationKeys">The selected replay keys.</param>
     /// <returns>The stream record or null.</returns>
     private static ServerCommitStreamRecord? ReadStreamRecord(
         SqliteDatabase connection,
         SqliteTransaction transaction,
-        ServerStreamKey streamKey)
+        ServerStreamKey streamKey,
+        IReadOnlyList<ServerOperationKey> operationKeys)
     {
-        _ = TryReadStreamRecord(connection, transaction, streamKey, out var stream);
+        _ = TryReadStreamRecord(connection, transaction, streamKey, out var stream, operationKeys);
         return stream;
     }
 
@@ -203,7 +228,9 @@ internal sealed partial class SqliteServerCommitJournal
             SELECT revision, state_version, state_payload_contract_id, state_payload_schema_version,
                    state_payload_content_type, state_payload, state_payload_hash, write_stamp_committed_at_utc,
                    write_stamp_client_id, write_stamp_operation_id, last_cursor, last_event_sequence,
-                   state_bytes, last_cursor_bytes, last_group_sequence, receive_history_incomplete
+                   state_bytes, last_cursor_bytes, last_group_sequence, receive_history_incomplete,
+                   EXISTS (SELECT 1 FROM oc_server_journal_ledger
+                       WHERE tenant_id = $tenantId AND stream_id = $streamId AND group_sequence IS NULL)
             FROM oc_server_journal_streams
             WHERE tenant_id = $tenantId AND stream_id = $streamId;
             """);
@@ -234,7 +261,8 @@ internal sealed partial class SqliteServerCommitJournal
             StateBytes = ReadNonNegativeLong(reader, StreamStateBytesColumn, "The SQLite server journal state bytes are invalid."),
             LastCursorBytes = ReadNonNegativeLong(reader, StreamLastCursorBytesColumn, "The SQLite server journal cursor bytes are invalid."),
             LastGroupSequence = ReadNonNegativeLong(reader, StreamLastGroupSequenceColumn, InvalidGroupSequenceMessage),
-            HasReceiveHistoryGap = ReadBoolean(reader, StreamReceiveHistoryGapColumn, "The SQLite server journal receive gap marker is invalid."),
+            HasReceiveHistoryGap = ReadBoolean(reader, StreamReceiveHistoryGapColumn, "The SQLite server journal receive gap marker is invalid.")
+                || ReadBoolean(reader, StreamLegacyGapColumn, "The SQLite server journal legacy gap marker is invalid."),
         };
         return stream;
     }
@@ -244,22 +272,71 @@ internal sealed partial class SqliteServerCommitJournal
     /// <param name="transaction">The transaction.</param>
     /// <param name="streamKey">The stream key.</param>
     /// <param name="stream">The stream record.</param>
+    /// <param name="operationKeys">The selected replay keys.</param>
     private static void ReadLedger(
         SqliteDatabase connection,
         SqliteTransaction transaction,
         ServerStreamKey streamKey,
-        ServerCommitStreamRecord stream)
+        ServerCommitStreamRecord stream,
+        IReadOnlyList<ServerOperationKey> operationKeys)
     {
+        if (operationKeys is { Count: 0 })
+        {
+            return;
+        }
+
+        if (operationKeys.Count > MaximumSelectionKeys)
+        {
+            for (var offset = 0; offset < operationKeys.Count; offset += MaximumSelectionKeys)
+            {
+                var count = Math.Min(MaximumSelectionKeys, operationKeys.Count - offset);
+                var chunk = new ServerOperationKey[count];
+                for (var index = 0; index < count; index++)
+                {
+                    chunk[index] = operationKeys[offset + index];
+                }
+
+                ReadLedger(connection, transaction, streamKey, stream, chunk);
+            }
+
+            return;
+        }
+
+        ReadSelectedLedger(connection, transaction, streamKey, stream, operationKeys);
+    }
+
+    /// <summary>Reconstructs one bounded selection of ledger rows and child collections.</summary>
+    /// <param name="connection">The connection.</param>
+    /// <param name="transaction">The transaction.</param>
+    /// <param name="streamKey">The stream key.</param>
+    /// <param name="stream">The stream header.</param>
+    /// <param name="operationKeys">The selected operation keys.</param>
+    private static void ReadSelectedLedger(
+        SqliteDatabase connection,
+        SqliteTransaction transaction,
+        ServerStreamKey streamKey,
+        ServerCommitStreamRecord stream,
+        IReadOnlyList<ServerOperationKey> operationKeys)
+    {
+        var selection = CreateLedgerSelection(operationKeys);
+        var lastEventSequence = stream.LastEventSequence;
+        var lastGroupSequence = stream.LastGroupSequence;
+        var lastCursor = stream.LastCursor;
+        stream.LastEventSequence = 0;
+        var conflicts = ReadConflicts(connection, transaction, streamKey, selection, operationKeys);
+        var events = ReadEvents(connection, transaction, streamKey, selection, operationKeys);
         using var command = connection.CreateStatement();
         command.UseTransaction(transaction);
-        command.SetSql("""
+        command.SetSql($"""
             SELECT client_id, operation_id, fingerprint, result_kind, result_reason_code, result_server_version,
                    committed_at_utc, expires_at_utc, logical_bytes, group_sequence
             FROM oc_server_journal_ledger
             WHERE tenant_id = $tenantId AND stream_id = $streamId
+                {selection}
             ORDER BY group_sequence IS NULL ASC, group_sequence ASC, rowid ASC;
             """);
         AddStreamParameters(command, streamKey);
+        BindLedgerSelection(command, operationKeys);
         using var reader = command.Query();
         while (reader.Read())
         {
@@ -272,8 +349,8 @@ internal sealed partial class SqliteServerCommitJournal
                         ReadResultKind(reader, LedgerResultKindColumn),
                         ReadNullableString(reader, LedgerReasonCodeColumn, "The SQLite server journal result reason code is invalid."),
                         ReadNullableString(reader, LedgerServerVersionColumn, "The SQLite server journal result server version is invalid.")),
-                    ReadConflicts(connection, transaction, streamKey, operationKey),
-                    ReadEvents(connection, transaction, streamKey, operationKey))
+                    conflicts.TryGetValue(operationKey, out var operationConflicts) ? operationConflicts : [],
+                    events.TryGetValue(operationKey, out var operationEvents) ? operationEvents : [])
                 .Commit(
                     ReadDateTimeOffset(reader, LedgerCommittedAtColumn, "The SQLite server journal commit timestamp is invalid."),
                     ReadDateTimeOffset(reader, LedgerExpiresAtColumn, "The SQLite server journal expiry timestamp is invalid."));
@@ -289,38 +366,44 @@ internal sealed partial class SqliteServerCommitJournal
             }
         }
 
-        stream.LastEventSequence = ReadLastEventSequence(connection, transaction, streamKey);
-        stream.LastGroupSequence = ReadLastGroupSequence(connection, transaction, streamKey);
+        stream.LastEventSequence = lastEventSequence;
+        stream.LastGroupSequence = lastGroupSequence;
+        stream.LastCursor = lastCursor;
     }
 
-    /// <summary>Reads conflict rows for one ledger entry.</summary>
+    /// <summary>Reads conflict rows for the selected ledger entries.</summary>
     /// <param name="connection">The connection.</param>
     /// <param name="transaction">The transaction.</param>
     /// <param name="streamKey">The stream key.</param>
-    /// <param name="operationKey">The operation key.</param>
+    /// <param name="selection">The parameterized selection predicate.</param>
+    /// <param name="operationKeys">The selected replay keys.</param>
     /// <returns>The conflict rows.</returns>
-    private static List<ResolvedConflict> ReadConflicts(
+    private static Dictionary<ServerOperationKey, List<ResolvedConflict>> ReadConflicts(
         SqliteDatabase connection,
         SqliteTransaction transaction,
         ServerStreamKey streamKey,
-        ServerOperationKey operationKey)
+        string selection,
+        IReadOnlyList<ServerOperationKey> operationKeys)
     {
         using var command = connection.CreateStatement();
         command.UseTransaction(transaction);
-        command.SetSql("""
+        command.SetSql($"""
             SELECT resolution_code, resolved_payload_contract_id, resolved_payload_schema_version,
-                   resolved_payload_content_type, resolved_payload, resolved_payload_hash
+                   resolved_payload_content_type, resolved_payload, resolved_payload_hash, client_id, operation_id
             FROM oc_server_journal_conflicts
-            WHERE tenant_id = $tenantId AND stream_id = $streamId AND client_id = $clientId AND operation_id = $operationId
-            ORDER BY conflict_index ASC;
+            WHERE tenant_id = $tenantId AND stream_id = $streamId {selection}
+            ORDER BY client_id, operation_id, conflict_index ASC;
             """);
         AddStreamParameters(command, streamKey);
-        AddOperationParameters(command, operationKey);
+        BindLedgerSelection(command, operationKeys);
         using var reader = command.Query();
-        var conflicts = new List<ResolvedConflict>();
+        var conflicts = new Dictionary<ServerOperationKey, List<ResolvedConflict>>();
         while (reader.Read())
         {
-            conflicts.Add(new(
+            var operationKey = ReadOperationKey(reader, ConflictClientColumn, ConflictOperationColumn);
+            var rows = GetReadBucket(conflicts, operationKey);
+
+            rows.Add(new(
                 operationKey.OperationId,
                 ReadValidatedText(reader, ConflictResolutionCodeColumn, "The SQLite server journal conflict resolution is invalid."),
                 ReadNullablePayload(reader, new(ConflictPayloadContractColumn, ConflictPayloadSchemaColumn, ConflictPayloadContentTypeColumn, ConflictPayloadColumn, ConflictPayloadHashColumn))));
@@ -329,32 +412,35 @@ internal sealed partial class SqliteServerCommitJournal
         return conflicts;
     }
 
-    /// <summary>Reads event rows for one ledger entry.</summary>
+    /// <summary>Reads event rows for the selected ledger entries.</summary>
     /// <param name="connection">The connection.</param>
     /// <param name="transaction">The transaction.</param>
     /// <param name="streamKey">The stream key.</param>
-    /// <param name="operationKey">The operation key.</param>
+    /// <param name="selection">The parameterized selection predicate.</param>
+    /// <param name="operationKeys">The selected replay keys.</param>
     /// <returns>The event rows.</returns>
-    private static List<RemoteEvent> ReadEvents(
+    private static Dictionary<ServerOperationKey, List<RemoteEvent>> ReadEvents(
         SqliteDatabase connection,
         SqliteTransaction transaction,
         ServerStreamKey streamKey,
-        ServerOperationKey operationKey)
+        string selection,
+        IReadOnlyList<ServerOperationKey> operationKeys)
     {
+        var metadata = ReadEventMetadata(connection, transaction, streamKey, selection, operationKeys);
         using var command = connection.CreateStatement();
         command.UseTransaction(transaction);
-        command.SetSql("""
+        command.SetSql($"""
             SELECT event_sequence, event_id, server_cursor, committed_at_utc, caused_by_operation_id,
                    origin_client_id, origin_operation_id, payload_contract_id, payload_schema_version,
-                   payload_content_type, payload, payload_hash
+                   payload_content_type, payload, payload_hash, client_id, operation_id
             FROM oc_server_journal_events
-            WHERE tenant_id = $tenantId AND stream_id = $streamId AND client_id = $clientId AND operation_id = $operationId
-            ORDER BY event_index ASC;
+            WHERE tenant_id = $tenantId AND stream_id = $streamId {selection}
+            ORDER BY event_sequence ASC;
             """);
         AddStreamParameters(command, streamKey);
-        AddOperationParameters(command, operationKey);
+        BindLedgerSelection(command, operationKeys);
         using var reader = command.Query();
-        var events = new List<RemoteEvent>();
+        var events = new Dictionary<ServerOperationKey, List<RemoteEvent>>();
         while (reader.Read())
         {
             var sequence = ReadNonNegativeLong(reader, EventSequenceColumn, InvalidEventSequenceMessage);
@@ -366,9 +452,12 @@ internal sealed partial class SqliteServerCommitJournal
                 ReadDateTimeOffset(reader, EventCommittedAtColumn, "The SQLite server journal event timestamp is invalid."),
                 ReadNullableOperationId(reader, EventCausedByOperationColumn),
                 ReadPayload(reader, new(EventPayloadContractColumn, EventPayloadSchemaColumn, EventPayloadContentTypeColumn, EventPayloadColumn, EventPayloadHashColumn)),
-                ReadEventMetadata(connection, transaction, streamKey, sequence))
+                metadata.TryGetValue(sequence, out var eventMetadata) ? eventMetadata : new Dictionary<string, string>())
             { Origin = origin };
-            events.Add(remoteEvent);
+            var operationKey = ReadOperationKey(reader, EventClientColumn, EventOperationColumn);
+            var rows = GetReadBucket(events, operationKey);
+
+            rows.Add(remoteEvent);
         }
 
         return events;
@@ -378,31 +467,38 @@ internal sealed partial class SqliteServerCommitJournal
     /// <param name="connection">The connection.</param>
     /// <param name="transaction">The transaction.</param>
     /// <param name="streamKey">The stream key.</param>
-    /// <param name="eventSequence">The event sequence.</param>
+    /// <param name="selection">The parameterized selection predicate.</param>
+    /// <param name="operationKeys">The selected replay keys.</param>
     /// <returns>The metadata.</returns>
-    private static Dictionary<string, string> ReadEventMetadata(
+    private static Dictionary<long, Dictionary<string, string>> ReadEventMetadata(
         SqliteDatabase connection,
         SqliteTransaction transaction,
         ServerStreamKey streamKey,
-        long eventSequence)
+        string selection,
+        IReadOnlyList<ServerOperationKey> operationKeys)
     {
         using var command = connection.CreateStatement();
         command.UseTransaction(transaction);
-        command.SetSql("""
-            SELECT key, value
+        command.SetSql($"""
+            SELECT event_sequence, key, value
             FROM oc_server_journal_event_metadata
-            WHERE tenant_id = $tenantId AND stream_id = $streamId AND event_sequence = $eventSequence
-            ORDER BY key ASC;
+            WHERE tenant_id = $tenantId AND stream_id = $streamId AND event_sequence IN (
+                SELECT event_sequence FROM oc_server_journal_events
+                WHERE tenant_id = $tenantId AND stream_id = $streamId {selection})
+            ORDER BY event_sequence, key ASC;
             """);
         AddStreamParameters(command, streamKey);
-        _ = command.Bind(EventSequenceParameterName, eventSequence);
+        BindLedgerSelection(command, operationKeys);
         using var reader = command.Query();
-        var metadata = new Dictionary<string, string>(StringComparer.Ordinal);
+        var metadata = new Dictionary<long, Dictionary<string, string>>();
         while (reader.Read())
         {
-            metadata.Add(
-                    ReadString(reader, 0, "The SQLite server journal metadata key is invalid."),
-                ReadString(reader, 1, "The SQLite server journal metadata value is invalid."));
+            var sequence = ReadNonNegativeLong(reader, 0, InvalidEventSequenceMessage);
+            var rows = GetReadBucket(metadata, sequence);
+
+            rows.Add(
+                ReadString(reader, 1, "The SQLite server journal metadata key is invalid."),
+                ReadString(reader, EventMetadataValueColumn, "The SQLite server journal metadata value is invalid."));
         }
 
         return metadata;
@@ -412,7 +508,7 @@ internal sealed partial class SqliteServerCommitJournal
     /// <param name="connection">The connection.</param>
     /// <param name="transaction">The transaction.</param>
     /// <returns>The retained metrics.</returns>
-    private static RetainedMetrics ReadMetrics(SqliteDatabase connection, SqliteTransaction transaction)
+    private static RetainedMetrics ScanMetrics(SqliteDatabase connection, SqliteTransaction transaction)
     {
         var metrics = new RetainedMetrics();
         using (var command = connection.CreateStatement())

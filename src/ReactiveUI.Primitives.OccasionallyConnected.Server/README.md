@@ -53,6 +53,39 @@ It binds values as SQL parameters. It does not pool connections.
 Writer transactions take the database lock before changing journal state.
 WAL journaling and FULL synchronous writes preserve atomic commits after a process crash.
 
+The hub runs synchronous SQLite commands on bounded dedicated workers, not request threads.
+Effect calls and acknowledgements have separate worker capacity.
+Cancellation removes commands that have not started. Disposal joins a command that has already started.
+An active native command may still wait for SQLite's bounded busy timeout.
+Domain handlers and authorization policies stay asynchronous.
+The processor prepares at most eight operations against sequential projected state.
+It does this before opening a write transaction. Each preparation must be side-effect-free.
+The processor checks each plan against the journal limits before adding it to the group.
+One physical transaction then checks each operation's own revision, capacity and replay proof.
+It advances state and revision once per accepted operation.
+This shares one durable disk sync across up to eight operations.
+Receipts become visible only after that transaction commits.
+If one plan fails admission, the journal stops applying dependent plans.
+The processor re-prepares stale plans within the existing retry bound.
+A later preparation failure or cancellation still flushes the valid earlier prefix.
+It does not admit the failing or canceled preparation.
+
+Unchanged registration and empty receive polls use read transactions.
+They do not refresh durable timestamps or reserve the writer lock.
+New bindings, resolved anchors, offered pages and acknowledgements persist their changes.
+Subscription retention starts at the last durable change, not the latest empty poll.
+An active subscriber reports a retention gap if compaction replaces its binding.
+It does not silently restart a `Latest` anchor and skip a new event.
+One publish broadcasts to every waiting subscriber after it releases its active-call slot.
+Poll timers still detect changes made by another process.
+
+Replay reads select only the requested operations.
+Receive reads select a bounded range of complete groups and their cursor anchor.
+The journal batches child events, metadata and conflicts instead of querying each row.
+Indexes support those reads and expiry cleanup.
+Transactional counters enforce shared storage bounds without scanning the store for each request.
+Opening an existing journal seeds these counters once without changing its retained data.
+
 Native failures use `SqliteDatabaseException` from the core contracts.
 Its `SqliteErrorCode` and `SqliteExtendedErrorCode` properties preserve SQLite's result codes.
 The public hub does not expose native handles or accept a database passphrase.

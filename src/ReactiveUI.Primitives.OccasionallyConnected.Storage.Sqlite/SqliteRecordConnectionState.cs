@@ -20,15 +20,18 @@ internal sealed class SqliteRecordConnectionState
     /// <summary>Gets or sets the data version observed in the authenticated read snapshot.</summary>
     internal long? VerifiedDataVersion { get; set; }
 
+    /// <summary>Gets or sets the native change count covered by verified state or a committed proof update.</summary>
+    internal long? VerifiedTotalChanges { get; set; }
+
     /// <summary>Gets or sets whether this connection journals state mutations.</summary>
     internal bool JournalInstalled { get; set; }
 
     /// <summary>Gets or sets whether a full proof rewrite already covered this transaction.</summary>
     internal bool FullProofRewriteCompleted { get; set; }
 
+    /// <summary>Gets or sets the cumulative change count before this operation begins.</summary>
+    internal long OperationStartChanges { get; set; }
+
     /// <summary>Gets or sets the integrity check to run after the writer lock is acquired.</summary>
     internal Action<SqliteDatabase, SqliteTransaction>? VerifyBeforeWrite { get; set; }
-
-    /// <summary>Gets or sets the integrity observer update to run after commit.</summary>
-    internal Action<bool>? ObserveAfterCommit { get; set; }
 }

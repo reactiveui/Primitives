@@ -20,6 +20,12 @@ internal sealed class SqliteStatement : IDisposable
     /// <summary>The current prepared native statement.</summary>
     private sqlite3_stmt? _handle;
 
+    /// <summary>The script used to prepare the current handle.</summary>
+    private string _preparedSql = string.Empty;
+
+    /// <summary>The tail originally returned by preparation.</summary>
+    private string _preparedTail = string.Empty;
+
     /// <summary>The remaining script after the current statement.</summary>
     private string _tail = string.Empty;
 
@@ -196,7 +202,18 @@ internal sealed class SqliteStatement : IDisposable
     /// <summary>Finalizes the current native statement, including a partially consumed cursor.</summary>
     internal void Finish()
     {
-        _handle?.Dispose();
+        if (_handle is not null)
+        {
+            if (_handle.IsInvalid)
+            {
+                _handle.Dispose();
+            }
+            else
+            {
+                Database.ReleasePrepared(_preparedSql, _handle, _preparedTail);
+            }
+        }
+
         _handle = null;
         _reading = false;
     }
@@ -257,10 +274,10 @@ internal sealed class SqliteStatement : IDisposable
     {
         while (_tail.Length > 0)
         {
-            var tail = string.Empty;
-            var result = Database.Run(() => raw.sqlite3_prepare_v2(Database.Handle, _tail, out _handle, out tail));
+            _preparedSql = _tail;
+            Database.Prepare(_tail, out _handle, out var tail);
+            _preparedTail = tail;
             _tail = tail;
-            Database.Check(result);
             if (_handle is null || _handle.IsInvalid)
             {
                 Finish();

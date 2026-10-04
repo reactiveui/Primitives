@@ -24,9 +24,6 @@ public sealed partial class ServerStreamHub : IServerStreamHub, IServerSnapshotR
     /// <summary>The maximum optimistic commit attempts delegated to the operation processor.</summary>
     private const int MaximumCommitAttempts = 4;
 
-    /// <summary>The maximum coalesced subscriber wakeup count.</summary>
-    private const int SemaphoreMaximumCount = 1;
-
     /// <summary>The append journal used by publish operations.</summary>
     private readonly IServerCommitJournal _commitJournal;
 
@@ -48,9 +45,6 @@ public sealed partial class ServerStreamHub : IServerStreamHub, IServerSnapshotR
     /// <summary>The immutable processor options derived from hub options.</summary>
     private readonly ServerOperationProcessorOptions _processorOptions;
 
-    /// <summary>The semaphore used to wake empty subscription polls after publishes or disposal.</summary>
-    private readonly SemaphoreSlim _wakeup = new(0, SemaphoreMaximumCount);
-
     /// <summary>The cancellation source signaled when the hub begins disposal.</summary>
     private readonly CancellationTokenSource _disposeCancellation = new();
 
@@ -59,6 +53,9 @@ public sealed partial class ServerStreamHub : IServerStreamHub, IServerSnapshotR
 
     /// <summary>Protects lifecycle admission and disposal state.</summary>
     private readonly object _lifecycleGate = new();
+
+    /// <summary>The next broadcast epoch, shared by all empty subscription polls.</summary>
+    private TaskCompletionSource<bool> _wakeup = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
     /// <summary>The shared disposal task returned to all concurrent disposal callers.</summary>
     private Task? _disposeTask;
@@ -74,12 +71,6 @@ public sealed partial class ServerStreamHub : IServerStreamHub, IServerSnapshotR
 
     /// <summary>The number of active subscription enumerators currently admitted.</summary>
     private int _activeSubscriptions;
-
-    /// <summary>Whether a subscriber wakeup is pending.</summary>
-    private int _pendingWakeup;
-
-    /// <summary>The monotonically increasing publish wakeup version.</summary>
-    private int _wakeupVersion;
 
     /// <summary>Whether the hub has begun disposal.</summary>
     private int _disposed;
@@ -142,6 +133,7 @@ public sealed partial class ServerStreamHub : IServerStreamHub, IServerSnapshotR
         var prepared = PrepareOptions(options);
 
         var journal = new SqliteServerCommitJournal(databasePath, prepared.JournalOptions);
+        journal.ConfigureWorkerCapacity(options.MaximumActiveCalls);
         return new(options, journal, journal, journal, journal, prepared.Handler, prepared.ProcessorOptions);
     }
 
@@ -196,7 +188,10 @@ public sealed partial class ServerStreamHub : IServerStreamHub, IServerSnapshotR
             var publicScope = await _options.AuthorizationPolicy.AuthorizeAcknowledgeAsync(client, acknowledgement, token).ConfigureAwait(false);
             token.ThrowIfCancellationRequested();
             var scope = ValidateScope(client, acknowledgement.StreamId, publicScope);
-            _ = _subscriptionJournal.Acknowledge(new(new(scope.TenantId, acknowledgement.StreamId), scope.ClientId, acknowledgement));
+            _ = await RunJournalAsync(
+                () => _subscriptionJournal.Acknowledge(new(new(scope.TenantId, acknowledgement.StreamId), scope.ClientId, acknowledgement)),
+                token,
+                acknowledgement: true).ConfigureAwait(false);
         }
         finally
         {
@@ -607,12 +602,14 @@ public sealed partial class ServerStreamHub : IServerStreamHub, IServerSnapshotR
     /// <param name="request">The subscription request.</param>
     /// <param name="client">The authenticated client.</param>
     /// <param name="cursor">The current receive cursor.</param>
+    /// <param name="expectedGeneration">The binding generation observed by this enumerator.</param>
     /// <param name="cancellationToken">The cancellation token.</param>
     /// <returns>The receive page result.</returns>
-    private async ValueTask<ServerReceivePageResult> ReadSubscriptionPageAsync(
+    private async ValueTask<(ServerReceivePageResult Page, long Generation)> ReadSubscriptionPageAsync(
         RemoteSubscribeRequest request,
         ServerAuthenticatedClient client,
         string? cursor,
+        long? expectedGeneration,
         CancellationToken cancellationToken)
     {
         EnterActiveCall();
@@ -624,13 +621,25 @@ public sealed partial class ServerStreamHub : IServerStreamHub, IServerSnapshotR
             cancellationToken.ThrowIfCancellationRequested();
             var scope = ValidateScope(client, request.StreamId, publicScope);
             var identity = new ServerSubscriptionIdentity(new(scope.TenantId, request.StreamId), scope.ClientId, request.SubscriptionId);
-            _ = _subscriptionJournal.RegisterSubscription(new ServerSubscriptionRegistrationRequest(identity, request.InitialPosition));
-            return _subscriptionJournal.OfferReceivePage(new(
-                identity,
-                cursor,
-                _options.MaximumReceiveGroups,
-                _options.MaximumReceiveEvents,
-                _options.MaximumReceiveLogicalBytes));
+            return await RunJournalAsync(
+                () =>
+                {
+                    var registration = _subscriptionJournal.RegisterSubscription(new ServerSubscriptionRegistrationRequest(identity, request.InitialPosition));
+                    if (expectedGeneration.HasValue && registration.Generation != expectedGeneration.Value)
+                    {
+                        return (new ServerReceivePageResult(ServerReceivePageStatus.RetentionGap, null, 0, 0), registration.Generation);
+                    }
+
+                    var page = _subscriptionJournal.OfferReceivePage(new(
+                        identity,
+                        cursor,
+                        _options.MaximumReceiveGroups,
+                        _options.MaximumReceiveEvents,
+                        _options.MaximumReceiveLogicalBytes)
+                    { ExpectedGeneration = registration.Generation });
+                    return (page, registration.Generation);
+                },
+                cancellationToken).ConfigureAwait(false);
         }
         finally
         {
@@ -639,39 +648,29 @@ public sealed partial class ServerStreamHub : IServerStreamHub, IServerSnapshotR
     }
 
     /// <summary>Waits for a publish wakeup, configured poll delay, cancellation or hub disposal.</summary>
+    /// <param name="wakeTask">The broadcast epoch captured before reading the page.</param>
     /// <param name="cancellationToken">The caller cancellation token.</param>
     /// <returns>A task that completes when the next poll should run.</returns>
-    private async ValueTask WaitForNextPollAsync(CancellationToken cancellationToken)
+    private async ValueTask WaitForNextPollAsync(Task wakeTask, CancellationToken cancellationToken)
     {
         EnterActivePoll();
-        var observedVersion = Volatile.Read(ref _wakeupVersion);
         try
         {
             _disposeCancellation.Token.ThrowIfCancellationRequested();
             using var linked = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, _disposeCancellation.Token);
-            var wakeTask = _wakeup.WaitAsync(linked.Token);
             var delayTask = DelayAsync(_options.TimeProvider, _options.EmptyPollDelay, linked.Token).AsTask();
             var completed = await Task.WhenAny(wakeTask, delayTask).ConfigureAwait(false);
-            var secondaryTask = ReferenceEquals(completed, wakeTask) ? delayTask : wakeTask;
             try
             {
                 await linked.CancelAsync().ConfigureAwait(false);
             }
             finally
             {
-                await ObserveSecondaryPollTaskAsync(secondaryTask).ConfigureAwait(false);
+                await ObserveSecondaryPollTaskAsync(delayTask).ConfigureAwait(false);
             }
 
             await completed.ConfigureAwait(false);
             _disposeCancellation.Token.ThrowIfCancellationRequested();
-            if (ReferenceEquals(completed, wakeTask))
-            {
-                _ = Interlocked.Exchange(ref _pendingWakeup, 0);
-                if (Volatile.Read(ref _wakeupVersion) != observedVersion)
-                {
-                    return;
-                }
-            }
         }
         finally
         {
@@ -679,16 +678,22 @@ public sealed partial class ServerStreamHub : IServerStreamHub, IServerSnapshotR
         }
     }
 
+    /// <summary>Schedules SQLite commands while keeping in-memory journal calls inline.</summary>
+    /// <typeparam name="T">The command result type.</typeparam>
+    /// <param name="command">The bounded journal command.</param>
+    /// <param name="cancellationToken">The request cancellation token.</param>
+    /// <param name="acknowledgement">Whether to use independent acknowledgement capacity.</param>
+    /// <returns>The journal result.</returns>
+    private ValueTask<T> RunJournalAsync<T>(Func<T> command, CancellationToken cancellationToken, bool acknowledgement = false) =>
+        _ownedJournal is SqliteServerCommitJournal sqlite
+            ? new(sqlite.ExecuteAsync(command, cancellationToken, acknowledgement))
+            : new(command());
+
     /// <summary>Signals subscribers that new data or disposal may unblock polling.</summary>
     private void SignalSubscribers()
     {
-        _ = Interlocked.Increment(ref _wakeupVersion);
-        if (Interlocked.Exchange(ref _pendingWakeup, 1) != 0)
-        {
-            return;
-        }
-
-        _ = _wakeup.Release();
+        var previous = Interlocked.Exchange(ref _wakeup, new(TaskCreationOptions.RunContinuationsAsynchronously));
+        _ = previous.TrySetResult(true);
     }
 
     /// <summary>Admits one active journal call.</summary>
@@ -718,7 +723,7 @@ public sealed partial class ServerStreamHub : IServerStreamHub, IServerSnapshotR
             _activeCalls--;
             if (signalSubscribers)
             {
-                // Wake after capacity is free, but before disposal can close the semaphore.
+                // Publish capacity must be free before any subscriber can read its next page.
                 SignalSubscribers();
             }
 
@@ -871,7 +876,14 @@ public sealed partial class ServerStreamHub : IServerStreamHub, IServerSnapshotR
         firstException = await CaptureDisposalExceptionAsync(firstException, GetActiveCallDrainTask).ConfigureAwait(false);
         try
         {
-            DisposeJournal();
+            if (_ownedJournal is SqliteServerCommitJournal sqlite)
+            {
+                await sqlite.DisposeWorkersAsync().ConfigureAwait(false);
+            }
+            else
+            {
+                DisposeJournal();
+            }
         }
         finally
         {
@@ -904,11 +916,8 @@ public sealed partial class ServerStreamHub : IServerStreamHub, IServerSnapshotR
     private void DisposeJournal() => _ownedJournal?.Dispose();
 
     /// <summary>Closes hub-managed resources after asynchronous cancellation and drain complete.</summary>
-    private void Close()
-    {
-        _disposeCancellation.Dispose();
-        _wakeup.Dispose();
-    }
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private void Close() => _disposeCancellation.Dispose();
 
     /// <summary>Adapts async policy decisions into the existing processor authorizer without blocking.</summary>
     /// <param name="authorizations">The immutable per-request authorization snapshot.</param>

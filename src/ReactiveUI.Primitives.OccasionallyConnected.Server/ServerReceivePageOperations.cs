@@ -65,6 +65,24 @@ internal static class ServerReceivePageOperations
             : CreateStreamResult(request, stream, requestedSequence);
     }
 
+    /// <summary>Validates receive page bounds.</summary>
+    /// <param name="request">The request.</param>
+    /// <exception cref="ArgumentException">The request is malformed.</exception>
+    /// <exception cref="ArgumentOutOfRangeException">A request bound is invalid.</exception>
+    internal static void ValidateRequest(ServerReceivePageRequest request)
+    {
+        ArgumentExceptionHelper.ThrowIfNull(request);
+        ServerCommitJournalGuard.ValidateStreamKey(request.StreamKey);
+        if (request.Cursor is not null)
+        {
+            ServerCommitJournalGuard.ValidateCursor(request.Cursor);
+        }
+
+        ArgumentOutOfRangeExceptionHelper.ThrowIfNegativeOrZero(request.MaximumGroups);
+        ArgumentOutOfRangeExceptionHelper.ThrowIfNegativeOrZero(request.MaximumEvents);
+        ThrowIfNonPositiveLogicalBytes(request.MaximumLogicalBytes);
+    }
+
     /// <summary>Builds a result when the requested stream has no retained row.</summary>
     /// <param name="requestedSequence">The requested group sequence.</param>
     /// <returns>The receive page result.</returns>
@@ -111,24 +129,6 @@ internal static class ServerReceivePageOperations
         return firstGroupSequence == requestedSequence + 1
             ? BuildPage(request, stream, firstIndex)
             : new(ServerReceivePageStatus.RetentionGap, null, requestedSequence, stream.LastGroupSequence);
-    }
-
-    /// <summary>Validates receive page bounds.</summary>
-    /// <param name="request">The request.</param>
-    /// <exception cref="ArgumentException">The request is malformed.</exception>
-    /// <exception cref="ArgumentOutOfRangeException">A request bound is invalid.</exception>
-    private static void ValidateRequest(ServerReceivePageRequest request)
-    {
-        ArgumentExceptionHelper.ThrowIfNull(request);
-        ServerCommitJournalGuard.ValidateStreamKey(request.StreamKey);
-        if (request.Cursor is not null)
-        {
-            ServerCommitJournalGuard.ValidateCursor(request.Cursor);
-        }
-
-        ArgumentOutOfRangeExceptionHelper.ThrowIfNegativeOrZero(request.MaximumGroups);
-        ArgumentOutOfRangeExceptionHelper.ThrowIfNegativeOrZero(request.MaximumEvents);
-        ThrowIfNonPositiveLogicalBytes(request.MaximumLogicalBytes);
     }
 
     /// <summary>Rejects a non-positive logical byte budget.</summary>

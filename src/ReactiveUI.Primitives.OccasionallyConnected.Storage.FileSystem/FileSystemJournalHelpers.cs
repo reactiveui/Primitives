@@ -215,9 +215,7 @@ internal static class FileSystemJournalHelpers
                 throw new InvalidDataException("The filesystem journal record checksum is invalid.");
             }
 
-            var record = JsonSerializer.Deserialize(payload, context.JournalRecord)
-                ?? throw new InvalidDataException("The filesystem journal contains an invalid record.");
-            state = record.State;
+            state = DecodeRecord(payload, context, state, position != 0);
             position = journal.Position;
         }
 
@@ -228,6 +226,61 @@ internal static class FileSystemJournalHelpers
         }
 
         return state;
+    }
+
+    /// <summary>Decodes and validates one complete checksummed transaction.</summary>
+    /// <param name="payload">The serialized record.</param>
+    /// <param name="context">The generated JSON metadata.</param>
+    /// <param name="state">The committed prefix.</param>
+    /// <param name="hasSnapshot">Whether the prefix contains an initial snapshot.</param>
+    /// <returns>The updated recovered state.</returns>
+    /// <exception cref="InvalidDataException">The record has invalid contents.</exception>
+    private static FileSystemLocalStoreAdapter.StoreState DecodeRecord(
+        byte[] payload,
+        FileSystemJsonContext context,
+        FileSystemLocalStoreAdapter.StoreState state,
+        bool hasSnapshot)
+    {
+        try
+        {
+            var record = JsonSerializer.Deserialize(payload, context.JournalRecord)
+                ?? throw new InvalidDataException("The filesystem journal contains an invalid record.");
+            FileSystemJournalDelta.Validate(record, hasSnapshot);
+            ValidateRecordIdentity(state, record);
+            if (record.State is { } snapshot)
+            {
+                FileSystemJournalDelta.ValidateSnapshotReplay(state, snapshot);
+                return snapshot;
+            }
+
+            FileSystemJournalDelta.Apply(state, record.Delta!);
+            return state;
+        }
+        catch (Exception error) when (error is JsonException or ArgumentException or InvalidOperationException or KeyNotFoundException or FormatException)
+        {
+            throw new InvalidDataException("The filesystem journal contains an invalid record.", error);
+        }
+    }
+
+    /// <summary>Ensures later records cannot change an already bound store or client identity.</summary>
+    /// <param name="state">The committed prefix.</param>
+    /// <param name="record">The next validated record.</param>
+    /// <exception cref="InvalidDataException">The next record changes a durable identity.</exception>
+    private static void ValidateRecordIdentity(
+        FileSystemLocalStoreAdapter.StoreState state,
+        FileSystemLocalStoreAdapter.JournalRecord record)
+    {
+        var clientId = record.State is { } snapshot ? snapshot.ClientId : record.Delta!.ClientId;
+        if (state.ClientId is not null && !string.Equals(state.ClientId, clientId, StringComparison.Ordinal))
+        {
+            throw new InvalidDataException("The filesystem journal changes the bound client identity.");
+        }
+
+        if (record.State is { } next && state.StoreIdentity is not null
+            && !string.Equals(state.StoreIdentity, next.StoreIdentity, StringComparison.Ordinal))
+        {
+            throw new InvalidDataException("The filesystem journal changes the bound store identity.");
+        }
     }
 
     /// <summary>Reads into a buffer until it is full or the stream reaches its end.</summary>

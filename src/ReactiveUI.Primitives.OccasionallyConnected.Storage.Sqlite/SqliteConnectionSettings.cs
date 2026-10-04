@@ -24,27 +24,29 @@ internal static class SqliteConnectionSettings
     /// <exception cref="InvalidOperationException">SQLite did not accept the required operational settings.</exception>
     internal static void ConfigureOperationalConnection(SqliteDatabase connection)
     {
-        using (var foreignKeysCommand = connection.CreateStatement())
-        {
-            foreignKeysCommand.SetSql("PRAGMA foreign_keys = ON;");
-            _ = foreignKeysCommand.Execute();
-        }
-
-        using (var synchronousCommand = connection.CreateStatement())
-        {
-            synchronousCommand.SetSql("PRAGMA synchronous = FULL;");
-            _ = synchronousCommand.Execute();
-        }
-
         using (var verifyForeignKeysCommand = connection.CreateStatement())
         {
-            verifyForeignKeysCommand.SetSql("PRAGMA foreign_keys;");
-            VerifyForeignKeys(verifyForeignKeysCommand.Scalar());
+            verifyForeignKeysCommand.SetSql("SELECT foreign_keys FROM pragma_foreign_keys;");
+            var foreignKeys = verifyForeignKeysCommand.Scalar();
+            if (foreignKeys is not long enabled || enabled != 1)
+            {
+                connection.Execute("PRAGMA foreign_keys = ON;");
+                foreignKeys = verifyForeignKeysCommand.Scalar();
+            }
+
+            VerifyForeignKeys(foreignKeys);
         }
 
         using var verifySynchronousCommand = connection.CreateStatement();
-        verifySynchronousCommand.SetSql("PRAGMA synchronous;");
-        VerifyFullSynchronous(verifySynchronousCommand.Scalar());
+        verifySynchronousCommand.SetSql("SELECT synchronous FROM pragma_synchronous;");
+        var synchronous = verifySynchronousCommand.Scalar();
+        if (synchronous is not long mode || mode != SqliteFullSynchronous)
+        {
+            connection.Execute("PRAGMA synchronous = FULL;");
+            synchronous = verifySynchronousCommand.Scalar();
+        }
+
+        VerifyFullSynchronous(synchronous);
     }
 
     /// <summary>Applies durability pragmas after schema validation.</summary>

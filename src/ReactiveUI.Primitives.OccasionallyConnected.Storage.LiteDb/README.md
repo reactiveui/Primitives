@@ -36,3 +36,9 @@ updates that document inside a transaction for each committed change.
 
 The adapter supports one schema version today. It does not support authenticated
 encryption at rest, so initialization rejects that requirement.
+
+The shared local store conformance suite checks the adapter's advertised capabilities.
+It covers failed commits, canceled writes, cursor fences, duplicate inbox events, leases and client binding.
+Native checks cover reopen, acknowledged commits after process termination and corrupt database headers.
+Reinitialization cannot change the bound client or store identity.
+The first remote apply uses revision zero when no snapshot exists.

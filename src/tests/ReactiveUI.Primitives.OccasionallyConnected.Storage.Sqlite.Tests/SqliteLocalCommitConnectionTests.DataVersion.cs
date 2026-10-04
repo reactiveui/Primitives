@@ -36,4 +36,35 @@ public sealed partial class SqliteLocalCommitConnectionTests
 
         await Assert.That(after).IsNotEqualTo(before);
     }
+
+    /// <summary>Verifies the trusted version belongs to the read snapshot, not a later external WAL commit.</summary>
+    /// <returns>The assertion task.</returns>
+    [Test]
+    public async Task DataVersionPinsReadSnapshotUntilTransactionEnds()
+    {
+        using var database = TempDatabase.Create();
+        using var writer = new SqliteDatabase(database.Path);
+        writer.Execute("PRAGMA journal_mode = WAL; CREATE TABLE data (value INTEGER); INSERT INTO data VALUES (1);");
+        using var observed = new SqliteDatabase(database.Path);
+        long before;
+        long during;
+        object? snapshotValue;
+        using (var transaction = observed.BeginTransaction(deferred: true))
+        {
+            before = SqliteLocalCommitConnection.GetDataVersion(observed, transaction);
+            writer.Execute("UPDATE data SET value = 2;");
+            during = SqliteLocalCommitConnection.GetDataVersion(observed, transaction);
+            using var selected = observed.CreateStatement();
+            selected.UseTransaction(transaction);
+            selected.SetSql("SELECT value FROM data;");
+            snapshotValue = selected.Scalar();
+            transaction.Commit();
+        }
+
+        using var later = observed.BeginTransaction(deferred: true);
+        var after = SqliteLocalCommitConnection.GetDataVersion(observed, later);
+        await Assert.That(during).IsEqualTo(before);
+        await Assert.That(snapshotValue).IsEqualTo(1L);
+        await Assert.That(after).IsNotEqualTo(before);
+    }
 }

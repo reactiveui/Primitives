@@ -37,7 +37,8 @@ internal sealed partial class SqliteLocalCommitStore
     {
         ThrowIfDisposed();
         var storeIdentity = GetInitializedStoreIdentity();
-        using var connection = OpenStoreConnection(storeIdentity, cancellationToken);
+        using var connectionScope = LeaseStoreConnection(storeIdentity, cancellationToken);
+        var connection = connectionScope.Connection;
         SqliteLocalCommitConnection.ConfigureLockPolling(connection);
         SqliteConnectionSettings.ConfigureOperationalConnection(connection);
         using var transaction = BeginVerifiedReadTransaction(connection);

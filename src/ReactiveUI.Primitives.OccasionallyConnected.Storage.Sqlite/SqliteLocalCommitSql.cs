@@ -245,6 +245,7 @@ internal static partial class SqliteLocalCommitSql
             "$commitFingerprint",
             ProtectBytes(command, fingerprint, SqliteRecordContext.Outbox(operation), SqliteRecordContext.CommitFingerprintColumn));
         _ = command.Execute();
+        SqliteOutboxCapacitySql.InsertCharge(connection, transaction, storeIdentity, operation);
     }
 
     /// <summary>Inserts the original authoritative mutation for an outbox operation.</summary>
@@ -786,13 +787,14 @@ internal static partial class SqliteLocalCommitSql
             ORDER BY outbox.client_sequence ASC;
             """);
         AddStreamParameters(command, storeIdentity, streamId);
+        var metadata = ReadSelectedOperationMetadata(connection, transaction, storeIdentity, streamId, MetadataSelection.Pending);
         using var reader = command.Query();
         var operations = new List<SyncOperation>();
         while (reader.Read())
         {
             const int OperationStateIndex = 14;
             _ = ReadOperationState(reader, OperationStateIndex);
-            operations.Add(ReadPendingOperation(connection, transaction, storeIdentity, streamId, reader, maximumPayloadBytes));
+            operations.Add(ReadPendingOperation(connection, transaction, storeIdentity, streamId, reader, maximumPayloadBytes, metadata));
         }
 
         return operations;
@@ -841,13 +843,14 @@ internal static partial class SqliteLocalCommitSql
             ORDER BY outbox.client_sequence ASC;
             """);
         AddStreamParameters(command, storeIdentity, streamId);
+        var metadata = ReadSelectedOperationMetadata(connection, transaction, storeIdentity, streamId, MetadataSelection.Replay);
         using var reader = command.Query();
         var operations = new List<SyncOperation>();
         while (reader.Read())
         {
             const int OperationStateIndex = 14;
             _ = ReadOperationState(reader, OperationStateIndex);
-            operations.Add(ReadPendingOperation(connection, transaction, storeIdentity, streamId, reader, maximumPayloadBytes));
+            operations.Add(ReadPendingOperation(connection, transaction, storeIdentity, streamId, reader, maximumPayloadBytes, metadata));
         }
 
         return operations;
@@ -893,6 +896,7 @@ internal static partial class SqliteLocalCommitSql
             ORDER BY outbox.client_sequence ASC;
             """);
         AddStreamParameters(command, storeIdentity, streamId);
+        var metadata = ReadSelectedOperationMetadata(connection, transaction, storeIdentity, streamId, MetadataSelection.DeadLetters);
         using var reader = command.Query();
         List<DeadLetterRecord> deadLetters = [];
         while (reader.Read())
@@ -902,7 +906,7 @@ internal static partial class SqliteLocalCommitSql
             const int ChangedAtIndex = 31;
             const int ReasonIndex = 32;
             _ = ReadOperationState(reader, OperationStateIndex);
-            var operation = ReadPendingOperation(connection, transaction, storeIdentity, streamId, reader, maximumPayloadBytes);
+            var operation = ReadPendingOperation(connection, transaction, storeIdentity, streamId, reader, maximumPayloadBytes, metadata);
             var attemptCount = ReadNonNegativeInt(reader, AttemptIndex, InvalidAttemptCountMessage);
             var reason = ReadDeadLetterReasonCode(connection, reader, ReasonIndex, operation.OperationId, attemptCount, ChangedAtIndex)
                 ?? throw new InvalidOperationException("The SQLite dead-letter reason code is invalid.");
@@ -914,71 +918,6 @@ internal static partial class SqliteLocalCommitSql
         }
 
         return deadLetters;
-    }
-
-    /// <summary>Reads one pending operation row.</summary>
-    /// <param name="connection">The connection.</param>
-    /// <param name="transaction">The transaction.</param>
-    /// <param name="storeIdentity">The store identity.</param>
-    /// <param name="streamId">The stream id.</param>
-    /// <param name="reader">The row reader.</param>
-    /// <param name="maximumPayloadBytes">The maximum payload bytes this adapter can materialize.</param>
-    /// <returns>The pending operation.</returns>
-    /// <exception cref="InvalidOperationException">Stored SQLite data is invalid.</exception>
-    internal static SyncOperation ReadPendingOperation(
-        SqliteDatabase connection,
-        SqliteTransaction transaction,
-        string storeIdentity,
-        StreamId streamId,
-        SqliteRows reader,
-        long maximumPayloadBytes)
-    {
-        const int OperationIdIndex = 0;
-        const int ClientSequenceIndex = 1;
-        const int TimestampIndex = 2;
-        const int BaseVersionIndex = 3;
-        const int TypeIndex = 4;
-        const int PayloadContractIndex = 5;
-        const int PayloadSchemaIndex = 6;
-        const int PayloadContentTypeIndex = 7;
-        const int PayloadIndex = 8;
-        const int PayloadHashIndex = 9;
-        const int DeliveryIndex = 10;
-        const int DurabilityIndex = 11;
-        const int PriorityIndex = 12;
-        const int ConflictIndex = 13;
-        const int RowIdIndex = 15;
-        const int EvidenceIndex = 16;
-        var operationId = ReadOperationId(reader, OperationIdIndex);
-        var clientSequence = ReadPositiveLong(reader, ClientSequenceIndex, InvalidOperationSequenceMessage);
-        var operationType = ReadOperationType(reader, TypeIndex);
-        var context = SqliteRecordContext.Outbox(operationId, streamId, clientSequence, operationType);
-        var operation = new SyncOperation
-        {
-            OperationId = operationId,
-            StreamId = streamId,
-            ClientSequence = clientSequence,
-            TimestampUtc = ReadDateTimeOffset(reader, TimestampIndex, "The SQLite operation timestamp is invalid."),
-            BaseVersion = ReadProtectedNullableText(connection, reader, BaseVersionIndex, context, SqliteRecordContext.BaseVersionColumn, operationId),
-            Type = operationType,
-            Payload = ReadOperationPayload(
-                connection,
-                reader,
-                SqlitePayloadColumns.Create(
-                    PayloadContractIndex,
-                    PayloadSchemaIndex,
-                    PayloadContentTypeIndex,
-                    PayloadIndex,
-                    PayloadHashIndex,
-                    new(RowIdIndex, SqliteStoreSchema.OutboxTableName, PayloadColumnName, context),
-                    EvidenceIndex),
-                operationId,
-                maximumPayloadBytes),
-            Policy = ReadPolicy(reader, DeliveryIndex, DurabilityIndex, PriorityIndex, ConflictIndex),
-            Metadata = ReadMetadata(connection, transaction, storeIdentity, operationId),
-        };
-        SqliteLocalCommitValidation.ValidateCommitInput(operation, new(streamId, operation.Payload, FormatVersion: 1, ExpectedRevision: 0));
-        return operation;
     }
 
     /// <summary>Reads operation metadata.</summary>

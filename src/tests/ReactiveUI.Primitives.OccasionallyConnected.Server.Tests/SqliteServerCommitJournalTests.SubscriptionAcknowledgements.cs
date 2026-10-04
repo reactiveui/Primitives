@@ -312,7 +312,7 @@ public sealed partial class SqliteServerCommitJournalTests
         await Assert.That(offerJournal.SubscriptionOfferCount).IsEqualTo(SingleEntryCount);
     }
 
-    /// <summary>Verifies SQLite subscription timestamp updates fail closed if a row vanishes mid-update.</summary>
+    /// <summary>Verifies durable offer updates fail closed if a subscription vanishes mid-update.</summary>
     /// <returns>The asynchronous test operation.</returns>
     [Test]
     public async Task SubscriptionUpdateGuardsRejectMissingRowsAfterTriggerMutation()
@@ -321,9 +321,12 @@ public sealed partial class SqliteServerCommitJournalTests
         using var journal = CreateSubscriptionJournal(database.Path);
         var identity = SubscriptionIdentity(FirstSubscription);
         _ = journal.RegisterSubscription(identity);
+        var key = OperationKey(FirstOperationSeed);
+        _ = journal.TryCommit(Plan(0, State(FirstVersion), Stamp(key), Entry(key, OperationResultKind.Accepted, FirstOperationSeed)));
         CreateDeleteSubscriptionBeforeUpdatedAtTrigger(database.Path);
 
-        await Assert.That(() => journal.RegisterSubscription(identity)).ThrowsExactly<InvalidOperationException>();
+        await Assert.That(() => journal.OfferReceivePage(new(identity, null, SingleEntryCount, DefaultMaximumEvents, DefaultMaximumLogicalBytes)))
+            .ThrowsExactly<InvalidOperationException>();
     }
 
     /// <summary>Verifies SQLite subscription acknowledgement members dispatch through the internal interface.</summary>
@@ -333,7 +336,8 @@ public sealed partial class SqliteServerCommitJournalTests
     public async Task SubscriptionAcknowledgementsUseJournalInterface()
     {
         using var database = new TemporaryDatabase();
-        IServerSubscriptionAcknowledgementJournal journal = CreateSubscriptionJournal(database.Path);
+        using var owner = CreateSubscriptionJournal(database.Path);
+        IServerSubscriptionAcknowledgementJournal journal = owner;
         var identity = SubscriptionIdentity(FirstSubscription);
         _ = journal.RegisterSubscription(identity);
         var key = OperationKey(FirstOperationSeed);

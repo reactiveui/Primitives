@@ -722,13 +722,13 @@ public sealed partial class LiteDbLocalStoreAdapter
             throw new ArgumentException("The batch and snapshot must target the same stream.");
         }
 
-        var snapshotRevision = stream.Snapshot?.Revision;
+        var snapshotRevision = stream.Snapshot?.Revision ?? 0;
         var cursorMismatch = stream.Cursor != batch.PreviousCursor;
         if (snapshotRevision != snapshotMutation.ExpectedRevision || cursorMismatch)
         {
             throw new InvalidOperationException(
                 "The remote apply fence does not match durable state "
-                + $"(snapshot revision {snapshotRevision?.ToString() ?? "missing"}, "
+                + $"(snapshot revision {snapshotRevision}, "
                 + $"expected {snapshotMutation.ExpectedRevision}; cursor mismatch: {cursorMismatch}).");
         }
     }

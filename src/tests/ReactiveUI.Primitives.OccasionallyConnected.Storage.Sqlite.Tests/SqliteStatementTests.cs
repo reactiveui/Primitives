@@ -16,8 +16,29 @@ public sealed class SqliteStatementTests
     /// <summary>The parameter reused by statement lifetime tests.</summary>
     private const string ValueParameter = "$value";
 
+    /// <summary>The parameterized scalar query.</summary>
+    private const string SelectValueSql = "SELECT $value;";
+
+    /// <summary>The number of preparations for two uncached queries.</summary>
+    private const long UncachedQueryPreparations = 2;
+
     /// <summary>The second script result.</summary>
     private const long SecondResult = 2;
+
+    /// <summary>The number of executions used to check a warm native handle.</summary>
+    private const int RepeatedPreparedExecutions = 16;
+
+    /// <summary>The number of distinct queries used to fill the cache.</summary>
+    private const int CachePressureQueryCount = 256;
+
+    /// <summary>The maximum retained idle native statement count.</summary>
+    private const int MaximumIdleNativeStatements = 128;
+
+    /// <summary>The maximum SQL characters retained with one cached handle.</summary>
+    private const int MaximumRetainedSqlCharacters = 16 * 1024;
+
+    /// <summary>The inserted key after a failed primary-key write.</summary>
+    private const int ValueAfterConstraintFailure = 3;
 
     /// <summary>The BLOB bytes that include embedded zeros.</summary>
     private static readonly byte[] BlobBytes = [0, 1, 0];
@@ -81,7 +102,7 @@ public sealed class SqliteStatementTests
     {
         using var database = new SqliteDatabase(MemoryPath);
         using var statement = database.CreateStatement();
-        statement.SetSql("SELECT $value;");
+        statement.SetSql(SelectValueSql);
         await Assert.That(() => statement.Scalar()).ThrowsExactly<InvalidOperationException>();
         _ = statement.Bind(ValueParameter, new());
         await Assert.That(() => statement.Scalar()).ThrowsExactly<ArgumentException>();
@@ -101,6 +122,7 @@ public sealed class SqliteStatementTests
     public async Task ActiveCursorRejectsStatementMutationAndDisposalReleasesNativeHandle()
     {
         using var database = new SqliteDatabase(MemoryPath);
+        database.Handle.enable_sqlite3_next_stmt(true);
         using var statement = database.CreateStatement();
         statement.SetSql("SELECT 1;");
         using (var rows = statement.Query())
@@ -110,7 +132,9 @@ public sealed class SqliteStatementTests
             await Assert.That(() => statement.Execute()).ThrowsExactly<InvalidOperationException>();
         }
 
-        await Assert.That(raw.sqlite3_next_stmt(database.Handle, null)).IsNull();
+        var idle = raw.sqlite3_next_stmt(database.Handle, null);
+        await Assert.That(idle).IsNotNull();
+        await Assert.That(raw.sqlite3_stmt_busy(idle!)).IsEqualTo(0);
         statement.SetSql("SELECT 2 WHERE 0;");
         await Assert.That(statement.Scalar()).IsNull();
         statement.SetSql("-- comment only");
@@ -133,5 +157,100 @@ public sealed class SqliteStatementTests
         _ = rows.Read();
         await Assert.That(rows.GetInt64(0)).IsEqualTo(SecondResult);
         await Assert.That(rows.MoveNextResult()).IsFalse();
+    }
+
+    /// <summary>Verifies independently owned commands reuse one reset handle without retaining parameters.</summary>
+    /// <returns>The assertion task.</returns>
+    [Test]
+    public async Task PreparedHandlesAreReusedAndMissingBindingsNeverReusePreviousValues()
+    {
+        using var database = new SqliteDatabase(MemoryPath);
+        for (var value = 0; value < RepeatedPreparedExecutions; value++)
+        {
+            using var command = database.CreateStatement();
+            command.SetSql(SelectValueSql);
+            _ = command.Bind(ValueParameter, value);
+            await Assert.That(command.Scalar()).IsEqualTo((long)value);
+        }
+
+        await Assert.That(database.PreparationCount).IsEqualTo(1L);
+        using var missing = database.CreateStatement();
+        missing.SetSql(SelectValueSql);
+        await Assert.That(() => missing.Scalar()).ThrowsExactly<InvalidOperationException>();
+        _ = missing.Bind(ValueParameter, null);
+        await Assert.That(missing.Scalar()).IsEqualTo(DBNull.Value);
+        await Assert.That(database.PreparationCount).IsEqualTo(1L);
+    }
+
+    /// <summary>Verifies nested cursors own separate native handles and cache growth stays bounded.</summary>
+    /// <returns>The assertion task.</returns>
+    [Test]
+    public async Task PreparedCacheIsBoundedAndConcurrentCursorsDoNotShareHandles()
+    {
+        using var database = new SqliteDatabase(MemoryPath);
+        database.Handle.enable_sqlite3_next_stmt(true);
+        using var first = database.CreateStatement();
+        first.SetSql(SelectValueSql);
+        _ = first.Bind(ValueParameter, 1);
+        using (var rows = first.Query())
+        {
+            using var second = database.CreateStatement();
+            second.SetSql(SelectValueSql);
+            _ = second.Bind(ValueParameter, SecondResult);
+            await Assert.That(second.Scalar()).IsEqualTo(SecondResult);
+            await Assert.That(rows.Read()).IsTrue();
+            await Assert.That(rows.GetInt64(0)).IsEqualTo(1L);
+        }
+
+        for (var value = 0; value < CachePressureQueryCount; value++)
+        {
+            database.Execute($"SELECT {value};");
+        }
+
+        var count = 0;
+        var handle = raw.sqlite3_next_stmt(database.Handle, null);
+        while (handle is not null)
+        {
+            count++;
+            await Assert.That(raw.sqlite3_stmt_busy(handle)).IsEqualTo(0);
+            handle = raw.sqlite3_next_stmt(database.Handle, handle);
+        }
+
+        await Assert.That(count).IsLessThanOrEqualTo(MaximumIdleNativeStatements);
+    }
+
+    /// <summary>Verifies SQLite automatically recompiles cached SQL when another command changes the schema.</summary>
+    /// <returns>The assertion task.</returns>
+    [Test]
+    public async Task CachedSelectSurvivesSchemaChangesAndConstraintFailures()
+    {
+        using var database = new SqliteDatabase(MemoryPath);
+        database.Execute("CREATE TABLE data (value INTEGER PRIMARY KEY); INSERT INTO data VALUES (1);");
+        using var command = database.CreateStatement();
+        command.SetSql("SELECT value FROM data;");
+        await Assert.That(command.Scalar()).IsEqualTo(1L);
+        database.Execute("DROP TABLE data; CREATE TABLE data (value INTEGER PRIMARY KEY, other TEXT); INSERT INTO data VALUES (2, 'new');");
+        await Assert.That(command.Scalar()).IsEqualTo(SecondResult);
+        command.SetSql("INSERT INTO data (value) VALUES ($value);");
+        _ = command.Bind(ValueParameter, SecondResult);
+        await Assert.That(() => command.Execute()).ThrowsExactly<SqliteDatabaseException>();
+        _ = command.Bind(ValueParameter, ValueAfterConstraintFailure);
+        await Assert.That(command.Execute()).IsEqualTo(1);
+    }
+
+    /// <summary>Verifies a large script cannot pin unbounded SQL text in the connection cache.</summary>
+    /// <returns>The assertion task.</returns>
+    [Test]
+    public async Task LargeSqlScriptsAreNotRetainedByPreparedCache()
+    {
+        using var database = new SqliteDatabase(MemoryPath);
+        database.Handle.enable_sqlite3_next_stmt(true);
+        var sql = $"SELECT 1; --{new string('x', MaximumRetainedSqlCharacters)}";
+        using var command = database.CreateStatement();
+        command.SetSql(sql);
+        await Assert.That(command.Scalar()).IsEqualTo(1L);
+        await Assert.That(command.Scalar()).IsEqualTo(1L);
+        await Assert.That(database.PreparationCount).IsEqualTo(UncachedQueryPreparations);
+        await Assert.That(raw.sqlite3_next_stmt(database.Handle, null)).IsNull();
     }
 }

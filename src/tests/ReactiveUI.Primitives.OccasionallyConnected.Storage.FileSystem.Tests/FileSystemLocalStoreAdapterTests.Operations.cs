@@ -69,7 +69,7 @@ public sealed partial class FileSystemLocalStoreAdapterTests
     [Test]
     public async Task IdentityAndCommitPreconditionsRejectInvalidState()
     {
-        var directory = Path.Combine(Path.GetTempPath(), $"rxui-filesystem-{Guid.NewGuid():N}");
+        var directory = CreateJournalTestDirectory();
         try
         {
             var stream = new StreamId("preconditions");
@@ -136,7 +136,7 @@ public sealed partial class FileSystemLocalStoreAdapterTests
     [Test]
     public async Task SyncResultsUpdateOperationAndSnapshotStates()
     {
-        var directory = Path.Combine(Path.GetTempPath(), $"rxui-filesystem-{Guid.NewGuid():N}");
+        var directory = CreateJournalTestDirectory();
         try
         {
             var stream = new StreamId("sync-results");
@@ -201,7 +201,7 @@ public sealed partial class FileSystemLocalStoreAdapterTests
     [Test]
     public async Task DeadLetterOperationsCanBeCompacted()
     {
-        var directory = Path.Combine(Path.GetTempPath(), $"rxui-filesystem-{Guid.NewGuid():N}");
+        var directory = CreateJournalTestDirectory();
         try
         {
             var stream = new StreamId("dead-letter-compaction");
@@ -244,7 +244,7 @@ public sealed partial class FileSystemLocalStoreAdapterTests
     [Test]
     public async Task RemoteBatchDeduplicatesEventsAndCompletesOperations()
     {
-        var directory = Path.Combine(Path.GetTempPath(), $"rxui-filesystem-{Guid.NewGuid():N}");
+        var directory = CreateJournalTestDirectory();
         try
         {
             var stream = new StreamId("remote-transitions");
@@ -291,12 +291,12 @@ public sealed partial class FileSystemLocalStoreAdapterTests
     [Test]
     public async Task UnknownRemoteCompletionDoesNotAdvanceDurableCursor()
     {
-        var directory = Path.Combine(Path.GetTempPath(), $"rxui-filesystem-{Guid.NewGuid():N}");
+        var directory = CreateJournalTestDirectory();
         try
         {
             var stream = new StreamId("unknown-completion");
             await using var adapter = new FileSystemLocalStoreAdapter(directory);
-            await adapter.InitializeAsync(new(ClientIdentity, 1, false), CancellationToken.None);
+            await adapter.InitializeAsync(new(ClientIdentity, 1, false) { ClientId = ClientIdentity }, CancellationToken.None);
             var subscription = await adapter.GetOrCreateSubscriptionIdAsync(stream, null, CancellationToken.None);
             var batch = new RemoteEventBatch(Guid.NewGuid(), stream, null, FirstCursor, [])
             { CompletedOperations = [new(new RemoteEventOrigin(ClientIdentity, OperationId.New()), [])], };
@@ -321,7 +321,7 @@ public sealed partial class FileSystemLocalStoreAdapterTests
     [Test]
     public async Task RemoteAttemptBarrierStopsAmbiguousAtMostOnceRetry()
     {
-        var directory = Path.Combine(Path.GetTempPath(), $"rxui-filesystem-{Guid.NewGuid():N}");
+        var directory = CreateJournalTestDirectory();
         try
         {
             var stream = new StreamId("attempt-barrier");

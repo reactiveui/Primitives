@@ -114,6 +114,7 @@ public sealed partial class LiteDbLocalStoreAdapter : ILocalStoreAdapter
             ThrowIfDisposed();
             if (Volatile.Read(ref _initialized) != 0)
             {
+                ValidateStoreIdentity(initialization);
                 return;
             }
 

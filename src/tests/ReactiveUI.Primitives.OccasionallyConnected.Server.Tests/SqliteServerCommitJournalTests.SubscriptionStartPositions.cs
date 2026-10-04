@@ -255,7 +255,8 @@ public sealed partial class SqliteServerCommitJournalTests
     public async Task SubscriptionStartPositionInterfaceOverloadRegistersSqliteBinding()
     {
         using var database = new TemporaryDatabase();
-        IServerSubscriptionAcknowledgementJournal journal = CreateSubscriptionJournal(database.Path);
+        using var owner = CreateSubscriptionJournal(database.Path);
+        IServerSubscriptionAcknowledgementJournal journal = owner;
         var identity = SubscriptionIdentity(FirstSubscription);
 
         var state = journal.RegisterSubscription(new ServerSubscriptionRegistrationRequest(identity, StartPosition.Latest));
@@ -425,7 +426,8 @@ public sealed partial class SqliteServerCommitJournalTests
 
         CorruptInitialPositionKind(database.Path);
 
-        await Assert.That(() => CreateSubscriptionJournal(database.Path).RegisterSubscription(SubscriptionIdentity(FirstSubscription)))
+        using var reopened = CreateSubscriptionJournal(database.Path);
+        await Assert.That(() => reopened.RegisterSubscription(SubscriptionIdentity(FirstSubscription)))
             .ThrowsExactly<InvalidOperationException>();
     }
 

@@ -14,6 +14,64 @@ public sealed partial class SqliteLocalStoreAdapterTests
     /// <summary>The manifest's record protection column.</summary>
     private const string IntegrityManifestColumn = "operation_state_manifest";
 
+    /// <summary>An ignored proof or manifest write cannot advance the trusted state set.</summary>
+    /// <param name="manifest">Whether to reject the manifest rather than the row proof.</param>
+    /// <returns>The assertion task.</returns>
+    [Test]
+    [Arguments(false)]
+    [Arguments(true)]
+    public async Task IgnoredProofMutationRollsBackProtectedCommit(bool manifest)
+    {
+        using var database = TempDatabase.Create();
+        await using var adapter = CreateEncryptedAdapter(database.Path, CreateFirstKeyProvider());
+        await adapter.InitializeAsync(CreateEncryptedInitialization(), CancellationToken.None);
+        _ = await adapter.GetOrCreateSubscriptionIdAsync(Stream, null, CancellationToken.None);
+        _ = await adapter.CommitLocalOperationAsync(CreateOperation(1), CreateSnapshotMutation(0), CancellationToken.None);
+        using (var connection = OpenRawConnection(database.Path))
+        {
+            connection.Execute(manifest
+                ? """
+                  CREATE TRIGGER reject_manifest BEFORE UPDATE ON oc_metadata
+                  WHEN NEW.key = 'rxui.localstore.operation_state_manifest'
+                  BEGIN SELECT RAISE(IGNORE); END;
+                  """
+                : """
+                  CREATE TRIGGER reject_proof BEFORE INSERT ON oc_operation_state_proofs
+                  BEGIN SELECT RAISE(IGNORE); END;
+                  """);
+        }
+
+        var operation = CreateOperation(SecondClientSequence);
+        await Assert.That(async () => await adapter.CommitLocalOperationAsync(operation, CreateSnapshotMutation(1), CancellationToken.None))
+            .ThrowsExactly<LocalStoreRecordAuthenticationException>();
+        await Assert.That(await adapter.GetOperationStatusAsync(operation.OperationId, CancellationToken.None)).IsNull();
+    }
+
+    /// <summary>A proof trigger cannot change canonical state after signing and still extend cached global trust.</summary>
+    /// <returns>The assertion task.</returns>
+    [Test]
+    public async Task ProofTriggerSideEffectsRollBackProtectedCommit()
+    {
+        using var database = TempDatabase.Create();
+        await using var adapter = CreateEncryptedAdapter(database.Path, CreateFirstKeyProvider());
+        await adapter.InitializeAsync(CreateEncryptedInitialization(), CancellationToken.None);
+        _ = await adapter.GetOrCreateSubscriptionIdAsync(Stream, null, CancellationToken.None);
+        using (var connection = OpenRawConnection(database.Path))
+        {
+            connection.Execute("""
+                CREATE TRIGGER proof_changes_state AFTER INSERT ON oc_operation_state_proofs BEGIN
+                    UPDATE oc_outbox_operation_states SET attempt_count = attempt_count + 1
+                    WHERE operation_id = NEW.operation_id;
+                END;
+                """);
+        }
+
+        var operation = CreateOperation(1);
+        await Assert.That(async () => await adapter.CommitLocalOperationAsync(operation, CreateSnapshotMutation(0), CancellationToken.None))
+            .ThrowsExactly<LocalStoreRecordAuthenticationException>();
+        await Assert.That(await adapter.GetOperationStatusAsync(operation.OperationId, CancellationToken.None)).IsNull();
+    }
+
     /// <summary>A journal update refuses to sign a row whose original proof has disappeared.</summary>
     /// <returns>The asynchronous test.</returns>
     [Test]

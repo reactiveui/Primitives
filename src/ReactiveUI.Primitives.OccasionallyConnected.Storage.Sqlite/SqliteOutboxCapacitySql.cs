@@ -34,6 +34,7 @@ internal static class SqliteOutboxCapacitySql
         }
 
         var candidateBytes = GetEncodedOperationBytes(operation);
+        SqliteOutboxCapacityIntegrity.VerifyWhenChanged(connection, transaction);
         var (unresolvedCount, unresolvedBytes) = ReadUsage(connection, transaction, storeIdentity);
         if (unresolvedCount < options.MaxOperations && candidateBytes <= options.MaxBytes - unresolvedBytes)
         {
@@ -48,7 +49,7 @@ internal static class SqliteOutboxCapacitySql
     /// <summary>Calculates the immutable operation envelope and metadata bytes.</summary>
     /// <param name="operation">The proposed operation.</param>
     /// <returns>The encoded byte count.</returns>
-    private static long GetEncodedOperationBytes(SyncOperation operation)
+    internal static long GetEncodedOperationBytes(SyncOperation operation)
     {
         var payload = operation.Payload;
         var bytes = checked((long)FixedOperationEnvelopeBytes
@@ -71,7 +72,7 @@ internal static class SqliteOutboxCapacitySql
     /// <param name="transaction">The write transaction.</param>
     /// <param name="storeIdentity">The store partition identity.</param>
     /// <returns>The current unresolved operation count and bytes.</returns>
-    private static (long Count, long Bytes) ReadUsage(
+    internal static (long Count, long Bytes) ReadUsage(
         SqliteDatabase connection,
         SqliteTransaction transaction,
         string storeIdentity)
@@ -79,33 +80,34 @@ internal static class SqliteOutboxCapacitySql
         using var command = connection.CreateStatement();
         command.UseTransaction(transaction);
         command.SetSql("""
-            SELECT COUNT(*), COALESCE(SUM(
-                $fixedEnvelopeBytes
-                + length(CAST(outbox.stream_id AS BLOB))
-                + COALESCE(length(CAST(outbox.base_version AS BLOB)), 0)
-                + length(CAST(outbox.payload_contract_id AS BLOB))
-                + length(CAST(outbox.payload_content_type AS BLOB))
-                + length(CAST(outbox.payload AS BLOB))
-                + length(CAST(outbox.payload_hash AS BLOB))
-                + (SELECT COALESCE(SUM(
-                    length(CAST(metadata.key AS BLOB)) + length(CAST(metadata.value AS BLOB))), 0)
-                   FROM oc_outbox_metadata AS metadata
-                   WHERE metadata.store_identity = outbox.store_identity
-                     AND metadata.operation_id = outbox.operation_id)), 0)
-            FROM oc_outbox AS outbox
-            LEFT JOIN oc_outbox_operation_states AS state
-                ON state.store_identity = outbox.store_identity
-               AND state.operation_id = outbox.operation_id
-            WHERE outbox.store_identity = $storeIdentity
-              AND (state.operation_state IS NULL OR state.operation_state NOT IN ($synchronized, $rejected, $deadLettered));
+            SELECT operation_count, encoded_bytes FROM oc_outbox_capacity_usage
+            WHERE store_identity = $storeIdentity;
             """);
         _ = command.Bind("$storeIdentity", storeIdentity);
-        _ = command.Bind("$fixedEnvelopeBytes", FixedOperationEnvelopeBytes);
-        _ = command.Bind("$synchronized", (int)SyncOperationState.Synchronized);
-        _ = command.Bind("$rejected", (int)SyncOperationState.Rejected);
-        _ = command.Bind("$deadLettered", (int)SyncOperationState.DeadLettered);
         using var reader = command.Query();
-        _ = reader.Read();
-        return (reader.GetInt64(0), reader.GetInt64(1));
+        return reader.Read() ? (reader.GetInt64(0), reader.GetInt64(1)) : (0, 0);
+    }
+
+    /// <summary>Records the plaintext immutable charge in the same transaction as the operation.</summary>
+    /// <param name="connection">The active connection.</param>
+    /// <param name="transaction">The active transaction.</param>
+    /// <param name="storeIdentity">The store partition.</param>
+    /// <param name="operation">The immutable operation.</param>
+    internal static void InsertCharge(SqliteDatabase connection, SqliteTransaction transaction, string storeIdentity, SyncOperation operation)
+    {
+        using var command = connection.CreateStatement();
+        command.UseTransaction(transaction);
+        command.SetSql("""
+            INSERT INTO oc_outbox_capacity_charges (store_identity, operation_id, encoded_bytes, proof, unresolved)
+            VALUES ($storeIdentity, $operationId, $bytes, $proof, COALESCE(
+                (SELECT operation_state NOT IN (4, 5, 6) FROM oc_outbox_operation_states
+                 WHERE store_identity = $storeIdentity AND operation_id = $operationId), 1));
+            """);
+        _ = command.Bind("$storeIdentity", storeIdentity);
+        _ = command.Bind("$operationId", operation.OperationId.Value.ToString("D"));
+        var bytes = GetEncodedOperationBytes(operation);
+        _ = command.Bind("$bytes", bytes);
+        _ = command.Bind("$proof", SqliteOutboxCapacityIntegrity.CreateProof(connection, operation.OperationId, bytes));
+        _ = command.Execute();
     }
 }

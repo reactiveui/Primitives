@@ -182,6 +182,47 @@ internal sealed partial class SqliteServerCommitJournal
             cursor);
     }
 
+    /// <summary>Loads only the durable frontier group needed to prove the checkpoint cursor.</summary>
+    /// <param name="connection">The connection.</param>
+    /// <param name="transaction">The transaction.</param>
+    /// <param name="streamKey">The stream key.</param>
+    /// <param name="stream">The selected stream record.</param>
+    private static void ReadSnapshotFrontier(
+        SqliteDatabase connection,
+        SqliteTransaction transaction,
+        ServerStreamKey streamKey,
+        ServerCommitStreamRecord? stream)
+    {
+        if (stream is null || stream.LastGroupSequence == 0)
+        {
+            return;
+        }
+
+        using var command = connection.CreateStatement();
+        command.UseTransaction(transaction);
+        command.SetSql("""
+            SELECT client_id, operation_id FROM oc_server_journal_ledger
+            WHERE tenant_id = $tenantId AND stream_id = $streamId AND group_sequence = $groupSequence LIMIT 1;
+            """);
+        AddStreamParameters(command, streamKey);
+        _ = command.Bind(GroupSequenceParameterName, stream.LastGroupSequence);
+        using var reader = command.Query();
+        if (!reader.Read())
+        {
+            return;
+        }
+
+        var key = ReadOperationKey(reader, 0, 1);
+        if (!stream.Ledger.TryGetValue(key, out var row))
+        {
+            ReadLedger(connection, transaction, streamKey, stream, [key]);
+            row = stream.Ledger[key];
+        }
+
+        _ = stream.Groups.Remove(row);
+        stream.Groups.Add(row);
+    }
+
     /// <summary>Offers a recovered snapshot cursor inside an open transaction.</summary>
     /// <param name="connection">The connection.</param>
     /// <param name="transaction">The transaction.</param>
@@ -232,7 +273,8 @@ internal sealed partial class SqliteServerCommitJournal
             return CreateSnapshotOfferResult(ServerSnapshotOfferStatus.ConcurrentChange, currentState, null);
         }
 
-        var stream = ReadStreamRecord(connection, transaction, request.StreamKey);
+        var stream = ReadStreamRecord(connection, transaction, request.StreamKey, CreateOperationKeys(request.Subscription, request.View));
+        ReadSnapshotFrontier(connection, transaction, request.StreamKey, stream);
         var current = ServerCommitJournalOperations.CreateSnapshot(request.StreamKey, stream, CreateOperationKeys(record.Identity, request.View));
         if (!SnapshotMatches(record.Identity, request.View, current))
         {

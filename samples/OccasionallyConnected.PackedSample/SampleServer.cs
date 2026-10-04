@@ -27,7 +27,7 @@ internal sealed class SampleServer : IAsyncDisposable
 
     private readonly string _databasePath;
     private readonly object _gate = new();
-    private readonly System.Collections.Concurrent.ConcurrentDictionary<string, int> _requests = new(StringComparer.Ordinal);
+    private readonly SampleCounterLog _requests = new();
     private ServerStreamHub? _hub;
     private HttpServerEndpoint? _endpoint;
 
@@ -128,9 +128,9 @@ internal sealed class SampleServer : IAsyncDisposable
     /// <summary>Describes the requests the server handled, grouped by client, route and outcome.</summary>
     /// <returns>The request summary.</returns>
     internal string DescribeRequests() =>
-        string.Join(", ", _requests.OrderBy(pair => pair.Key, StringComparer.Ordinal).Select(pair => $"{pair.Key} x{pair.Value}"));
+        _requests.Describe();
 
-    private void Record(string key) => _requests.AddOrUpdate(key, 1, static (_, count) => count + 1);
+    private void Record(string key) => _requests.Record(key);
 
     /// <summary>Gets the running endpoint, or <see langword="null"/> while the server is down.</summary>
     /// <returns>The endpoint.</returns>

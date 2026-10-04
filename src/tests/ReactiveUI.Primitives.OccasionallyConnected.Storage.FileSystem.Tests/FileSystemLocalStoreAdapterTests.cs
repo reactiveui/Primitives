@@ -93,7 +93,7 @@ public sealed partial class FileSystemLocalStoreAdapterTests
     [Test]
     public async Task CommitIsRecoveredAfterReopen()
     {
-        var directory = Path.Combine(Path.GetTempPath(), $"rxui-filesystem-{Guid.NewGuid():N}");
+        var directory = CreateJournalTestDirectory();
         try
         {
             var stream = new StreamId(TemperatureStreamName);
@@ -140,7 +140,7 @@ public sealed partial class FileSystemLocalStoreAdapterTests
     [Test]
     public async Task TimeProviderControlsDurableTimestamps()
     {
-        var directory = Path.Combine(Path.GetTempPath(), $"rxui-filesystem-{Guid.NewGuid():N}");
+        var directory = CreateJournalTestDirectory();
         var expectedTime = new DateTimeOffset(2032, 4, 5, 6, 7, 8, TimeSpan.Zero);
         try
         {
@@ -174,7 +174,7 @@ public sealed partial class FileSystemLocalStoreAdapterTests
     [Test]
     public async Task ConcurrentDisposeAsyncCallsComplete()
     {
-        var directory = Path.Combine(Path.GetTempPath(), $"rxui-filesystem-{Guid.NewGuid():N}");
+        var directory = CreateJournalTestDirectory();
         var adapter = new FileSystemLocalStoreAdapter(directory);
         try
         {
@@ -196,7 +196,7 @@ public sealed partial class FileSystemLocalStoreAdapterTests
     [Test]
     public async Task IncompleteTailIsDiscardedDuringRecovery()
     {
-        var directory = Path.Combine(Path.GetTempPath(), $"rxui-filesystem-{Guid.NewGuid():N}");
+        var directory = CreateJournalTestDirectory();
         try
         {
             var stream = new StreamId(TemperatureStreamName);
@@ -253,7 +253,7 @@ public sealed partial class FileSystemLocalStoreAdapterTests
     [Test]
     public async Task OrphanedCompactionTemporaryFileDoesNotHideCommittedJournal()
     {
-        var directory = Path.Combine(Path.GetTempPath(), $"rxui-filesystem-{Guid.NewGuid():N}");
+        var directory = CreateJournalTestDirectory();
         try
         {
             var stream = new StreamId("interrupted-compaction");
@@ -300,7 +300,7 @@ public sealed partial class FileSystemLocalStoreAdapterTests
     [Arguments(nameof(FileSystemJournalCheckpoint.AfterCompactionJournalReplace))]
     public async Task WhenProcessDiesAtCompactionCheckpoint_ThenReopenUsesCompleteJournal(string checkpoint)
     {
-        var directory = Path.Combine(Path.GetTempPath(), $"rxui-filesystem-crash-{Guid.NewGuid():N}");
+        var directory = CreateJournalTestDirectory();
         var signalPath = Path.Combine(directory, "compaction.signal");
         var operationId = Guid.NewGuid();
         try
@@ -351,9 +351,14 @@ public sealed partial class FileSystemLocalStoreAdapterTests
         }
 
         var stream = new StreamId("compaction-process-crash");
+        var appendCase = checkpoint is FileSystemJournalCheckpoint.AfterAppendHeader
+            or FileSystemJournalCheckpoint.AfterAppendPayload
+            or FileSystemJournalCheckpoint.AfterAppendChecksum
+            or FileSystemJournalCheckpoint.AfterAppendFlush;
+        var armed = !appendCase;
         Action<FileSystemJournalCheckpoint> reached = current =>
         {
-            if (current == checkpoint)
+            if (armed && current == checkpoint)
             {
                 SignalAndBlockAtCompactionCheckpoint(fields[1], current.ToString());
             }
@@ -366,6 +371,16 @@ public sealed partial class FileSystemLocalStoreAdapterTests
             operation,
             new(stream, CreatePayload(SnapshotPayload), InitialSnapshotRevision),
             CancellationToken.None);
+        if (appendCase)
+        {
+            armed = true;
+            await adapter.CommitLocalOperationAsync(
+                CreateOperation(stream, NextOperationSequence),
+                new(stream, CreatePayload("next"), 1, 1),
+                CancellationToken.None);
+            throw new InvalidOperationException($"The append child completed without reaching {checkpoint}.");
+        }
+
         await adapter.CompactAsync(new(stream, DateTimeOffset.MaxValue, NoCompactionRecords), CancellationToken.None);
         throw new InvalidOperationException($"The compaction child completed without reaching {checkpoint}.");
     }

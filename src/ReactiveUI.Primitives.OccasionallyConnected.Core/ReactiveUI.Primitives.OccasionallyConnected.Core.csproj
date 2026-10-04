@@ -12,5 +12,7 @@
 
   <ItemGroup>
     <None Include="README.md" Pack="true" PackagePath="README.md" />
+    <None Include="..\tests\ReactiveUI.Primitives.OccasionallyConnected.Conformance.Tests\LocalStoreConformance.cs"
+          Pack="true" PackagePath="conformance\LocalStoreConformance.cs" />
   </ItemGroup>
 </Project>

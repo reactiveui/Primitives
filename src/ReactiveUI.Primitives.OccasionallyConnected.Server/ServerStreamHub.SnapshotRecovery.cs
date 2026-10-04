@@ -65,7 +65,9 @@ public sealed partial class ServerStreamHub
             var scope = ValidateScope(client, request.StreamId, publicScope);
             var streamKey = new ServerStreamKey(scope.TenantId, request.StreamId);
             var subscription = new ServerSubscriptionIdentity(streamKey, scope.ClientId, request.SubscriptionId);
-            var view = ReadSnapshotRecoveryView(_snapshotRecoveryJournal, streamKey, subscription, request, _options.SnapshotRecoveryLimits);
+            var view = await RunJournalAsync(
+                () => ReadSnapshotRecoveryView(_snapshotRecoveryJournal, streamKey, subscription, request, _options.SnapshotRecoveryLimits),
+                token).ConfigureAwait(false);
 
             var capturedState = view.Snapshot.State;
             if (view.SubscriptionState is null || !HasRetainedExpiredCursorProof(view) || capturedState is null)
@@ -95,9 +97,7 @@ public sealed partial class ServerStreamHub
                 ObservedAtUtc = observedAtUtc,
                 OperationDispositions = dispositions,
             };
-            return materialization is null
-                ? CreateNonRecoveredResult(RemoteSnapshotRecoveryStatus.ValidationRejected, SnapshotValidationRejectedReason)
-                : OfferMaterializedSnapshot(_snapshotRecoveryJournal, _options.SnapshotRecoveryLimits, offerContext, materialization);
+            return await OfferMaterializationAsync(offerContext, materialization, token).ConfigureAwait(false);
         }
         finally
         {
@@ -434,6 +434,21 @@ public sealed partial class ServerStreamHub
 
         return MapOfferResult(offer, result);
     }
+
+    /// <summary>Offers valid materialization without running synchronous SQLite work on the request thread.</summary>
+    /// <param name="context">The captured offer context.</param>
+    /// <param name="materialization">The optional materialized state.</param>
+    /// <param name="cancellationToken">The caller token.</param>
+    /// <returns>The recovery result.</returns>
+    private ValueTask<RemoteSnapshotRecoveryResult> OfferMaterializationAsync(
+        SnapshotRecoveryOfferContext context,
+        ServerSnapshotMaterializationResult? materialization,
+        CancellationToken cancellationToken) =>
+        materialization is null
+            ? new(CreateNonRecoveredResult(RemoteSnapshotRecoveryStatus.ValidationRejected, SnapshotValidationRejectedReason))
+            : RunJournalAsync(
+                () => OfferMaterializedSnapshot(_snapshotRecoveryJournal, _options.SnapshotRecoveryLimits, context, materialization),
+                cancellationToken);
 
     /// <summary>Groups captured inputs needed to validate and offer a materialized snapshot.</summary>
     private sealed record SnapshotRecoveryOfferContext

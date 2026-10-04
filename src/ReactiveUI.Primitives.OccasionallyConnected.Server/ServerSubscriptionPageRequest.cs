@@ -15,4 +15,8 @@ internal sealed record ServerSubscriptionPageRequest(
     string? Cursor,
     int MaximumGroups,
     int MaximumEvents,
-    long MaximumLogicalBytes);
+    long MaximumLogicalBytes)
+{
+    /// <summary>Gets the binding generation already observed by the active enumerator.</summary>
+    internal long? ExpectedGeneration { get; init; }
+}

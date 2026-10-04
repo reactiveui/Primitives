@@ -157,6 +157,7 @@ public sealed partial class FileSystemLocalStoreAdapter : ILocalStoreAdapter
             ThrowIfDisposed();
             if (Volatile.Read(ref _initialized) != 0)
             {
+                ValidateStoreIdentity(initialization);
                 return;
             }
 
@@ -189,14 +190,23 @@ public sealed partial class FileSystemLocalStoreAdapter : ILocalStoreAdapter
                 FileOptions.SequentialScan);
             _state = FileSystemJournalHelpers.ReadJournal(_journal, JsonContext);
             ValidateStoreIdentity(initialization);
-            _state.StoreIdentity = initialization.StoreIdentity;
-            _state.ClientId = initialization.ClientId;
+            var next = new StoreState(_state) { StoreIdentity = initialization.StoreIdentity, ClientId = initialization.ClientId, };
             if (initialization.Outbox is not null)
             {
-                _state.Outbox = initialization.Outbox;
+                next.Outbox = initialization.Outbox;
             }
 
-            await PersistAsync(cancellationToken).ConfigureAwait(false);
+            cancellationToken.ThrowIfCancellationRequested();
+            if (_journal.Length == 0)
+            {
+                await AppendAsync(new(next), cancellationToken).ConfigureAwait(false);
+                _state = next;
+            }
+            else if (next.Outbox != _state.Outbox || next.ClientId != _state.ClientId)
+            {
+                await PersistStateAsync(next, cancellationToken).ConfigureAwait(false);
+            }
+
             _ = Interlocked.Exchange(ref _initialized, 1);
         }
         catch
@@ -260,9 +270,11 @@ public sealed partial class FileSystemLocalStoreAdapter : ILocalStoreAdapter
         try
         {
             await FileSystemJournalHelpers.WriteAsync(journal, header, cancellationToken).ConfigureAwait(false);
-            _journalCheckpoint?.Invoke(FileSystemJournalCheckpoint.AfterAppendHeader);
+            ReachAppendCheckpoint(journal, FileSystemJournalCheckpoint.AfterAppendHeader);
             await FileSystemJournalHelpers.WriteAsync(journal, payload, cancellationToken).ConfigureAwait(false);
+            ReachAppendCheckpoint(journal, FileSystemJournalCheckpoint.AfterAppendPayload);
             await FileSystemJournalHelpers.WriteAsync(journal, checksum, cancellationToken).ConfigureAwait(false);
+            ReachAppendCheckpoint(journal, FileSystemJournalCheckpoint.AfterAppendChecksum);
             await journal.FlushAsync(cancellationToken).ConfigureAwait(false);
             FileSystemJournalHelpers.FlushToDisk(journal);
         }
@@ -270,6 +282,7 @@ public sealed partial class FileSystemLocalStoreAdapter : ILocalStoreAdapter
         {
             try
             {
+                _journalCheckpoint?.Invoke(FileSystemJournalCheckpoint.BeforeAppendRollback);
                 journal.SetLength(recordStart);
                 _ = journal.Seek(recordStart, SeekOrigin.Begin);
                 FileSystemJournalHelpers.FlushToDisk(journal);
@@ -284,6 +297,22 @@ public sealed partial class FileSystemLocalStoreAdapter : ILocalStoreAdapter
 
             throw;
         }
+
+        _journalCheckpoint?.Invoke(FileSystemJournalCheckpoint.AfterAppendFlush);
+    }
+
+    /// <summary>Exposes written bytes to process-crash tests before invoking their checkpoint.</summary>
+    /// <param name="journal">The journal containing the newly written bytes.</param>
+    /// <param name="checkpoint">The append boundary.</param>
+    private void ReachAppendCheckpoint(FileStream journal, FileSystemJournalCheckpoint checkpoint)
+    {
+        if (_journalCheckpoint is null)
+        {
+            return;
+        }
+
+        journal.Flush();
+        _journalCheckpoint(checkpoint);
     }
 
     /// <summary>Opens the journal for serialized reads and writes.</summary>
@@ -362,19 +391,13 @@ public sealed partial class FileSystemLocalStoreAdapter : ILocalStoreAdapter
         }
     }
 
-    /// <summary>Appends the current state to the journal.</summary>
-    /// <param name="cancellationToken">The cancellation token.</param>
-    /// <returns>A task that completes when the record is durably flushed.</returns>
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private ValueTask PersistAsync(CancellationToken cancellationToken) => AppendAsync(new(_state), cancellationToken);
-
     /// <summary>Appends a new state and publishes it after the durable write completes.</summary>
     /// <param name="next">The state to persist.</param>
     /// <param name="cancellationToken">The cancellation token.</param>
     /// <returns>A task that completes when the new state is durable.</returns>
     private async ValueTask PersistStateAsync(StoreState next, CancellationToken cancellationToken)
     {
-        await AppendAsync(new(next), cancellationToken).ConfigureAwait(false);
+        await AppendAsync(new(null, FileSystemJournalDelta.Create(_state, next), IncrementalRecordVersion), cancellationToken).ConfigureAwait(false);
         _state = next;
     }
 
@@ -447,6 +470,7 @@ public sealed partial class FileSystemLocalStoreAdapter : ILocalStoreAdapter
         }
 
         /// <summary>Gets or sets the identity of the store instance.</summary>
+        [JsonRequired]
         public string? StoreIdentity { get; set; }
 
         /// <summary>Gets or sets the bound client identity.</summary>
@@ -456,15 +480,19 @@ public sealed partial class FileSystemLocalStoreAdapter : ILocalStoreAdapter
         public OutboxOptions? Outbox { get; set; }
 
         /// <summary>Gets durable state indexed by stream identifier.</summary>
+        [JsonRequired]
         public Dictionary<string, StreamState> Streams { get; init; } = [];
 
         /// <summary>Gets active outbox leases indexed by lease identifier.</summary>
+        [JsonRequired]
         public Dictionary<Guid, LeaseState> Leases { get; init; } = [];
 
         /// <summary>Gets durably applied remote event identities.</summary>
+        [JsonRequired]
         public HashSet<string> Inbox { get; init; } = [];
 
         /// <summary>Gets local operations already included in authoritative snapshots.</summary>
+        [JsonRequired]
         public HashSet<Guid> IncludedOperations { get; init; } = [];
     }
 
@@ -532,9 +560,11 @@ public sealed partial class FileSystemLocalStoreAdapter : ILocalStoreAdapter
         }
 
         /// <summary>Gets or sets the immutable operation payload and metadata.</summary>
+        [JsonRequired]
         public SyncOperation Operation { get; set; } = null!;
 
         /// <summary>Gets or sets the latest local operation status.</summary>
+        [JsonRequired]
         public SyncOperationStatus Status { get; set; } = null!;
 
         /// <summary>Gets or sets the persisted retry schedule, when one exists.</summary>
@@ -661,7 +691,9 @@ public sealed partial class FileSystemLocalStoreAdapter : ILocalStoreAdapter
         }
     }
 
-    /// <summary>Represents one complete journal state record.</summary>
-    /// <param name="State">The persisted store state.</param>
-    internal sealed record JournalRecord(StoreState State);
+    /// <summary>Represents a legacy-compatible snapshot or a versioned incremental transaction.</summary>
+    /// <param name="State">The persisted snapshot, for version one.</param>
+    /// <param name="Delta">The incremental transaction, for version two.</param>
+    /// <param name="Version">The record version. Legacy records omit this property.</param>
+    internal sealed record JournalRecord(StoreState? State, JournalDelta? Delta = null, int Version = 1);
 }

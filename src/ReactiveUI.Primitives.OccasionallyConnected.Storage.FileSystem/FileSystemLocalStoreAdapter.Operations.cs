@@ -148,8 +148,7 @@ public sealed partial class FileSystemLocalStoreAdapter
                 Status = new(operation.OperationId, operation.StreamId, SyncOperationState.SavedLocally, 0, _timeProvider.GetUtcNow(), null),
             };
             next.Streams[operation.StreamId.Value] = nextStream;
-            await AppendAsync(new(next), cancellationToken).ConfigureAwait(false);
-            _state = next;
+            await PersistStateAsync(next, cancellationToken).ConfigureAwait(false);
             return new(operation.OperationId, operation.ClientSequence, expectedRevision + 1, _timeProvider.GetUtcNow());
         }
         finally
@@ -721,13 +720,13 @@ public sealed partial class FileSystemLocalStoreAdapter
             throw new ArgumentException("The batch and snapshot must target the same stream.");
         }
 
-        var snapshotRevision = stream.Snapshot?.Revision;
+        var snapshotRevision = stream.Snapshot?.Revision ?? 0;
         var cursorMismatch = stream.Cursor != batch.PreviousCursor;
         if (snapshotRevision != snapshotMutation.ExpectedRevision || cursorMismatch)
         {
             throw new InvalidOperationException(
                 "The remote apply fence does not match durable state "
-                + $"(snapshot revision {snapshotRevision?.ToString() ?? "missing"}, "
+                + $"(snapshot revision {snapshotRevision}, "
                 + $"expected {snapshotMutation.ExpectedRevision}; cursor mismatch: {cursorMismatch}).");
         }
     }

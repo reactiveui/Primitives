@@ -27,6 +27,12 @@ internal sealed class SqliteDatabase : IDisposable
     /// <summary>The milliseconds per stopwatch second.</summary>
     private const double MillisecondsPerSecond = 1000;
 
+    /// <summary>The maximum number of idle statements retained by one connection.</summary>
+    private const int MaximumPreparedStatements = 128;
+
+    /// <summary>The maximum SQL characters retained with one prepared handle.</summary>
+    private const int MaximumPreparedSqlLength = 16 * 1024;
+
     /// <summary>Initializes the single native provider before the first database opens.</summary>
     private static readonly Lazy<bool> Provider = new(static () =>
     {
@@ -40,6 +46,12 @@ internal sealed class SqliteDatabase : IDisposable
     /// <summary>The incremental BLOB handles owned by this database.</summary>
     private readonly HashSet<SqliteBlobStream> _blobs = [];
 
+    /// <summary>The bounded cache of idle prepared statements, owned only by this connection.</summary>
+    private readonly Dictionary<string, (sqlite3_stmt Handle, string Tail, LinkedListNode<string> Node)> _prepared = [with(StringComparer.Ordinal)];
+
+    /// <summary>The idle statement order, independent of framework-specific dictionary enumeration.</summary>
+    private readonly LinkedList<string> _preparedOrder = new();
+
     /// <summary>The native database handle.</summary>
     private readonly sqlite3 _handle;
 
@@ -48,6 +60,9 @@ internal sealed class SqliteDatabase : IDisposable
 
     /// <summary>The current operation's cancellation token.</summary>
     private CancellationToken _cancellationToken;
+
+    /// <summary>Whether a native cancellation handler has been installed.</summary>
+    private bool _cancellationConfigured;
 
     /// <summary>The maximum native busy wait in milliseconds.</summary>
     private int _busyTimeoutMilliseconds = DefaultBusyTimeoutMilliseconds;
@@ -100,6 +115,9 @@ internal sealed class SqliteDatabase : IDisposable
     /// <summary>Gets or sets adapter-owned state composed with this connection.</summary>
     internal object? Context { get; set; }
 
+    /// <summary>Gets the number of native preparations performed by this connection.</summary>
+    internal long PreparationCount { get; private set; }
+
     /// <summary>Gets or sets the active transaction, or null outside a transaction.</summary>
     internal SqliteTransaction? Transaction { get; set; }
 
@@ -139,6 +157,13 @@ internal sealed class SqliteDatabase : IDisposable
             }
 
             Transaction?.Dispose();
+            foreach (var prepared in _prepared.Values)
+            {
+                prepared.Handle.Dispose();
+            }
+
+            _prepared.Clear();
+            _preparedOrder.Clear();
             Check(raw.sqlite3_close(_handle));
         }
         finally
@@ -156,6 +181,66 @@ internal sealed class SqliteDatabase : IDisposable
         _ = Handle;
         _ = _statements.Add(statement);
         return statement;
+    }
+
+    /// <summary>Acquires an idle prepared handle or prepares the next statement in a script.</summary>
+    /// <param name="sql">The remaining SQL script.</param>
+    /// <param name="handle">The prepared handle.</param>
+    /// <param name="tail">The script remaining after the statement.</param>
+    internal void Prepare(string sql, out sqlite3_stmt? handle, out string tail)
+    {
+        if (_prepared.TryGetValue(sql, out var cached))
+        {
+            _ = _prepared.Remove(sql);
+            _preparedOrder.Remove(cached.Node);
+            handle = cached.Handle;
+            tail = cached.Tail;
+            return;
+        }
+
+        sqlite3_stmt? prepared = null;
+        var remaining = string.Empty;
+        var result = Run(() => raw.sqlite3_prepare_v2(Handle, sql, out prepared, out remaining));
+        PreparationCount++;
+        try
+        {
+            Check(result);
+        }
+        catch
+        {
+            prepared?.Dispose();
+            throw;
+        }
+
+        handle = prepared;
+        tail = remaining;
+    }
+
+    /// <summary>Resets a statement and clears all native parameters before retaining its idle handle.</summary>
+    /// <param name="sql">The SQL used to prepare the statement.</param>
+    /// <param name="handle">The handle to release.</param>
+    /// <param name="tail">The remaining script.</param>
+    internal void ReleasePrepared(string sql, sqlite3_stmt handle, string tail)
+    {
+        // Reset reports the preceding step's failure; that failure was already delivered to the caller.
+        _ = raw.sqlite3_reset(handle);
+        var cleared = raw.sqlite3_clear_bindings(handle);
+        if (Volatile.Read(ref _disposeStarted) != 0 || cleared != raw.SQLITE_OK || !CanRetainPrepared(sql) || _prepared.ContainsKey(sql))
+        {
+            handle.Dispose();
+            return;
+        }
+
+        if (_prepared.Count >= MaximumPreparedStatements)
+        {
+            var oldest = _preparedOrder.First!;
+            var entry = _prepared[oldest.Value];
+            entry.Handle.Dispose();
+            _ = _prepared.Remove(oldest.Value);
+            _preparedOrder.RemoveFirst();
+        }
+
+        _prepared.Add(sql, (handle, tail, _preparedOrder.AddLast(sql)));
     }
 
     /// <summary>Starts a read snapshot or acquires the writer lock immediately.</summary>
@@ -197,8 +282,14 @@ internal sealed class SqliteDatabase : IDisposable
     internal void SetCancellation(CancellationToken cancellationToken)
     {
         _ = Handle;
+        if (_cancellationConfigured && cancellationToken == _cancellationToken)
+        {
+            return;
+        }
+
         _cancellationRegistration.Dispose();
         _cancellationToken = cancellationToken;
+        _cancellationConfigured = true;
         raw.sqlite3_progress_handler(
             _handle,
             ProgressInstructions,
@@ -315,6 +406,41 @@ internal sealed class SqliteDatabase : IDisposable
         _ = _blobs.Add(blob);
         return blob;
     }
+
+    /// <summary>Retains fixed data and transaction statements, not configuration values baked in at prepare time.</summary>
+    /// <param name="sql">The SQL script beginning at this statement.</param>
+    /// <returns>Whether the handle is safe to retain.</returns>
+    private static bool CanRetainPrepared(string sql)
+    {
+        if (sql.Length > MaximumPreparedSqlLength)
+        {
+            return false;
+        }
+
+        var text = sql.TrimStart();
+        return IsDataStatement(text) || IsTransactionOrVersionStatement(text);
+    }
+
+    /// <summary>Identifies data statements whose virtual machines can safely execute again.</summary>
+    /// <param name="text">The trimmed SQL.</param>
+    /// <returns>Whether the SQL begins with a data statement.</returns>
+    private static bool IsDataStatement(string text) =>
+        text.StartsWith("SELECT ", StringComparison.OrdinalIgnoreCase)
+            || text.StartsWith("WITH ", StringComparison.OrdinalIgnoreCase)
+            || text.StartsWith("INSERT ", StringComparison.OrdinalIgnoreCase)
+            || text.StartsWith("UPDATE ", StringComparison.OrdinalIgnoreCase)
+            || text.StartsWith("DELETE ", StringComparison.OrdinalIgnoreCase);
+
+    /// <summary>Identifies transaction commands and dynamically evaluated version pragmas.</summary>
+    /// <param name="text">The trimmed SQL.</param>
+    /// <returns>Whether the SQL is safe to retain.</returns>
+    private static bool IsTransactionOrVersionStatement(string text) =>
+        text.Equals("BEGIN;", StringComparison.OrdinalIgnoreCase)
+            || text.Equals("BEGIN IMMEDIATE;", StringComparison.OrdinalIgnoreCase)
+            || text.Equals("COMMIT;", StringComparison.OrdinalIgnoreCase)
+            || text.Equals("ROLLBACK;", StringComparison.OrdinalIgnoreCase)
+            || text.Equals("PRAGMA data_version;", StringComparison.OrdinalIgnoreCase)
+            || text.Equals("PRAGMA user_version;", StringComparison.OrdinalIgnoreCase);
 
     /// <summary>Applies a passphrase without embedding it in SQL.</summary>
     /// <param name="password">The passphrase.</param>

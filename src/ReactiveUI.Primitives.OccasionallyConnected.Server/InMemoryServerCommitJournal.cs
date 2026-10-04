@@ -697,6 +697,11 @@ internal sealed class InMemoryServerCommitJournal : IServerCommitJournal, IServe
     private ServerReceivePageResult OfferReceivePageUnderGate(ServerSubscriptionPageRequest request, DateTimeOffset observedUtc)
     {
         var record = ReadRegisteredSubscription(request.Identity);
+        if (request.ExpectedGeneration.HasValue && request.ExpectedGeneration.Value != record.Generation)
+        {
+            return new(ServerReceivePageStatus.RetentionGap, null, 0, 0);
+        }
+
         _ = _streams.TryGetValue(request.Identity.StreamKey, out var stream);
         ServerReceivePageOperations.ExpireReceiveHistory(stream, _options, observedUtc);
         if (!TryResolveInitialReadCursor(record, request.Cursor, stream, observedUtc, out var readCursor, out var pendingResult))

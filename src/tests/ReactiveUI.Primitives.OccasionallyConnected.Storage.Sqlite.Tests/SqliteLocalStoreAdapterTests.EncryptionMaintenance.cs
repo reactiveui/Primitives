@@ -136,6 +136,35 @@ public sealed partial class SqliteLocalStoreAdapterTests
         await AssertEncryptedSeedAsync(reopened, seed);
     }
 
+    /// <summary>Verifies a rolled-back rotation leaves the retained connection and cipher resources usable.</summary>
+    /// <returns>The assertion task.</returns>
+    [Test]
+    public async Task FailedRotationDoesNotPoisonRetainedConnectionOrNextProofUpdate()
+    {
+        using var database = TempDatabase.Create();
+        var seed = await SeedEncryptedDatabaseAsync(database.Path);
+        var provider = new StaticLocalStoreKeyProvider(CreateTestKey(SecondKeyId, SecondKeyFill), [CreateTestKey(FirstKeyId, FirstKeyFill)]);
+        var next = CreateOperation(seed.Second.ClientSequence + 1);
+        await using (var adapter = CreateEncryptedAdapter(
+            database.Path,
+            provider,
+            new ThrowingCommitFaultPoint(SqliteCommitCheckpoint.KeyRotationBeforeCommit)))
+        {
+            await adapter.InitializeAsync(CreateEncryptedInitialization(), CancellationToken.None);
+            await Assert.That(async () => await adapter.RotateEncryptionKeyAsync(CancellationToken.None)).ThrowsExactly<IOException>();
+            await AssertEncryptedSeedAsync(adapter, seed);
+            var committed = await adapter.CommitLocalOperationAsync(next, CreateSnapshotMutation(EncryptedSeededRevision), CancellationToken.None);
+            await Assert.That(committed.ClientSequence).IsEqualTo(next.ClientSequence);
+            var status = await adapter.GetOperationStatusAsync(next.OperationId, CancellationToken.None);
+            await Assert.That(status?.State).IsEqualTo(SyncOperationState.QueuedForUpload);
+        }
+
+        await using var reopened = CreateEncryptedAdapter(database.Path, provider);
+        await reopened.InitializeAsync(CreateEncryptedInitialization(), CancellationToken.None);
+        var recovered = await reopened.GetOperationStatusAsync(next.OperationId, CancellationToken.None);
+        await Assert.That(recovered?.State).IsEqualTo(SyncOperationState.QueuedForUpload);
+    }
+
     /// <summary>Verifies cancellation after rotation commits cannot report the committed rewrite as canceled.</summary>
     /// <returns>The assertion task.</returns>
     [Test]

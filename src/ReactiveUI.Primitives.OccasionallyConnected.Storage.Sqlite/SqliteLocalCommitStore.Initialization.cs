@@ -10,6 +10,17 @@ namespace ReactiveUI.Primitives.OccasionallyConnected.Storage.Sqlite;
 /// <content>Commits initialization and the optional encryption transition.</content>
 internal sealed partial class SqliteLocalCommitStore
 {
+    /// <summary>Records the connection-local version of the authenticated initialization snapshot.</summary>
+    /// <param name="connection">The initialized connection.</param>
+    /// <param name="transaction">The locked initialization transaction.</param>
+    private static void RecordVerifiedInitializationVersion(SqliteDatabase connection, SqliteTransaction transaction)
+    {
+        if (connection.Context is SqliteRecordConnectionState state)
+        {
+            state.VerifiedDataVersion = SqliteLocalCommitConnection.GetDataVersion(connection, transaction);
+        }
+    }
+
     /// <summary>Commits initialization with an encryption checkpoint when protection was enabled.</summary>
     /// <param name="connection">The open connection.</param>
     /// <param name="transaction">The active transaction.</param>
@@ -31,6 +42,20 @@ internal sealed partial class SqliteLocalCommitStore
         if (encrypted)
         {
             SqliteRecordProtectionMaintenance.TruncateWriteAheadLog(connection);
+        }
+    }
+
+    /// <summary>Transfers a successful initialization connection to the operational owner.</summary>
+    /// <param name="scope">The committed initialization scope.</param>
+    private void RetainInitializedConnection(SqliteInitializationConnectionScope scope)
+    {
+        lock (_connectionGate)
+        {
+            if (_operationalConnection is null)
+            {
+                ConfigureProtectedOperationalConnection(scope.Connection);
+                _operationalConnection = scope.Retain();
+            }
         }
     }
 }

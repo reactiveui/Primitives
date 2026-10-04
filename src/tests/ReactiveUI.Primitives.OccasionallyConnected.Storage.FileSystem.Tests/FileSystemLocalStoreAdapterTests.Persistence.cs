@@ -16,7 +16,7 @@ public sealed partial class FileSystemLocalStoreAdapterTests
     [Test]
     public async Task CorruptCompleteRecordFailsRecovery()
     {
-        var directory = Path.Combine(Path.GetTempPath(), $"rxui-filesystem-{Guid.NewGuid():N}");
+        var directory = CreateJournalTestDirectory();
         try
         {
             var stream = new StreamId("sensor/corrupt");
@@ -54,7 +54,7 @@ public sealed partial class FileSystemLocalStoreAdapterTests
     [Test]
     public async Task LeaseSkipsOperationThatExceedsMaximumBytes()
     {
-        var directory = Path.Combine(Path.GetTempPath(), $"rxui-filesystem-{Guid.NewGuid():N}");
+        var directory = CreateJournalTestDirectory();
         try
         {
             var stream = new StreamId("sensor/lease-size");
@@ -91,7 +91,7 @@ public sealed partial class FileSystemLocalStoreAdapterTests
     [Test]
     public async Task RenewedLeaseRemainsExclusivePastOriginalExpiry()
     {
-        var directory = Path.Combine(Path.GetTempPath(), $"rxui-filesystem-{Guid.NewGuid():N}");
+        var directory = CreateJournalTestDirectory();
         try
         {
             var stream = new StreamId("sensor/lease-renewal");
@@ -140,7 +140,7 @@ public sealed partial class FileSystemLocalStoreAdapterTests
     [Test]
     public async Task EncryptionRequirementIsRejectedRatherThanAdvertised()
     {
-        var directory = Path.Combine(Path.GetTempPath(), $"rxui-filesystem-{Guid.NewGuid():N}");
+        var directory = CreateJournalTestDirectory();
         try
         {
             await using var adapter = new FileSystemLocalStoreAdapter(directory);
@@ -162,7 +162,7 @@ public sealed partial class FileSystemLocalStoreAdapterTests
     [Test]
     public async Task SubscriptionLeaseAndResultWorkflow()
     {
-        var directory = Path.Combine(Path.GetTempPath(), $"rxui-filesystem-{Guid.NewGuid():N}");
+        var directory = CreateJournalTestDirectory();
         try
         {
             var stream = new StreamId("workflow");
@@ -209,7 +209,7 @@ public sealed partial class FileSystemLocalStoreAdapterTests
     [Test]
     public async Task AcceptedOperationResultSurvivesReopen()
     {
-        var directory = Path.Combine(Path.GetTempPath(), $"rxui-filesystem-{Guid.NewGuid():N}");
+        var directory = CreateJournalTestDirectory();
         try
         {
             var stream = new StreamId("accepted-restart");
@@ -263,7 +263,7 @@ public sealed partial class FileSystemLocalStoreAdapterTests
     [Test]
     public async Task ReleasedLeaseAllowsRetryAfterReopen()
     {
-        var directory = Path.Combine(Path.GetTempPath(), $"rxui-filesystem-{Guid.NewGuid():N}");
+        var directory = CreateJournalTestDirectory();
         try
         {
             var stream = new StreamId("released-restart");
@@ -323,7 +323,7 @@ public sealed partial class FileSystemLocalStoreAdapterTests
     [Test]
     public async Task CanceledCommitDoesNotChangeDurableState()
     {
-        var directory = Path.Combine(Path.GetTempPath(), $"rxui-filesystem-{Guid.NewGuid():N}");
+        var directory = CreateJournalTestDirectory();
         try
         {
             var stream = new StreamId("canceled-commit");
@@ -355,17 +355,21 @@ public sealed partial class FileSystemLocalStoreAdapterTests
         }
     }
 
-    /// <summary>Verifies cancellation after a journal header write rolls back the partial record.</summary>
+    /// <summary>Verifies cancellation during a journal write rolls back the partial record.</summary>
+    /// <param name="expectedCheckpoint">The append boundary that cancels the transaction.</param>
     /// <returns>The assertion task.</returns>
     [Test]
-    public async Task CanceledCommitDuringAppendDoesNotChangeDurableState()
+    [Arguments(nameof(FileSystemJournalCheckpoint.AfterAppendHeader))]
+    [Arguments(nameof(FileSystemJournalCheckpoint.AfterAppendPayload))]
+    [Arguments(nameof(FileSystemJournalCheckpoint.AfterAppendChecksum))]
+    public async Task CanceledCommitDuringAppendDoesNotChangeDurableState(string expectedCheckpoint)
     {
-        var directory = Path.Combine(Path.GetTempPath(), $"rxui-filesystem-{Guid.NewGuid():N}");
+        var directory = CreateJournalTestDirectory();
         var cancelNextAppend = false;
         using var cancellation = new CancellationTokenSource();
         Action<FileSystemJournalCheckpoint> cancelAfterHeader = checkpoint =>
         {
-            if (cancelNextAppend && checkpoint == FileSystemJournalCheckpoint.AfterAppendHeader)
+            if (cancelNextAppend && checkpoint.ToString() == expectedCheckpoint)
             {
                 cancelNextAppend = false;
                 cancellation.Cancel();
@@ -407,7 +411,7 @@ public sealed partial class FileSystemLocalStoreAdapterTests
     [Test]
     public async Task CompactionRewritesJournalAndRetainsUnincludedReplay()
     {
-        var directory = Path.Combine(Path.GetTempPath(), $"rxui-filesystem-{Guid.NewGuid():N}");
+        var directory = CreateJournalTestDirectory();
         try
         {
             var stream = new StreamId("compaction");
@@ -461,7 +465,7 @@ public sealed partial class FileSystemLocalStoreAdapterTests
     [Test]
     public async Task LeaseRetryAndInboxStateSurviveReopen()
     {
-        var directory = Path.Combine(Path.GetTempPath(), $"rxui-filesystem-{Guid.NewGuid():N}");
+        var directory = CreateJournalTestDirectory();
         try
         {
             var stream = new StreamId("restart");

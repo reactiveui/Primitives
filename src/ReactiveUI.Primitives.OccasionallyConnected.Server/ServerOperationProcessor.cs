@@ -8,7 +8,7 @@ using System.Runtime.CompilerServices;
 namespace ReactiveUI.Primitives.OccasionallyConnected.Server;
 
 /// <summary>Processes authorized client operations through an internal server commit journal.</summary>
-internal sealed class ServerOperationProcessor
+internal sealed partial class ServerOperationProcessor
 {
     /// <summary>The reason returned for canonical intent mismatches.</summary>
     private const string IntentMismatchReason = "intent-mismatch";
@@ -92,12 +92,17 @@ internal sealed class ServerOperationProcessor
         try
         {
             var operations = CaptureOperations(batch.Operations);
+            var batched = _journal is SqliteServerCommitJournal sqlite && operations.Length > 1
+                ? await ProcessSqliteBatchAsync(sqlite, client, operations, cancellationToken).ConfigureAwait(false)
+                : null;
             var results = new OperationSyncResult[operations.Length];
             var producedEvents = new List<RemoteEvent>();
             string? serverCursor = null;
             for (var index = 0; index < operations.Length; index++)
             {
-                var operationResult = await ProcessOperationAsync(client, operations[index], cancellationToken).ConfigureAwait(false);
+                var operationResult = batched is null
+                    ? await ProcessOperationAsync(client, operations[index], cancellationToken).ConfigureAwait(false)
+                    : batched[index];
                 results[index] = operationResult.Result;
                 for (var eventIndex = 0; eventIndex < operationResult.Events.Count; eventIndex++)
                 {
@@ -488,11 +493,13 @@ internal sealed class ServerOperationProcessor
     /// <param name="client">The authenticated client identity.</param>
     /// <param name="operation">The operation.</param>
     /// <param name="cancellationToken">The token used to cancel processing.</param>
+    /// <param name="startingAttempt">The attempts already consumed by grouped admission.</param>
     /// <returns>The operation receipt.</returns>
     private async ValueTask<ServerOperationReceipt> ProcessOperationAsync(
         ClientIdentity client,
         SyncOperation operation,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        int startingAttempt = 0)
     {
         cancellationToken.ThrowIfCancellationRequested();
         var scope = Authorize(client, operation);
@@ -504,9 +511,11 @@ internal sealed class ServerOperationProcessor
             operation,
             _options.MaximumCanonicalOperationBytes));
 
-        for (var attempt = 0; attempt < _options.MaximumCommitAttempts; attempt++)
+        for (var attempt = startingAttempt; attempt < _options.MaximumCommitAttempts; attempt++)
         {
-            var snapshot = _journal.Read(streamKey, [operationKey]);
+            var snapshot = _journal is SqliteServerCommitJournal sqlite
+                ? await sqlite.ExecuteAsync(() => _journal.Read(streamKey, [operationKey]), cancellationToken).ConfigureAwait(false)
+                : _journal.Read(streamKey, [operationKey]);
             var replay = TryReplay(operation.OperationId, snapshot, fingerprint);
             if (replay is not null)
             {
@@ -517,7 +526,7 @@ internal sealed class ServerOperationProcessor
             var preparation = await _handler.PrepareAsync(context, cancellationToken).ConfigureAwait(false);
             ArgumentExceptionHelper.ThrowIfNull(preparation);
             cancellationToken.ThrowIfCancellationRequested();
-            var receipt = TryCommitPrepared(context, fingerprint, preparation, cancellationToken);
+            var receipt = await TryCommitPreparedAsync(context, fingerprint, preparation, cancellationToken).ConfigureAwait(false);
             if (receipt is not null)
             {
                 return receipt;
@@ -553,7 +562,7 @@ internal sealed class ServerOperationProcessor
     /// <param name="cancellationToken">The token used to cancel before durable admission.</param>
     /// <returns>The receipt, or null when the caller must retry from a fresh snapshot.</returns>
     /// <exception cref="InvalidOperationException">The prepared result or journal status is invalid.</exception>
-    private ServerOperationReceipt? TryCommitPrepared(
+    private async ValueTask<ServerOperationReceipt?> TryCommitPreparedAsync(
         ServerOperationContext context,
         ServerCommitFingerprint fingerprint,
         ServerOperationPreparation preparation,
@@ -566,7 +575,10 @@ internal sealed class ServerOperationProcessor
             ? (ServerWriteStamp?)null
             : context.CandidateWrite;
         cancellationToken.ThrowIfCancellationRequested();
-        var commit = _journal.TryCommit(new(context.StreamKey, context.Snapshot.Revision, preparation.NewState, stamp, [entry]));
+        var plan = new ServerCommitPlan(context.StreamKey, context.Snapshot.Revision, preparation.NewState, stamp, [entry]);
+        var commit = _journal is SqliteServerCommitJournal sqlite
+            ? await sqlite.ExecuteAsync(() => _journal.TryCommit(plan), cancellationToken).ConfigureAwait(false)
+            : _journal.TryCommit(plan);
         return commit.Status switch
         {
             ServerCommitStatus.Committed => ReplayCommitted(context.Operation.OperationId, commit.Snapshot, fingerprint),

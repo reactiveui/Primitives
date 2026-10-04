@@ -10,6 +10,31 @@ namespace ReactiveUI.Primitives.OccasionallyConnected.Storage.Sqlite.Tests;
 /// <summary>Tests for <see cref="SqliteConnectionSettings"/>.</summary>
 public sealed class SqliteConnectionSettingsTests
 {
+    /// <summary>The native FULL synchronous setting.</summary>
+    private const long FullSynchronous = 2;
+
+    /// <summary>Checks repeated settings verification reuses SQL and still corrects changed connection settings.</summary>
+    /// <returns>The assertion task.</returns>
+    [Test]
+    public async Task ReusedConnectionVerifiesCurrentSettingsWithoutRepreparingWarmQueries()
+    {
+        using var connection = new SqliteDatabase(":memory:");
+        SqliteConnectionSettings.ConfigureOperationalConnection(connection);
+        var before = connection.PreparationCount;
+        SqliteConnectionSettings.ConfigureOperationalConnection(connection);
+        await Assert.That(connection.PreparationCount).IsEqualTo(before);
+        connection.Execute("PRAGMA foreign_keys = OFF; PRAGMA synchronous = OFF;");
+        SqliteConnectionSettings.ConfigureOperationalConnection(connection);
+        using var synchronous = connection.CreateStatement();
+        synchronous.SetSql("PRAGMA synchronous;");
+        await Assert.That(synchronous.Scalar()).IsEqualTo(FullSynchronous);
+        using var foreignKeys = connection.CreateStatement();
+        foreignKeys.SetSql("PRAGMA foreign_keys;");
+        await Assert.That(foreignKeys.Scalar()).IsEqualTo(1L);
+        connection.Execute("PRAGMA synchronous = OFF;");
+        await Assert.That(synchronous.Scalar()).IsEqualTo(0L);
+    }
+
     /// <summary>Verifies durability configuration fails closed when WAL cannot be enabled.</summary>
     /// <returns>A task that represents the asynchronous test.</returns>
     [Test]

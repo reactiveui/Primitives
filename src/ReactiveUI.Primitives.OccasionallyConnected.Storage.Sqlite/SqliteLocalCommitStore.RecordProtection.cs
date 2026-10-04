@@ -11,14 +11,14 @@ namespace ReactiveUI.Primitives.OccasionallyConnected.Storage.Sqlite;
 /// <content>Opens record-protecting connections and rotates record protection keys.</content>
 internal sealed partial class SqliteLocalCommitStore
 {
-    /// <summary>Protects the observer connection and its trusted version.</summary>
-    private readonly Lock _integrityGate = new();
+    /// <summary>The brief gate wait before observing cancellation.</summary>
+    private const int ConnectionGatePollMilliseconds = 10;
 
-    /// <summary>A connection that notices commits from every operational connection.</summary>
-    private SqliteDatabase? _integrityObserver;
+    /// <summary>Serializes native connection borrowers, including methods without the store gate.</summary>
+    private readonly object _connectionGate = new();
 
-    /// <summary>The observer version that was last fully authenticated or safely committed.</summary>
-    private long? _trustedObserverVersion;
+    /// <summary>The operational connection owned under the connection gate.</summary>
+    private SqliteDatabase? _operationalConnection;
 
     /// <summary>Re-encrypts every protected value that is not under the provider's current key.</summary>
     /// <param name="cancellationToken">The cancellation token.</param>
@@ -36,12 +36,15 @@ internal sealed partial class SqliteLocalCommitStore
             var protection = _protection
                 ?? throw new InvalidOperationException("The SQLite local store does not encrypt records at rest.");
             var storeIdentity = GetInitializedStoreIdentity();
-            using var connection = OpenStoreConnection(storeIdentity, cancellationToken, forWrite: true);
+            using var connectionScope = LeaseStoreConnection(storeIdentity, cancellationToken);
+            var connection = connectionScope.Connection;
             SqliteLocalCommitConnection.ConfigureLockPolling(connection);
             SqliteConnectionSettings.ConfigureOperationalConnection(connection);
             using var transaction = SqliteLocalCommitConnection.BeginWriteTransaction(connection, cancellationToken);
             var rewritten = SqliteRecordProtectionMaintenance.RotateKeys(connection, transaction, protection, cancellationToken);
+            SqliteOutboxCapacityIntegrity.RefreshProofs(connection, transaction);
             SqliteOperationStateIntegrity.Write(connection, transaction);
+            SqliteOperationStateIntegrity.Verify(connection, transaction);
             ((SqliteRecordConnectionState)connection.Context!).FullProofRewriteCompleted = true;
             cancellationToken.ThrowIfCancellationRequested();
             CommitAtCheckpoints(transaction, SqliteCommitCheckpoint.KeyRotationBeforeCommit, SqliteCommitCheckpoint.KeyRotationAfterCommit);
@@ -73,11 +76,13 @@ internal sealed partial class SqliteLocalCommitStore
             }
         }
 
+        var trustedTotalChanges = protectedConnection is not null ? ReadTotalChanges(connection, transaction) : 0;
         transaction.Commit();
         connection.SetCancellation(CancellationToken.None);
-        if (connection.Context is SqliteRecordConnectionState { ObserveAfterCommit: { } observeAfterCommit })
+        SqliteOutboxCapacityIntegrity.RecordTrustedCommit(connection);
+        if (protectedConnection is not null)
         {
-            observeAfterCommit(changed);
+            protectedConnection.VerifiedTotalChanges = trustedTotalChanges;
         }
     }
 
@@ -85,21 +90,18 @@ internal sealed partial class SqliteLocalCommitStore
     /// <param name="connection">The connection.</param>
     /// <param name="transaction">The transaction.</param>
     /// <returns>Whether the connection made a change.</returns>
-    private static bool HasChanges(SqliteDatabase connection, SqliteTransaction transaction)
+    private static bool HasChanges(SqliteDatabase connection, SqliteTransaction transaction) =>
+        ReadTotalChanges(connection, transaction) > ((SqliteRecordConnectionState)connection.Context!).OperationStartChanges;
+
+    /// <summary>Reads the connection's cumulative native change count, including its own commits.</summary>
+    /// <param name="connection">The operational connection.</param>
+    /// <param name="transaction">The active transaction, if any.</param>
+    /// <returns>The cumulative change count.</returns>
+    private static long ReadTotalChanges(SqliteDatabase connection, SqliteTransaction? transaction = null)
     {
         using var command = connection.CreateStatement();
         command.UseTransaction(transaction);
         command.SetSql("SELECT total_changes();");
-        return Convert.ToInt64(command.Scalar(), System.Globalization.CultureInfo.InvariantCulture) > 0;
-    }
-
-    /// <summary>Reads the observer's connection-local data version.</summary>
-    /// <param name="connection">The observer connection.</param>
-    /// <returns>The data version.</returns>
-    private static long ReadObserverVersion(SqliteDatabase connection)
-    {
-        using var command = connection.CreateStatement();
-        command.SetSql("PRAGMA data_version;");
         return Convert.ToInt64(command.Scalar(), System.Globalization.CultureInfo.InvariantCulture);
     }
 
@@ -111,7 +113,7 @@ internal sealed partial class SqliteLocalCommitStore
         var transaction = connection.BeginTransaction(deferred: true);
         try
         {
-            SqliteOperationStateIntegrity.Verify(connection, transaction);
+            VerifyProtectedWrite(connection, transaction);
             return transaction;
         }
         catch
@@ -121,13 +123,49 @@ internal sealed partial class SqliteLocalCommitStore
         }
     }
 
+    /// <summary>Installs connection-local mutation tracking once the schema exists.</summary>
+    /// <param name="connection">The store-owned connection.</param>
+    private static void ConfigureProtectedOperationalConnection(SqliteDatabase connection)
+    {
+        if (connection.Context is not SqliteRecordConnectionState state || state.JournalInstalled)
+        {
+            return;
+        }
+
+        SqliteOperationStateIntegrity.InstallJournal(connection);
+        state.JournalInstalled = true;
+        state.VerifyBeforeWrite = VerifyProtectedWrite;
+    }
+
+    /// <summary>Authenticates a snapshot when another connection changed the database.</summary>
+    /// <param name="connection">The operational connection.</param>
+    /// <param name="transaction">The active transaction.</param>
+    private static void VerifyProtectedWrite(SqliteDatabase connection, SqliteTransaction transaction)
+    {
+        if (connection.Context is not SqliteRecordConnectionState state)
+        {
+            return;
+        }
+
+        var version = SqliteLocalCommitConnection.GetDataVersion(connection, transaction);
+        var changes = ReadTotalChanges(connection, transaction);
+        if (state.VerifiedDataVersion == version && state.VerifiedTotalChanges == changes)
+        {
+            return;
+        }
+
+        SqliteOperationStateIntegrity.Verify(connection, transaction);
+        SqliteOutboxCapacityIntegrity.VerifyWhenChanged(connection, transaction);
+        state.VerifiedDataVersion = version;
+        state.VerifiedTotalChanges = changes;
+    }
+
     /// <summary>Opens a connection that carries the record cipher for a store identity when records are protected.</summary>
     /// <param name="storeIdentity">The store identity.</param>
     /// <param name="cancellationToken">The token used to interrupt native operations.</param>
-    /// <param name="forWrite">Whether the caller will acquire a writer transaction.</param>
     /// <returns>The open connection.</returns>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private SqliteDatabase OpenStoreConnection(string storeIdentity, CancellationToken cancellationToken, bool forWrite = false)
+    private SqliteDatabase OpenStoreConnection(string storeIdentity, CancellationToken cancellationToken)
     {
         var connection = SqliteLocalCommitConnection.OpenConnection(
             _databasePath,
@@ -135,13 +173,9 @@ internal sealed partial class SqliteLocalCommitStore
             cancellationToken);
         try
         {
-            if (_storeIdentity is not null && _protection is not null && forWrite)
+            if (_storeIdentity is not null && _protection is not null)
             {
-                var protectedConnection = (SqliteRecordConnectionState)connection.Context!;
-                SqliteOperationStateIntegrity.InstallJournal(connection);
-                protectedConnection.JournalInstalled = true;
-                protectedConnection.VerifyBeforeWrite = VerifyProtectedWrite;
-                protectedConnection.ObserveAfterCommit = ObserveProtectedCommit;
+                ConfigureProtectedOperationalConnection(connection);
             }
 
             return connection;
@@ -153,49 +187,71 @@ internal sealed partial class SqliteLocalCommitStore
         }
     }
 
-    /// <summary>Authenticates a writer snapshot when another connection changed the database.</summary>
-    /// <param name="connection">The writer connection.</param>
-    /// <param name="transaction">The locked write transaction.</param>
-    private void VerifyProtectedWrite(SqliteDatabase connection, SqliteTransaction transaction)
+    /// <summary>Borrows the gate-owned connection and installs fresh operation state.</summary>
+    /// <param name="storeIdentity">The initialized store identity.</param>
+    /// <param name="cancellationToken">The operation cancellation token.</param>
+    /// <returns>The scope that clears cancellation after rollback or commit.</returns>
+    /// <exception cref="InvalidOperationException">The connection already has an active operation.</exception>
+    private SqliteStoreConnectionScope LeaseStoreConnection(string storeIdentity, CancellationToken cancellationToken)
     {
-        lock (_integrityGate)
+        while (!Monitor.TryEnter(_connectionGate, ConnectionGatePollMilliseconds))
         {
-            _integrityObserver ??= SqliteLocalCommitConnection.OpenConnection(_databasePath);
-            var observed = ReadObserverVersion(_integrityObserver);
-            if (_trustedObserverVersion == observed)
+            cancellationToken.ThrowIfCancellationRequested();
+        }
+
+        SqliteStoreConnectionScope? scope = null;
+        try
+        {
+            ThrowIfDisposed();
+            cancellationToken.ThrowIfCancellationRequested();
+            _operationalConnection ??= OpenStoreConnection(storeIdentity, CancellationToken.None);
+            var connection = _operationalConnection;
+            if (connection.Transaction is not null)
             {
-                return;
+                throw new InvalidOperationException("The SQLite store connection already has an active operation.");
             }
 
-            SqliteOperationStateIntegrity.Verify(connection, transaction);
-            _trustedObserverVersion = observed;
+            scope = new(connection, _connectionGate, RetireOperationalConnection);
+            connection.SetCancellation(cancellationToken);
+            if (connection.Context is SqliteRecordConnectionState state)
+            {
+                if (state.VerifiedTotalChanges != ReadTotalChanges(connection))
+                {
+                    state.VerifiedDataVersion = null;
+                }
+
+                state.FullProofRewriteCompleted = false;
+                if (state.JournalInstalled)
+                {
+                    connection.Execute("DELETE FROM temp.oc_state_journal;");
+                }
+
+                state.OperationStartChanges = ReadTotalChanges(connection);
+                state.VerifiedTotalChanges = state.OperationStartChanges;
+            }
+
+            return scope;
+        }
+        catch
+        {
+            if (scope is null)
+            {
+                Monitor.Exit(_connectionGate);
+            }
+            else
+            {
+                scope.Dispose();
+            }
+
+            throw;
         }
     }
 
-    /// <summary>Advances the trusted observer only for the expected commit.</summary>
-    /// <param name="changed">Whether this connection wrote any main database rows.</param>
-    private void ObserveProtectedCommit(bool changed)
+    /// <summary>Removes a connection whose operation cleanup failed so it cannot be borrowed again.</summary>
+    /// <param name="connection">The failed native connection.</param>
+    private void RetireOperationalConnection(SqliteDatabase connection)
     {
-        lock (_integrityGate)
-        {
-            if (_integrityObserver is null || _trustedObserverVersion is not long trusted)
-            {
-                return;
-            }
-
-            var observed = ReadObserverVersion(_integrityObserver);
-            _trustedObserverVersion = observed == trusted + (changed ? 1 : 0) ? observed : null;
-        }
-    }
-
-    /// <summary>Releases the observer when this store is disposed.</summary>
-    private void DisposeIntegrityObserver()
-    {
-        lock (_integrityGate)
-        {
-            _integrityObserver?.Dispose();
-            _integrityObserver = null;
-            _trustedObserverVersion = null;
-        }
+        _operationalConnection = null;
+        connection.Dispose();
     }
 }

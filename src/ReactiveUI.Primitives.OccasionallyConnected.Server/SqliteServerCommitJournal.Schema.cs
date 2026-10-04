@@ -14,6 +14,27 @@ namespace ReactiveUI.Primitives.OccasionallyConnected.Server;
 /// <content>Provides SQLite schema and connection helpers for the server commit journal.</content>
 internal sealed partial class SqliteServerCommitJournal
 {
+    /// <summary>Initializes the schema before transferring the connection to journal ownership.</summary>
+    /// <param name="connection">The startup connection.</param>
+    private static void InitializeSchema(SqliteDatabase connection)
+    {
+        using var transaction = connection.BeginTransaction();
+        var userVersion = GetUserVersion(connection, transaction);
+        if (userVersion == 0 && !HasUserTables(connection, transaction))
+        {
+            CreateSchema(connection, transaction);
+        }
+        else
+        {
+            ValidateExistingSchema(connection, transaction, userVersion);
+        }
+
+        InitializeReadIndexes(connection, transaction);
+        InitializeMetrics(connection, transaction);
+        transaction.Commit();
+        ConfigureDurability(connection);
+    }
+
     /// <summary>Sets the current SQLite user version.</summary>
     /// <param name="connection">The connection.</param>
     /// <param name="transaction">The transaction.</param>

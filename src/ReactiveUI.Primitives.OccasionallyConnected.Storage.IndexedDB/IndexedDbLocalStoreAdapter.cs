@@ -164,6 +164,7 @@ public sealed partial class IndexedDbLocalStoreAdapter : ILocalStoreAdapter
             ThrowIfDisposed();
             if (Volatile.Read(ref _initialized) != 0)
             {
+                ValidateStoreIdentity(await LoadStateAsync(cancellationToken).ConfigureAwait(false), initialization);
                 return;
             }
 
@@ -319,6 +320,7 @@ public sealed partial class IndexedDbLocalStoreAdapter : ILocalStoreAdapter
     /// <param name="cancellationToken">The token used to cancel the JS interop call.</param>
     /// <returns>The loaded state, or a new empty state when nothing is stored.</returns>
     /// <exception cref="JSException">The JS module cannot load the persisted state.</exception>
+    /// <exception cref="InvalidDataException">The persisted document has no valid generation or store identity.</exception>
     private async ValueTask<StoreState> LoadStateAsync(string storeIdentity, CancellationToken cancellationToken)
     {
         var module = await GetModuleAsync(cancellationToken).ConfigureAwait(false);
@@ -338,10 +340,19 @@ public sealed partial class IndexedDbLocalStoreAdapter : ILocalStoreAdapter
             throw;
         }
 
-        return string.IsNullOrEmpty(json)
-            ? new()
-            : JsonSerializer.Deserialize(json, JsonContext.StoreState)
-                ?? new();
+        if (json is null)
+        {
+            return new();
+        }
+
+        var state = JsonSerializer.Deserialize(json, JsonContext.StoreState)
+            ?? throw new InvalidDataException("The IndexedDB store document is invalid.");
+        if (state.Generation <= 0 || !string.Equals(state.StoreIdentity, storeIdentity, StringComparison.Ordinal))
+        {
+            throw new InvalidDataException("The IndexedDB store document has an invalid generation or store identity.");
+        }
+
+        return state;
     }
 
     /// <summary>Loads the current state for the initialized store identity.</summary>

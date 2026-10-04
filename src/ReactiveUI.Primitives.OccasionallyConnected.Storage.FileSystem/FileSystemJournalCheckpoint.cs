@@ -15,4 +15,16 @@ internal enum FileSystemJournalCheckpoint
 
     /// <summary>The compacted journal has replaced the active journal.</summary>
     AfterCompactionJournalReplace = 2,
+
+    /// <summary>The payload was appended before its checksum is written.</summary>
+    AfterAppendPayload = 3,
+
+    /// <summary>The complete record was appended before the durable flush.</summary>
+    AfterAppendChecksum = 4,
+
+    /// <summary>The complete record was durably flushed before publishing in-memory state.</summary>
+    AfterAppendFlush = 5,
+
+    /// <summary>An append failed and its partial record is about to be rolled back.</summary>
+    BeforeAppendRollback = 6,
 }

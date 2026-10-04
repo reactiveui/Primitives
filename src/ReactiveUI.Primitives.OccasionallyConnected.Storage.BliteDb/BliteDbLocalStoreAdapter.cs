@@ -129,6 +129,7 @@ public sealed partial class BliteDbLocalStoreAdapter : ILocalStoreAdapter
             ThrowIfDisposed();
             if (Volatile.Read(ref _initialized) != 0)
             {
+                ValidateStoreIdentity(initialization);
                 return;
             }
 

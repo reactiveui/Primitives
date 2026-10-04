@@ -22,6 +22,7 @@
 
   <ItemGroup>
     <Compile Include="..\OccasionallyConnected.Sqlite.Shared\*.cs" Link="Sqlite\%(Filename)%(Extension)" />
+    <Compile Include="..\ReactiveUI.Primitives.OccasionallyConnected.Storage.Sqlite\SqliteSynchronousCommandWorker.cs" Link="Sqlite\SqliteSynchronousCommandWorker.cs" />
   </ItemGroup>
 
   <ItemGroup>

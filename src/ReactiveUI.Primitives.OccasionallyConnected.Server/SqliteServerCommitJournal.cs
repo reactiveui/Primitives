@@ -298,7 +298,7 @@ internal sealed partial class SqliteServerCommitJournal : IServerCommitJournal, 
         _databasePath = Path.GetFullPath(databasePath);
         _options = options ?? new();
         _options.Validate();
-        InitializeSchema();
+        _connection = InitializeSchema();
     }
 
     /// <summary>Gets the current retained stream count.</summary>
@@ -320,7 +320,8 @@ internal sealed partial class SqliteServerCommitJournal : IServerCommitJournal, 
     internal long LogicalBytes => ReadMetrics().LogicalBytes;
 
     /// <inheritdoc/>
-    public void Dispose() => _disposed = true;
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public void Dispose() => DisposeWorkersAsync().AsTask().GetAwaiter().GetResult();
 
     /// <summary>Reads a stream revision and requested terminal operation entries atomically.</summary>
     /// <param name="streamKey">The authenticated stream key.</param>
@@ -331,11 +332,12 @@ internal sealed partial class SqliteServerCommitJournal : IServerCommitJournal, 
         ThrowIfDisposed();
         ServerCommitJournalGuard.ValidateStreamKey(streamKey);
         var requested = ServerCommitJournalGuard.CaptureOperationKeys(operationKeys, _options.MaximumOperationCaptureCount);
-        using var connection = OpenConnection();
+        using var connectionLease = AcquireConnection();
+        var connection = _connection;
         using var transaction = connection.BeginTransaction(deferred: true);
         ValidateExistingSchema(connection, transaction);
         ValidateReadCapacity(connection, transaction);
-        var stream = ReadStreamRecord(connection, transaction, streamKey);
+        var stream = ReadStreamRecord(connection, transaction, streamKey, requested);
         var snapshot = ServerCommitJournalOperations.CreateSnapshot(streamKey, stream, requested);
         transaction.Commit();
         return snapshot;
@@ -350,17 +352,54 @@ internal sealed partial class SqliteServerCommitJournal : IServerCommitJournal, 
         ArgumentExceptionHelper.ThrowIfNull(plan);
         var commit = ServerCommitJournalGuard.ValidatePlan(plan, _options);
         var observedUtc = _options.TimeProvider.GetUtcNow();
-        using var connection = OpenConnection();
+        using var connectionLease = AcquireConnection();
+        var connection = _connection;
         using var transaction = connection.BeginTransaction();
         ValidateExistingSchema(connection, transaction);
         ValidateReadCapacity(connection, transaction);
-        var streamExists = TryReadStreamRecord(connection, transaction, commit.StreamKey, out var stream);
+        var result = TryCommitInTransaction(connection, transaction, commit, observedUtc);
+        if (result.Status == ServerCommitStatus.Committed)
+        {
+            _faultPoint.Reached(SqliteServerCommitCheckpoint.TryCommitBeforeCommit);
+        }
+
+        transaction.Commit();
+        if (result.Status == ServerCommitStatus.Committed)
+        {
+            _ = Interlocked.Increment(ref _committedTransactionCount);
+        }
+
+        if (result.Status == ServerCommitStatus.Committed)
+        {
+            _faultPoint.Reached(SqliteServerCommitCheckpoint.TryCommitAfterCommit);
+        }
+
+        return result;
+    }
+
+    /// <summary>Applies one independently fenced prepared operation inside a shared write transaction.</summary>
+    /// <param name="connection">The connection.</param>
+    /// <param name="transaction">The transaction.</param>
+    /// <param name="commit">The validated operation plan.</param>
+    /// <param name="observedUtc">The journal-owned commit clock.</param>
+    /// <returns>The operation's commit result.</returns>
+    internal ServerCommitResult TryCommitInTransaction(
+        SqliteDatabase connection,
+        SqliteTransaction transaction,
+        ServerCommitValidationResult commit,
+        DateTimeOffset observedUtc)
+    {
+        var streamExists = TryReadStreamRecord(connection, transaction, commit.StreamKey, out var stream, commit.OperationKeys);
         stream ??= new();
+        if (stream.Revision == commit.ExpectedRevision)
+        {
+            ReadCommitEventConflicts(connection, transaction, commit, stream);
+        }
+
         var status = ServerCommitJournalOperations.GetPreCommitStatus(stream, commit);
         if (status != ServerCommitStatus.Committed)
         {
             var rejectedSnapshot = ServerCommitJournalOperations.CreateSnapshot(commit.StreamKey, stream, commit.OperationKeys);
-            transaction.Commit();
             return new(status, rejectedSnapshot);
         }
 
@@ -376,7 +415,6 @@ internal sealed partial class SqliteServerCommitJournal : IServerCommitJournal, 
             if (!HasCapacity(metrics, commit, stateDelta, streamDelta, lastCursorDelta, expired))
             {
                 var snapshot = ServerCommitJournalOperations.CreateSnapshot(commit.StreamKey, stream, commit.OperationKeys);
-                transaction.Commit();
                 return new(ServerCommitStatus.CapacityExceeded, snapshot);
             }
 
@@ -393,11 +431,8 @@ internal sealed partial class SqliteServerCommitJournal : IServerCommitJournal, 
         InsertLedger(connection, transaction, commit.StreamKey, committedEntries, commit.EntryBytes);
         UpsertStream(connection, transaction, commit.StreamKey, stream, commit);
         WriteLatestUtc(connection, transaction, committedUtc);
-        var committedStream = ReadStreamRecord(connection, transaction, commit.StreamKey);
+        var committedStream = ReadStreamRecord(connection, transaction, commit.StreamKey, commit.OperationKeys);
         var committedSnapshot = ServerCommitJournalOperations.CreateSnapshot(commit.StreamKey, committedStream, commit.OperationKeys);
-        _faultPoint.Reached(SqliteServerCommitCheckpoint.TryCommitBeforeCommit);
-        transaction.Commit();
-        _faultPoint.Reached(SqliteServerCommitCheckpoint.TryCommitAfterCommit);
         return new(ServerCommitStatus.Committed, committedSnapshot);
     }
 
@@ -408,14 +443,15 @@ internal sealed partial class SqliteServerCommitJournal : IServerCommitJournal, 
     {
         ThrowIfDisposed();
         ArgumentExceptionHelper.ThrowIfNull(request);
+        ServerReceivePageOperations.ValidateRequest(request);
         var observedUtc = _options.TimeProvider.GetUtcNow();
-        using var connection = OpenConnection();
+        using var connectionLease = AcquireConnection();
+        var connection = _connection;
         using var transaction = connection.BeginTransaction(deferred: true);
         ValidateExistingSchema(connection, transaction);
         ValidateReadCapacity(connection, transaction);
-        var stream = ReadStreamRecord(connection, transaction, request.StreamKey);
-        ServerReceivePageOperations.ExpireReceiveHistory(stream, _options, observedUtc);
-        var result = ServerReceivePageOperations.Create(request, stream);
+        var stream = ReadReceiveHeader(connection, transaction, request.StreamKey, observedUtc);
+        var result = ReadSelectedReceivePage(connection, transaction, request, stream, observedUtc);
         transaction.Commit();
         return result;
     }
@@ -438,7 +474,24 @@ internal sealed partial class SqliteServerCommitJournal : IServerCommitJournal, 
         ThrowIfDisposed();
         ServerSubscriptionJournalOperations.ValidateRegistrationRequest(request);
         var observedUtc = _options.TimeProvider.GetUtcNow();
-        using var connection = OpenConnection();
+        using (var readLease = AcquireConnection())
+        {
+            var readConnection = _connection;
+            using var readTransaction = readConnection.BeginTransaction(deferred: true);
+            ValidateExistingSchema(readConnection, readTransaction);
+            ValidateReadCapacity(readConnection, readTransaction);
+            var existing = ReadSubscriptionRecord(readConnection, readTransaction, request.Identity.SubscriptionId, readOffers: false);
+            if (existing is not null)
+            {
+                ThrowIfRegistrationMismatch(request, existing);
+                var retainedState = ReadSubscriptionState(readConnection, readTransaction, existing);
+                readTransaction.Commit();
+                return retainedState;
+            }
+        }
+
+        using var connectionLease = AcquireConnection();
+        var connection = _connection;
         using var transaction = connection.BeginTransaction();
         ValidateExistingSchema(connection, transaction);
         ValidateReadCapacity(connection, transaction);
@@ -457,13 +510,25 @@ internal sealed partial class SqliteServerCommitJournal : IServerCommitJournal, 
         ThrowIfDisposed();
         ServerSubscriptionJournalOperations.ValidatePageRequest(request);
         var observedUtc = _options.TimeProvider.GetUtcNow();
-        using var connection = OpenConnection();
+        var empty = TryReadEmptyOffer(request, observedUtc);
+        if (empty is not null)
+        {
+            return empty;
+        }
+
+        using var connectionLease = AcquireConnection();
+        var connection = _connection;
         using var transaction = connection.BeginTransaction();
         ValidateExistingSchema(connection, transaction);
         ValidateReadCapacity(connection, transaction);
         var record = ReadRegisteredSubscription(connection, transaction, request.Identity);
-        var stream = ReadStreamRecord(connection, transaction, request.Identity.StreamKey);
-        ServerReceivePageOperations.ExpireReceiveHistory(stream, _options, observedUtc);
+        if (request.ExpectedGeneration.HasValue && request.ExpectedGeneration.Value != record.Generation)
+        {
+            transaction.Commit();
+            return new(ServerReceivePageStatus.RetentionGap, null, 0, 0);
+        }
+
+        var stream = ReadSubscriptionAnchorStream(connection, transaction, record, observedUtc);
         var initialRead = ResolveInitialReadCursor(connection, transaction, record, request.Cursor, stream, observedUtc);
         if (!initialRead.HasReadCursor)
         {
@@ -471,7 +536,12 @@ internal sealed partial class SqliteServerCommitJournal : IServerCommitJournal, 
             return initialRead.PendingResult;
         }
 
-        var result = ServerReceivePageOperations.Create(ServerSubscriptionJournalOperations.CreateReceiveRequest(request with { Cursor = initialRead.ReadCursor }), stream);
+        var result = ReadSelectedReceivePage(
+            connection,
+            transaction,
+            ServerSubscriptionJournalOperations.CreateReceiveRequest(request with { Cursor = initialRead.ReadCursor }),
+            stream,
+            observedUtc);
         result = ServerSubscriptionStartPositionOperations.WithClientPreviousCursor(result, request.Cursor);
         if (result.Batch is not null)
         {
@@ -493,7 +563,8 @@ internal sealed partial class SqliteServerCommitJournal : IServerCommitJournal, 
         ThrowIfDisposed();
         ServerSubscriptionJournalOperations.ValidateAcknowledgementRequest(request);
         var observedUtc = _options.TimeProvider.GetUtcNow();
-        using var connection = OpenConnection();
+        using var connectionLease = AcquireConnection();
+        var connection = _connection;
         using var transaction = connection.BeginTransaction();
         ValidateExistingSchema(connection, transaction);
         ValidateReadCapacity(connection, transaction);
@@ -512,11 +583,12 @@ internal sealed partial class SqliteServerCommitJournal : IServerCommitJournal, 
         ThrowIfDisposed();
         ServerSnapshotRecoveryJournalOperations.ValidateReadRequest(request);
         var operationKeys = ServerSnapshotRecoveryJournalOperations.CaptureOperationProofs(request, out var fingerprints);
-        using var connection = OpenConnection();
+        using var connectionLease = AcquireConnection();
+        var connection = _connection;
         using var transaction = connection.BeginTransaction(deferred: true);
         ValidateExistingSchema(connection, transaction);
         ValidateReadCapacity(connection, transaction);
-        var stream = ReadStreamRecord(connection, transaction, request.StreamKey);
+        var stream = ReadStreamRecord(connection, transaction, request.StreamKey, operationKeys);
         var snapshot = ServerCommitJournalOperations.CreateSnapshot(request.StreamKey, stream, operationKeys);
         var record = ReadSubscriptionRecord(connection, transaction, request.Subscription.SubscriptionId);
         ServerSubscriptionState? state = null;
@@ -560,7 +632,8 @@ internal sealed partial class SqliteServerCommitJournal : IServerCommitJournal, 
         }
 
         var observedUtc = _options.TimeProvider.GetUtcNow();
-        using var connection = OpenConnection();
+        using var connectionLease = AcquireConnection();
+        var connection = _connection;
         using var transaction = connection.BeginTransaction();
         ValidateExistingSchema(connection, transaction);
         ValidateReadCapacity(connection, transaction);
@@ -624,7 +697,8 @@ internal sealed partial class SqliteServerCommitJournal : IServerCommitJournal, 
     {
         ThrowIfDisposed();
         var sampledUtc = utcNow ?? _options.TimeProvider.GetUtcNow();
-        using var connection = OpenConnection();
+        using var connectionLease = AcquireConnection();
+        var connection = _connection;
         using var transaction = connection.BeginTransaction();
         ValidateExistingSchema(connection, transaction);
         var compactUtc = ServerCommitJournalOperations.Max(ReadLatestUtc(connection, transaction), sampledUtc);
@@ -695,23 +769,21 @@ internal sealed partial class SqliteServerCommitJournal : IServerCommitJournal, 
         && metrics.SubscriptionOfferCount <= _options.MaximumSubscriptionOffers;
 
     /// <summary>Initializes or validates the durable schema.</summary>
-    private void InitializeSchema()
+    /// <returns>The initialized connection whose lifetime belongs to the journal.</returns>
+    private SqliteDatabase InitializeSchema()
     {
         _ = Directory.CreateDirectory(GetDirectoryForCreate(_databasePath));
-        using var connection = OpenInitializationConnection();
-        using var transaction = connection.BeginTransaction();
-        var userVersion = GetUserVersion(connection, transaction);
-        if (userVersion == 0 && !HasUserTables(connection, transaction))
+        var connection = OpenInitializationConnection();
+        try
         {
-            CreateSchema(connection, transaction);
+            InitializeSchema(connection);
+            return connection;
         }
-        else
+        catch
         {
-            ValidateExistingSchema(connection, transaction, userVersion);
+            connection.Dispose();
+            throw;
         }
-
-        transaction.Commit();
-        ConfigureDurability(connection);
     }
 
     /// <summary>Opens a fresh startup connection while Windows releases a killed writer's WAL handle.</summary>
@@ -725,7 +797,8 @@ internal sealed partial class SqliteServerCommitJournal : IServerCommitJournal, 
     private RetainedMetrics ReadMetrics()
     {
         ThrowIfDisposed();
-        using var connection = OpenConnection();
+        using var connectionLease = AcquireConnection();
+        var connection = _connection;
         using var transaction = connection.BeginTransaction(deferred: true);
         ValidateExistingSchema(connection, transaction);
         var metrics = ReadMetrics(connection, transaction);

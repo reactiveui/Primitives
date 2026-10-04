@@ -320,6 +320,7 @@ internal static partial class SqliteOperationStateIntegrity
     /// <param name="connection">The connection.</param>
     /// <param name="transaction">The transaction.</param>
     /// <param name="change">The original row.</param>
+    /// <exception cref="LocalStoreRecordAuthenticationException">The deleted proof remains in the authenticated set.</exception>
     private static void DeleteProof(SqliteDatabase connection, SqliteTransaction transaction, JournalChange change)
     {
         using var command = connection.CreateStatement();
@@ -327,7 +328,12 @@ internal static partial class SqliteOperationStateIntegrity
         command.SetSql("DELETE FROM oc_operation_state_proofs WHERE store_identity = $storeIdentity AND operation_id = $operationId;");
         _ = command.Bind(StoreIdentityParameter, change.StoreIdentity);
         _ = command.Bind(OperationIdParameter, change.OperationId);
-        _ = command.Execute();
+        ExecuteProofMutation(command, transaction, expectedChanges: null);
+        command.SetSql("SELECT 1 FROM oc_operation_state_proofs WHERE store_identity = $storeIdentity AND operation_id = $operationId;");
+        if (command.Scalar() is not null)
+        {
+            throw new LocalStoreRecordAuthenticationException("A deleted SQLite operation state proof remains in the authenticated set.");
+        }
     }
 
     /// <summary>The authenticated row count and set digest.</summary>

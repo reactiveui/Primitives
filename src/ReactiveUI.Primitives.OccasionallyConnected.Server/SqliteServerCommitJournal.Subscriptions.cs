@@ -151,12 +151,10 @@ internal sealed partial class SqliteServerCommitJournal
         if (existing is not null)
         {
             ThrowIfRegistrationMismatch(request, existing);
-            UpdateSubscriptionUpdatedAt(connection, transaction, request.Identity.SubscriptionId, updatedUtc);
-            existing.UpdatedAtUtc = updatedUtc;
             return ServerSubscriptionJournalOperations.CreateState(existing);
         }
 
-        var stream = ReadStreamRecord(connection, transaction, request.Identity.StreamKey);
+        var stream = ReadInitialAnchorStream(connection, transaction, request.Identity.StreamKey, request.StartPosition);
         var anchor = CaptureInitialAnchor(connection, transaction, request, stream);
         var logicalBytes = ServerSubscriptionJournalOperations.GetSubscriptionBytes(request.Identity, request.StartPosition, anchor.Cursor);
         if (!HasSubscriptionCapacity(connection, transaction, 1, 0, logicalBytes, options))
@@ -187,14 +185,16 @@ internal sealed partial class SqliteServerCommitJournal
     /// <param name="connection">The connection.</param>
     /// <param name="transaction">The transaction.</param>
     /// <param name="identity">The identity.</param>
+    /// <param name="readOffers">Whether to reconstruct retained offer payloads.</param>
     /// <returns>The subscription record.</returns>
     /// <exception cref="InvalidOperationException">The subscription is missing or bound to another identity.</exception>
     private static ServerSubscriptionRecord ReadRegisteredSubscription(
         SqliteDatabase connection,
         SqliteTransaction transaction,
-        ServerSubscriptionIdentity identity)
+        ServerSubscriptionIdentity identity,
+        bool readOffers = true)
     {
-        var record = ReadSubscriptionRecord(connection, transaction, identity.SubscriptionId)
+        var record = ReadSubscriptionRecord(connection, transaction, identity.SubscriptionId, readOffers)
             ?? throw new InvalidOperationException("The subscription is not registered.");
 
         ThrowIfIdentityMismatch(identity, record);
@@ -205,11 +205,13 @@ internal sealed partial class SqliteServerCommitJournal
     /// <param name="connection">The connection.</param>
     /// <param name="transaction">The transaction.</param>
     /// <param name="subscriptionId">The subscription identifier.</param>
+    /// <param name="readOffers">Whether to reconstruct retained offer payloads.</param>
     /// <returns>The subscription record or null.</returns>
     private static ServerSubscriptionRecord? ReadSubscriptionRecord(
         SqliteDatabase connection,
         SqliteTransaction transaction,
-        SubscriptionId subscriptionId)
+        SubscriptionId subscriptionId,
+        bool readOffers = true)
     {
         using var command = connection.CreateStatement();
         command.UseTransaction(transaction);
@@ -253,7 +255,11 @@ internal sealed partial class SqliteServerCommitJournal
             Generation = ReadNonNegativeLong(reader, SubscriptionGenerationColumn, "The SQLite server subscription generation is invalid."),
             Revision = ReadNonNegativeLong(reader, SubscriptionRevisionColumn, "The SQLite server subscription revision is invalid."),
         };
-        ReadOffers(connection, transaction, record);
+        if (readOffers)
+        {
+            ReadOffers(connection, transaction, record);
+        }
+
         return record;
     }
 

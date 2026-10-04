@@ -22,7 +22,7 @@ namespace ReactiveUI.Primitives.OccasionallyConnected.Storage.Sqlite;
 /// .NET 8 or later.
 /// </para>
 /// </remarks>
-internal sealed class SqliteRecordProtection
+internal sealed class SqliteRecordProtection : IDisposable
 {
     /// <summary>The current envelope format version.</summary>
     internal const byte EnvelopeVersion = 1;
@@ -57,19 +57,53 @@ internal sealed class SqliteRecordProtection
 #if NET8_0_OR_GREATER
     /// <summary>The derived AES key length in bytes.</summary>
     private const int DerivedKeyBytes = 32;
+
+    /// <summary>The maximum number of provider keys retained during rotation.</summary>
+    private const int MaximumCachedKeys = 8;
 #endif
 
     /// <summary>The key provider.</summary>
     private readonly ILocalStoreKeyProvider _keyProvider;
+
+    /// <summary>Serializes use and disposal of cached native cipher resources.</summary>
+    private readonly Lock _cipherGate = new();
+
+#if NET8_0_OR_GREATER
+    /// <summary>The bounded cache of validated provider key material and derived ciphers.</summary>
+    private readonly Dictionary<string, SqliteRecordKey> _keys = [with(StringComparer.Ordinal)];
+#endif
+
+    /// <summary>Whether cipher resources have been released.</summary>
+    private bool _disposed;
 
     /// <summary>Initializes a new instance of the <see cref="SqliteRecordProtection"/> class.</summary>
     /// <param name="keyProvider">The key provider.</param>
     private SqliteRecordProtection(ILocalStoreKeyProvider keyProvider) => _keyProvider = keyProvider;
 
 #if NET8_0_OR_GREATER
+    /// <summary>Gets the number of key derivations performed by this protection owner.</summary>
+    internal long DerivationCount { get; private set; }
+
     /// <summary>Gets the HKDF info value that separates this key use from any other use of the provider key.</summary>
     private static ReadOnlySpan<byte> DerivationInfo => "ReactiveUI.Primitives.OccasionallyConnected.Storage.Sqlite/record-aead/aes-256-gcm/v1"u8;
 #endif
+
+    /// <inheritdoc/>
+    public void Dispose()
+    {
+        lock (_cipherGate)
+        {
+            _disposed = true;
+#if NET8_0_OR_GREATER
+            foreach (var key in _keys.Values)
+            {
+                key.Dispose();
+            }
+
+            _keys.Clear();
+#endif
+        }
+    }
 
     /// <summary>Creates record protection for the supplied key provider.</summary>
     /// <param name="keyProvider">The key provider.</param>
@@ -144,30 +178,11 @@ internal sealed class SqliteRecordProtection
     internal byte[] Protect(ReadOnlySpan<byte> plaintext, Func<byte[], byte[]> associatedData)
     {
 #if NET8_0_OR_GREATER
-        var key = GetValidatedCurrentKey();
-        var keyId = Encoding.ASCII.GetBytes(key.KeyId);
-        var headerLength = HeaderPrefixBytes + keyId.Length;
-        var envelope = new byte[headerLength + NonceBytes + TagBytes + plaintext.Length];
-        envelope[0] = EnvelopeVersion;
-        envelope[KeyIdLengthIndex] = (byte)keyId.Length;
-        keyId.CopyTo(envelope, HeaderPrefixBytes);
-        var header = envelope.AsSpan(0, headerLength).ToArray();
-        var nonce = envelope.AsSpan(headerLength, NonceBytes);
-        var tag = envelope.AsSpan(headerLength + NonceBytes, TagBytes);
-        var ciphertext = envelope.AsSpan(headerLength + NonceBytes + TagBytes);
-        RandomNumberGenerator.Fill(nonce);
-        var derivedKey = DeriveKey(key);
-        try
+        lock (_cipherGate)
         {
-            using var aes = new AesGcm(derivedKey, TagBytes);
-            aes.Encrypt(nonce, plaintext, ciphertext, tag, associatedData(header));
+            ObjectDisposedExceptionHelper.ThrowIf(_disposed, this);
+            return ProtectCore(plaintext, associatedData);
         }
-        finally
-        {
-            CryptographicOperations.ZeroMemory(derivedKey);
-        }
-
-        return envelope;
 #else
         _ = plaintext.Length;
         _ = associatedData;
@@ -185,37 +200,11 @@ internal sealed class SqliteRecordProtection
     internal byte[] Unprotect(ReadOnlySpan<byte> envelope, Func<byte[], byte[]> associatedData)
     {
 #if NET8_0_OR_GREATER
-        var keyId = TryReadKeyId(envelope)
-            ?? throw new LocalStoreRecordAuthenticationException("A persisted SQLite record envelope is malformed.");
-        var key = _keyProvider.GetKey(keyId)
-            ?? throw new LocalStoreRecordAuthenticationException($"The key '{keyId}' that protects a persisted SQLite record is not available.");
-        if (!string.Equals(key.KeyId, keyId, StringComparison.Ordinal))
+        lock (_cipherGate)
         {
-            throw new LocalStoreRecordAuthenticationException("The key provider returned a key with a different identifier.");
+            ObjectDisposedExceptionHelper.ThrowIf(_disposed, this);
+            return UnprotectCore(envelope, associatedData);
         }
-
-        var headerLength = HeaderPrefixBytes + envelope[KeyIdLengthIndex];
-        var header = envelope[..headerLength].ToArray();
-        var nonce = envelope.Slice(headerLength, NonceBytes);
-        var tag = envelope.Slice(headerLength + NonceBytes, TagBytes);
-        var ciphertext = envelope[(headerLength + NonceBytes + TagBytes)..];
-        var plaintext = new byte[ciphertext.Length];
-        var derivedKey = DeriveKey(key);
-        try
-        {
-            using var aes = new AesGcm(derivedKey, TagBytes);
-            aes.Decrypt(nonce, ciphertext, tag, plaintext, associatedData(header));
-        }
-        catch (CryptographicException exception)
-        {
-            throw new LocalStoreRecordAuthenticationException("A persisted SQLite record failed authentication.", exception);
-        }
-        finally
-        {
-            CryptographicOperations.ZeroMemory(derivedKey);
-        }
-
-        return plaintext;
 #else
         _ = envelope.Length;
         _ = associatedData;
@@ -234,11 +223,127 @@ internal sealed class SqliteRecordProtection
         HKDF.DeriveKey(HashAlgorithmName.SHA256, key.KeyMaterial, derivedKey, ReadOnlySpan<byte>.Empty, DerivationInfo);
         return derivedKey;
     }
+
+    /// <summary>Encrypts one value while the cipher resource gate is held.</summary>
+    /// <param name="plaintext">The value bytes.</param>
+    /// <param name="associatedData">The associated data factory.</param>
+    /// <returns>The envelope.</returns>
+    private byte[] ProtectCore(ReadOnlySpan<byte> plaintext, Func<byte[], byte[]> associatedData)
+    {
+        var key = GetValidatedCurrentKey();
+        var keyId = Encoding.ASCII.GetBytes(key.KeyId);
+        var headerLength = HeaderPrefixBytes + keyId.Length;
+        var envelope = new byte[headerLength + NonceBytes + TagBytes + plaintext.Length];
+        envelope[0] = EnvelopeVersion;
+        envelope[KeyIdLengthIndex] = (byte)keyId.Length;
+        keyId.CopyTo(envelope, HeaderPrefixBytes);
+        var header = envelope.AsSpan(0, headerLength).ToArray();
+        var nonce = envelope.AsSpan(headerLength, NonceBytes);
+        var tag = envelope.AsSpan(headerLength + NonceBytes, TagBytes);
+        var ciphertext = envelope.AsSpan(headerLength + NonceBytes + TagBytes);
+        RandomNumberGenerator.Fill(nonce);
+        GetKeyResource(key).Cipher.Encrypt(nonce, plaintext, ciphertext, tag, associatedData(header));
+
+        return envelope;
+    }
+
+    /// <summary>Decrypts one value while the cipher resource gate is held.</summary>
+    /// <param name="envelope">The envelope bytes.</param>
+    /// <param name="associatedData">The associated data factory.</param>
+    /// <returns>The plaintext.</returns>
+    /// <exception cref="LocalStoreRecordAuthenticationException">The envelope or its provider key fails authentication.</exception>
+    private byte[] UnprotectCore(ReadOnlySpan<byte> envelope, Func<byte[], byte[]> associatedData)
+    {
+        var keyId = TryReadKeyId(envelope)
+            ?? throw new LocalStoreRecordAuthenticationException("A persisted SQLite record envelope is malformed.");
+        var key = _keyProvider.GetKey(keyId)
+            ?? throw new LocalStoreRecordAuthenticationException($"The key '{keyId}' that protects a persisted SQLite record is not available.");
+        if (!string.Equals(key.KeyId, keyId, StringComparison.Ordinal))
+        {
+            throw new LocalStoreRecordAuthenticationException("The key provider returned a key with a different identifier.");
+        }
+
+        var headerLength = HeaderPrefixBytes + envelope[KeyIdLengthIndex];
+        var header = envelope[..headerLength].ToArray();
+        var nonce = envelope.Slice(headerLength, NonceBytes);
+        var tag = envelope.Slice(headerLength + NonceBytes, TagBytes);
+        var ciphertext = envelope[(headerLength + NonceBytes + TagBytes)..];
+        var plaintext = new byte[ciphertext.Length];
+        try
+        {
+            GetKeyResource(key).Cipher.Decrypt(nonce, ciphertext, tag, plaintext, associatedData(header));
+        }
+        catch (CryptographicException exception)
+        {
+            CryptographicOperations.ZeroMemory(plaintext);
+            throw new LocalStoreRecordAuthenticationException("A persisted SQLite record failed authentication.", exception);
+        }
+
+        return plaintext;
+    }
+
+    /// <summary>Reuses a cipher only while the provider still supplies exactly the same key material.</summary>
+    /// <param name="key">The freshly resolved provider key.</param>
+    /// <returns>The serialized cipher resource.</returns>
+    private SqliteRecordKey GetKeyResource(LocalStoreKey key)
+    {
+        if (_keys.TryGetValue(key.KeyId, out var cached))
+        {
+            if (CryptographicOperations.FixedTimeEquals(cached.Material, key.KeyMaterial))
+            {
+                return cached;
+            }
+
+            cached.Dispose();
+            _ = _keys.Remove(key.KeyId);
+        }
+
+        if (_keys.Count == MaximumCachedKeys)
+        {
+            var entry = ReadFirstCachedKey();
+            entry.Value.Dispose();
+            _ = _keys.Remove(entry.Key);
+        }
+
+        var derived = DeriveKey(key);
+        var material = key.KeyMaterial.ToArray();
+        AesGcm? cipher = null;
+        try
+        {
+            cipher = new(derived, TagBytes);
+            var resource = new SqliteRecordKey(material, cipher);
+            _keys.Add(key.KeyId, resource);
+            DerivationCount++;
+            return resource;
+        }
+        catch
+        {
+            cipher?.Dispose();
+            CryptographicOperations.ZeroMemory(material);
+            throw;
+        }
+        finally
+        {
+            CryptographicOperations.ZeroMemory(derived);
+        }
+    }
+
+    /// <summary>Reads one cache entry without keeping an enumerator alive during eviction.</summary>
+    /// <returns>The first cached key.</returns>
+    private KeyValuePair<string, SqliteRecordKey> ReadFirstCachedKey()
+    {
+        using var enumerator = _keys.GetEnumerator();
+        _ = enumerator.MoveNext();
+        return enumerator.Current;
+    }
 #endif
 
     /// <summary>Gets and validates the provider's current key.</summary>
     /// <returns>The current key.</returns>
     /// <exception cref="InvalidOperationException">The provider returned no key.</exception>
-    private LocalStoreKey GetValidatedCurrentKey() =>
-        _keyProvider.GetCurrentKey() ?? throw new InvalidOperationException("The local store key provider returned no current key.");
+    private LocalStoreKey GetValidatedCurrentKey()
+    {
+        ObjectDisposedExceptionHelper.ThrowIf(_disposed, this);
+        return _keyProvider.GetCurrentKey() ?? throw new InvalidOperationException("The local store key provider returned no current key.");
+    }
 }

@@ -36,3 +36,9 @@ write method validates its preconditions, writes the replacement state inside on
 BLite transaction, and then returns the committed result. The adapter does not
 enable BLite encryption in this package, so initialization rejects
 authenticated-encryption-at-rest requirements.
+
+The shared local store conformance suite checks the adapter's advertised capabilities.
+It covers failed commits, canceled writes, cursor fences, duplicate inbox events, leases and client binding.
+Native checks cover reopen, acknowledged commits after process termination and corrupt database headers.
+Reinitialization cannot change the bound client or store identity.
+The first remote apply uses revision zero when no snapshot exists.

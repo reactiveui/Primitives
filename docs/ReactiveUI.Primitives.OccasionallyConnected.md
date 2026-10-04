@@ -1544,6 +1544,13 @@ Conformance is capability-driven:
 
 Every advertised flag runs its positive suite. Every required-but-missing flag runs the startup validation suite. Transport conformance also proves that adapters perform no hidden unbounded retries and map failures/retry hints to the standard classification.
 
+The `.Core` package includes the source kit at `conformance/LocalStoreConformance.cs`.
+Adapters pass fresh initialized stores to its TUnit checks. The kit uses composition, not a test base class.
+The shared store suite covers every shipped provider. Backend-specific suites add transaction failure,
+corruption and ownership tests. Native durable stores also run acknowledged-commit process-kill checks.
+IndexedDB checks use a real browser for transaction completion and browser process restart.
+The C# interop fake tests contract behavior only. They do not prove browser persistence on their own.
+
 CI scans test project package references and source imports. It fails on xUnit, NUnit, MSTest, FluentAssertions, or another assertion framework, and requires TUnit plus Microsoft.Testing.Platform. Documentation samples are compiled from clean projects against freshly packed packages.
 
 ### 17.1 Test layers

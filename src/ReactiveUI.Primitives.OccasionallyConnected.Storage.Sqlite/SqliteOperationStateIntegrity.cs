@@ -68,7 +68,7 @@ internal static partial class SqliteOperationStateIntegrity
         """;
 
     /// <summary>The query used to inspect all state rows.</summary>
-    private const string SelectRows = """
+    private const string SelectStateRows = """
         SELECT state.store_identity, state.operation_id, state.operation_state, state.attempt_count,
                state.changed_at_utc, state.reason_code, state.retry_started_utc, state.retry_due_utc,
                state.retry_previous_delay_ticks, state.retry_transient_attempt_count,
@@ -78,8 +78,13 @@ internal static partial class SqliteOperationStateIntegrity
         FROM oc_outbox_operation_states AS state
         LEFT JOIN oc_operation_state_proofs AS proof
           ON proof.store_identity = state.store_identity AND proof.operation_id = state.operation_id
-        ORDER BY state.store_identity, state.operation_id;
         """;
+
+    /// <summary>The ordered query used to authenticate the full state set.</summary>
+    private const string SelectRows = $"{SelectStateRows} ORDER BY state.store_identity, state.operation_id;";
+
+    /// <summary>The indexed query used to authenticate one selected state.</summary>
+    private const string SelectRow = $"{SelectStateRows} WHERE state.store_identity = $storeIdentity AND state.operation_id = $operationId;";
 
     /// <summary>Verifies all rows before a protected store can select state.</summary>
     /// <param name="connection">The connection.</param>
@@ -100,17 +105,7 @@ internal static partial class SqliteOperationStateIntegrity
         using var reader = command.Query();
         while (reader.Read())
         {
-            if (reader.IsDBNull(ProofColumnIndex))
-            {
-                throw new LocalStoreRecordAuthenticationException("A persisted SQLite operation state proof is missing.");
-            }
-
-            var actual = cipher.UnprotectBytes(ReadProof(reader, ProofColumnIndex), SqliteRecordContext.KeyCheck(), ProofColumn);
-            var expected = Serialize(reader);
-            if (!FixedTimeEquals(actual, expected))
-            {
-                throw new LocalStoreRecordAuthenticationException("A persisted SQLite operation state failed authentication.");
-            }
+            VerifyProof(reader, cipher);
         }
 
         using var orphan = connection.CreateStatement();
@@ -127,6 +122,35 @@ internal static partial class SqliteOperationStateIntegrity
         }
 
         VerifyManifest(connection, transaction, cipher);
+    }
+
+    /// <summary>Authenticates only the state selected by an indexed point read.</summary>
+    /// <param name="connection">The protected connection.</param>
+    /// <param name="transaction">The read snapshot.</param>
+    /// <param name="storeIdentity">The store partition.</param>
+    /// <param name="operationId">The selected operation.</param>
+    internal static void VerifyOperation(
+        SqliteDatabase connection,
+        SqliteTransaction transaction,
+        string storeIdentity,
+        OperationId operationId)
+    {
+        var cipher = SqliteRecordCipher.For(connection);
+        if (cipher is null)
+        {
+            return;
+        }
+
+        using var command = connection.CreateStatement();
+        command.UseTransaction(transaction);
+        command.SetSql(SelectRow);
+        _ = command.Bind("$storeIdentity", storeIdentity);
+        _ = command.Bind("$operationId", operationId.Value.ToString("D"));
+        using var reader = command.Query();
+        if (reader.Read())
+        {
+            VerifyProof(reader, new(cipher.Protection, string.Empty));
+        }
     }
 
     /// <summary>Writes all proofs in the same transaction as the state changes.</summary>
@@ -161,6 +185,25 @@ internal static partial class SqliteOperationStateIntegrity
         if (wroteProof || removed > 0 || !ManifestUsesCurrentKey(connection, transaction, cipher))
         {
             WriteManifest(connection, transaction, cipher);
+        }
+    }
+
+    /// <summary>Authenticates the canonical bytes of one operation state.</summary>
+    /// <param name="reader">The selected row.</param>
+    /// <param name="cipher">The state proof cipher.</param>
+    /// <exception cref="LocalStoreRecordAuthenticationException">The state proof is missing or invalid.</exception>
+    private static void VerifyProof(SqliteRows reader, SqliteRecordCipher cipher)
+    {
+        if (reader.IsDBNull(ProofColumnIndex))
+        {
+            throw new LocalStoreRecordAuthenticationException("A persisted SQLite operation state proof is missing.");
+        }
+
+        var actual = cipher.UnprotectBytes(ReadProof(reader, ProofColumnIndex), SqliteRecordContext.KeyCheck(), ProofColumn);
+        var expected = Serialize(reader);
+        if (!FixedTimeEquals(actual, expected))
+        {
+            throw new LocalStoreRecordAuthenticationException("A persisted SQLite operation state failed authentication.");
         }
     }
 
@@ -254,10 +297,31 @@ internal static partial class SqliteOperationStateIntegrity
             _ = command.Bind("$storeIdentity", proof.StoreIdentity);
             _ = command.Bind("$operationId", proof.OperationId);
             _ = command.Bind("$proof", proof.Proof);
-            _ = command.Execute();
+            ExecuteProofMutation(command, transaction);
         }
 
         return proofs.Count != 0;
+    }
+
+    /// <summary>Requires a proof mutation to affect only its intended row before extending trusted state.</summary>
+    /// <param name="command">The proof or manifest mutation.</param>
+    /// <param name="transaction">The transaction.</param>
+    /// <param name="expectedChanges">The exact changed rows, or null for a bounded zero-or-one deletion.</param>
+    /// <exception cref="LocalStoreRecordAuthenticationException">A trigger rejected the mutation or changed other rows.</exception>
+    private static void ExecuteProofMutation(SqliteStatement command, SqliteTransaction transaction, int? expectedChanges = 1)
+    {
+        using var counter = command.Database.CreateStatement();
+        counter.UseTransaction(transaction);
+        counter.SetSql("SELECT total_changes();");
+        var before = Convert.ToInt64(counter.Scalar(), CultureInfo.InvariantCulture);
+        var changes = command.Execute();
+        var after = Convert.ToInt64(counter.Scalar(), CultureInfo.InvariantCulture);
+        if ((expectedChanges is int expected && changes != expected)
+            || changes is < 0 or > 1
+            || after - before != changes)
+        {
+            throw new LocalStoreRecordAuthenticationException("A SQLite operation state proof mutation was rejected or changed unexpected rows.");
+        }
     }
 
     /// <summary>Removes proofs whose state rows were deleted in the same transaction.</summary>
@@ -341,7 +405,7 @@ internal static partial class SqliteOperationStateIntegrity
             """);
         _ = command.Bind("$key", ManifestKey);
         _ = command.Bind("$value", manifest);
-        _ = command.Execute();
+        ExecuteProofMutation(command, transaction);
     }
 
     /// <summary>Hashes the complete proof set, including row identities.</summary>
