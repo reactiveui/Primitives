@@ -28,6 +28,24 @@ public sealed partial class SyncEngineTests
         /// <summary>The current monotonic timestamp.</summary>
         private long _monotonicTimestamp;
 
+        /// <summary>Counts all timer registrations, including disposed timers.</summary>
+        private int _createdTimerCount;
+
+        /// <summary>Gets or sets an optional timer creation callback.</summary>
+        public Action<TimeSpan>? OnCreatingTimer { get; set; }
+
+        /// <summary>Gets the number of timers registered with this clock.</summary>
+        public int CreatedTimerCount
+        {
+            get
+            {
+                lock (_gate)
+                {
+                    return _createdTimerCount;
+                }
+            }
+        }
+
         /// <summary>Gets active timer count.</summary>
         public int TimerCount
         {
@@ -74,10 +92,12 @@ public sealed partial class SyncEngineTests
         /// <inheritdoc/>
         public override ITimer CreateTimer(TimerCallback callback, object? state, TimeSpan dueTime, TimeSpan period)
         {
+            OnCreatingTimer?.Invoke(dueTime);
             var timer = new ManualTimer(this, callback, state, dueTime, period);
             lock (_gate)
             {
                 _timers.Add(timer);
+                _createdTimerCount++;
             }
 
             return timer;

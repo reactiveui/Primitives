@@ -8,9 +8,12 @@ namespace ReactiveUI.Primitives.OccasionallyConnected.Tests;
 public sealed partial class SyncEngineTests
 {
     /// <summary>Verifies failed retry telemetry preserves backoff and retries the same durable operation.</summary>
+    /// <param name="pauseReplacementTimer">Whether to hold replacement timer creation before registration.</param>
     /// <returns>The assertion task.</returns>
     [Test]
-    public async Task ThrowingTelemetryPreservesRetryBackoffAndOperationIdentity()
+    [Arguments(false)]
+    [Arguments(true)]
+    public async Task ThrowingTelemetryPreservesRetryBackoffAndOperationIdentity(bool pauseReplacementTimer)
     {
         using var metrics = CreateThrowingEngineMetricListener();
         var clock = new ManualTimerTimeProvider(DateTimeOffset.UnixEpoch);
@@ -31,6 +34,7 @@ public sealed partial class SyncEngineTests
         {
             Retry = RetryOptions.Default with { MinimumDelay = retryDelay, MaximumDelay = retryDelay },
         };
+        using var releaseTimer = new ManualResetEventSlim(!pauseReplacementTimer);
         await using var engine = CreateEngine(store, new() { SessionOverride = session }, options, timeProvider: clock);
         await using var stream = CreateUploadOnlyCounterStream(store, engine, new(), clock);
         var receipt = await PublishVolatileCounterAsync(stream);
@@ -40,8 +44,14 @@ public sealed partial class SyncEngineTests
         await WaitForConditionAsync(() => clock.HasTimerDueIn(retryDelay));
         var retry = await store.GetRetryStateAsync(receipt.OperationId, CancellationToken.None);
         await Assert.That(retry!.TransientAttemptCount).IsEqualTo(ExpectedSingleOperation);
-        var retrySync = engine.TriggerSyncAsync(CancellationToken.None).AsTask();
-        await Assert.That(session.SentBatches.Count).IsEqualTo(ExpectedSingleOperation);
+        var retrySync = await TriggerDiagnosticsRetryAfterTimerRearmsAsync(
+            engine,
+            clock,
+            session,
+            firstSync,
+            retryDelay,
+            releaseTimer,
+            pauseReplacementTimer);
 
         clock.Advance(retryDelay);
         await Task.WhenAll(firstSync, retrySync).WaitAsync(GuardTimeout);
