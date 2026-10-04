@@ -41,6 +41,14 @@ public sealed class BackgroundThreadTests
         await Assert.That(await BackgroundThread.FinishesPromptly(source.Task)).IsTrue();
         await Assert.That(source.Task.IsFaulted).IsEqualTo(completion == "fault");
         await Assert.That(source.Task.IsCanceled).IsEqualTo(completion == "cancel");
+        if (completion == "fault")
+        {
+            await Assert.That(async () => await source.Task).ThrowsExactly<InvalidOperationException>();
+        }
+        else if (completion == "cancel")
+        {
+            await Assert.That(async () => await source.Task).ThrowsExactly<TaskCanceledException>();
+        }
     }
 
     /// <summary>Checks a blocked worker fails the original bound even when it later completes.</summary>
