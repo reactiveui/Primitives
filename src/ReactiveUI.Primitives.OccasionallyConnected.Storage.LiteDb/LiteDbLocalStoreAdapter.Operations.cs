@@ -571,8 +571,16 @@ public sealed partial class LiteDbLocalStoreAdapter
             await _gate.WaitAsync().ConfigureAwait(false);
             try
             {
-                _database?.Dispose();
-                _database = null;
+                try
+                {
+                    _database?.Dispose();
+                }
+                finally
+                {
+                    _database = null;
+                    _owner?.Dispose();
+                    _owner = null;
+                }
             }
             finally
             {

@@ -49,6 +49,9 @@ public sealed partial class LiteDbLocalStoreAdapter : ILocalStoreAdapter
     /// <summary>The open LiteDB database.</summary>
     private LiteDatabase? _database;
 
+    /// <summary>The lifetime process ownership lock for the cached store state.</summary>
+    private FileStream? _owner;
+
     /// <summary>The latest durable state loaded from or persisted to the database.</summary>
     private StoreState _state = new();
 
@@ -164,6 +167,9 @@ public sealed partial class LiteDbLocalStoreAdapter : ILocalStoreAdapter
         _ = Directory.CreateDirectory(Path.GetDirectoryName(_databasePath) ?? ".");
         try
         {
+            // LiteDB's transaction locks do not protect this adapter's cached state
+            // for its lifetime. Keep a separate, stable file locked across rebuilds.
+            _owner = new($"{_databasePath}.owner.lock", FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.None);
             _database = OpenDatabase();
             _state = LoadState(_database);
             ValidateStoreIdentity(initialization);
@@ -179,8 +185,17 @@ public sealed partial class LiteDbLocalStoreAdapter : ILocalStoreAdapter
         }
         catch
         {
-            _database?.Dispose();
-            _database = null;
+            try
+            {
+                _database?.Dispose();
+            }
+            finally
+            {
+                _database = null;
+                _owner?.Dispose();
+                _owner = null;
+            }
+
             throw;
         }
     }
