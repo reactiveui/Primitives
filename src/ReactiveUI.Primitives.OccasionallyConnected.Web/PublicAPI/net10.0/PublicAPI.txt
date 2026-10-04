@@ -1,0 +1,22 @@
+[assembly: System.Runtime.CompilerServices.InternalsVisibleTo("ReactiveUI.Primitives.OccasionallyConnected.Web.Tests")]
+namespace ReactiveUI.Primitives.OccasionallyConnected.Web;
+
+public enum BrowserConnectivityHint
+{
+    Unknown = 0,
+    Unavailable = 1,
+    PossiblyAvailable = 2,
+}
+[System.Diagnostics.DebuggerDisplay("{ConnectivityHint}, Suspended = {IsSuspended}")]
+public sealed class BrowserLifecycleAdapter : System.IAsyncDisposable
+{
+    public BrowserLifecycleAdapter(Microsoft.JSInterop.IJSRuntime runtime, ReactiveUI.Primitives.OccasionallyConnected.IOccasionallyConnectedContext context) { }
+    public ReactiveUI.Primitives.OccasionallyConnected.Web.BrowserConnectivityHint ConnectivityHint { get; }
+    public bool IsSuspended { get; }
+    public System.Exception? LastError { get; }
+    public static ReactiveUI.Primitives.OccasionallyConnected.Storage.IndexedDB.IndexedDbLocalStoreAdapter CreateLocalStore(Microsoft.JSInterop.IJSRuntime runtime) { }
+    public System.Threading.Tasks.ValueTask DisposeAsync() { }
+    [Microsoft.JSInterop.JSInvokable]
+    public System.Threading.Tasks.Task OnBrowserStateChangedAsync(bool networkAvailable, bool suspended) { }
+    public System.Threading.Tasks.ValueTask StartAsync(System.Threading.CancellationToken cancellationToken) { }
+}

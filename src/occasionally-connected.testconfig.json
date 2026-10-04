@@ -1,0 +1,31 @@
+{
+    "platform": {
+        "execution": {
+            "parallel": false
+        }
+    },
+    "codeCoverage": {
+        "Configuration": {
+            "Format": "cobertura",
+            "CodeCoverage": {
+                "ModulePaths": {
+                    "Include": [
+                        ".*ReactiveUI\\.Primitives\\.OccasionallyConnected.*\\.dll$"
+                    ],
+                    "Exclude": [
+                        ".*Tests\\.dll$"
+                    ]
+                },
+                "Attributes": {
+                    "Exclude": []
+                },
+                "Functions": {
+                    "Exclude": []
+                },
+                "Sources": {
+                    "Exclude": []
+                }
+            }
+        }
+    }
+}

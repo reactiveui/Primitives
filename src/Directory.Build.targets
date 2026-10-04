@@ -4,13 +4,82 @@
     <EnableVSTestReferences>false</EnableVSTestReferences>
   </PropertyGroup>
 
-  <!-- net11 platform packages (Maui.Core, AspNetCore.Components, Microsoft.Extensions.*) only ship as
-       preview while .NET 11 is in preview, so a stable pack of a net11-targeting package trips NU5104.
-       NU5104 is a pack-time (outer-build) check; this lives in .targets so $(TargetFrameworks) is set.
-       Scoped to packages that actually ship a net11 leg, so non-net11 packages still reject preview deps. -->
-  <PropertyGroup Condition="$(TargetFrameworks.Contains('net11.0'))">
-    <NoWarn>$(NoWarn);NU5104</NoWarn>
-  </PropertyGroup>
+  <!-- NuGet walks this item list for lib assets. Resolve MinVer before
+       selecting package assets: Version at evaluation time is not the final package version.
+       Build and restore keep every TFM, including the net11 preview test matrix. -->
+  <Target Name="SelectStablePackageFrameworks"
+          AfterTargets="_GetTargetFrameworksOutput"
+          DependsOnTargets="MinVer"
+          Condition="'$(IsPackable)' != 'false'">
+    <ItemGroup Condition="!$(PackageVersion.Contains('-'))">
+      <_PreviewPackageFrameworks Include="@(_TargetFrameworks)" Condition="$([System.String]::Copy('%(Identity)').StartsWith('net11.0'))"/>
+      <_TargetFrameworks Remove="@(_TargetFrameworks)" Condition="$([System.String]::Copy('%(Identity)').StartsWith('net11.0'))"/>
+    </ItemGroup>
+    <Error Condition="'@(_TargetFrameworks)' == ''"
+           Text="Stable packages require a stable target framework. .NET 11 assets are preview-only; pack a prerelease version or include a stable target framework."/>
+  </Target>
+
+  <!-- Pack reads dependency and framework-reference groups from the restore file independently of
+       _TargetFrameworks. Give pack a filtered copy; never change the build/test restore file. -->
+  <UsingTask TaskName="CreateStablePackAssets" TaskFactory="RoslynCodeTaskFactory"
+             AssemblyFile="$(MSBuildToolsPath)\Microsoft.Build.Tasks.Core.dll">
+    <ParameterGroup>
+      <AssetsFile ParameterType="System.String" Required="true"/>
+      <OutputFile ParameterType="System.String" Required="true"/>
+      <ModelAssemblyFile ParameterType="System.String" Required="true"/>
+    </ParameterGroup>
+    <Task>
+      <Using Namespace="System.Linq"/>
+      <Code Type="Fragment" Language="cs"><![CDATA[
+        // NuGet's SDK assemblies target the host runtime, not RoslynCodeTaskFactory's netstandard
+        // references. Reflection uses that SDK's own restore model without pinning another NuGet version.
+        var assembly = System.Reflection.Assembly.LoadFrom(ModelAssemblyFile);
+        var formatType = assembly.GetType("NuGet.ProjectModel.LockFileFormat", true);
+        var lockFileType = assembly.GetType("NuGet.ProjectModel.LockFile", true);
+        var format = System.Activator.CreateInstance(formatType);
+        var assets = formatType.GetMethod("Read", new[] { typeof(string) }).Invoke(format, new object[] { AssetsFile });
+        var spec = lockFileType.GetProperty("PackageSpec").GetValue(assets);
+        var collections = new[]
+        {
+            (System.Collections.IList)spec.GetType().GetProperty("TargetFrameworks").GetValue(spec),
+            (System.Collections.IList)lockFileType.GetProperty("Targets").GetValue(assets),
+            (System.Collections.IList)lockFileType.GetProperty("ProjectFileDependencyGroups").GetValue(assets),
+        };
+        foreach (var collection in collections)
+        {
+            foreach (var value in collection.Cast<object>().ToArray())
+            {
+                var property = value.GetType().GetProperty("FrameworkName") ?? value.GetType().GetProperty("TargetFramework");
+                var framework = property.GetValue(value);
+                var name = framework is string
+                    ? (string)framework
+                    : (string)framework.GetType().GetMethod("GetShortFolderName", System.Type.EmptyTypes).Invoke(framework, null);
+                if (name.StartsWith("net11.0", System.StringComparison.Ordinal))
+                {
+                    collection.Remove(value);
+                }
+            }
+        }
+        formatType.GetMethod("Write", new[] { typeof(string), lockFileType }).Invoke(format, new[] { OutputFile, assets });
+      ]]></Code>
+    </Task>
+  </UsingTask>
+
+  <Target Name="PrepareStablePackAssets" BeforeTargets="GenerateNuspec"
+          Condition="'$(IsPackable)' == 'true' and '@(_PreviewPackageFrameworks)' != ''">
+    <PropertyGroup>
+      <_StablePackRestoreOutputPath>$([System.IO.Path]::Combine('$(RestoreOutputAbsolutePath)', 'stable-pack', '$(PackageVersion)'))</_StablePackRestoreOutputPath>
+      <_PackProjectModelAssembly>$([System.IO.Path]::GetDirectoryName('$(MSBuildSDKsPath)'))\NuGet.ProjectModel.dll</_PackProjectModelAssembly>
+      <_PackProjectModelAssembly Condition="'$(MSBuildRuntimeType)' != 'Core'">$(MSBuildSDKsPath)\Microsoft.NET.Sdk\tools\net472\NuGet.ProjectModel.dll</_PackProjectModelAssembly>
+    </PropertyGroup>
+    <MakeDir Directories="$(_StablePackRestoreOutputPath)"/>
+    <CreateStablePackAssets AssetsFile="$([System.IO.Path]::Combine('$(RestoreOutputAbsolutePath)', 'project.assets.json'))"
+                            OutputFile="$([System.IO.Path]::Combine('$(_StablePackRestoreOutputPath)', 'project.assets.json'))"
+                            ModelAssemblyFile="$(_PackProjectModelAssembly)"/>
+    <PropertyGroup>
+      <RestoreOutputAbsolutePath>$(_StablePackRestoreOutputPath)</RestoreOutputAbsolutePath>
+    </PropertyGroup>
+  </Target>
 
   <Target Name="ValidateNugetProperties" Condition="!$(IsTestProject) or $(IsTestProject) == ''" BeforeTargets="Compile">
     <Error Condition="$(PackageDescription) == '' or $(PackageDescription) == $(DefaultPackageDescription)" Text="The Nuget PackageDescription property needs to be set for the project. Currently : '$(PackageDescription)'"/>

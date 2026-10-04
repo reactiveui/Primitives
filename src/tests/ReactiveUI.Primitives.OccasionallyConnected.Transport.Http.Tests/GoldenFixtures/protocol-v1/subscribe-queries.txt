@@ -1,0 +1,6 @@
+# Canonical protocol-v1 subscribe queries: Latest, FromTimestamp, FromSequence, FromCursor, resume cursor.
+?streamId=sensor%2Ftemperature&subscriptionId=00000000-0000-0000-0000-000000000301&positionKind=0
+?streamId=sensor%2Ftemperature&subscriptionId=00000000-0000-0000-0000-000000000301&positionKind=1&timestamp=2026-09-13T00%3A00%3A07.0000000%2B00%3A00
+?streamId=sensor%2Ftemperature&subscriptionId=00000000-0000-0000-0000-000000000301&positionKind=2&sequence=42
+?streamId=sensor%2Ftemperature&subscriptionId=00000000-0000-0000-0000-000000000301&positionKind=3&initialCursor=anchor%2F1%20%2Bx
+?streamId=sensor%2Ftemperature&subscriptionId=00000000-0000-0000-0000-000000000301&cursor=resume%2F2%3D%3F%26&positionKind=0

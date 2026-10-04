@@ -1,0 +1,32 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFrameworks>$(TestTargetFrameworks)</TargetFrameworks>
+    <IsPackable>false</IsPackable>
+    <OutputType>Exe</OutputType>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Include="..\..\..\samples\OccasionallyConnected.PackedSample\SampleCounterLog.cs" Link="Fixtures\SampleCounterLog.cs" />
+    <ProjectReference Include="..\..\ReactiveUI.Primitives.OccasionallyConnected\ReactiveUI.Primitives.OccasionallyConnected.csproj" />
+    <ProjectReference Include="..\..\ReactiveUI.Primitives.OccasionallyConnected.Server\ReactiveUI.Primitives.OccasionallyConnected.Server.csproj" />
+    <ProjectReference Include="..\..\ReactiveUI.Primitives.OccasionallyConnected.Storage.Sqlite\ReactiveUI.Primitives.OccasionallyConnected.Storage.Sqlite.csproj" />
+    <ProjectReference Include="..\..\ReactiveUI.Primitives.OccasionallyConnected.Storage.FileSystem\ReactiveUI.Primitives.OccasionallyConnected.Storage.FileSystem.csproj" />
+    <ProjectReference Include="..\..\ReactiveUI.Primitives.OccasionallyConnected.Storage.LiteDb\ReactiveUI.Primitives.OccasionallyConnected.Storage.LiteDb.csproj" />
+    <ProjectReference Include="..\..\ReactiveUI.Primitives.OccasionallyConnected.Storage.BliteDb\ReactiveUI.Primitives.OccasionallyConnected.Storage.BliteDb.csproj" />
+    <ProjectReference Include="..\..\ReactiveUI.Primitives.OccasionallyConnected.Storage.IndexedDB\ReactiveUI.Primitives.OccasionallyConnected.Storage.IndexedDB.csproj"
+                      Condition="$([MSBuild]::IsTargetFrameworkCompatible('$(TargetFramework)', 'net10.0'))" />
+    <ProjectReference Include="..\..\ReactiveUI.Primitives.OccasionallyConnected.Transport.Http\ReactiveUI.Primitives.OccasionallyConnected.Transport.Http.csproj" />
+    <PackageReference Include="Microsoft.Extensions.TimeProvider.Testing" />
+  </ItemGroup>
+
+  <ItemGroup Condition="$([MSBuild]::IsTargetFrameworkCompatible('$(TargetFramework)', 'net10.0'))">
+    <Compile Include="..\ReactiveUI.Primitives.OccasionallyConnected.Storage.IndexedDB.Tests\FakeJsRuntime.cs" Link="Fixtures\FakeJsRuntime.cs" />
+    <Compile Include="..\ReactiveUI.Primitives.OccasionallyConnected.Storage.IndexedDB.Tests\FakeJsModule.cs" Link="Fixtures\FakeJsModule.cs" />
+    <None Update="indexedDbBrowserConformance.mjs" CopyToOutputDirectory="PreserveNewest" />
+    <None Update="indexedDbBrowserStartup.mjs" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="..\..\ReactiveUI.Primitives.OccasionallyConnected.Storage.IndexedDB\wwwroot\indexedDbInterop.js"
+          Link="indexedDbInterop.js" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+</Project>

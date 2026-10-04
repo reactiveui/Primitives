@@ -1,0 +1,101 @@
+name: OccasionallyConnected soak and performance
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'src/ReactiveUI.Primitives.OccasionallyConnected.Core/**'
+      - 'src/ReactiveUI.Primitives.OccasionallyConnected.Storage.Sqlite/**'
+      - 'src/tests/ReactiveUI.Primitives.OccasionallyConnected.Storage.Sqlite.Tests/**'
+      - 'src/Directory.*'
+      - '.github/workflows/occasionally-connected-soak.yml'
+  schedule:
+    - cron: '23 3 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: occasionally-connected-soak-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  soak:
+    if: github.event_name != 'pull_request'
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+        with:
+          persist-credentials: false
+      - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6
+        with:
+          dotnet-version: |
+            8.0.x
+            9.0.x
+            10.0.x
+            11.0.x
+      - name: Soak durable queue
+        working-directory: src
+        run: >-
+          dotnet test
+          tests/ReactiveUI.Primitives.OccasionallyConnected.Storage.Sqlite.Tests/ReactiveUI.Primitives.OccasionallyConnected.Storage.Sqlite.Tests.csproj
+          --configuration Release
+          --framework net10.0
+          -p:AndroidPrimitivesTargetFrameworks=
+          -p:ApplePrimitivesTargetFrameworks=
+          -p:MobilePlatformTargetFrameworks=
+          --
+          --treenode-filter "/*/*/*/OfflineOutboxSoakRecoversDrainsAndCompacts"
+      - name: Soak slow observers and reconnect
+        working-directory: src
+        run: >-
+          dotnet test
+          tests/ReactiveUI.Primitives.OccasionallyConnected.Tests/ReactiveUI.Primitives.OccasionallyConnected.Tests.csproj
+          --configuration Release
+          --framework net10.0
+          -p:AndroidPrimitivesTargetFrameworks=
+          -p:ApplePrimitivesTargetFrameworks=
+          -p:MobilePlatformTargetFrameworks=
+          --
+          --treenode-filter "/*/*/*/SlowObserverStormDisconnectsAndResubscribeRecovers"
+
+  performance:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+        with:
+          persist-credentials: false
+      - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6
+        with:
+          dotnet-version: |
+            8.0.x
+            9.0.x
+            10.0.x
+            11.0.x
+      - name: Check durable queue performance budgets
+        working-directory: src
+        env:
+          TMP: ${{ runner.temp }}
+          TEMP: ${{ runner.temp }}
+          TMPDIR: ${{ runner.temp }}
+        run: >-
+          dotnet test
+          tests/ReactiveUI.Primitives.OccasionallyConnected.Storage.Sqlite.Tests/ReactiveUI.Primitives.OccasionallyConnected.Storage.Sqlite.Tests.csproj
+          --configuration Release
+          --framework net10.0
+          -p:AndroidPrimitivesTargetFrameworks=
+          -p:ApplePrimitivesTargetFrameworks=
+          -p:MobilePlatformTargetFrameworks=
+          --
+          --treenode-filter "/*/*/*/DurableOutboxPerformanceStaysWithinReleaseBudgets"

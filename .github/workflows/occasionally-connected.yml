@@ -1,0 +1,45 @@
+name: OccasionallyConnected coverage
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: occasionally-connected-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  coverage:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        framework: [net8.0, net9.0, net10.0, net11.0]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6
+        with:
+          dotnet-version: |
+            8.0.x
+            9.0.x
+            10.0.x
+            11.0.x
+      - name: Build and verify complete feature coverage
+        shell: bash
+        run: dotnet run --project tools/OccasionallyConnected.Ci/OccasionallyConnected.Ci.csproj -- coverage --framework "${{ matrix.framework }}" --run-id "$GITHUB_RUN_ID" --run-attempt "$GITHUB_RUN_ATTEMPT" --runner-os "$RUNNER_OS"
+      - name: Retain coverage evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: occasionally-connected-${{ matrix.os }}-${{ matrix.framework }}
+          path: artifacts/occasionally-connected

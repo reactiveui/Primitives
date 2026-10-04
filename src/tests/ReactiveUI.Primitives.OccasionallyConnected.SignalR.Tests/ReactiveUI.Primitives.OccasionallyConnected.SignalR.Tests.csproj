@@ -1,0 +1,12 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFrameworks>$(TestTargetFrameworks)</TargetFrameworks>
+    <IsPackable>false</IsPackable>
+    <OutputType>Exe</OutputType>
+  </PropertyGroup>
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+    <ProjectReference Include="..\..\ReactiveUI.Primitives.OccasionallyConnected.SignalR\ReactiveUI.Primitives.OccasionallyConnected.SignalR.csproj" />
+    <ProjectReference Include="..\..\ReactiveUI.Primitives.OccasionallyConnected.Server\ReactiveUI.Primitives.OccasionallyConnected.Server.csproj" />
+  </ItemGroup>
+</Project>

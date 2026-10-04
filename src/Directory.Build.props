@@ -38,6 +38,13 @@
     <AllowedOutputExtensionsInPackageBuildOutputFolder>$(AllowedOutputExtensionsInPackageBuildOutputFolder);.pdb</AllowedOutputExtensionsInPackageBuildOutputFolder>
   </PropertyGroup>
 
+  <PropertyGroup Condition="'$(OccasionallyConnectedPackageBuildId)' != ''">
+    <BaseIntermediateOutputPath>obj\package-validation\$(OccasionallyConnectedPackageBuildId)\</BaseIntermediateOutputPath>
+    <BaseOutputPath>bin\package-validation\$(OccasionallyConnectedPackageBuildId)\</BaseOutputPath>
+    <CompilerGeneratedFilesOutputPath>$(MSBuildProjectDirectory)\$(BaseIntermediateOutputPath)Generated</CompilerGeneratedFilesOutputPath>
+    <DefaultItemExcludes>$(DefaultItemExcludes);bin\**;obj\**</DefaultItemExcludes>
+  </PropertyGroup>
+
   <!-- Target Framework Monikers. EnableWindowsTargeting lets the netfx/Windows legs build anywhere. -->
   <PropertyGroup>
     <NetTargetFrameworks>net8.0;net9.0;net10.0;net11.0</NetTargetFrameworks>
@@ -68,10 +75,12 @@
     <TestingPlatformDotnetTestSupport>true</TestingPlatformDotnetTestSupport>
     <TUnitImplicitUsings>true</TUnitImplicitUsings>
     <TUnitAssertionsImplicitUsings>true</TUnitAssertionsImplicitUsings>
+    <TestConfigurationFile>$(MSBuildThisFileDirectory)testconfig.json</TestConfigurationFile>
+    <TestConfigurationFile Condition="$(MSBuildProjectName.StartsWith('ReactiveUI.Primitives.OccasionallyConnected.'))">$(MSBuildThisFileDirectory)occasionally-connected.testconfig.json</TestConfigurationFile>
   </PropertyGroup>
 
   <ItemGroup Condition="'$(IsTestProject)' == 'true'">
-    <None Include="$(MSBuildThisFileDirectory)testconfig.json">
+    <None Include="$(TestConfigurationFile)">
       <Link>$(AssemblyName).testconfig.json</Link>
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
@@ -83,6 +92,17 @@
   <ItemGroup Condition="'$(IsTestProject)' != 'true'">
     <PackageReference Include="Microsoft.SourceLink.GitHub" PrivateAssets="All"/>
   </ItemGroup>
+
+  <!-- OccasionallyConnected packages ship Source Link-enabled portable PDBs in a .snupkg symbol package
+       (spec section 18.1) instead of embedding them, and use CI build metadata on build servers so
+       source paths are deterministic. -->
+  <PropertyGroup Condition="'$(IsTestProject)' != 'true' and $(MSBuildProjectName.StartsWith('ReactiveUI.Primitives.OccasionallyConnected'))">
+    <DebugType>portable</DebugType>
+    <IncludeSymbols>true</IncludeSymbols>
+    <SymbolPackageFormat>snupkg</SymbolPackageFormat>
+    <AllowedOutputExtensionsInPackageBuildOutputFolder>$(AllowedOutputExtensionsInPackageBuildOutputFolder.Replace('.pdb', ''))</AllowedOutputExtensionsInPackageBuildOutputFolder>
+    <ContinuousIntegrationBuild Condition="'$(ContinuousIntegrationBuild)' == '' and ('$(GITHUB_ACTIONS)' == 'true' or '$(TF_BUILD)' == 'true')">true</ContinuousIntegrationBuild>
+  </PropertyGroup>
 
   <!-- The designer is emitted as a public type in this assembly's root namespace, so it would ship as library API. -->
   <PropertyGroup Condition="$(TargetFramework.Contains('-android'))">
@@ -134,7 +154,23 @@
 
   <ItemGroup>
     <None Include="$(MSBuildThisFileDirectory)..\LICENSE" Pack="true" PackagePath="LICENSE"/>
-    <None Include="$(MSBuildThisFileDirectory)..\README.md" Pack="true" PackagePath="README.md"/>
+    <None Include="$(MSBuildThisFileDirectory)..\README.md" Pack="true" PackagePath="README.md"
+          Condition="'$(MSBuildProjectName)' != 'ReactiveUI.Primitives.OccasionallyConnected'
+                     And '$(MSBuildProjectName)' != 'ReactiveUI.Primitives.OccasionallyConnected.Core'
+                     And '$(MSBuildProjectName)' != 'ReactiveUI.Primitives.OccasionallyConnected.DependencyInjection'
+                     And '$(MSBuildProjectName)' != 'ReactiveUI.Primitives.OccasionallyConnected.Hosting'
+                     And '$(MSBuildProjectName)' != 'ReactiveUI.Primitives.OccasionallyConnected.Mobile'
+                     And '$(MSBuildProjectName)' != 'ReactiveUI.Primitives.OccasionallyConnected.Reactive'
+                     And '$(MSBuildProjectName)' != 'ReactiveUI.Primitives.OccasionallyConnected.Server'
+                     And '$(MSBuildProjectName)' != 'ReactiveUI.Primitives.OccasionallyConnected.SignalR'
+                     And '$(MSBuildProjectName)' != 'ReactiveUI.Primitives.OccasionallyConnected.Storage.BliteDb'
+                     And '$(MSBuildProjectName)' != 'ReactiveUI.Primitives.OccasionallyConnected.Storage.FileSystem'
+                     And '$(MSBuildProjectName)' != 'ReactiveUI.Primitives.OccasionallyConnected.Storage.IndexedDB'
+                     And '$(MSBuildProjectName)' != 'ReactiveUI.Primitives.OccasionallyConnected.Storage.LiteDb'
+                     And '$(MSBuildProjectName)' != 'ReactiveUI.Primitives.OccasionallyConnected.Storage.Sqlite'
+                     And '$(MSBuildProjectName)' != 'ReactiveUI.Primitives.OccasionallyConnected.Transport.Http'
+                     And '$(MSBuildProjectName)' != 'ReactiveUI.Primitives.OccasionallyConnected.Transport.WebSockets'
+                     And '$(MSBuildProjectName)' != 'ReactiveUI.Primitives.OccasionallyConnected.Web'"/>
     <None Include="$(MSBuildThisFileDirectory)..\images\logo.png" Pack="true" PackagePath="\"/>
   </ItemGroup>
 
@@ -213,7 +249,8 @@
                         or '%(Filename)' == 'Microsoft.Interop.VtableIndexStubGenerator'
                         or '%(Filename)' == 'Microsoft.Interop.JavaScript.JSImportGenerator'
                         or '%(Filename)' == 'Microsoft.Interop.LibraryImportGenerator'
-                        or '%(Filename)' == 'System.Text.Json.SourceGeneration'"/>
+                        or ('%(Filename)' == 'System.Text.Json.SourceGeneration'
+                            and '$(EnableSystemTextJsonSourceGenerator)' != 'true')"/>
     </ItemGroup>
   </Target>
 </Project>

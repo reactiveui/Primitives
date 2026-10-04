@@ -1,0 +1,10 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFrameworks>$(MauiTestTargetFrameworks)</TargetFrameworks>
+    <IsPackable>false</IsPackable>
+    <OutputType>Exe</OutputType>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\ReactiveUI.Primitives.OccasionallyConnected.Mobile\ReactiveUI.Primitives.OccasionallyConnected.Mobile.csproj" />
+  </ItemGroup>
+</Project>

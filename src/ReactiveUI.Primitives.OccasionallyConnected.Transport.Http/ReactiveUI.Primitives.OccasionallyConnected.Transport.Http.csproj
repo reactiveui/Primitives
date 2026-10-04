@@ -1,0 +1,29 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFrameworks>$(LibraryTargetFrameworks)</TargetFrameworks>
+    <RootNamespace>ReactiveUI.Primitives.OccasionallyConnected.Transport.Http</RootNamespace>
+    <PackageDescription>HTTP transport primitives for occasionally connected synchronization.</PackageDescription>
+    <EnableSystemTextJsonSourceGenerator>true</EnableSystemTextJsonSourceGenerator>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="$(AssemblyName).Tests" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\ReactiveUI.Primitives.OccasionallyConnected.Core\ReactiveUI.Primitives.OccasionallyConnected.Core.csproj" />
+    <PackageReference Include="Microsoft.Bcl.TimeProvider" />
+    <PackageReference Include="System.Text.Json" />
+  </ItemGroup>
+
+  <ItemGroup Condition="$(TargetFramework.StartsWith('net4'))">
+    <Reference Include="System.Net.Http" />
+    <PackageReference Include="System.Diagnostics.DiagnosticSource" />
+    <PackageReference Include="System.ValueTuple" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="README.md" Pack="true" PackagePath="README.md" />
+  </ItemGroup>
+</Project>

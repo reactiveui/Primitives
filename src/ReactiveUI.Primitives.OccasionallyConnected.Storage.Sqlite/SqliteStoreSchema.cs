@@ -1,0 +1,713 @@
+// Copyright (c) 2019-2026 ReactiveUI Association Incorporated. All rights reserved.
+// ReactiveUI Association Incorporated licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for full license information.
+
+using System.Globalization;
+using System.Text;
+using ReactiveUI.Primitives.OccasionallyConnected.Sqlite;
+
+namespace ReactiveUI.Primitives.OccasionallyConnected.Storage.Sqlite;
+
+/// <summary>Owns exact SQLite schema definitions shared by local store components.</summary>
+internal static partial class SqliteStoreSchema
+{
+    /// <summary>The initial full local commit schema version.</summary>
+    internal const int LocalCommitSchemaVersion = 1;
+
+    /// <summary>The metadata key for the schema version.</summary>
+    internal const string SchemaVersionKey = "schema_version";
+
+    /// <summary>The metadata table name.</summary>
+    internal const string MetadataTableName = "oc_metadata";
+
+    /// <summary>The subscription identity table name.</summary>
+    internal const string SubscriptionIdentitiesTableName = "oc_subscription_identities";
+
+    /// <summary>The stream table name.</summary>
+    internal const string StreamsTableName = "oc_streams";
+
+    /// <summary>The snapshot table name.</summary>
+    internal const string SnapshotsTableName = "oc_snapshots";
+
+    /// <summary>The outbox table name.</summary>
+    internal const string OutboxTableName = "oc_outbox";
+
+    /// <summary>The outbox metadata table name.</summary>
+    internal const string OutboxMetadataTableName = "oc_outbox_metadata";
+
+    /// <summary>The remote inbox table name.</summary>
+    internal const string InboxTableName = "oc_inbox";
+
+    /// <summary>The outbox leases table name.</summary>
+    internal const string OutboxLeasesTableName = "oc_outbox_leases";
+
+    /// <summary>The outbox operation states table name.</summary>
+    internal const string OutboxOperationStatesTableName = "oc_outbox_operation_states";
+
+    /// <summary>The operation state integrity proof table name.</summary>
+    internal const string OperationStateProofsTableName = "oc_operation_state_proofs";
+
+    /// <summary>The current authoritative snapshot payload table name.</summary>
+    internal const string SnapshotAuthoritativeStatesTableName = "oc_snapshot_authoritative_states";
+
+    /// <summary>The original authoritative outbox mutation table name.</summary>
+    internal const string OutboxAuthoritativeMutationsTableName = "oc_outbox_authoritative_mutations";
+
+    /// <summary>The outbox receive inclusion table name.</summary>
+    internal const string OutboxReceiveInclusionsTableName = "oc_outbox_receive_inclusions";
+
+    /// <summary>The payload quarantine table name.</summary>
+    internal const string PayloadQuarantineTableName = "oc_payload_quarantine";
+
+    /// <summary>The invalid schema exception message.</summary>
+    private const string InvalidSchemaMessage = "The SQLite local commit schema is invalid.";
+
+    /// <summary>The unsupported metadata schema version exception message.</summary>
+    private const string UnsupportedMetadataSchemaVersionMessage = "The SQLite local commit metadata schema version is not supported.";
+
+    /// <summary>The SQL definition for the metadata table.</summary>
+    private const string MetadataTableSql = "CREATE TABLE oc_metadata (key TEXT NOT NULL PRIMARY KEY, value TEXT NOT NULL);";
+
+    /// <summary>The SQL definition for the subscription identity table.</summary>
+    private const string SubscriptionIdentitiesTableSql = """
+        CREATE TABLE oc_subscription_identities (
+            store_identity TEXT NOT NULL,
+            stream_id TEXT NOT NULL,
+            subscription_id TEXT NOT NULL,
+            PRIMARY KEY (store_identity, stream_id));
+        """;
+
+    /// <summary>The SQL definition for the stream table.</summary>
+    private const string StreamsTableSql = """
+        CREATE TABLE oc_streams (
+            store_identity TEXT NOT NULL,
+            stream_id TEXT NOT NULL,
+            subscription_id TEXT NOT NULL,
+            next_client_sequence INTEGER NOT NULL,
+            server_cursor TEXT NULL,
+            PRIMARY KEY (store_identity, stream_id),
+            FOREIGN KEY (store_identity, stream_id)
+                REFERENCES oc_subscription_identities (store_identity, stream_id)
+                ON DELETE CASCADE);
+        """;
+
+    /// <summary>The SQL definition for the snapshot table.</summary>
+    private const string SnapshotsTableSql = """
+        CREATE TABLE oc_snapshots (
+            store_identity TEXT NOT NULL,
+            stream_id TEXT NOT NULL,
+            format_version INTEGER NOT NULL,
+            server_cursor TEXT NULL,
+            payload_contract_id TEXT NOT NULL,
+            payload_schema_version INTEGER NOT NULL,
+            payload_content_type TEXT NOT NULL,
+            payload BLOB NOT NULL,
+            payload_hash TEXT NOT NULL,
+            revision INTEGER NOT NULL,
+            saved_at_utc TEXT NOT NULL,
+            PRIMARY KEY (store_identity, stream_id),
+            FOREIGN KEY (store_identity, stream_id)
+                REFERENCES oc_streams (store_identity, stream_id)
+                ON DELETE CASCADE);
+        """;
+
+    /// <summary>The SQL definition for the outbox table.</summary>
+    private const string OutboxTableSql = """
+        CREATE TABLE oc_outbox (
+            store_identity TEXT NOT NULL,
+            operation_id TEXT NOT NULL,
+            stream_id TEXT NOT NULL,
+            client_sequence INTEGER NOT NULL,
+            timestamp_utc TEXT NOT NULL,
+            base_version TEXT NULL,
+            operation_type INTEGER NOT NULL,
+            payload_contract_id TEXT NOT NULL,
+            payload_schema_version INTEGER NOT NULL,
+            payload_content_type TEXT NOT NULL,
+            payload BLOB NOT NULL,
+            payload_hash TEXT NOT NULL,
+            policy_delivery_guarantee INTEGER NOT NULL,
+            policy_durability INTEGER NOT NULL,
+            policy_priority INTEGER NOT NULL,
+            policy_conflict INTEGER NOT NULL,
+            snapshot_revision INTEGER NOT NULL,
+            committed_at_utc TEXT NOT NULL,
+            commit_fingerprint BLOB NOT NULL,
+            PRIMARY KEY (store_identity, operation_id),
+            UNIQUE (store_identity, stream_id, client_sequence),
+            FOREIGN KEY (store_identity, stream_id)
+                REFERENCES oc_streams (store_identity, stream_id)
+                ON DELETE CASCADE);
+        """;
+
+    /// <summary>The SQL definition for the outbox metadata table.</summary>
+    private const string OutboxMetadataTableSql = """
+        CREATE TABLE oc_outbox_metadata (
+            store_identity TEXT NOT NULL,
+            operation_id TEXT NOT NULL,
+            key TEXT NOT NULL,
+            value TEXT NOT NULL,
+            PRIMARY KEY (store_identity, operation_id, key),
+            FOREIGN KEY (store_identity, operation_id)
+                REFERENCES oc_outbox (store_identity, operation_id)
+                ON DELETE CASCADE);
+        """;
+
+    /// <summary>The SQL definition for the current authoritative snapshot payload table.</summary>
+    private const string SnapshotAuthoritativeStatesTableSql = """
+        CREATE TABLE oc_snapshot_authoritative_states (
+            store_identity TEXT NOT NULL,
+            stream_id TEXT NOT NULL,
+            payload_contract_id TEXT NOT NULL,
+            payload_schema_version INTEGER NOT NULL,
+            payload_content_type TEXT NOT NULL,
+            payload BLOB NOT NULL,
+            payload_hash TEXT NOT NULL,
+            PRIMARY KEY (store_identity, stream_id),
+            FOREIGN KEY (store_identity, stream_id)
+                REFERENCES oc_snapshots (store_identity, stream_id)
+                ON DELETE CASCADE);
+        """;
+
+    /// <summary>The SQL definition for original authoritative outbox mutations.</summary>
+    private const string OutboxAuthoritativeMutationsTableSql = """
+        CREATE TABLE oc_outbox_authoritative_mutations (
+            store_identity TEXT NOT NULL,
+            operation_id TEXT NOT NULL,
+            payload_contract_id TEXT NOT NULL,
+            payload_schema_version INTEGER NOT NULL,
+            payload_content_type TEXT NOT NULL,
+            payload BLOB NOT NULL,
+            payload_hash TEXT NOT NULL,
+            PRIMARY KEY (store_identity, operation_id),
+            FOREIGN KEY (store_identity, operation_id)
+                REFERENCES oc_outbox (store_identity, operation_id)
+                ON DELETE CASCADE);
+        """;
+
+    /// <summary>The SQL definition for receive inclusion markers.</summary>
+    private const string OutboxReceiveInclusionsTableSql = """
+        CREATE TABLE oc_outbox_receive_inclusions (
+            store_identity TEXT NOT NULL,
+            operation_id TEXT NOT NULL,
+            PRIMARY KEY (store_identity, operation_id),
+            FOREIGN KEY (store_identity, operation_id)
+                REFERENCES oc_outbox (store_identity, operation_id)
+                ON DELETE CASCADE);
+        """;
+
+    /// <summary>The SQL definition for the remote inbox table.</summary>
+    private const string InboxTableSql = """
+        CREATE TABLE oc_inbox (
+            store_identity TEXT NOT NULL,
+            stream_id TEXT NOT NULL,
+            event_id TEXT NOT NULL,
+            server_cursor TEXT NOT NULL,
+            committed_at_utc TEXT NOT NULL,
+            PRIMARY KEY (store_identity, stream_id, event_id),
+            FOREIGN KEY (store_identity, stream_id)
+                REFERENCES oc_streams (store_identity, stream_id)
+                ON DELETE CASCADE);
+        """;
+
+    /// <summary>The SQL definition for the outbox leases table.</summary>
+    private const string OutboxLeasesTableSql = """
+        CREATE TABLE oc_outbox_leases (
+            store_identity TEXT NOT NULL,
+            lease_id TEXT NOT NULL,
+            operation_id TEXT NOT NULL,
+            stream_id TEXT NOT NULL,
+            client_sequence INTEGER NOT NULL,
+            lease_expires_at_utc TEXT NOT NULL,
+            lease_member_count INTEGER NOT NULL,
+            PRIMARY KEY (store_identity, lease_id, operation_id),
+            UNIQUE (store_identity, operation_id),
+            FOREIGN KEY (store_identity, operation_id)
+                REFERENCES oc_outbox (store_identity, operation_id)
+                ON DELETE CASCADE,
+            FOREIGN KEY (store_identity, stream_id)
+                REFERENCES oc_streams (store_identity, stream_id)
+                ON DELETE CASCADE);
+        """;
+
+    /// <summary>The SQL definition for the outbox operation states table.</summary>
+    private const string OutboxOperationStatesTableSql = """
+        CREATE TABLE oc_outbox_operation_states (
+            store_identity TEXT NOT NULL,
+            operation_id TEXT NOT NULL,
+            operation_state INTEGER NOT NULL,
+            attempt_count INTEGER NOT NULL,
+            changed_at_utc TEXT NOT NULL,
+            reason_code TEXT NULL,
+            retry_started_utc TEXT NULL,
+            retry_due_utc TEXT NULL,
+            retry_previous_delay_ticks INTEGER NULL,
+            retry_transient_attempt_count INTEGER NULL,
+            retry_authentication_state INTEGER NULL,
+            retry_credentials_version TEXT NULL,
+            PRIMARY KEY (store_identity, operation_id),
+            FOREIGN KEY (store_identity, operation_id)
+                REFERENCES oc_outbox (store_identity, operation_id)
+                ON UPDATE CASCADE
+                ON DELETE CASCADE);
+        """;
+
+    /// <summary>The SQL definition for operation state integrity proofs.</summary>
+    private const string OperationStateProofsTableSql = """
+        CREATE TABLE oc_operation_state_proofs (
+            store_identity TEXT NOT NULL,
+            operation_id TEXT NOT NULL,
+            proof BLOB NOT NULL,
+            PRIMARY KEY (store_identity, operation_id),
+            FOREIGN KEY (store_identity, operation_id)
+                REFERENCES oc_outbox_operation_states (store_identity, operation_id)
+                ON DELETE CASCADE);
+        """;
+
+    /// <summary>The SQL definition for stream payload quarantine markers.</summary>
+    private const string PayloadQuarantineTableSql = """
+        CREATE TABLE oc_payload_quarantine (
+            store_identity TEXT NOT NULL,
+            stream_id TEXT NOT NULL,
+            quarantine_id TEXT NOT NULL,
+            subscription_id TEXT NULL,
+            operation_id TEXT NULL,
+            event_id TEXT NULL,
+            source INTEGER NOT NULL,
+            reason INTEGER NOT NULL,
+            reason_code TEXT NULL,
+            cursor TEXT NULL,
+            evidence_contract_id TEXT NULL,
+            evidence_schema_version INTEGER NULL,
+            evidence_content_type TEXT NULL,
+            evidence_payload_length INTEGER NOT NULL,
+            evidence_payload_hash TEXT NULL,
+            evidence_payload_prefix BLOB NOT NULL,
+            observed_at_utc TEXT NOT NULL,
+            PRIMARY KEY (store_identity, stream_id),
+            FOREIGN KEY (store_identity, stream_id)
+                REFERENCES oc_streams (store_identity, stream_id)
+                ON DELETE CASCADE);
+        """;
+
+    /// <summary>Creates the complete schema version one.</summary>
+    /// <param name="connection">The open connection.</param>
+    /// <param name="transaction">The current transaction.</param>
+    /// <exception cref="InvalidOperationException">The SQLite schema state is invalid.</exception>
+    internal static void CreateLocalCommitSchema(SqliteDatabase connection, SqliteTransaction transaction)
+    {
+        SetLocalCommitUserVersion(connection, transaction);
+        CreateMetadataTable(connection, transaction);
+        CreateSubscriptionIdentitiesTable(connection, transaction);
+        CreateLocalCommitTables(connection, transaction);
+        CreateInboxTable(connection, transaction);
+        CreateOutboxLeasesTable(connection, transaction);
+        CreateOutboxOperationStatesTable(connection, transaction);
+        CreateOperationStateProofsTable(connection, transaction);
+        CreateAuthoritativeStateTables(connection, transaction);
+        CreateOutboxReceiveInclusionsTable(connection, transaction);
+        CreatePayloadQuarantineTable(connection, transaction);
+        CreateOutboxCapacitySchema(connection, transaction);
+        InsertMetadata(connection, transaction, SchemaVersionKey, LocalCommitSchemaVersion.ToString(CultureInfo.InvariantCulture));
+    }
+
+    /// <summary>Validates the complete version one schema and its recorded checksum.</summary>
+    /// <param name="connection">The open connection.</param>
+    /// <param name="transaction">The active transaction.</param>
+    /// <param name="userVersion">The SQLite user version.</param>
+    /// <exception cref="InvalidOperationException">The existing schema is unsupported or invalid.</exception>
+    internal static void ValidateExistingSchemaForLocalCommit(
+        SqliteDatabase connection,
+        SqliteTransaction transaction,
+        long userVersion)
+    {
+        if (userVersion != LocalCommitSchemaVersion)
+        {
+            throw new InvalidOperationException("The SQLite local commit schema version is not supported.");
+        }
+
+        ValidateLocalCommitSchema(connection, transaction);
+        SqliteSchemaChecksum.Verify(connection, transaction);
+    }
+
+    /// <summary>Validates the exact complete version one table layout.</summary>
+    /// <param name="connection">The open connection.</param>
+    /// <param name="transaction">The active transaction.</param>
+    /// <exception cref="InvalidOperationException">The table layout or schema metadata is invalid.</exception>
+    internal static void ValidateLocalCommitSchema(SqliteDatabase connection, SqliteTransaction transaction)
+    {
+        ValidateUserTableNames(
+            connection,
+            transaction,
+            [
+                InboxTableName,
+                MetadataTableName,
+                OperationStateProofsTableName,
+                OutboxTableName,
+                OutboxAuthoritativeMutationsTableName,
+                .. GetOutboxCapacityTableNames(connection, transaction),
+                OutboxLeasesTableName,
+                OutboxMetadataTableName,
+                OutboxOperationStatesTableName,
+                OutboxReceiveInclusionsTableName,
+                PayloadQuarantineTableName,
+                SnapshotAuthoritativeStatesTableName,
+                SnapshotsTableName,
+                StreamsTableName,
+                SubscriptionIdentitiesTableName,
+            ]);
+        ValidateTableDefinition(connection, transaction, MetadataTableName, MetadataTableSql);
+        var schemaVersion = SelectMetadata(connection, transaction, SchemaVersionKey);
+        if (schemaVersion != LocalCommitSchemaVersion.ToString(CultureInfo.InvariantCulture))
+        {
+            throw new InvalidOperationException(UnsupportedMetadataSchemaVersionMessage);
+        }
+
+        ValidateTableDefinition(connection, transaction, SubscriptionIdentitiesTableName, SubscriptionIdentitiesTableSql);
+        ValidateTableDefinition(connection, transaction, StreamsTableName, StreamsTableSql);
+        ValidateTableDefinition(connection, transaction, SnapshotsTableName, SnapshotsTableSql);
+        ValidateTableDefinition(connection, transaction, OutboxTableName, OutboxTableSql);
+        ValidateTableDefinition(connection, transaction, OutboxLeasesTableName, OutboxLeasesTableSql);
+        ValidateTableDefinition(connection, transaction, OutboxMetadataTableName, OutboxMetadataTableSql);
+        ValidateTableDefinition(connection, transaction, OutboxOperationStatesTableName, OutboxOperationStatesTableSql);
+        ValidateTableDefinition(connection, transaction, OperationStateProofsTableName, OperationStateProofsTableSql);
+        ValidateTableDefinition(connection, transaction, OutboxAuthoritativeMutationsTableName, OutboxAuthoritativeMutationsTableSql);
+        ValidateTableDefinition(connection, transaction, OutboxReceiveInclusionsTableName, OutboxReceiveInclusionsTableSql);
+        ValidateTableDefinition(connection, transaction, PayloadQuarantineTableName, PayloadQuarantineTableSql);
+        ValidateTableDefinition(connection, transaction, SnapshotAuthoritativeStatesTableName, SnapshotAuthoritativeStatesTableSql);
+        ValidateTableDefinition(connection, transaction, InboxTableName, InboxTableSql);
+        ValidateOutboxCapacitySchema(connection, transaction);
+    }
+
+    /// <summary>Selects a metadata value.</summary>
+    /// <param name="connection">The open connection.</param>
+    /// <param name="transaction">The transaction.</param>
+    /// <param name="key">The metadata key.</param>
+    /// <returns>The metadata value.</returns>
+    internal static string SelectMetadata(SqliteDatabase connection, SqliteTransaction transaction, string key)
+    {
+        using var command = connection.CreateStatement();
+        command.UseTransaction(transaction);
+        command.SetSql("SELECT value FROM oc_metadata WHERE key = $key;");
+        _ = command.Bind("$key", key);
+        return SqliteIdentityStoreData.ReadMetadataValue(command.Scalar());
+    }
+
+    /// <summary>Creates the core local commit tables.</summary>
+    /// <param name="connection">The open connection.</param>
+    /// <param name="transaction">The current transaction.</param>
+    private static void CreateLocalCommitTables(SqliteDatabase connection, SqliteTransaction transaction)
+    {
+        CreateStreamsTable(connection, transaction);
+        CreateSnapshotsTable(connection, transaction);
+        CreateOutboxTable(connection, transaction);
+        CreateOutboxMetadataTable(connection, transaction);
+    }
+
+    /// <summary>Creates authoritative payload sidecar tables.</summary>
+    /// <param name="connection">The open connection.</param>
+    /// <param name="transaction">The current transaction.</param>
+    private static void CreateAuthoritativeStateTables(SqliteDatabase connection, SqliteTransaction transaction)
+    {
+        CreateOutboxAuthoritativeMutationsTable(connection, transaction);
+        CreateSnapshotAuthoritativeStatesTable(connection, transaction);
+    }
+
+    /// <summary>Validates the exact owned user table set.</summary>
+    /// <param name="connection">The open connection.</param>
+    /// <param name="transaction">The current transaction.</param>
+    /// <param name="expectedNames">The expected table names.</param>
+    /// <exception cref="InvalidOperationException">The SQLite schema state is invalid.</exception>
+    private static void ValidateUserTableNames(SqliteDatabase connection, SqliteTransaction transaction, string[] expectedNames)
+    {
+        using var command = connection.CreateStatement();
+        command.UseTransaction(transaction);
+        command.SetSql("SELECT name FROM sqlite_master WHERE type = 'table' AND name NOT LIKE 'sqlite_%' ORDER BY name;");
+        using var reader = command.Query();
+        var found = 0;
+        while (reader.Read())
+        {
+            if (found >= expectedNames.Length || reader.GetString(0) != expectedNames[found])
+            {
+                throw new InvalidOperationException(InvalidSchemaMessage);
+            }
+
+            found++;
+        }
+
+        if (found == expectedNames.Length)
+        {
+            return;
+        }
+
+        throw new InvalidOperationException(InvalidSchemaMessage);
+    }
+
+    /// <summary>Validates that a table uses the expected SQL definition.</summary>
+    /// <param name="connection">The open connection.</param>
+    /// <param name="transaction">The current transaction.</param>
+    /// <param name="tableName">The table name.</param>
+    /// <param name="expectedSql">The expected SQL definition.</param>
+    /// <exception cref="InvalidOperationException">The SQLite schema state is invalid.</exception>
+    private static void ValidateTableDefinition(
+        SqliteDatabase connection,
+        SqliteTransaction transaction,
+        string tableName,
+        string expectedSql)
+    {
+        var actualSql = ReadTableDefinition(connection, transaction, tableName);
+        if (TextEqualsOrdinalIgnoreCase(actualSql, NormalizeCreateTableSql(expectedSql)))
+        {
+            return;
+        }
+
+        throw new InvalidOperationException(InvalidSchemaMessage);
+    }
+
+    /// <summary>Compares schema text without a content-dependent early return.</summary>
+    /// <param name="left">The first normalized definition.</param>
+    /// <param name="right">The second normalized definition.</param>
+    /// <returns>Whether the definitions match, ignoring ordinal case.</returns>
+    private static bool TextEqualsOrdinalIgnoreCase(string left, string right)
+    {
+        if (left.Length != right.Length)
+        {
+            return false;
+        }
+
+        var result = 0;
+        for (var index = 0; index < left.Length; index++)
+        {
+            result |= char.ToUpperInvariant(left[index]) ^ char.ToUpperInvariant(right[index]);
+        }
+
+        return result == 0;
+    }
+
+    /// <summary>Reads a table definition from SQLite metadata.</summary>
+    /// <param name="connection">The open connection.</param>
+    /// <param name="transaction">The current transaction.</param>
+    /// <param name="tableName">The table name.</param>
+    /// <returns>The normalized table definition.</returns>
+    /// <exception cref="InvalidOperationException">The SQLite schema state is invalid.</exception>
+    private static string ReadTableDefinition(SqliteDatabase connection, SqliteTransaction transaction, string tableName)
+    {
+        using var command = connection.CreateStatement();
+        command.UseTransaction(transaction);
+        command.SetSql("SELECT sql FROM sqlite_master WHERE type = 'table' AND name = $name;");
+        _ = command.Bind("$name", tableName);
+        if (command.Scalar() is string tableSql)
+        {
+            return NormalizeCreateTableSql(tableSql);
+        }
+
+        throw new InvalidOperationException(InvalidSchemaMessage);
+    }
+
+    /// <summary>Normalizes create-table SQL for schema comparison.</summary>
+    /// <param name="sql">The SQL text.</param>
+    /// <returns>The normalized SQL text.</returns>
+    private static string NormalizeCreateTableSql(string sql)
+    {
+        var builder = new StringBuilder(sql.Length);
+        var pendingSpace = false;
+        foreach (var character in sql)
+        {
+            if (char.IsWhiteSpace(character))
+            {
+                pendingSpace = builder.Length > 0;
+                continue;
+            }
+
+            if (pendingSpace)
+            {
+                _ = builder.Append(' ');
+                pendingSpace = false;
+            }
+
+            _ = builder.Append(character);
+        }
+
+        return builder.ToString().TrimEnd(';');
+    }
+
+    /// <summary>Inserts a metadata entry.</summary>
+    /// <param name="connection">The open connection.</param>
+    /// <param name="transaction">The transaction.</param>
+    /// <param name="key">The metadata key.</param>
+    /// <param name="value">The metadata value.</param>
+    private static void InsertMetadata(SqliteDatabase connection, SqliteTransaction transaction, string key, string value)
+    {
+        using var command = connection.CreateStatement();
+        command.UseTransaction(transaction);
+        command.SetSql("INSERT INTO oc_metadata (key, value) VALUES ($key, $value);");
+        _ = command.Bind("$key", key);
+        _ = command.Bind("$value", value);
+        _ = command.Execute();
+    }
+
+    /// <summary>Sets the current local commit schema version.</summary>
+    /// <param name="connection">The open connection.</param>
+    /// <param name="transaction">The transaction.</param>
+    private static void SetLocalCommitUserVersion(SqliteDatabase connection, SqliteTransaction transaction)
+    {
+        using var command = connection.CreateStatement();
+        command.UseTransaction(transaction);
+        command.SetSql("PRAGMA user_version = 1;");
+        _ = command.Execute();
+    }
+
+    /// <summary>Creates the metadata table.</summary>
+    /// <param name="connection">The open connection.</param>
+    /// <param name="transaction">The transaction.</param>
+    private static void CreateMetadataTable(SqliteDatabase connection, SqliteTransaction transaction)
+    {
+        using var command = connection.CreateStatement();
+        command.UseTransaction(transaction);
+        command.SetSql(MetadataTableSql);
+        _ = command.Execute();
+    }
+
+    /// <summary>Creates the subscription identity table.</summary>
+    /// <param name="connection">The open connection.</param>
+    /// <param name="transaction">The transaction.</param>
+    private static void CreateSubscriptionIdentitiesTable(SqliteDatabase connection, SqliteTransaction transaction)
+    {
+        using var command = connection.CreateStatement();
+        command.UseTransaction(transaction);
+        command.SetSql(SubscriptionIdentitiesTableSql);
+        _ = command.Execute();
+    }
+
+    /// <summary>Creates the streams table.</summary>
+    /// <param name="connection">The open connection.</param>
+    /// <param name="transaction">The transaction.</param>
+    private static void CreateStreamsTable(SqliteDatabase connection, SqliteTransaction transaction)
+    {
+        using var command = connection.CreateStatement();
+        command.UseTransaction(transaction);
+        command.SetSql(StreamsTableSql);
+        _ = command.Execute();
+    }
+
+    /// <summary>Creates the snapshots table.</summary>
+    /// <param name="connection">The open connection.</param>
+    /// <param name="transaction">The transaction.</param>
+    private static void CreateSnapshotsTable(SqliteDatabase connection, SqliteTransaction transaction)
+    {
+        using var command = connection.CreateStatement();
+        command.UseTransaction(transaction);
+        command.SetSql(SnapshotsTableSql);
+        _ = command.Execute();
+    }
+
+    /// <summary>Creates the outbox table.</summary>
+    /// <param name="connection">The open connection.</param>
+    /// <param name="transaction">The transaction.</param>
+    private static void CreateOutboxTable(SqliteDatabase connection, SqliteTransaction transaction)
+    {
+        using var command = connection.CreateStatement();
+        command.UseTransaction(transaction);
+        command.SetSql(OutboxTableSql);
+        _ = command.Execute();
+    }
+
+    /// <summary>Creates the outbox metadata table.</summary>
+    /// <param name="connection">The open connection.</param>
+    /// <param name="transaction">The transaction.</param>
+    private static void CreateOutboxMetadataTable(SqliteDatabase connection, SqliteTransaction transaction)
+    {
+        using var command = connection.CreateStatement();
+        command.UseTransaction(transaction);
+        command.SetSql(OutboxMetadataTableSql);
+        _ = command.Execute();
+    }
+
+    /// <summary>Creates the original authoritative mutation table.</summary>
+    /// <param name="connection">The open connection.</param>
+    /// <param name="transaction">The transaction.</param>
+    private static void CreateOutboxAuthoritativeMutationsTable(SqliteDatabase connection, SqliteTransaction transaction)
+    {
+        using var command = connection.CreateStatement();
+        command.UseTransaction(transaction);
+        command.SetSql(OutboxAuthoritativeMutationsTableSql);
+        _ = command.Execute();
+    }
+
+    /// <summary>Creates the current authoritative snapshot table.</summary>
+    /// <param name="connection">The open connection.</param>
+    /// <param name="transaction">The transaction.</param>
+    private static void CreateSnapshotAuthoritativeStatesTable(SqliteDatabase connection, SqliteTransaction transaction)
+    {
+        using var command = connection.CreateStatement();
+        command.UseTransaction(transaction);
+        command.SetSql(SnapshotAuthoritativeStatesTableSql);
+        _ = command.Execute();
+    }
+
+    /// <summary>Creates the receive inclusion table.</summary>
+    /// <param name="connection">The open connection.</param>
+    /// <param name="transaction">The transaction.</param>
+    private static void CreateOutboxReceiveInclusionsTable(SqliteDatabase connection, SqliteTransaction transaction)
+    {
+        using var command = connection.CreateStatement();
+        command.UseTransaction(transaction);
+        command.SetSql(OutboxReceiveInclusionsTableSql);
+        _ = command.Execute();
+    }
+
+    /// <summary>Creates the payload quarantine table.</summary>
+    /// <param name="connection">The open connection.</param>
+    /// <param name="transaction">The transaction.</param>
+    private static void CreatePayloadQuarantineTable(SqliteDatabase connection, SqliteTransaction transaction)
+    {
+        using var command = connection.CreateStatement();
+        command.UseTransaction(transaction);
+        command.SetSql(PayloadQuarantineTableSql);
+        _ = command.Execute();
+    }
+
+    /// <summary>Creates the inbox table.</summary>
+    /// <param name="connection">The open connection.</param>
+    /// <param name="transaction">The transaction.</param>
+    private static void CreateInboxTable(SqliteDatabase connection, SqliteTransaction transaction)
+    {
+        using var command = connection.CreateStatement();
+        command.UseTransaction(transaction);
+        command.SetSql(InboxTableSql);
+        _ = command.Execute();
+    }
+
+    /// <summary>Creates the outbox leases table.</summary>
+    /// <param name="connection">The open connection.</param>
+    /// <param name="transaction">The transaction.</param>
+    private static void CreateOutboxLeasesTable(SqliteDatabase connection, SqliteTransaction transaction)
+    {
+        using var command = connection.CreateStatement();
+        command.UseTransaction(transaction);
+        command.SetSql(OutboxLeasesTableSql);
+        _ = command.Execute();
+    }
+
+    /// <summary>Creates the outbox operation states table.</summary>
+    /// <param name="connection">The open connection.</param>
+    /// <param name="transaction">The transaction.</param>
+    private static void CreateOutboxOperationStatesTable(SqliteDatabase connection, SqliteTransaction transaction)
+    {
+        using var command = connection.CreateStatement();
+        command.UseTransaction(transaction);
+        command.SetSql(OutboxOperationStatesTableSql);
+        _ = command.Execute();
+    }
+
+    /// <summary>Creates the operation state proof table.</summary>
+    /// <param name="connection">The connection.</param>
+    /// <param name="transaction">The transaction.</param>
+    private static void CreateOperationStateProofsTable(SqliteDatabase connection, SqliteTransaction transaction)
+    {
+        using var command = connection.CreateStatement();
+        command.UseTransaction(transaction);
+        command.SetSql(OperationStateProofsTableSql);
+        _ = command.Execute();
+    }
+}

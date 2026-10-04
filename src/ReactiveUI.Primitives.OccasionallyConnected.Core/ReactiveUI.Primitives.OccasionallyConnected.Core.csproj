@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFrameworks>$(LibraryTargetFrameworks)</TargetFrameworks>
+    <RootNamespace>ReactiveUI.Primitives.OccasionallyConnected</RootNamespace>
+    <PackageDescription>Core contracts for durable, occasionally connected reactive streams.</PackageDescription>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\ReactiveUI.Primitives.Core\ReactiveUI.Primitives.Core.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="README.md" Pack="true" PackagePath="README.md" />
+    <None Include="..\tests\ReactiveUI.Primitives.OccasionallyConnected.Conformance.Tests\LocalStoreConformance.cs"
+          Pack="true" PackagePath="conformance\LocalStoreConformance.cs" />
+  </ItemGroup>
+</Project>

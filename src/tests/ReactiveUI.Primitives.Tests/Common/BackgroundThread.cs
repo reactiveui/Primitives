@@ -34,6 +34,11 @@ internal static class BackgroundThread
     /// <summary>Waits a bounded time for a task to finish.</summary>
     /// <param name="task">The task to wait for.</param>
     /// <returns><see langword="true"/> when the task finished within the bound.</returns>
-    internal static async Task<bool> FinishesPromptly(Task task) =>
-        await Task.WhenAny(task, Task.Delay(Prompt)).ConfigureAwait(false) == task;
+    internal static Task<bool> FinishesPromptly(Task task)
+    {
+        // The task-owned event signals completion directly. WhenAny can instead race
+        // a queued notification against the timer even after the worker finished.
+        // This checks completion only; awaiting the task still propagates its outcome.
+        return Task.FromResult(((IAsyncResult)task).AsyncWaitHandle.WaitOne(Prompt));
+    }
 }

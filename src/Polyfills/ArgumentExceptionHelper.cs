@@ -27,4 +27,21 @@ internal static class ArgumentExceptionHelper
 
         throw new ArgumentNullException(paramName);
     }
+
+    /// <summary>Throws an <see cref="ArgumentException"/> if a string is <see langword="null"/> or whitespace.</summary>
+    /// <param name="argument">The string argument to validate.</param>
+    /// <param name="paramName">The name of the parameter with which <paramref name="argument"/> corresponds.</param>
+    /// <exception cref="ArgumentException"><paramref name="argument"/> is <see langword="null"/> or whitespace.</exception>
+    internal static void ThrowIfNullOrWhiteSpace(
+        [NotNull] string? argument,
+        [CallerArgumentExpression(nameof(argument))]
+        string? paramName = null)
+    {
+        if (argument is not null && !string.IsNullOrWhiteSpace(argument))
+        {
+            return;
+        }
+
+        throw new ArgumentException("The value cannot be null or whitespace.", paramName);
+    }
 }
