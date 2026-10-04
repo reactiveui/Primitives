@@ -13,7 +13,7 @@ using ReactiveUI.Primitives.OccasionallyConnected.Collaboration.Server;
 namespace ReactiveUI.Primitives.OccasionallyConnected.Collaboration.Server.Tests;
 
 /// <summary>Tests for the collaboration server runner and executable entry point.</summary>
-public sealed class ProgramTests
+public sealed partial class ProgramTests
 {
     /// <summary>The test bearer token accepted by the development credential store.</summary>
     private const string Token = "process-token";
@@ -151,7 +151,7 @@ public sealed class ProgramTests
         startInfo.Environment["Logging__LogLevel__Microsoft.Hosting.Lifetime"] = "Information";
         var process = Process.Start(startInfo)
             ?? throw new InvalidOperationException("The example server process did not start.");
-        return new(process);
+        return new(process, System.IO.Path.GetDirectoryName(databasePath)!);
     }
 
     /// <summary>Waits until the public runner serves the mounted health endpoint.</summary>
@@ -410,11 +410,16 @@ public sealed class ProgramTests
         /// <summary>The standard error read task.</summary>
         private readonly Task<string> _standardError;
 
+        /// <summary>The owned directory whose files must be released before deletion.</summary>
+        private readonly string _databaseDirectory;
+
         /// <summary>Initializes a new instance of the <see cref="CapturedServerProcess"/> class.</summary>
         /// <param name="process">The started child process.</param>
-        internal CapturedServerProcess(Process process)
+        /// <param name="databaseDirectory">The owned database directory.</param>
+        internal CapturedServerProcess(Process process, string databaseDirectory)
         {
             Process = process;
+            _databaseDirectory = databaseDirectory;
             _standardOutput = ReadStandardOutputAsync(process.StandardOutput);
             _standardError = process.StandardError.ReadToEndAsync();
         }
@@ -434,6 +439,7 @@ public sealed class ProgramTests
         /// <returns>The cleanup task.</returns>
         internal async ValueTask StopAsync()
         {
+            using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(StopTimeoutSeconds));
             try
             {
                 if (!Process.HasExited)
@@ -445,14 +451,8 @@ public sealed class ProgramTests
             {
             }
 
-            using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(StopTimeoutSeconds));
-            try
-            {
-                await Process.WaitForExitAsync(timeout.Token).ConfigureAwait(false);
-            }
-            catch (OperationCanceledException)
-            {
-            }
+            await Process.WaitForExitAsync(timeout.Token).ConfigureAwait(false);
+            await WaitForReleasedDatabaseFilesAsync(_databaseDirectory, timeout.Token).ConfigureAwait(false);
         }
 
         /// <summary>Reads the drained child process output.</summary>

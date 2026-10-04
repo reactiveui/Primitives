@@ -57,6 +57,9 @@ public sealed partial class SyncEngineTests
         /// <summary>Gets or sets the optional retry-state save exception.</summary>
         public Exception? RetryStateSaveException { get; set; }
 
+        /// <summary>Gets or sets the optional signal that releases a published retry-state save.</summary>
+        public TaskCompletionSource? ReleaseRetryStateSave { get; set; }
+
         /// <summary>Gets or sets the optional lease release exception.</summary>
         public Exception? ReleaseLeaseException { get; set; }
 
@@ -245,7 +248,7 @@ public sealed partial class SyncEngineTests
         }
 
         /// <inheritdoc/>
-        public ValueTask SaveRetryStateAsync(OperationId operationId, RetryState retryState, CancellationToken cancellationToken)
+        public async ValueTask SaveRetryStateAsync(OperationId operationId, RetryState retryState, CancellationToken cancellationToken)
         {
             cancellationToken.ThrowIfCancellationRequested();
             if (RetryStateSaveException is not null)
@@ -254,7 +257,10 @@ public sealed partial class SyncEngineTests
             }
 
             RetryStates[operationId] = retryState;
-            return default;
+            if (ReleaseRetryStateSave is not null)
+            {
+                await ReleaseRetryStateSave.Task.WaitAsync(cancellationToken).ConfigureAwait(false);
+            }
         }
 
         /// <inheritdoc/>

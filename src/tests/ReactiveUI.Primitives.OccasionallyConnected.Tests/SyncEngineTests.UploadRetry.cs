@@ -617,16 +617,21 @@ public sealed partial class SyncEngineTests
     }
 
     /// <summary>Verifies transient upload failures fault after the configured retry attempt limit.</summary>
+    /// <param name="holdRetryStateSave">Whether to hold the save after its retry state becomes visible.</param>
     /// <returns>The assertion task.</returns>
     /// <exception cref="TimeoutException">Upload retry progress is not observed before the guard timeout.</exception>
     [Test]
-    public async Task UploadAttemptPublishesFaultAfterConfiguredTransientRetryLimit()
+    [Arguments(false)]
+    [Arguments(true)]
+    public async Task UploadAttemptPublishesFaultAfterConfiguredTransientRetryLimit(bool holdRetryStateSave)
     {
         var clock = new ManualTimerTimeProvider(DateTimeOffset.UnixEpoch);
         var retryDelay = TimeSpan.FromMilliseconds(UploadShortRetryMilliseconds);
         var operation = CreateOperation();
         var store = CreateUploadStore([operation], timeProvider: clock);
         store.RequeueReleasedLeases = true;
+        var releaseRetryStateSave = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        store.ReleaseRetryStateSave = holdRetryStateSave ? releaseRetryStateSave : null;
         var session = new PreparedSession(ExpectedSingleOperation, PreparedUploadBytes)
             { SendException = CreateTransportFailure(RetryFailureKind.Transient, retryDelay) };
         var faults = new RecordingObserver<OccasionallyConnectedFault>();
@@ -647,32 +652,14 @@ public sealed partial class SyncEngineTests
         using var registration = engine.RegisterParticipant(CreateUploadParticipant(store));
         using var faultSubscription = engine.Faults.Subscribe(faults);
 
-        await engine.StartAsync(CancellationToken.None);
-        engine.NotifyLocalCommitReady(Stream, operation);
-        await DriveUploadDwellWithTraceAsync(clock, store, session, faults, operationStates: null);
-        await WaitForUploadConditionWithTraceAsync(
-            () => store.RetryStates.TryGetValue(operation.OperationId, out var state)
-                && state.TransientAttemptCount == ExpectedSingleOperation,
-            store,
-            session,
-            faults,
-            operationStates: null);
-
-        clock.Advance(retryDelay);
-        await WaitForUploadConditionWithTraceAsync(
-            () => faults.Values.Count == ExpectedSingleOperation,
-            store,
-            session,
-            faults,
-            operationStates: null);
-
-        await Assert.That(session.SentBatches.Count).IsEqualTo(ExpectedCapacityCommitAttempts);
-        await Assert.That(store.ReleaseLeaseCalls).IsEqualTo(ExpectedCapacityCommitAttempts);
-        await Assert.That(store.RetryStates[operation.OperationId].TransientAttemptCount)
-            .IsEqualTo(ExpectedSingleOperation);
-        await Assert.That(faults.Values[0].Code).IsEqualTo(UploadAttemptFaultCode);
-
-        await engine.StopAsync(CancellationToken.None);
+        try
+        {
+            await AssertConfiguredRetryLimitAsync(engine, clock, store, session, faults, operation, retryDelay);
+        }
+        finally
+        {
+            _ = releaseRetryStateSave.TrySetResult();
+        }
     }
 
     /// <summary>Verifies typed permanent upload failures are faulted without durable retry state.</summary>
