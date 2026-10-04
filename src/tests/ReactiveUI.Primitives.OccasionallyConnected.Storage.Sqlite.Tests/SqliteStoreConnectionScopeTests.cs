@@ -6,10 +6,10 @@ using ReactiveUI.Primitives.OccasionallyConnected.Sqlite;
 
 namespace ReactiveUI.Primitives.OccasionallyConnected.Storage.Sqlite.Tests;
 
-/// <summary>Tests operation-local transaction, cancellation and gate cleanup.</summary>
+/// <summary>Tests operation-local transaction and cancellation cleanup.</summary>
 public sealed class SqliteStoreConnectionScopeTests
 {
-    /// <summary>Checks scope cleanup rolls back a canceled transaction and releases its gate once.</summary>
+    /// <summary>Checks scope cleanup rolls back a canceled transaction once.</summary>
     /// <returns>The assertion task.</returns>
     [Test]
     public async Task ScopeRollsBackCanceledWorkAndLeavesConnectionUsable()
@@ -22,18 +22,16 @@ public sealed class SqliteStoreConnectionScopeTests
         await Assert.That(database.IsDisposed).IsFalse();
     }
 
-    /// <summary>Checks a failed native cleanup retires the connection and releases the borrower gate.</summary>
+    /// <summary>Checks a failed native cleanup retires the connection once.</summary>
     /// <returns>The assertion task.</returns>
     [Test]
-    public async Task FailedCleanupRetiresConnectionAndReleasesGate()
+    public async Task FailedCleanupRetiresConnectionOnce()
     {
         var database = new SqliteDatabase(":memory:");
         try
         {
-            var gate = new object();
             var retired = false;
-            Monitor.Enter(gate);
-            var scope = new SqliteStoreConnectionScope(database, gate, failed =>
+            var scope = new SqliteStoreConnectionScope(database, failed =>
             {
                 retired = true;
                 failed.Dispose();
@@ -49,11 +47,9 @@ public sealed class SqliteStoreConnectionScopeTests
                 failure = exception;
             }
 
-            var ownsGate = Monitor.IsEntered(gate);
             scope.Dispose();
             await Assert.That(failure).IsNotNull();
             await Assert.That(retired).IsTrue();
-            await Assert.That(ownsGate).IsFalse();
         }
         finally
         {
@@ -61,15 +57,13 @@ public sealed class SqliteStoreConnectionScopeTests
         }
     }
 
-    /// <summary>Runs a synchronous borrower so cancellation cleanup releases its thread-affine gate.</summary>
+    /// <summary>Runs a synchronous borrower so cancellation cleanup rolls back native work.</summary>
     /// <param name="database">The native database.</param>
     /// <returns>The row count after rollback.</returns>
     private static object? RunCanceledScope(SqliteDatabase database)
     {
         using var cancellation = new CancellationTokenSource();
-        var gate = new object();
-        Monitor.Enter(gate);
-        var scope = new SqliteStoreConnectionScope(database, gate, static failed => failed.Dispose());
+        var scope = new SqliteStoreConnectionScope(database, static failed => failed.Dispose());
         database.SetCancellation(cancellation.Token);
         _ = database.BeginTransaction();
         database.Execute("INSERT INTO data VALUES (1);");

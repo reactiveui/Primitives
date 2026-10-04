@@ -101,4 +101,19 @@ releaseDeparted();
 await setImmediate();
 results.push(departedCalls === 1);
 
+const resumed = [];
+observe("resumed", { invokeMethodAsync: async (...args) => { resumed.push(args); } });
+await setImmediate();
+document.dispatchEvent(new Event("freeze"));
+await setImmediate();
+window.dispatchEvent(new Event("pagehide"));
+await setImmediate();
+document.dispatchEvent(new Event("resume"));
+await setImmediate();
+results.push(resumed.at(-1)[2] === true);
+window.dispatchEvent(new Event("pageshow"));
+await setImmediate();
+results.push(resumed.length === 5 && resumed.at(-1)[2] === false);
+unobserve("resumed");
+
 console.log(JSON.stringify(results));

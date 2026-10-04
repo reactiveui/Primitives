@@ -9,9 +9,6 @@ namespace ReactiveUI.Primitives.OccasionallyConnected.Storage.Sqlite;
 /// <summary>Clears operation-local native state without releasing the store-owned connection.</summary>
 internal sealed class SqliteStoreConnectionScope : IDisposable
 {
-    /// <summary>The gate released after native cleanup.</summary>
-    private readonly object _gate;
-
     /// <summary>Retires the connection if native rollback or cancellation cleanup fails.</summary>
     private readonly Action<SqliteDatabase> _retire;
 
@@ -20,12 +17,10 @@ internal sealed class SqliteStoreConnectionScope : IDisposable
 
     /// <summary>Initializes a new instance of the <see cref="SqliteStoreConnectionScope"/> class.</summary>
     /// <param name="connection">The gate-owned connection.</param>
-    /// <param name="gate">The acquired connection gate.</param>
     /// <param name="retire">The failed connection cleanup.</param>
-    internal SqliteStoreConnectionScope(SqliteDatabase connection, object gate, Action<SqliteDatabase> retire)
+    internal SqliteStoreConnectionScope(SqliteDatabase connection, Action<SqliteDatabase> retire)
     {
         Connection = connection;
-        _gate = gate;
         _retire = retire;
     }
 
@@ -49,10 +44,6 @@ internal sealed class SqliteStoreConnectionScope : IDisposable
         {
             _retire(Connection);
             throw;
-        }
-        finally
-        {
-            Monitor.Exit(_gate);
         }
     }
 }

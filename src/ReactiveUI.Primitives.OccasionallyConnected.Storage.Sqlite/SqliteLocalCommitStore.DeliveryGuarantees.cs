@@ -85,23 +85,27 @@ internal sealed partial class SqliteLocalCommitStore
         SqliteLocalCommitValidation.ValidateOperationId(operationId, nameof(operationId));
         cancellationToken.ThrowIfCancellationRequested();
         var storeIdentity = GetInitializedStoreIdentityForOperation();
-        using var connectionScope = LeaseStoreConnection(storeIdentity, cancellationToken);
-        var connection = connectionScope.Connection;
-        SqliteLocalCommitConnection.ConfigureLockPolling(connection);
-        SqliteConnectionSettings.ConfigureOperationalConnection(connection);
-        using var transaction = SqliteLocalCommitConnection.BeginWriteTransaction(connection, cancellationToken);
-        var nowUtc = _timeProvider.GetUtcNow();
-        var leaseExpiry = SqliteLocalCommitSql.ValidateLeaseMembership(connection, transaction, storeIdentity, leaseId);
-        SqliteLocalCommitSql.ThrowIfLeaseQuarantined(connection, transaction, storeIdentity, leaseId);
-        SqliteLocalCommitSql.ThrowIfOperationStreamQuarantined(connection, transaction, storeIdentity, operationId);
-        if (leaseExpiry <= nowUtc)
-        {
-            throw new InvalidOperationException(ExpiredLeaseMessage);
-        }
+        return WithStoreConnection(
+            storeIdentity,
+            connection =>
+            {
+                SqliteLocalCommitConnection.ConfigureLockPolling(connection);
+                SqliteConnectionSettings.ConfigureOperationalConnection(connection);
+                using var transaction = SqliteLocalCommitConnection.BeginWriteTransaction(connection, cancellationToken);
+                var nowUtc = _timeProvider.GetUtcNow();
+                var leaseExpiry = SqliteLocalCommitSql.ValidateLeaseMembership(connection, transaction, storeIdentity, leaseId);
+                SqliteLocalCommitSql.ThrowIfLeaseQuarantined(connection, transaction, storeIdentity, leaseId);
+                SqliteLocalCommitSql.ThrowIfOperationStreamQuarantined(connection, transaction, storeIdentity, operationId);
+                if (leaseExpiry <= nowUtc)
+                {
+                    throw new InvalidOperationException(ExpiredLeaseMessage);
+                }
 
-        var status = transition(connection, transaction, storeIdentity, nowUtc);
-        cancellationToken.ThrowIfCancellationRequested();
-        CommitWithOperationStateIntegrity(transaction);
-        return status;
+                var status = transition(connection, transaction, storeIdentity, nowUtc);
+                cancellationToken.ThrowIfCancellationRequested();
+                CommitWithOperationStateIntegrity(transaction);
+                return status;
+            },
+            cancellationToken);
     }
 }

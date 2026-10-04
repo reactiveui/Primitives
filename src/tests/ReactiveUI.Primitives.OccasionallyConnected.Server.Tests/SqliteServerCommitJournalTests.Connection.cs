@@ -8,6 +8,9 @@ namespace ReactiveUI.Primitives.OccasionallyConnected.Server.Tests;
 /// <content>Verifies owned connection reuse, transaction cleanup and disposal.</content>
 public sealed partial class SqliteServerCommitJournalTests
 {
+    /// <summary>The finite deadline for observing connection ownership on another thread.</summary>
+    private static readonly TimeSpan ConnectionOwnershipDeadline = TimeSpan.FromSeconds(5);
+
     /// <summary>Verifies repeated operations reuse native preparations and release ownership on disposal.</summary>
     /// <returns>The test operation.</returns>
     [Test]
@@ -44,13 +47,27 @@ public sealed partial class SqliteServerCommitJournalTests
         var key = OperationKey(FirstOperationSeed);
         var plan = Plan(0, State(FirstVersion), Stamp(key), Entry(key, OperationResultKind.Accepted, FirstOperationSeed));
         await Assert.That(() => journal.TryCommit(plan)).ThrowsExactly<InvalidOperationException>();
-        await Assert.That(journal.Read(StreamKey(), [key]).Revision).IsEqualTo(0);
+        var recovered = await Task.Run(() => journal.Read(StreamKey(), [key])).WaitAsync(ConnectionOwnershipDeadline);
+        await Assert.That(recovered.Revision).IsEqualTo(0);
         using var cancellation = new CancellationTokenSource();
         await cancellation.CancelAsync();
         _ = await Assert.ThrowsAsync<OperationCanceledException>(() => journal.ExecuteAsync(() => journal.TryCommit(plan), cancellation.Token));
         var result = await journal.ExecuteAsync(() => journal.TryCommit(plan), CancellationToken.None);
         await Assert.That(result.Status).IsEqualTo(ServerCommitStatus.Committed);
         await Assert.That(journal.Read(StreamKey(), [key]).Entries).Count().IsEqualTo(1);
+    }
+
+    /// <summary>Verifies rejected ownership after disposal does not hold the gate against another thread.</summary>
+    /// <returns>The test operation.</returns>
+    [Test]
+    public async Task OwnedConnectionReleasesGateAfterDisposedAccess()
+    {
+        using var database = new TemporaryDatabase();
+        using var journal = CreateJournal(database.Path);
+        await journal.DisposeWorkersAsync();
+        await Assert.That(() => journal.PreparationCount).ThrowsExactly<ObjectDisposedException>();
+        var disposed = await Task.Run(() => journal.IsConnectionDisposed).WaitAsync(ConnectionOwnershipDeadline);
+        await Assert.That(disposed).IsTrue();
     }
 
     /// <summary>Verifies independent workers cannot overlap transactions on their shared owned connection.</summary>

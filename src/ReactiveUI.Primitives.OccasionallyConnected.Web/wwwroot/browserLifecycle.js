@@ -49,11 +49,11 @@ export function observe(id, receiver) {
     listen(window, "online", notify);
     listen(window, "offline", notify);
     listen(document, "visibilitychange", notify);
-    listen(document, "freeze", () => { frozen = true; void notify(); });
-    listen(document, "resume", () => { frozen = false; void notify(); });
-    listen(window, "pagehide", () => { departed = true; void notify(); });
-    listen(window, "pageshow", () => { departed = false; frozen = false; void notify(); });
-    void notify();
+    listen(document, "freeze", () => { frozen = true; notify(); });
+    listen(document, "resume", () => { frozen = false; notify(); });
+    listen(window, "pagehide", () => { departed = true; notify(); });
+    listen(window, "pageshow", () => { departed = false; frozen = false; notify(); });
+    notify();
 
     const registration = {
         dispose() {

@@ -464,15 +464,19 @@ internal sealed partial class SqliteLocalCommitStore
         ThrowIfDisposed();
         var storeIdentity = GetInitializedStoreIdentity();
         cancellationToken.ThrowIfCancellationRequested();
-        using var connectionScope = LeaseStoreConnection(storeIdentity, cancellationToken);
-        var connection = connectionScope.Connection;
-        SqliteLocalCommitConnection.ConfigureLockPolling(connection);
-        SqliteConnectionSettings.ConfigureOperationalConnection(connection);
-        using var transaction = SqliteLocalCommitConnection.BeginWriteTransaction(connection, cancellationToken);
-        var result = ApplySnapshotRecoveryTransaction(connection, transaction, storeIdentity, mutation, nowUtc, cancellationToken);
-        cancellationToken.ThrowIfCancellationRequested();
-        CommitWithOperationStateIntegrity(transaction);
-        return result;
+        return WithStoreConnection(
+            storeIdentity,
+            connection =>
+            {
+                SqliteLocalCommitConnection.ConfigureLockPolling(connection);
+                SqliteConnectionSettings.ConfigureOperationalConnection(connection);
+                using var transaction = SqliteLocalCommitConnection.BeginWriteTransaction(connection, cancellationToken);
+                var result = ApplySnapshotRecoveryTransaction(connection, transaction, storeIdentity, mutation, nowUtc, cancellationToken);
+                cancellationToken.ThrowIfCancellationRequested();
+                CommitWithOperationStateIntegrity(transaction);
+                return result;
+            },
+            cancellationToken);
     }
 
     /// <summary>Groups state used while applying snapshot recovery operation dispositions.</summary>

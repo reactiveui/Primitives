@@ -101,49 +101,52 @@ internal sealed partial class SqliteServerCommitJournal
     /// <returns>The empty result, or null when durable state must change.</returns>
     private ServerReceivePageResult? TryReadEmptyOffer(ServerSubscriptionPageRequest request, DateTimeOffset observedUtc)
     {
-        using var connectionLease = AcquireConnection();
-        var connection = _connection;
-        using var transaction = connection.BeginTransaction(deferred: true);
-        ValidateExistingSchema(connection, transaction);
-        ValidateReadCapacity(connection, transaction);
-        var record = ReadRegisteredSubscription(connection, transaction, request.Identity, readOffers: false);
-        if (request.ExpectedGeneration.HasValue && request.ExpectedGeneration.Value != record.Generation)
+        lock (_connectionGate)
         {
-            transaction.Commit();
-            return new(ServerReceivePageStatus.RetentionGap, null, 0, 0);
-        }
-
-        var stream = ReadSubscriptionAnchorStream(connection, transaction, record, observedUtc);
-        var cursor = request.Cursor;
-        if (cursor is null)
-        {
-            if (!record.InitialAnchorResolved)
+            ThrowIfDisposed();
+            var connection = _connection;
+            using var transaction = connection.BeginTransaction(deferred: true);
+            ValidateExistingSchema(connection, transaction);
+            ValidateReadCapacity(connection, transaction);
+            var record = ReadRegisteredSubscription(connection, transaction, request.Identity, readOffers: false);
+            if (request.ExpectedGeneration.HasValue && request.ExpectedGeneration.Value != record.Generation)
             {
-                var resolution = TryResolveInitialAnchor(connection, transaction, record, stream, out _);
-                if (resolution == ServerSubscriptionAnchorResolution.Resolved)
-                {
-                    return null;
-                }
-
-                var sequence = stream?.LastGroupSequence ?? 0;
-                var status = resolution == ServerSubscriptionAnchorResolution.RetentionGap
-                    ? ServerReceivePageStatus.RetentionGap
-                    : ServerReceivePageStatus.EndOfStream;
                 transaction.Commit();
-                return new(status, null, sequence, sequence);
+                return new(ServerReceivePageStatus.RetentionGap, null, 0, 0);
             }
 
-            cursor = ServerSubscriptionStartPositionOperations.GetInitialReadCursor(record);
-        }
+            var stream = ReadSubscriptionAnchorStream(connection, transaction, record, observedUtc);
+            var cursor = request.Cursor;
+            if (cursor is null)
+            {
+                if (!record.InitialAnchorResolved)
+                {
+                    var resolution = TryResolveInitialAnchor(connection, transaction, record, stream, out _);
+                    if (resolution == ServerSubscriptionAnchorResolution.Resolved)
+                    {
+                        return null;
+                    }
 
-        var result = ReadSelectedReceivePage(
-            connection,
-            transaction,
-            ServerSubscriptionJournalOperations.CreateReceiveRequest(request with { Cursor = cursor }),
-            stream,
-            observedUtc);
-        transaction.Commit();
-        return result.Batch is null ? result : null;
+                    var sequence = stream?.LastGroupSequence ?? 0;
+                    var status = resolution == ServerSubscriptionAnchorResolution.RetentionGap
+                        ? ServerReceivePageStatus.RetentionGap
+                        : ServerReceivePageStatus.EndOfStream;
+                    transaction.Commit();
+                    return new(status, null, sequence, sequence);
+                }
+
+                cursor = ServerSubscriptionStartPositionOperations.GetInitialReadCursor(record);
+            }
+
+            var result = ReadSelectedReceivePage(
+                connection,
+                transaction,
+                ServerSubscriptionJournalOperations.CreateReceiveRequest(request with { Cursor = cursor }),
+                stream,
+                observedUtc);
+            transaction.Commit();
+            return result.Batch is null ? result : null;
+        }
     }
 
     /// <summary>Reads only the groups needed to resolve a deferred initial position.</summary>

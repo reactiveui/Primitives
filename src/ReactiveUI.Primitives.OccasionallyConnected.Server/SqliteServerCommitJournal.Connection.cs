@@ -2,7 +2,6 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
-using System.Runtime.CompilerServices;
 using ReactiveUI.Primitives.OccasionallyConnected.Sqlite;
 
 namespace ReactiveUI.Primitives.OccasionallyConnected.Server;
@@ -22,8 +21,11 @@ internal sealed partial class SqliteServerCommitJournal
     {
         get
         {
-            using var lease = AcquireConnection();
-            return _connection.PreparationCount;
+            lock (_connectionGate)
+            {
+                ThrowIfDisposed();
+                return _connection.PreparationCount;
+            }
         }
     }
 
@@ -37,37 +39,5 @@ internal sealed partial class SqliteServerCommitJournal
                 return _connection.IsDisposed;
             }
         }
-    }
-
-    /// <summary>Acquires sole native ownership until statements and transactions have been released.</summary>
-    /// <returns>The synchronous connection ownership lease.</returns>
-    private ConnectionLease AcquireConnection()
-    {
-        Monitor.Enter(_connectionGate);
-        try
-        {
-            ThrowIfDisposed();
-            return new(_connectionGate);
-        }
-        catch
-        {
-            Monitor.Exit(_connectionGate);
-            throw;
-        }
-    }
-
-    /// <summary>Releases synchronous connection ownership after a complete journal operation.</summary>
-    private readonly struct ConnectionLease : IDisposable
-    {
-        /// <summary>The journal's native ownership gate.</summary>
-        private readonly object _gate;
-
-        /// <summary>Initializes a new instance of the <see cref="ConnectionLease"/> struct.</summary>
-        /// <param name="gate">The acquired ownership gate.</param>
-        internal ConnectionLease(object gate) => _gate = gate;
-
-        /// <inheritdoc/>
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Dispose() => Monitor.Exit(_gate);
     }
 }

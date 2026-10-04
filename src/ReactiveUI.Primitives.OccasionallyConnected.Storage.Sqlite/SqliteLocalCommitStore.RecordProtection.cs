@@ -36,20 +36,24 @@ internal sealed partial class SqliteLocalCommitStore
             var protection = _protection
                 ?? throw new InvalidOperationException("The SQLite local store does not encrypt records at rest.");
             var storeIdentity = GetInitializedStoreIdentity();
-            using var connectionScope = LeaseStoreConnection(storeIdentity, cancellationToken);
-            var connection = connectionScope.Connection;
-            SqliteLocalCommitConnection.ConfigureLockPolling(connection);
-            SqliteConnectionSettings.ConfigureOperationalConnection(connection);
-            using var transaction = SqliteLocalCommitConnection.BeginWriteTransaction(connection, cancellationToken);
-            var rewritten = SqliteRecordProtectionMaintenance.RotateKeys(connection, transaction, protection, cancellationToken);
-            SqliteOutboxCapacityIntegrity.RefreshProofs(connection, transaction);
-            SqliteOperationStateIntegrity.Write(connection, transaction);
-            SqliteOperationStateIntegrity.Verify(connection, transaction);
-            ((SqliteRecordConnectionState)connection.Context!).FullProofRewriteCompleted = true;
-            cancellationToken.ThrowIfCancellationRequested();
-            CommitAtCheckpoints(transaction, SqliteCommitCheckpoint.KeyRotationBeforeCommit, SqliteCommitCheckpoint.KeyRotationAfterCommit);
-            SqliteRecordProtectionMaintenance.TruncateWriteAheadLog(connection);
-            return rewritten;
+            return WithStoreConnection(
+                storeIdentity,
+                connection =>
+                {
+                    SqliteLocalCommitConnection.ConfigureLockPolling(connection);
+                    SqliteConnectionSettings.ConfigureOperationalConnection(connection);
+                    using var transaction = SqliteLocalCommitConnection.BeginWriteTransaction(connection, cancellationToken);
+                    var rewritten = SqliteRecordProtectionMaintenance.RotateKeys(connection, transaction, protection, cancellationToken);
+                    SqliteOutboxCapacityIntegrity.RefreshProofs(connection, transaction);
+                    SqliteOperationStateIntegrity.Write(connection, transaction);
+                    SqliteOperationStateIntegrity.Verify(connection, transaction);
+                    ((SqliteRecordConnectionState)connection.Context!).FullProofRewriteCompleted = true;
+                    cancellationToken.ThrowIfCancellationRequested();
+                    CommitAtCheckpoints(transaction, SqliteCommitCheckpoint.KeyRotationBeforeCommit, SqliteCommitCheckpoint.KeyRotationAfterCommit);
+                    SqliteRecordProtectionMaintenance.TruncateWriteAheadLog(connection);
+                    return rewritten;
+                },
+                cancellationToken);
         }
     }
 
@@ -187,18 +191,60 @@ internal sealed partial class SqliteLocalCommitStore
         }
     }
 
-    /// <summary>Borrows the gate-owned connection and installs fresh operation state.</summary>
+    /// <summary>Runs a synchronous borrower while retaining lexical gate ownership through cleanup.</summary>
+    /// <typeparam name="TResult">The operation result type.</typeparam>
+    /// <param name="storeIdentity">The initialized store identity.</param>
+    /// <param name="operation">The synchronous connection borrower.</param>
+    /// <param name="cancellationToken">The operation cancellation token.</param>
+    /// <returns>The operation result.</returns>
+    private TResult WithStoreConnection<TResult>(
+        string storeIdentity,
+        Func<SqliteDatabase, TResult> operation,
+        CancellationToken cancellationToken)
+    {
+        var gateTaken = false;
+        try
+        {
+            while (!gateTaken)
+            {
+                Monitor.TryEnter(_connectionGate, ConnectionGatePollMilliseconds, ref gateTaken);
+                cancellationToken.ThrowIfCancellationRequested();
+            }
+
+            using var scope = PrepareStoreConnection(storeIdentity, cancellationToken);
+            return operation(scope.Connection);
+        }
+        finally
+        {
+            if (gateTaken)
+            {
+                Monitor.Exit(_connectionGate);
+            }
+        }
+    }
+
+    /// <summary>Runs a synchronous borrower that does not return a value.</summary>
+    /// <param name="storeIdentity">The initialized store identity.</param>
+    /// <param name="operation">The synchronous connection borrower.</param>
+    /// <param name="cancellationToken">The operation cancellation token.</param>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private void WithStoreConnection(string storeIdentity, Action<SqliteDatabase> operation, CancellationToken cancellationToken) =>
+        WithStoreConnection(
+            storeIdentity,
+            connection =>
+            {
+                operation(connection);
+                return 0;
+            },
+            cancellationToken);
+
+    /// <summary>Prepares the gate-owned connection and installs fresh operation state.</summary>
     /// <param name="storeIdentity">The initialized store identity.</param>
     /// <param name="cancellationToken">The operation cancellation token.</param>
     /// <returns>The scope that clears cancellation after rollback or commit.</returns>
     /// <exception cref="InvalidOperationException">The connection already has an active operation.</exception>
-    private SqliteStoreConnectionScope LeaseStoreConnection(string storeIdentity, CancellationToken cancellationToken)
+    private SqliteStoreConnectionScope PrepareStoreConnection(string storeIdentity, CancellationToken cancellationToken)
     {
-        while (!Monitor.TryEnter(_connectionGate, ConnectionGatePollMilliseconds))
-        {
-            cancellationToken.ThrowIfCancellationRequested();
-        }
-
         SqliteStoreConnectionScope? scope = null;
         try
         {
@@ -211,7 +257,7 @@ internal sealed partial class SqliteLocalCommitStore
                 throw new InvalidOperationException("The SQLite store connection already has an active operation.");
             }
 
-            scope = new(connection, _connectionGate, RetireOperationalConnection);
+            scope = new(connection, RetireOperationalConnection);
             connection.SetCancellation(cancellationToken);
             if (connection.Context is SqliteRecordConnectionState state)
             {
@@ -234,14 +280,7 @@ internal sealed partial class SqliteLocalCommitStore
         }
         catch
         {
-            if (scope is null)
-            {
-                Monitor.Exit(_connectionGate);
-            }
-            else
-            {
-                scope.Dispose();
-            }
+            scope?.Dispose();
 
             throw;
         }

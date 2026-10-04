@@ -249,94 +249,24 @@ internal sealed partial class SqliteLocalCommitStore : IDisposable
             ThrowIfDisposed();
             var storeIdentity = GetInitializedStoreIdentity();
             cancellationToken.ThrowIfCancellationRequested();
-            using var connectionScope = LeaseStoreConnection(storeIdentity, cancellationToken);
-            var connection = connectionScope.Connection;
-            SqliteLocalCommitConnection.ConfigureLockPolling(connection);
-            SqliteConnectionSettings.ConfigureOperationalConnection(connection);
-            using var transaction = SqliteLocalCommitConnection.BeginWriteTransaction(connection, cancellationToken);
-            var candidate = preferredId ?? SubscriptionId.New();
-            SqliteSubscriptionIdentitySql.InsertSubscriptionIdentityIfMissing(connection, transaction, storeIdentity, streamId, candidate);
-            var stored = SqliteSubscriptionIdentitySql.SelectSubscriptionIdentity(connection, transaction, storeIdentity, streamId);
-            SqliteSubscriptionIdentitySql.ThrowIfPreferredMismatch(preferredId, stored);
-            SqliteLocalCommitSql.EnsureStreamRow(connection, transaction, storeIdentity, streamId, stored);
-            SqliteLocalCommitSql.ThrowIfStreamQuarantined(connection, transaction, storeIdentity, streamId);
-            cancellationToken.ThrowIfCancellationRequested();
-            CommitWithOperationStateIntegrity(transaction);
-            return stored;
-        }
-    }
-
-    /// <summary>Atomically commits a local operation, snapshot, and next sequence.</summary>
-    /// <param name="operation">The operation to commit.</param>
-    /// <param name="snapshotMutation">The snapshot mutation.</param>
-    /// <param name="cancellationToken">The cancellation token.</param>
-    /// <returns>The local commit result.</returns>
-    /// <exception cref="ArgumentException">The operation or snapshot mutation is invalid.</exception>
-    /// <exception cref="InvalidOperationException">The store has not been initialized or the durable stream state rejects the commit.</exception>
-    /// <exception cref="ObjectDisposedException">This instance has been disposed.</exception>
-    /// <exception cref="OperationCanceledException">The operation is canceled before the transaction commits.</exception>
-    /// <exception cref="SqliteDatabaseException">SQLite rejects the operation.</exception>
-    internal LocalCommitResult CommitLocalOperation(
-        SyncOperation operation,
-        SnapshotMutation snapshotMutation,
-        CancellationToken cancellationToken)
-    {
-        SqliteLocalCommitValidation.ValidateCommitInput(operation, snapshotMutation);
-        cancellationToken.ThrowIfCancellationRequested();
-        var fingerprint = SqliteCommitFingerprint.Compute(operation, snapshotMutation);
-        var committedAtUtc = _timeProvider.GetUtcNow();
-        lock (_gate)
-        {
-            ThrowIfDisposed();
-            var storeIdentity = GetInitializedStoreIdentity();
-            cancellationToken.ThrowIfCancellationRequested();
-            using var connectionScope = LeaseStoreConnection(storeIdentity, cancellationToken);
-            var connection = connectionScope.Connection;
-            ConfigureLocalCommitConnection(connection);
-            using var transaction = SqliteLocalCommitConnection.BeginWriteTransaction(connection, cancellationToken);
-            SqliteLocalCommitSql.ThrowIfStreamQuarantined(connection, transaction, storeIdentity, operation.StreamId);
-            var query = new SqliteCommittedResultQuery(
-                operation,
-                snapshotMutation,
-                fingerprint,
-                _maximumReadPayloadBytes);
-            if (SqliteLocalCommitSql.TryReadCommittedResult(connection, transaction, storeIdentity, query, out var existing)
-                && existing is not null)
-            {
-                CommitWithOperationStateIntegrity(transaction);
-                return existing;
-            }
-
-            var subscriptionId = SqliteLocalCommitSql.SelectSubscriptionId(connection, transaction, storeIdentity, operation.StreamId);
-            SqliteLocalCommitSql.EnsureStreamRow(connection, transaction, storeIdentity, operation.StreamId, subscriptionId);
-            var stream = SqliteLocalCommitSql.ReadStreamState(connection, transaction, storeIdentity, operation.StreamId);
-            if (stream.NextClientSequence != operation.ClientSequence)
-            {
-                throw new InvalidOperationException("The operation client sequence does not match the next durable sequence.");
-            }
-
-            var currentRevision = SqliteLocalCommitSql.ReadSnapshotRevision(connection, transaction, storeIdentity, operation.StreamId);
-            if (currentRevision != snapshotMutation.ExpectedRevision)
-            {
-                throw new InvalidOperationException("The snapshot revision does not match the expected revision.");
-            }
-
-            var nextRevision = snapshotMutation.ExpectedRevision + 1;
-            SqliteOutboxCapacitySql.EnsureCapacityFor(connection, transaction, storeIdentity, operation, _outboxOptions);
-            SqliteLocalCommitSql.InsertOutboxOperation(connection, transaction, storeIdentity, operation, nextRevision, fingerprint, committedAtUtc);
-            SqliteLocalCommitSql.InsertOutboxAuthoritativeMutation(
-                connection,
-                transaction,
+            return WithStoreConnection(
                 storeIdentity,
-                operation.OperationId,
-                snapshotMutation.AuthoritativeState);
-            SqliteLocalCommitSql.InsertOperationMetadata(connection, transaction, storeIdentity, operation);
-            SqliteLocalCommitSql.InsertInitialOperationState(connection, transaction, storeIdentity, operation, committedAtUtc);
-            SqliteLocalCommitSql.UpsertSnapshot(connection, transaction, storeIdentity, snapshotMutation, nextRevision, stream.ServerCursor, committedAtUtc);
-            SqliteLocalCommitSql.UpdateNextClientSequence(connection, transaction, storeIdentity, operation.StreamId, operation.ClientSequence + 1);
-            cancellationToken.ThrowIfCancellationRequested();
-            CommitAtCheckpoints(transaction, SqliteCommitCheckpoint.LocalCommitBeforeCommit, SqliteCommitCheckpoint.LocalCommitAfterCommit);
-            return new(operation.OperationId, operation.ClientSequence, nextRevision, committedAtUtc);
+                connection =>
+                {
+                    SqliteLocalCommitConnection.ConfigureLockPolling(connection);
+                    SqliteConnectionSettings.ConfigureOperationalConnection(connection);
+                    using var transaction = SqliteLocalCommitConnection.BeginWriteTransaction(connection, cancellationToken);
+                    var candidate = preferredId ?? SubscriptionId.New();
+                    SqliteSubscriptionIdentitySql.InsertSubscriptionIdentityIfMissing(connection, transaction, storeIdentity, streamId, candidate);
+                    var stored = SqliteSubscriptionIdentitySql.SelectSubscriptionIdentity(connection, transaction, storeIdentity, streamId);
+                    SqliteSubscriptionIdentitySql.ThrowIfPreferredMismatch(preferredId, stored);
+                    SqliteLocalCommitSql.EnsureStreamRow(connection, transaction, storeIdentity, streamId, stored);
+                    SqliteLocalCommitSql.ThrowIfStreamQuarantined(connection, transaction, storeIdentity, streamId);
+                    cancellationToken.ThrowIfCancellationRequested();
+                    CommitWithOperationStateIntegrity(transaction);
+                    return stored;
+                },
+                cancellationToken);
         }
     }
 
@@ -358,58 +288,62 @@ internal sealed partial class SqliteLocalCommitStore : IDisposable
         {
             ThrowIfDisposed();
             var storeIdentity = GetInitializedStoreIdentity();
-            using var connectionScope = LeaseStoreConnection(storeIdentity, cancellationToken);
-            var connection = connectionScope.Connection;
-            SqliteLocalCommitConnection.ConfigureLockPolling(connection);
-            SqliteConnectionSettings.ConfigureOperationalConnection(connection);
-            using var transaction = BeginVerifiedReadTransaction(connection);
-            var storedSubscriptionId = SqliteLocalCommitSql.SelectSubscriptionId(connection, transaction, storeIdentity, streamId);
-            if (storedSubscriptionId != subscriptionId)
-            {
-                throw new InvalidOperationException("The recovered subscription identity does not match the requested identity.");
-            }
-
-            var target = new SqliteRecoveryTarget(storeIdentity, streamId, subscriptionId);
-            var hasStream = TryReadRecoveryStreamState(connection, transaction, in target, out var storedStream, cancellationToken);
-            var stream = hasStream ? storedStream : new SqliteLocalStreamState(FirstClientSequence, null);
-            var quarantine = SqliteLocalCommitSql.ReadPayloadQuarantine(connection, transaction, storeIdentity, streamId);
-            if (quarantine is not null)
-            {
-                return CommitQuarantinedRecovery(transaction, subscriptionId, stream, quarantine, cancellationToken);
-            }
-
-            SqliteRecoveredPayloadRows payloadRows;
-            try
-            {
-                payloadRows = ReadRecoverablePayloadRows(connection, transaction, storeIdentity, streamId, _maximumReadPayloadBytes);
-            }
-            catch (SqlitePayloadQuarantineException exception) when (hasStream)
-            {
-                throw QuarantineRecovery(connection, transaction, in target, exception, "Recovered SQLite payload data was quarantined.", cancellationToken);
-            }
-
-            if (!hasStream && payloadRows.HasRows)
-            {
-                throw new InvalidOperationException("Committed data has no durable stream state.");
-            }
-
-            if (payloadRows.Snapshot is not null && payloadRows.Snapshot.ServerCursor != stream.ServerCursor)
-            {
-                throw new InvalidOperationException("The snapshot cursor does not match the durable stream cursor.");
-            }
-
-            ValidateRecoveredSequences(payloadRows.Pending, payloadRows.Replay, stream.NextClientSequence);
-            var pendingUploadNotBeforeUtc = SqliteLocalCommitSql.SelectRecoveredPendingUploadNotBeforeUtc(
-                connection,
-                transaction,
+            return WithStoreConnection(
                 storeIdentity,
-                streamId,
-                _timeProvider.GetUtcNow(),
-                cancellationToken);
+                connection =>
+                {
+                    SqliteLocalCommitConnection.ConfigureLockPolling(connection);
+                    SqliteConnectionSettings.ConfigureOperationalConnection(connection);
+                    using var transaction = BeginVerifiedReadTransaction(connection);
+                    var storedSubscriptionId = SqliteLocalCommitSql.SelectSubscriptionId(connection, transaction, storeIdentity, streamId);
+                    if (storedSubscriptionId != subscriptionId)
+                    {
+                        throw new InvalidOperationException("The recovered subscription identity does not match the requested identity.");
+                    }
 
-            cancellationToken.ThrowIfCancellationRequested();
-            CommitWithOperationStateIntegrity(transaction);
-            return CreateRecoveredStream(subscriptionId, stream, in payloadRows, pendingUploadNotBeforeUtc);
+                    var target = new SqliteRecoveryTarget(storeIdentity, streamId, subscriptionId);
+                    var hasStream = TryReadRecoveryStreamState(connection, transaction, in target, out var storedStream, cancellationToken);
+                    var stream = hasStream ? storedStream : new SqliteLocalStreamState(FirstClientSequence, null);
+                    var quarantine = SqliteLocalCommitSql.ReadPayloadQuarantine(connection, transaction, storeIdentity, streamId);
+                    if (quarantine is not null)
+                    {
+                        return CommitQuarantinedRecovery(transaction, subscriptionId, stream, quarantine, cancellationToken);
+                    }
+
+                    SqliteRecoveredPayloadRows payloadRows;
+                    try
+                    {
+                        payloadRows = ReadRecoverablePayloadRows(connection, transaction, storeIdentity, streamId, _maximumReadPayloadBytes);
+                    }
+                    catch (SqlitePayloadQuarantineException exception) when (hasStream)
+                    {
+                        throw QuarantineRecovery(connection, transaction, in target, exception, "Recovered SQLite payload data was quarantined.", cancellationToken);
+                    }
+
+                    if (!hasStream && payloadRows.HasRows)
+                    {
+                        throw new InvalidOperationException("Committed data has no durable stream state.");
+                    }
+
+                    if (payloadRows.Snapshot is not null && payloadRows.Snapshot.ServerCursor != stream.ServerCursor)
+                    {
+                        throw new InvalidOperationException("The snapshot cursor does not match the durable stream cursor.");
+                    }
+
+                    ValidateRecoveredSequences(payloadRows.Pending, payloadRows.Replay, stream.NextClientSequence);
+                    var pendingUploadNotBeforeUtc = SqliteLocalCommitSql.SelectRecoveredPendingUploadNotBeforeUtc(
+                        connection,
+                        transaction,
+                        storeIdentity,
+                        streamId,
+                        _timeProvider.GetUtcNow(),
+                        cancellationToken);
+
+                    cancellationToken.ThrowIfCancellationRequested();
+                    CommitWithOperationStateIntegrity(transaction);
+                    return CreateRecoveredStream(subscriptionId, stream, in payloadRows, pendingUploadNotBeforeUtc);
+                },
+                cancellationToken);
         }
     }
 
@@ -434,49 +368,53 @@ internal sealed partial class SqliteLocalCommitStore : IDisposable
             ThrowIfDisposed();
             var storeIdentity = GetInitializedStoreIdentity();
             cancellationToken.ThrowIfCancellationRequested();
-            using var connectionScope = LeaseStoreConnection(storeIdentity, cancellationToken);
-            var connection = connectionScope.Connection;
-            SqliteLocalCommitConnection.ConfigureLockPolling(connection);
-            SqliteConnectionSettings.ConfigureOperationalConnection(connection);
-            using var transaction = SqliteLocalCommitConnection.BeginWriteTransaction(connection, cancellationToken);
-            var operations = SqliteLocalCommitSql.SelectLeaseableOperationIds(connection, transaction, storeIdentity, request, nowUtc, cancellationToken);
-            if (operations.Count == 0)
-            {
-                CommitWithOperationStateIntegrity(transaction);
-                return null;
-            }
+            return WithStoreConnection<LeasedOperationBatch?>(
+                storeIdentity,
+                connection =>
+                {
+                    SqliteLocalCommitConnection.ConfigureLockPolling(connection);
+                    SqliteConnectionSettings.ConfigureOperationalConnection(connection);
+                    using var transaction = SqliteLocalCommitConnection.BeginWriteTransaction(connection, cancellationToken);
+                    var operations = SqliteLocalCommitSql.SelectLeaseableOperationIds(connection, transaction, storeIdentity, request, nowUtc, cancellationToken);
+                    if (operations.Count == 0)
+                    {
+                        CommitWithOperationStateIntegrity(transaction);
+                        return null;
+                    }
 
-            SqliteLocalCommitSql.ReclaimSelectedLeaseRows(connection, transaction, storeIdentity, operations);
-            SqliteLocalCommitSql.InsertLeaseMembership(connection, transaction, storeIdentity, leaseId, expiresAtUtc, operations);
-            List<SyncOperation> leasedOperations;
-            try
-            {
-                leasedOperations = SqliteLocalCommitSql.ReadLeasedOperations(connection, transaction, storeIdentity, leaseId, _maximumReadPayloadBytes);
-            }
-            catch (SqlitePayloadQuarantineException exception)
-            {
-                var operation = operations[0];
-                var operationId = exception.ResolveOperationId(operation.OperationId);
-                PersistPayloadQuarantine(
-                    connection,
-                    transaction,
-                    storeIdentity,
-                    CreateOutboxQuarantineRequest(
-                        operation.StreamId,
-                        operationId,
-                        exception.Evidence,
-                        _timeProvider.GetUtcNow(),
-                        exception.IsAuthenticationFailure),
-                    exception.Evidence);
-                SqliteLocalCommitSql.ReclaimSelectedLeaseRows(connection, transaction, storeIdentity, operations);
-                cancellationToken.ThrowIfCancellationRequested();
-                CommitWithOperationStateIntegrity(transaction);
-                throw CreateQuarantinedException("Leased SQLite payload data was quarantined.", exception);
-            }
+                    SqliteLocalCommitSql.ReclaimSelectedLeaseRows(connection, transaction, storeIdentity, operations);
+                    SqliteLocalCommitSql.InsertLeaseMembership(connection, transaction, storeIdentity, leaseId, expiresAtUtc, operations);
+                    List<SyncOperation> leasedOperations;
+                    try
+                    {
+                        leasedOperations = SqliteLocalCommitSql.ReadLeasedOperations(connection, transaction, storeIdentity, leaseId, _maximumReadPayloadBytes);
+                    }
+                    catch (SqlitePayloadQuarantineException exception)
+                    {
+                        var operation = operations[0];
+                        var operationId = exception.ResolveOperationId(operation.OperationId);
+                        PersistPayloadQuarantine(
+                            connection,
+                            transaction,
+                            storeIdentity,
+                            CreateOutboxQuarantineRequest(
+                                operation.StreamId,
+                                operationId,
+                                exception.Evidence,
+                                _timeProvider.GetUtcNow(),
+                                exception.IsAuthenticationFailure),
+                            exception.Evidence);
+                        SqliteLocalCommitSql.ReclaimSelectedLeaseRows(connection, transaction, storeIdentity, operations);
+                        cancellationToken.ThrowIfCancellationRequested();
+                        CommitWithOperationStateIntegrity(transaction);
+                        throw CreateQuarantinedException("Leased SQLite payload data was quarantined.", exception);
+                    }
 
-            cancellationToken.ThrowIfCancellationRequested();
-            CommitWithOperationStateIntegrity(transaction);
-            return new(leaseId, expiresAtUtc, leasedOperations);
+                    cancellationToken.ThrowIfCancellationRequested();
+                    CommitWithOperationStateIntegrity(transaction);
+                    return new(leaseId, expiresAtUtc, leasedOperations);
+                },
+                cancellationToken);
         }
     }
 
@@ -499,22 +437,26 @@ internal sealed partial class SqliteLocalCommitStore : IDisposable
             ThrowIfDisposed();
             var storeIdentity = GetInitializedStoreIdentity();
             cancellationToken.ThrowIfCancellationRequested();
-            using var connectionScope = LeaseStoreConnection(storeIdentity, cancellationToken);
-            var connection = connectionScope.Connection;
-            SqliteLocalCommitConnection.ConfigureLockPolling(connection);
-            SqliteConnectionSettings.ConfigureOperationalConnection(connection);
-            using var transaction = SqliteLocalCommitConnection.BeginWriteTransaction(connection, cancellationToken);
-            var currentExpiry = SqliteLocalCommitSql.ValidateLeaseMembership(connection, transaction, storeIdentity, leaseId);
-            SqliteLocalCommitSql.ThrowIfLeaseQuarantined(connection, transaction, storeIdentity, leaseId);
-            if (currentExpiry <= nowUtc)
-            {
-                throw new InvalidOperationException(ExpiredLeaseMessage);
-            }
+            WithStoreConnection(
+                storeIdentity,
+                connection =>
+                {
+                    SqliteLocalCommitConnection.ConfigureLockPolling(connection);
+                    SqliteConnectionSettings.ConfigureOperationalConnection(connection);
+                    using var transaction = SqliteLocalCommitConnection.BeginWriteTransaction(connection, cancellationToken);
+                    var currentExpiry = SqliteLocalCommitSql.ValidateLeaseMembership(connection, transaction, storeIdentity, leaseId);
+                    SqliteLocalCommitSql.ThrowIfLeaseQuarantined(connection, transaction, storeIdentity, leaseId);
+                    if (currentExpiry <= nowUtc)
+                    {
+                        throw new InvalidOperationException(ExpiredLeaseMessage);
+                    }
 
-            var expiresAtUtc = CheckedAdd(currentExpiry, extension);
-            SqliteLocalCommitSql.RenewLease(connection, transaction, storeIdentity, leaseId, expiresAtUtc);
-            cancellationToken.ThrowIfCancellationRequested();
-            CommitWithOperationStateIntegrity(transaction);
+                    var expiresAtUtc = CheckedAdd(currentExpiry, extension);
+                    SqliteLocalCommitSql.RenewLease(connection, transaction, storeIdentity, leaseId, expiresAtUtc);
+                    cancellationToken.ThrowIfCancellationRequested();
+                    CommitWithOperationStateIntegrity(transaction);
+                },
+                cancellationToken);
         }
     }
 
@@ -546,16 +488,20 @@ internal sealed partial class SqliteLocalCommitStore : IDisposable
             ThrowIfDisposed();
             var storeIdentity = GetInitializedStoreIdentity();
             cancellationToken.ThrowIfCancellationRequested();
-            using var connectionScope = LeaseStoreConnection(storeIdentity, cancellationToken);
-            var connection = connectionScope.Connection;
-            SqliteLocalCommitConnection.ConfigureLockPolling(connection);
-            SqliteConnectionSettings.ConfigureOperationalConnection(connection);
-            using var transaction = SqliteLocalCommitConnection.BeginWriteTransaction(connection, cancellationToken);
-            _ = SqliteLocalCommitSql.ValidateLeaseMembership(connection, transaction, storeIdentity, leaseId);
-            SqliteLocalCommitSql.ThrowIfLeaseQuarantined(connection, transaction, storeIdentity, leaseId);
-            SqliteLocalCommitSql.ReleaseLease(connection, transaction, storeIdentity, leaseId);
-            cancellationToken.ThrowIfCancellationRequested();
-            CommitWithOperationStateIntegrity(transaction);
+            WithStoreConnection(
+                storeIdentity,
+                connection =>
+                {
+                    SqliteLocalCommitConnection.ConfigureLockPolling(connection);
+                    SqliteConnectionSettings.ConfigureOperationalConnection(connection);
+                    using var transaction = SqliteLocalCommitConnection.BeginWriteTransaction(connection, cancellationToken);
+                    _ = SqliteLocalCommitSql.ValidateLeaseMembership(connection, transaction, storeIdentity, leaseId);
+                    SqliteLocalCommitSql.ThrowIfLeaseQuarantined(connection, transaction, storeIdentity, leaseId);
+                    SqliteLocalCommitSql.ReleaseLease(connection, transaction, storeIdentity, leaseId);
+                    cancellationToken.ThrowIfCancellationRequested();
+                    CommitWithOperationStateIntegrity(transaction);
+                },
+                cancellationToken);
         }
     }
 
@@ -591,26 +537,30 @@ internal sealed partial class SqliteLocalCommitStore : IDisposable
             ThrowIfDisposed();
             var storeIdentity = GetInitializedStoreIdentity();
             cancellationToken.ThrowIfCancellationRequested();
-            using var connectionScope = LeaseStoreConnection(storeIdentity, cancellationToken);
-            var connection = connectionScope.Connection;
-            SqliteLocalCommitConnection.ConfigureLockPolling(connection);
-            SqliteConnectionSettings.ConfigureOperationalConnection(connection);
-            using var transaction = BeginVerifiedReadTransaction(connection);
-            SqliteLocalCommitSql.ThrowIfStreamQuarantined(connection, transaction, storeIdentity, streamId);
-            List<Guid> unapplied = [with(capacity: eventIds.Count)];
-            for (var index = 0; index < eventIds.Count; index++)
-            {
-                cancellationToken.ThrowIfCancellationRequested();
-                var eventId = eventIds[index];
-                if (!SqliteLocalCommitSql.IsInboxEventApplied(connection, transaction, storeIdentity, streamId, eventId))
+            return WithStoreConnection<IReadOnlyList<Guid>>(
+                storeIdentity,
+                connection =>
                 {
-                    unapplied.Add(eventId);
-                }
-            }
+                    SqliteLocalCommitConnection.ConfigureLockPolling(connection);
+                    SqliteConnectionSettings.ConfigureOperationalConnection(connection);
+                    using var transaction = BeginVerifiedReadTransaction(connection);
+                    SqliteLocalCommitSql.ThrowIfStreamQuarantined(connection, transaction, storeIdentity, streamId);
+                    List<Guid> unapplied = [with(capacity: eventIds.Count)];
+                    for (var index = 0; index < eventIds.Count; index++)
+                    {
+                        cancellationToken.ThrowIfCancellationRequested();
+                        var eventId = eventIds[index];
+                        if (!SqliteLocalCommitSql.IsInboxEventApplied(connection, transaction, storeIdentity, streamId, eventId))
+                        {
+                            unapplied.Add(eventId);
+                        }
+                    }
 
-            cancellationToken.ThrowIfCancellationRequested();
-            CommitWithOperationStateIntegrity(transaction);
-            return unapplied;
+                    cancellationToken.ThrowIfCancellationRequested();
+                    CommitWithOperationStateIntegrity(transaction);
+                    return unapplied;
+                },
+                cancellationToken);
         }
     }
 
@@ -638,22 +588,26 @@ internal sealed partial class SqliteLocalCommitStore : IDisposable
             ThrowIfDisposed();
             var storeIdentity = GetInitializedStoreIdentity();
             cancellationToken.ThrowIfCancellationRequested();
-            using var connectionScope = LeaseStoreConnection(storeIdentity, cancellationToken);
-            var connection = connectionScope.Connection;
-            SqliteLocalCommitConnection.ConfigureLockPolling(connection);
-            SqliteConnectionSettings.ConfigureOperationalConnection(connection);
-            using var transaction = SqliteLocalCommitConnection.BeginWriteTransaction(connection, cancellationToken);
-            var result = SqliteLocalCommitSql.Compact(
-                connection,
-                transaction,
+            return WithStoreConnection(
                 storeIdentity,
-                request,
-                retention,
-                nowUtc,
+                connection =>
+                {
+                    SqliteLocalCommitConnection.ConfigureLockPolling(connection);
+                    SqliteConnectionSettings.ConfigureOperationalConnection(connection);
+                    using var transaction = SqliteLocalCommitConnection.BeginWriteTransaction(connection, cancellationToken);
+                    var result = SqliteLocalCommitSql.Compact(
+                        connection,
+                        transaction,
+                        storeIdentity,
+                        request,
+                        retention,
+                        nowUtc,
+                        cancellationToken);
+                    cancellationToken.ThrowIfCancellationRequested();
+                    CommitAtCheckpoints(transaction, SqliteCommitCheckpoint.CompactionBeforeCommit, SqliteCommitCheckpoint.CompactionAfterCommit);
+                    return result;
+                },
                 cancellationToken);
-            cancellationToken.ThrowIfCancellationRequested();
-            CommitAtCheckpoints(transaction, SqliteCommitCheckpoint.CompactionBeforeCommit, SqliteCommitCheckpoint.CompactionAfterCommit);
-            return result;
         }
     }
 
@@ -676,19 +630,23 @@ internal sealed partial class SqliteLocalCommitStore : IDisposable
             ThrowIfDisposed();
             var storeIdentity = GetInitializedStoreIdentity();
             cancellationToken.ThrowIfCancellationRequested();
-            using var connectionScope = LeaseStoreConnection(storeIdentity, cancellationToken);
-            var connection = connectionScope.Connection;
-            SqliteLocalCommitConnection.ConfigureLockPolling(connection);
-            SqliteConnectionSettings.ConfigureOperationalConnection(connection);
-            using var transaction = SqliteLocalCommitConnection.BeginWriteTransaction(connection, cancellationToken);
-            _ = SqliteLocalCommitSql.ReadStreamState(connection, transaction, storeIdentity, request.Request.StreamId);
-            var subscriptionId = SqliteLocalCommitSql.SelectSubscriptionId(connection, transaction, storeIdentity, request.Request.StreamId);
-            ValidateQuarantineSubscriptionBinding(request.Request, subscriptionId);
-            ValidateQuarantineOperationBinding(connection, transaction, storeIdentity, request.Request);
-            var result = SqliteLocalCommitSql.InsertPayloadQuarantine(connection, transaction, storeIdentity, request, Guid.NewGuid());
-            cancellationToken.ThrowIfCancellationRequested();
-            CommitWithOperationStateIntegrity(transaction);
-            return result;
+            return WithStoreConnection(
+                storeIdentity,
+                connection =>
+                {
+                    SqliteLocalCommitConnection.ConfigureLockPolling(connection);
+                    SqliteConnectionSettings.ConfigureOperationalConnection(connection);
+                    using var transaction = SqliteLocalCommitConnection.BeginWriteTransaction(connection, cancellationToken);
+                    _ = SqliteLocalCommitSql.ReadStreamState(connection, transaction, storeIdentity, request.Request.StreamId);
+                    var subscriptionId = SqliteLocalCommitSql.SelectSubscriptionId(connection, transaction, storeIdentity, request.Request.StreamId);
+                    ValidateQuarantineSubscriptionBinding(request.Request, subscriptionId);
+                    ValidateQuarantineOperationBinding(connection, transaction, storeIdentity, request.Request);
+                    var result = SqliteLocalCommitSql.InsertPayloadQuarantine(connection, transaction, storeIdentity, request, Guid.NewGuid());
+                    cancellationToken.ThrowIfCancellationRequested();
+                    CommitWithOperationStateIntegrity(transaction);
+                    return result;
+                },
+                cancellationToken);
         }
     }
 
@@ -710,15 +668,19 @@ internal sealed partial class SqliteLocalCommitStore : IDisposable
             ThrowIfDisposed();
             var storeIdentity = GetInitializedStoreIdentity();
             cancellationToken.ThrowIfCancellationRequested();
-            using var connectionScope = LeaseStoreConnection(storeIdentity, cancellationToken);
-            var connection = connectionScope.Connection;
-            SqliteLocalCommitConnection.ConfigureLockPolling(connection);
-            SqliteConnectionSettings.ConfigureOperationalConnection(connection);
-            using var transaction = BeginVerifiedReadTransaction(connection);
-            var result = SqliteLocalCommitSql.ReadPayloadQuarantine(connection, transaction, storeIdentity, streamId);
-            cancellationToken.ThrowIfCancellationRequested();
-            CommitWithOperationStateIntegrity(transaction);
-            return result;
+            return WithStoreConnection(
+                storeIdentity,
+                connection =>
+                {
+                    SqliteLocalCommitConnection.ConfigureLockPolling(connection);
+                    SqliteConnectionSettings.ConfigureOperationalConnection(connection);
+                    using var transaction = BeginVerifiedReadTransaction(connection);
+                    var result = SqliteLocalCommitSql.ReadPayloadQuarantine(connection, transaction, storeIdentity, streamId);
+                    cancellationToken.ThrowIfCancellationRequested();
+                    CommitWithOperationStateIntegrity(transaction);
+                    return result;
+                },
+                cancellationToken);
         }
     }
 
@@ -746,49 +708,53 @@ internal sealed partial class SqliteLocalCommitStore : IDisposable
             ThrowIfDisposed();
             var storeIdentity = GetInitializedStoreIdentity();
             cancellationToken.ThrowIfCancellationRequested();
-            using var connectionScope = LeaseStoreConnection(storeIdentity, cancellationToken);
-            var connection = connectionScope.Connection;
-            SqliteLocalCommitConnection.ConfigureLockPolling(connection);
-            SqliteConnectionSettings.ConfigureOperationalConnection(connection);
-            using var transaction = SqliteLocalCommitConnection.BeginWriteTransaction(connection, cancellationToken);
-            SqliteLocalCommitSql.ThrowIfStreamQuarantined(connection, transaction, storeIdentity, batch.StreamId);
-            var subscriptionId = SqliteLocalCommitSql.SelectSubscriptionId(connection, transaction, storeIdentity, batch.StreamId);
-            SqliteLocalCommitSql.EnsureStreamRow(connection, transaction, storeIdentity, batch.StreamId, subscriptionId);
-            var stream = SqliteLocalCommitSql.ReadStreamState(connection, transaction, storeIdentity, batch.StreamId);
-            if (!string.Equals(stream.ServerCursor, batch.PreviousCursor, StringComparison.Ordinal))
-            {
-                throw new InvalidOperationException("The SQLite stream cursor does not match the remote batch previous cursor.");
-            }
-
-            var currentRevision = SqliteLocalCommitSql.ReadSnapshotRevision(connection, transaction, storeIdentity, batch.StreamId);
-            if (currentRevision != snapshotMutation.ExpectedRevision)
-            {
-                throw new InvalidOperationException("The snapshot revision does not match the expected revision.");
-            }
-
-            var nextRevision = snapshotMutation.ExpectedRevision + 1;
-            var appliedCount = 0;
-            var duplicateCount = 0;
-            for (var index = 0; index < batch.Events.Count; index++)
-            {
-                cancellationToken.ThrowIfCancellationRequested();
-                var remoteEvent = batch.Events[index];
-                if (SqliteLocalCommitSql.IsInboxEventApplied(connection, transaction, storeIdentity, batch.StreamId, remoteEvent.EventId))
+            return WithStoreConnection<RemoteApplyResult>(
+                storeIdentity,
+                connection =>
                 {
-                    duplicateCount++;
-                    continue;
-                }
+                    SqliteLocalCommitConnection.ConfigureLockPolling(connection);
+                    SqliteConnectionSettings.ConfigureOperationalConnection(connection);
+                    using var transaction = SqliteLocalCommitConnection.BeginWriteTransaction(connection, cancellationToken);
+                    SqliteLocalCommitSql.ThrowIfStreamQuarantined(connection, transaction, storeIdentity, batch.StreamId);
+                    var subscriptionId = SqliteLocalCommitSql.SelectSubscriptionId(connection, transaction, storeIdentity, batch.StreamId);
+                    SqliteLocalCommitSql.EnsureStreamRow(connection, transaction, storeIdentity, batch.StreamId, subscriptionId);
+                    var stream = SqliteLocalCommitSql.ReadStreamState(connection, transaction, storeIdentity, batch.StreamId);
+                    if (!string.Equals(stream.ServerCursor, batch.PreviousCursor, StringComparison.Ordinal))
+                    {
+                        throw new InvalidOperationException("The SQLite stream cursor does not match the remote batch previous cursor.");
+                    }
 
-                SqliteLocalCommitSql.InsertInboxEvent(connection, transaction, storeIdentity, remoteEvent, committedAtUtc);
-                appliedCount++;
-            }
+                    var currentRevision = SqliteLocalCommitSql.ReadSnapshotRevision(connection, transaction, storeIdentity, batch.StreamId);
+                    if (currentRevision != snapshotMutation.ExpectedRevision)
+                    {
+                        throw new InvalidOperationException("The snapshot revision does not match the expected revision.");
+                    }
 
-            SqliteLocalCommitSql.UpsertSnapshot(connection, transaction, storeIdentity, snapshotMutation, nextRevision, batch.NextCursor, committedAtUtc);
-            SqliteLocalCommitSql.UpdateServerCursor(connection, transaction, storeIdentity, batch.StreamId, batch.PreviousCursor, batch.NextCursor);
-            SqliteLocalCommitSql.MarkReceiveInclusions(connection, transaction, storeIdentity, _clientId, batch, snapshotMutation);
-            cancellationToken.ThrowIfCancellationRequested();
-            CommitAtCheckpoints(transaction, SqliteCommitCheckpoint.RemoteApplyBeforeCommit, SqliteCommitCheckpoint.RemoteApplyAfterCommit);
-            return new(batch.NextCursor, appliedCount, duplicateCount, nextRevision);
+                    var nextRevision = snapshotMutation.ExpectedRevision + 1;
+                    var appliedCount = 0;
+                    var duplicateCount = 0;
+                    for (var index = 0; index < batch.Events.Count; index++)
+                    {
+                        cancellationToken.ThrowIfCancellationRequested();
+                        var remoteEvent = batch.Events[index];
+                        if (SqliteLocalCommitSql.IsInboxEventApplied(connection, transaction, storeIdentity, batch.StreamId, remoteEvent.EventId))
+                        {
+                            duplicateCount++;
+                            continue;
+                        }
+
+                        SqliteLocalCommitSql.InsertInboxEvent(connection, transaction, storeIdentity, remoteEvent, committedAtUtc);
+                        appliedCount++;
+                    }
+
+                    SqliteLocalCommitSql.UpsertSnapshot(connection, transaction, storeIdentity, snapshotMutation, nextRevision, batch.NextCursor, committedAtUtc);
+                    SqliteLocalCommitSql.UpdateServerCursor(connection, transaction, storeIdentity, batch.StreamId, batch.PreviousCursor, batch.NextCursor);
+                    SqliteLocalCommitSql.MarkReceiveInclusions(connection, transaction, storeIdentity, _clientId, batch, snapshotMutation);
+                    cancellationToken.ThrowIfCancellationRequested();
+                    CommitAtCheckpoints(transaction, SqliteCommitCheckpoint.RemoteApplyBeforeCommit, SqliteCommitCheckpoint.RemoteApplyAfterCommit);
+                    return new(batch.NextCursor, appliedCount, duplicateCount, nextRevision);
+                },
+                cancellationToken);
         }
     }
 
@@ -805,16 +771,20 @@ internal sealed partial class SqliteLocalCommitStore : IDisposable
             ThrowIfDisposed();
             var storeIdentity = GetInitializedStoreIdentity();
             cancellationToken.ThrowIfCancellationRequested();
-            using var connectionScope = LeaseStoreConnection(storeIdentity, cancellationToken);
-            var connection = connectionScope.Connection;
-            SqliteLocalCommitConnection.ConfigureLockPolling(connection);
-            SqliteConnectionSettings.ConfigureOperationalConnection(connection);
-            using var transaction = BeginVerifiedReadTransaction(connection);
-            SqliteOperationStateIntegrity.VerifyOperation(connection, transaction, storeIdentity, operationId);
-            var status = SqliteLocalCommitSql.ReadOperationStatus(connection, transaction, storeIdentity, operationId);
-            cancellationToken.ThrowIfCancellationRequested();
-            CommitWithOperationStateIntegrity(transaction);
-            return status;
+            return WithStoreConnection(
+                storeIdentity,
+                connection =>
+                {
+                    SqliteLocalCommitConnection.ConfigureLockPolling(connection);
+                    SqliteConnectionSettings.ConfigureOperationalConnection(connection);
+                    using var transaction = BeginVerifiedReadTransaction(connection);
+                    SqliteOperationStateIntegrity.VerifyOperation(connection, transaction, storeIdentity, operationId);
+                    var status = SqliteLocalCommitSql.ReadOperationStatus(connection, transaction, storeIdentity, operationId);
+                    cancellationToken.ThrowIfCancellationRequested();
+                    CommitWithOperationStateIntegrity(transaction);
+                    return status;
+                },
+                cancellationToken);
         }
     }
 
@@ -831,16 +801,20 @@ internal sealed partial class SqliteLocalCommitStore : IDisposable
             ThrowIfDisposed();
             var storeIdentity = GetInitializedStoreIdentity();
             cancellationToken.ThrowIfCancellationRequested();
-            using var connectionScope = LeaseStoreConnection(storeIdentity, cancellationToken);
-            var connection = connectionScope.Connection;
-            SqliteLocalCommitConnection.ConfigureLockPolling(connection);
-            SqliteConnectionSettings.ConfigureOperationalConnection(connection);
-            using var transaction = BeginVerifiedReadTransaction(connection);
-            SqliteOperationStateIntegrity.VerifyOperation(connection, transaction, storeIdentity, operationId);
-            var retryState = SqliteLocalCommitSql.ReadRetryState(connection, transaction, storeIdentity, operationId);
-            cancellationToken.ThrowIfCancellationRequested();
-            CommitWithOperationStateIntegrity(transaction);
-            return retryState;
+            return WithStoreConnection(
+                storeIdentity,
+                connection =>
+                {
+                    SqliteLocalCommitConnection.ConfigureLockPolling(connection);
+                    SqliteConnectionSettings.ConfigureOperationalConnection(connection);
+                    using var transaction = BeginVerifiedReadTransaction(connection);
+                    SqliteOperationStateIntegrity.VerifyOperation(connection, transaction, storeIdentity, operationId);
+                    var retryState = SqliteLocalCommitSql.ReadRetryState(connection, transaction, storeIdentity, operationId);
+                    cancellationToken.ThrowIfCancellationRequested();
+                    CommitWithOperationStateIntegrity(transaction);
+                    return retryState;
+                },
+                cancellationToken);
         }
     }
 
@@ -865,31 +839,35 @@ internal sealed partial class SqliteLocalCommitStore : IDisposable
         SqliteLocalCommitValidation.ValidateAttemptBarrierInput(leaseId, operationId, nextAttempt);
         cancellationToken.ThrowIfCancellationRequested();
         var storeIdentity = GetInitializedStoreIdentityForOperation();
-        using var connectionScope = LeaseStoreConnection(storeIdentity, cancellationToken);
-        var connection = connectionScope.Connection;
-        SqliteLocalCommitConnection.ConfigureLockPolling(connection);
-        SqliteConnectionSettings.ConfigureOperationalConnection(connection);
-        using var transaction = SqliteLocalCommitConnection.BeginWriteTransaction(connection, cancellationToken);
-        var nowUtc = _timeProvider.GetUtcNow();
-        var leaseExpiry = SqliteLocalCommitSql.ValidateLeaseMembership(connection, transaction, storeIdentity, leaseId);
-        SqliteLocalCommitSql.ThrowIfLeaseQuarantined(connection, transaction, storeIdentity, leaseId);
-        SqliteLocalCommitSql.ThrowIfOperationStreamQuarantined(connection, transaction, storeIdentity, operationId);
-        if (leaseExpiry <= nowUtc)
-        {
-            throw new InvalidOperationException(ExpiredLeaseMessage);
-        }
-
-        var decision = SqliteLocalCommitSql.TryBeginRemoteAttempt(
-            connection,
-            transaction,
+        return WithStoreConnection(
             storeIdentity,
-            leaseId,
-            operationId,
-            nextAttempt,
-            nowUtc);
-        cancellationToken.ThrowIfCancellationRequested();
-        CommitAtCheckpoints(transaction, SqliteCommitCheckpoint.AttemptBarrierBeforeCommit, SqliteCommitCheckpoint.AttemptBarrierAfterCommit);
-        return decision;
+            connection =>
+            {
+                SqliteLocalCommitConnection.ConfigureLockPolling(connection);
+                SqliteConnectionSettings.ConfigureOperationalConnection(connection);
+                using var transaction = SqliteLocalCommitConnection.BeginWriteTransaction(connection, cancellationToken);
+                var nowUtc = _timeProvider.GetUtcNow();
+                var leaseExpiry = SqliteLocalCommitSql.ValidateLeaseMembership(connection, transaction, storeIdentity, leaseId);
+                SqliteLocalCommitSql.ThrowIfLeaseQuarantined(connection, transaction, storeIdentity, leaseId);
+                SqliteLocalCommitSql.ThrowIfOperationStreamQuarantined(connection, transaction, storeIdentity, operationId);
+                if (leaseExpiry <= nowUtc)
+                {
+                    throw new InvalidOperationException(ExpiredLeaseMessage);
+                }
+
+                var decision = SqliteLocalCommitSql.TryBeginRemoteAttempt(
+                    connection,
+                    transaction,
+                    storeIdentity,
+                    leaseId,
+                    operationId,
+                    nextAttempt,
+                    nowUtc);
+                cancellationToken.ThrowIfCancellationRequested();
+                CommitAtCheckpoints(transaction, SqliteCommitCheckpoint.AttemptBarrierBeforeCommit, SqliteCommitCheckpoint.AttemptBarrierAfterCommit);
+                return decision;
+            },
+            cancellationToken);
     }
 
     /// <summary>Applies remote synchronization results to the currently leased batch.</summary>
@@ -924,15 +902,19 @@ internal sealed partial class SqliteLocalCommitStore : IDisposable
             ThrowIfDisposed();
             var storeIdentity = GetInitializedStoreIdentity();
             cancellationToken.ThrowIfCancellationRequested();
-            using var connectionScope = LeaseStoreConnection(storeIdentity, cancellationToken);
-            var connection = connectionScope.Connection;
-            SqliteLocalCommitConnection.ConfigureLockPolling(connection);
-            SqliteConnectionSettings.ConfigureOperationalConnection(connection);
-            using var transaction = SqliteLocalCommitConnection.BeginWriteTransaction(connection, cancellationToken);
-            SqliteLocalCommitSql.ThrowIfOperationStreamQuarantined(connection, transaction, storeIdentity, operationId);
-            SqliteLocalCommitSql.SaveRetryState(connection, transaction, storeIdentity, operationId, retryState, nowUtc);
-            cancellationToken.ThrowIfCancellationRequested();
-            CommitWithOperationStateIntegrity(transaction);
+            WithStoreConnection(
+                storeIdentity,
+                connection =>
+                {
+                    SqliteLocalCommitConnection.ConfigureLockPolling(connection);
+                    SqliteConnectionSettings.ConfigureOperationalConnection(connection);
+                    using var transaction = SqliteLocalCommitConnection.BeginWriteTransaction(connection, cancellationToken);
+                    SqliteLocalCommitSql.ThrowIfOperationStreamQuarantined(connection, transaction, storeIdentity, operationId);
+                    SqliteLocalCommitSql.SaveRetryState(connection, transaction, storeIdentity, operationId, retryState, nowUtc);
+                    cancellationToken.ThrowIfCancellationRequested();
+                    CommitWithOperationStateIntegrity(transaction);
+                },
+                cancellationToken);
         }
     }
 
@@ -963,27 +945,31 @@ internal sealed partial class SqliteLocalCommitStore : IDisposable
         SqliteLocalCommitValidation.ValidateSyncResultInput(leaseId, result);
         cancellationToken.ThrowIfCancellationRequested();
         var storeIdentity = GetInitializedStoreIdentityForOperation();
-        using var connectionScope = LeaseStoreConnection(storeIdentity, cancellationToken);
-        var connection = connectionScope.Connection;
-        SqliteLocalCommitConnection.ConfigureLockPolling(connection);
-        SqliteConnectionSettings.ConfigureOperationalConnection(connection);
-        using var transaction = SqliteLocalCommitConnection.BeginWriteTransaction(connection, cancellationToken);
-        var nowUtc = _timeProvider.GetUtcNow();
-        var leaseExpiry = SqliteLocalCommitSql.ValidateLeaseMembership(connection, transaction, storeIdentity, leaseId);
-        SqliteLocalCommitSql.ThrowIfLeaseQuarantined(connection, transaction, storeIdentity, leaseId);
-        if (leaseExpiry <= nowUtc)
-        {
-            throw new InvalidOperationException(ExpiredLeaseMessage);
-        }
+        WithStoreConnection(
+            storeIdentity,
+            connection =>
+            {
+                SqliteLocalCommitConnection.ConfigureLockPolling(connection);
+                SqliteConnectionSettings.ConfigureOperationalConnection(connection);
+                using var transaction = SqliteLocalCommitConnection.BeginWriteTransaction(connection, cancellationToken);
+                var nowUtc = _timeProvider.GetUtcNow();
+                var leaseExpiry = SqliteLocalCommitSql.ValidateLeaseMembership(connection, transaction, storeIdentity, leaseId);
+                SqliteLocalCommitSql.ThrowIfLeaseQuarantined(connection, transaction, storeIdentity, leaseId);
+                if (leaseExpiry <= nowUtc)
+                {
+                    throw new InvalidOperationException(ExpiredLeaseMessage);
+                }
 
-        var operations = SqliteLocalCommitSql.ReadLeasedOperations(connection, transaction, storeIdentity, leaseId, _maximumReadPayloadBytes);
-        ValidateResultCountForLeasedBatch(operations, result);
-        SyncBatchValidator.Validate(new(leaseId, operations), result);
-        SqliteLocalCommitSql.ValidateStatusOnlyReconciliation(connection, transaction, storeIdentity, operations, result, _maximumReadPayloadBytes);
-        SqliteLocalCommitSql.ApplySyncResult(connection, transaction, storeIdentity, result, nowUtc);
-        SqliteLocalCommitSql.ReleaseLease(connection, transaction, storeIdentity, leaseId);
-        cancellationToken.ThrowIfCancellationRequested();
-        CommitAtCheckpoints(transaction, SqliteCommitCheckpoint.SyncResultBeforeCommit, SqliteCommitCheckpoint.SyncResultAfterCommit);
+                var operations = SqliteLocalCommitSql.ReadLeasedOperations(connection, transaction, storeIdentity, leaseId, _maximumReadPayloadBytes);
+                ValidateResultCountForLeasedBatch(operations, result);
+                SyncBatchValidator.Validate(new(leaseId, operations), result);
+                SqliteLocalCommitSql.ValidateStatusOnlyReconciliation(connection, transaction, storeIdentity, operations, result, _maximumReadPayloadBytes);
+                SqliteLocalCommitSql.ApplySyncResult(connection, transaction, storeIdentity, result, nowUtc);
+                SqliteLocalCommitSql.ReleaseLease(connection, transaction, storeIdentity, leaseId);
+                cancellationToken.ThrowIfCancellationRequested();
+                CommitAtCheckpoints(transaction, SqliteCommitCheckpoint.SyncResultBeforeCommit, SqliteCommitCheckpoint.SyncResultAfterCommit);
+            },
+            cancellationToken);
     }
 
     /// <summary>Applies remote synchronization results and replacement snapshots to the currently leased batch.</summary>
@@ -1009,48 +995,52 @@ internal sealed partial class SqliteLocalCommitStore : IDisposable
         ArgumentExceptionHelper.ThrowIfNull(snapshotMutations);
         cancellationToken.ThrowIfCancellationRequested();
         var storeIdentity = GetInitializedStoreIdentityForOperation();
-        using var connectionScope = LeaseStoreConnection(storeIdentity, cancellationToken);
-        var connection = connectionScope.Connection;
-        SqliteLocalCommitConnection.ConfigureLockPolling(connection);
-        SqliteConnectionSettings.ConfigureOperationalConnection(connection);
-        using var transaction = SqliteLocalCommitConnection.BeginWriteTransaction(connection, cancellationToken);
-        var nowUtc = _timeProvider.GetUtcNow();
-        var leaseExpiry = SqliteLocalCommitSql.ValidateLeaseMembership(connection, transaction, storeIdentity, leaseId);
-        SqliteLocalCommitSql.ThrowIfLeaseQuarantined(connection, transaction, storeIdentity, leaseId);
-        if (leaseExpiry <= nowUtc)
-        {
-            throw new InvalidOperationException(ExpiredLeaseMessage);
-        }
-
-        var operations = SqliteLocalCommitSql.ReadLeasedOperations(connection, transaction, storeIdentity, leaseId, _maximumReadPayloadBytes);
-        ValidateResultCountForLeasedBatch(operations, result);
-        SyncBatchValidator.Validate(new(leaseId, operations), result);
-        var plan = new SqliteResultReconciliationPlan(result, snapshotMutations, nowUtc, _maximumReadPayloadBytes);
-        var committedSnapshots = SqliteLocalCommitSql.CreateResultReconciliationSnapshots(
-            connection,
-            transaction,
+        return WithStoreConnection(
             storeIdentity,
-            operations,
-            plan);
-        SqliteLocalCommitSql.ApplySyncResult(connection, transaction, storeIdentity, result, nowUtc);
-        SqliteLocalCommitSql.ReleaseLease(connection, transaction, storeIdentity, leaseId);
-        for (var index = 0; index < committedSnapshots.Count; index++)
-        {
-            var snapshot = committedSnapshots[index];
-            SqliteLocalCommitSql.UpsertSnapshot(
-                connection,
-                transaction,
-                storeIdentity,
-                new(snapshot.StreamId, snapshot.State, snapshot.FormatVersion, snapshot.Revision - 1) { AuthoritativeState = snapshot.AuthoritativeState },
-                snapshot.Revision,
-                snapshot.ServerCursor,
-                snapshot.SavedAtUtc);
-        }
+            connection =>
+            {
+                SqliteLocalCommitConnection.ConfigureLockPolling(connection);
+                SqliteConnectionSettings.ConfigureOperationalConnection(connection);
+                using var transaction = SqliteLocalCommitConnection.BeginWriteTransaction(connection, cancellationToken);
+                var nowUtc = _timeProvider.GetUtcNow();
+                var leaseExpiry = SqliteLocalCommitSql.ValidateLeaseMembership(connection, transaction, storeIdentity, leaseId);
+                SqliteLocalCommitSql.ThrowIfLeaseQuarantined(connection, transaction, storeIdentity, leaseId);
+                if (leaseExpiry <= nowUtc)
+                {
+                    throw new InvalidOperationException(ExpiredLeaseMessage);
+                }
 
-        var receipt = new ReadOnlyCollection<LocalSnapshot>(committedSnapshots);
-        cancellationToken.ThrowIfCancellationRequested();
-        CommitAtCheckpoints(transaction, SqliteCommitCheckpoint.SyncResultBeforeCommit, SqliteCommitCheckpoint.SyncResultAfterCommit);
-        return receipt;
+                var operations = SqliteLocalCommitSql.ReadLeasedOperations(connection, transaction, storeIdentity, leaseId, _maximumReadPayloadBytes);
+                ValidateResultCountForLeasedBatch(operations, result);
+                SyncBatchValidator.Validate(new(leaseId, operations), result);
+                var plan = new SqliteResultReconciliationPlan(result, snapshotMutations, nowUtc, _maximumReadPayloadBytes);
+                var committedSnapshots = SqliteLocalCommitSql.CreateResultReconciliationSnapshots(
+                    connection,
+                    transaction,
+                    storeIdentity,
+                    operations,
+                    plan);
+                SqliteLocalCommitSql.ApplySyncResult(connection, transaction, storeIdentity, result, nowUtc);
+                SqliteLocalCommitSql.ReleaseLease(connection, transaction, storeIdentity, leaseId);
+                for (var index = 0; index < committedSnapshots.Count; index++)
+                {
+                    var snapshot = committedSnapshots[index];
+                    SqliteLocalCommitSql.UpsertSnapshot(
+                        connection,
+                        transaction,
+                        storeIdentity,
+                        new(snapshot.StreamId, snapshot.State, snapshot.FormatVersion, snapshot.Revision - 1) { AuthoritativeState = snapshot.AuthoritativeState },
+                        snapshot.Revision,
+                        snapshot.ServerCursor,
+                        snapshot.SavedAtUtc);
+                }
+
+                var receipt = new ReadOnlyCollection<LocalSnapshot>(committedSnapshots);
+                cancellationToken.ThrowIfCancellationRequested();
+                CommitAtCheckpoints(transaction, SqliteCommitCheckpoint.SyncResultBeforeCommit, SqliteCommitCheckpoint.SyncResultAfterCommit);
+                return receipt;
+            },
+            cancellationToken);
     }
 
     /// <summary>Dead-letters one leased operation and commits the rebuilt optimistic snapshot atomically.</summary>
@@ -1077,52 +1067,56 @@ internal sealed partial class SqliteLocalCommitStore : IDisposable
         SqliteLocalCommitValidation.ValidateDeadLetterInput(leaseId, operationId, reasonCode, snapshotMutation);
         cancellationToken.ThrowIfCancellationRequested();
         var storeIdentity = GetInitializedStoreIdentityForOperation();
-        using var connectionScope = LeaseStoreConnection(storeIdentity, cancellationToken);
-        var connection = connectionScope.Connection;
-        SqliteLocalCommitConnection.ConfigureLockPolling(connection);
-        SqliteConnectionSettings.ConfigureOperationalConnection(connection);
-        using var transaction = SqliteLocalCommitConnection.BeginWriteTransaction(connection, cancellationToken);
-        var nowUtc = _timeProvider.GetUtcNow();
-        var leaseExpiry = SqliteLocalCommitSql.ValidateLeaseMembership(connection, transaction, storeIdentity, leaseId);
-        if (leaseExpiry <= nowUtc)
-        {
-            throw new InvalidOperationException(ExpiredLeaseMessage);
-        }
+        return WithStoreConnection(
+            storeIdentity,
+            connection =>
+            {
+                SqliteLocalCommitConnection.ConfigureLockPolling(connection);
+                SqliteConnectionSettings.ConfigureOperationalConnection(connection);
+                using var transaction = SqliteLocalCommitConnection.BeginWriteTransaction(connection, cancellationToken);
+                var nowUtc = _timeProvider.GetUtcNow();
+                var leaseExpiry = SqliteLocalCommitSql.ValidateLeaseMembership(connection, transaction, storeIdentity, leaseId);
+                if (leaseExpiry <= nowUtc)
+                {
+                    throw new InvalidOperationException(ExpiredLeaseMessage);
+                }
 
-        var operation = SqliteLocalCommitSql.ReadLeasedOperation(
-            connection,
-            transaction,
-            storeIdentity,
-            leaseId,
-            operationId,
-            _maximumReadPayloadBytes);
-        var revision = snapshotMutation.ExpectedRevision + 1;
-        var committedSnapshot = SqliteLocalCommitSql.CreateDeadLetterSnapshot(
-            connection,
-            transaction,
-            storeIdentity,
-            operation,
-            snapshotMutation,
-            nowUtc,
-            _maximumReadPayloadBytes);
-        SqliteLocalCommitSql.DeadLetterOperation(connection, transaction, storeIdentity, operationId, reasonCode, nowUtc);
-        SqliteLocalCommitSql.ReleaseLeaseOperation(connection, transaction, storeIdentity, leaseId, operationId);
-        var committedMutation = new SnapshotMutation(committedSnapshot.StreamId, committedSnapshot.State, committedSnapshot.FormatVersion, revision - 1)
-        {
-            AuthoritativeState = committedSnapshot.AuthoritativeState,
-        };
-        SqliteLocalCommitSql.UpsertSnapshot(
-            connection,
-            transaction,
-            storeIdentity,
-            committedMutation,
-            committedSnapshot.Revision,
-            committedSnapshot.ServerCursor,
-            committedSnapshot.SavedAtUtc);
-        var receipt = committedSnapshot;
-        cancellationToken.ThrowIfCancellationRequested();
-        CommitAtCheckpoints(transaction, SqliteCommitCheckpoint.DeadLetterBeforeCommit, SqliteCommitCheckpoint.DeadLetterAfterCommit);
-        return receipt;
+                var operation = SqliteLocalCommitSql.ReadLeasedOperation(
+                    connection,
+                    transaction,
+                    storeIdentity,
+                    leaseId,
+                    operationId,
+                    _maximumReadPayloadBytes);
+                var revision = snapshotMutation.ExpectedRevision + 1;
+                var committedSnapshot = SqliteLocalCommitSql.CreateDeadLetterSnapshot(
+                    connection,
+                    transaction,
+                    storeIdentity,
+                    operation,
+                    snapshotMutation,
+                    nowUtc,
+                    _maximumReadPayloadBytes);
+                SqliteLocalCommitSql.DeadLetterOperation(connection, transaction, storeIdentity, operationId, reasonCode, nowUtc);
+                SqliteLocalCommitSql.ReleaseLeaseOperation(connection, transaction, storeIdentity, leaseId, operationId);
+                var committedMutation = new SnapshotMutation(committedSnapshot.StreamId, committedSnapshot.State, committedSnapshot.FormatVersion, revision - 1)
+                {
+                    AuthoritativeState = committedSnapshot.AuthoritativeState,
+                };
+                SqliteLocalCommitSql.UpsertSnapshot(
+                    connection,
+                    transaction,
+                    storeIdentity,
+                    committedMutation,
+                    committedSnapshot.Revision,
+                    committedSnapshot.ServerCursor,
+                    committedSnapshot.SavedAtUtc);
+                var receipt = committedSnapshot;
+                cancellationToken.ThrowIfCancellationRequested();
+                CommitAtCheckpoints(transaction, SqliteCommitCheckpoint.DeadLetterBeforeCommit, SqliteCommitCheckpoint.DeadLetterAfterCommit);
+                return receipt;
+            },
+            cancellationToken);
     }
 
     /// <summary>Rejects malformed result sizes before the shared validator allocates membership dictionaries.</summary>

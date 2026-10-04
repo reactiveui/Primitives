@@ -37,43 +37,47 @@ internal sealed partial class SqliteLocalCommitStore
     {
         ThrowIfDisposed();
         var storeIdentity = GetInitializedStoreIdentity();
-        using var connectionScope = LeaseStoreConnection(storeIdentity, cancellationToken);
-        var connection = connectionScope.Connection;
-        SqliteLocalCommitConnection.ConfigureLockPolling(connection);
-        SqliteConnectionSettings.ConfigureOperationalConnection(connection);
-        using var transaction = BeginVerifiedReadTransaction(connection);
-        var stream = SqliteLocalCommitSql.PreflightSnapshotRecoveryCapture(
-            connection,
-            transaction,
+        return WithStoreConnection(
             storeIdentity,
-            request,
+            connection =>
+            {
+                SqliteLocalCommitConnection.ConfigureLockPolling(connection);
+                SqliteConnectionSettings.ConfigureOperationalConnection(connection);
+                using var transaction = BeginVerifiedReadTransaction(connection);
+                var stream = SqliteLocalCommitSql.PreflightSnapshotRecoveryCapture(
+                    connection,
+                    transaction,
+                    storeIdentity,
+                    request,
+                    cancellationToken);
+                var payloadRows = ReadSnapshotRecoveryCapturePayloadRows(connection, transaction, storeIdentity, request.StreamId, _maximumReadPayloadBytes);
+                if (payloadRows.HasRows && stream is null)
+                {
+                    throw new InvalidOperationException("Committed data has no durable stream state.");
+                }
+
+                if (stream is { } durableStream && payloadRows.Snapshot is { } snapshot && snapshot.ServerCursor != durableStream.ServerCursor)
+                {
+                    throw new InvalidOperationException("The snapshot cursor does not match the durable stream cursor.");
+                }
+
+                var recoveredStream = stream is null
+                    ? new RecoveredStream(request.SubscriptionId, null, null, [], [], FirstClientSequence)
+                    : CreateRecoveredStream(request.SubscriptionId, stream.Value, in payloadRows);
+                var capture = new LocalSnapshotRecoveryCapture
+                {
+                    StreamId = request.StreamId,
+                    SubscriptionId = request.SubscriptionId,
+                    ServerCursor = recoveredStream.ServerCursor,
+                    Snapshot = recoveredStream.Snapshot,
+                    NextClientSequence = recoveredStream.NextClientSequence,
+                    PendingOperations = recoveredStream.PendingOperations,
+                    ReplayOperations = recoveredStream.ReplayOperations,
+                };
+                cancellationToken.ThrowIfCancellationRequested();
+                CommitWithOperationStateIntegrity(transaction);
+                return capture;
+            },
             cancellationToken);
-        var payloadRows = ReadSnapshotRecoveryCapturePayloadRows(connection, transaction, storeIdentity, request.StreamId, _maximumReadPayloadBytes);
-        if (payloadRows.HasRows && stream is null)
-        {
-            throw new InvalidOperationException("Committed data has no durable stream state.");
-        }
-
-        if (stream is { } durableStream && payloadRows.Snapshot is { } snapshot && snapshot.ServerCursor != durableStream.ServerCursor)
-        {
-            throw new InvalidOperationException("The snapshot cursor does not match the durable stream cursor.");
-        }
-
-        var recoveredStream = stream is null
-            ? new RecoveredStream(request.SubscriptionId, null, null, [], [], FirstClientSequence)
-            : CreateRecoveredStream(request.SubscriptionId, stream.Value, in payloadRows);
-        var capture = new LocalSnapshotRecoveryCapture
-        {
-            StreamId = request.StreamId,
-            SubscriptionId = request.SubscriptionId,
-            ServerCursor = recoveredStream.ServerCursor,
-            Snapshot = recoveredStream.Snapshot,
-            NextClientSequence = recoveredStream.NextClientSequence,
-            PendingOperations = recoveredStream.PendingOperations,
-            ReplayOperations = recoveredStream.ReplayOperations,
-        };
-        cancellationToken.ThrowIfCancellationRequested();
-        CommitWithOperationStateIntegrity(transaction);
-        return capture;
     }
 }

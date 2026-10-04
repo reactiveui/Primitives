@@ -51,44 +51,47 @@ internal sealed partial class SqliteServerCommitJournal
             commits[index] = ValidatePreparation(plans[index]);
         }
 
-        using var connectionLease = AcquireConnection();
-        var connection = _connection;
-        using var transaction = connection.BeginTransaction();
-        ValidateExistingSchema(connection, transaction);
-        ValidateReadCapacity(connection, transaction);
-        var results = new ServerCommitResult[commits.Length];
-        var changed = false;
-        var canApplyNext = true;
-        for (var index = 0; index < commits.Length; index++)
+        lock (_connectionGate)
         {
-            results[index] = canApplyNext
-                ? TryCommitInTransaction(connection, transaction, commits[index], _options.TimeProvider.GetUtcNow())
-                : new(
-                    ServerCommitStatus.StaleRevision,
-                    ServerCommitJournalOperations.CreateSnapshot(
-                        commits[index].StreamKey,
-                        ReadStreamRecord(connection, transaction, commits[index].StreamKey, commits[index].OperationKeys),
-                        commits[index].OperationKeys));
-            canApplyNext &= results[index].Status == ServerCommitStatus.Committed;
-            changed |= results[index].Status == ServerCommitStatus.Committed;
-        }
+            ThrowIfDisposed();
+            var connection = _connection;
+            using var transaction = connection.BeginTransaction();
+            ValidateExistingSchema(connection, transaction);
+            ValidateReadCapacity(connection, transaction);
+            var results = new ServerCommitResult[commits.Length];
+            var changed = false;
+            var canApplyNext = true;
+            for (var index = 0; index < commits.Length; index++)
+            {
+                results[index] = canApplyNext
+                    ? TryCommitInTransaction(connection, transaction, commits[index], _options.TimeProvider.GetUtcNow())
+                    : new(
+                        ServerCommitStatus.StaleRevision,
+                        ServerCommitJournalOperations.CreateSnapshot(
+                            commits[index].StreamKey,
+                            ReadStreamRecord(connection, transaction, commits[index].StreamKey, commits[index].OperationKeys),
+                            commits[index].OperationKeys));
+                canApplyNext &= results[index].Status == ServerCommitStatus.Committed;
+                changed |= results[index].Status == ServerCommitStatus.Committed;
+            }
 
-        if (changed)
-        {
-            _faultPoint.Reached(SqliteServerCommitCheckpoint.TryCommitBeforeCommit);
-        }
+            if (changed)
+            {
+                _faultPoint.Reached(SqliteServerCommitCheckpoint.TryCommitBeforeCommit);
+            }
 
-        transaction.Commit();
-        if (changed)
-        {
-            _ = Interlocked.Increment(ref _committedTransactionCount);
-        }
+            transaction.Commit();
+            if (changed)
+            {
+                _ = Interlocked.Increment(ref _committedTransactionCount);
+            }
 
-        if (changed)
-        {
-            _faultPoint.Reached(SqliteServerCommitCheckpoint.TryCommitAfterCommit);
-        }
+            if (changed)
+            {
+                _faultPoint.Reached(SqliteServerCommitCheckpoint.TryCommitAfterCommit);
+            }
 
-        return results;
+            return results;
+        }
     }
 }
