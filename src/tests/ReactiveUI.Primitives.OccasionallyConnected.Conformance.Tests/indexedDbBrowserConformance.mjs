@@ -4,6 +4,7 @@ import { readFile, mkdtemp, rm, access } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { setTimeout as delay } from "node:timers/promises";
+import { waitForDebuggingPort } from "./indexedDbBrowserStartup.mjs";
 
 const deadline = AbortSignal.timeout(45000);
 const profile = await mkdtemp(join(tmpdir(), "rxui-indexeddb-conformance-"));
@@ -40,14 +41,7 @@ browser.stdout.on("data", data => { output += data; });
 browser.stderr.on("data", data => { output += data; });
 let socket;
 try {
-    let port;
-    while (!port) {
-        deadline.throwIfAborted();
-        if (browser.exitCode !== null) throw new Error(`Browser exited before debugging started (exit ${browser.exitCode}): ${output}`);
-        try { port = Number((await readFile(join(profile, "DevToolsActivePort"), "utf8")).split("\n")[0]); }
-        catch (error) { if (error.code !== "ENOENT") throw error; }
-        if (!port) await delay(25, undefined, { signal: deadline });
-    }
+    let port = await waitForDebuggingPort(join(profile, "DevToolsActivePort"), browser, () => output, deadline);
     let page;
     while (!page) {
         const pages = await (await fetch(`http://127.0.0.1:${port}/json/list`, { signal: deadline })).json();
@@ -146,14 +140,7 @@ try {
     browser = spawn(executable, browserArguments, { stdio: ["ignore", "pipe", "pipe"] });
     browser.stdout.on("data", data => { output += data; });
     browser.stderr.on("data", data => { output += data; });
-    port = undefined;
-    while (!port) {
-        deadline.throwIfAborted();
-        if (browser.exitCode !== null) throw new Error(`Reopened browser exited (exit ${browser.exitCode}): ${output}`);
-        try { port = Number((await readFile(join(profile, "DevToolsActivePort"), "utf8")).split("\n")[0]); }
-        catch (error) { if (error.code !== "ENOENT") throw error; }
-        if (!port) await delay(25, undefined, { signal: deadline });
-    }
+    port = await waitForDebuggingPort(join(profile, "DevToolsActivePort"), browser, () => output, deadline);
     page = undefined;
     while (!page) {
         const pages = await (await fetch(`http://127.0.0.1:${port}/json/list`, { signal: deadline })).json();

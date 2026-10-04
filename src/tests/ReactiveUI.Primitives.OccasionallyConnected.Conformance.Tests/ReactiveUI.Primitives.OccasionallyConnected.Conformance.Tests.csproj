@@ -24,6 +24,7 @@
     <Compile Include="..\ReactiveUI.Primitives.OccasionallyConnected.Storage.IndexedDB.Tests\FakeJsRuntime.cs" Link="Fixtures\FakeJsRuntime.cs" />
     <Compile Include="..\ReactiveUI.Primitives.OccasionallyConnected.Storage.IndexedDB.Tests\FakeJsModule.cs" Link="Fixtures\FakeJsModule.cs" />
     <None Update="indexedDbBrowserConformance.mjs" CopyToOutputDirectory="PreserveNewest" />
+    <None Update="indexedDbBrowserStartup.mjs" CopyToOutputDirectory="PreserveNewest" />
     <None Include="..\..\ReactiveUI.Primitives.OccasionallyConnected.Storage.IndexedDB\wwwroot\indexedDbInterop.js"
           Link="indexedDbInterop.js" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
