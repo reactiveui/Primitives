@@ -69,7 +69,7 @@
     <PackageVersion Include="Microsoft.CodeAnalysis.CSharp" Version="4.14.0" Condition="!$(MSBuildProjectDirectory.Replace('\', '/').Contains('/benchmarks/'))"/>
     <!-- BenchmarkDotNet needs Roslyn 5.3+; this also reaches the job projects it generates under the benchmark bin folders. -->
     <PackageVersion Include="Microsoft.CodeAnalysis.CSharp" Version="5.9.0" Condition="$(MSBuildProjectDirectory.Replace('\', '/').Contains('/benchmarks/'))"/>
-    <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="18.10.1"/>
+    <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="18.11.0"/>
     <PackageVersion Include="TUnit" Version="1.72.10"/>
     <PackageVersion Include="Microsoft.Testing.Extensions.CodeCoverage" Version="18.11.2"/>
   </ItemGroup>
