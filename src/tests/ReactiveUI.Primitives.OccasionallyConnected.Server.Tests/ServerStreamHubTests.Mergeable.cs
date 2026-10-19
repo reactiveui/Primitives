@@ -290,7 +290,12 @@ public sealed partial class ServerStreamHubTests
         new()
         {
             AuthorizationPolicy = new AllowPolicy(Tenant),
-            ConflictHandler = new() { Streams = [composeFromParts ? MergeableRegistrationFromParts() : MergeableServerStreamRegistration.Create(new() { StreamId = MergeableStream, Kind = MergeableKind.IncrementOnlyCounter })] },
+            ConflictHandler = new()
+            {
+                Streams = [composeFromParts
+                    ? MergeableRegistrationFromParts()
+                    : MergeableServerStreamRegistration.Create(new() { StreamId = MergeableStream, Kind = MergeableKind.IncrementOnlyCounter })],
+            },
             SnapshotRecoveryAuthorizationPolicy = materializer is null ? null : new AllowSnapshotRecoveryPolicy(Tenant),
             SnapshotRecoveryMaterializer = materializer,
             EmptyPollDelay = TimeSpan.FromMilliseconds(PollDelayMilliseconds),

@@ -10,6 +10,47 @@ namespace ReactiveUI.Primitives.OccasionallyConnected.Storage.FileSystem.Tests;
 /// <summary>Tests durable append failure and complete-record replay boundaries.</summary>
 public sealed partial class FileSystemLocalStoreAdapterTests
 {
+    /// <summary>Verifies an exception after replacement cannot expose stale in-memory state.</summary>
+    /// <returns>The assertion task.</returns>
+    [Test]
+    public async Task ReplacementPublicationFailureClosesAdapterAndReopensCompleteJournal()
+    {
+        var directory = CreateJournalTestDirectory();
+        try
+        {
+            var stream = new StreamId("replacement-publication");
+            var initialization = new LocalStoreInitialization(TestClientId, 1, false);
+            SubscriptionId subscription;
+            await using (var adapter = new FileSystemLocalStoreAdapter(directory, static checkpoint =>
+            {
+                if (checkpoint == FileSystemJournalCheckpoint.AfterCompactionJournalReplace)
+                {
+                    throw new IOException("Injected failure after atomic replacement.");
+                }
+            }))
+            {
+                await adapter.InitializeAsync(initialization, CancellationToken.None);
+                subscription = await adapter.GetOrCreateSubscriptionIdAsync(stream, null, CancellationToken.None);
+                await CommitJournalRangeAsync(adapter, stream, 0, 1);
+                await Assert.That(() => IgnoreResultAsync(adapter.CompactAsync(new(stream, DateTimeOffset.MaxValue, 0), CancellationToken.None)))
+                    .Throws<IOException>();
+                await Assert.That(() => IgnoreResultAsync(adapter.RecoverStreamAsync(stream, subscription, CancellationToken.None)))
+                    .Throws<InvalidOperationException>();
+            }
+
+            await using var reopened = new FileSystemLocalStoreAdapter(directory);
+            await reopened.InitializeAsync(initialization, CancellationToken.None);
+            var state = await reopened.RecoverStreamAsync(stream, subscription, CancellationToken.None);
+            await Assert.That(state.PendingOperations).HasSingleItem();
+            await Assert.That(state.Snapshot!.Revision).IsEqualTo(1);
+            await CommitJournalRangeAsync(reopened, stream, 1, TwoPendingOperations);
+        }
+        finally
+        {
+            Directory.Delete(directory, recursive: true);
+        }
+    }
+
     /// <summary>Verifies failed rollback closes the adapter instead of exposing uncertain state.</summary>
     /// <returns>The assertion task.</returns>
     [Test]

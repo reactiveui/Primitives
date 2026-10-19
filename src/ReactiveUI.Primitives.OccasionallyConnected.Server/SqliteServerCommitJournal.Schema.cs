@@ -316,6 +316,10 @@ internal sealed partial class SqliteServerCommitJournal
         using var verifySynchronousCommand = connection.CreateStatement();
         verifySynchronousCommand.SetSql("PRAGMA synchronous;");
         VerifyFullSynchronous(verifySynchronousCommand.Scalar());
+        if (SqlitePlatform.RequiresFullFileSync)
+        {
+            SqlitePlatform.ConfigureFullFileSync(connection);
+        }
     }
 
     /// <summary>Applies durability pragmas after schema validation.</summary>

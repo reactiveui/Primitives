@@ -4,6 +4,7 @@
 
 using System.Runtime.CompilerServices;
 using ReactiveUI.Primitives.OccasionallyConnected;
+using ReactiveUI.Primitives.OccasionallyConnected.Sqlite;
 
 namespace ReactiveUI.Primitives.OccasionallyConnected.Storage.Sqlite;
 
@@ -41,10 +42,12 @@ internal sealed class SqliteSynchronousCommandWorker : IAsyncDisposable
     /// <param name="capacity">The maximum admitted command count, including the active command.</param>
     /// <param name="capacityBytes">The maximum caller-declared retained bytes, including the active command.</param>
     /// <exception cref="ArgumentOutOfRangeException">A capacity value is not positive.</exception>
+    /// <exception cref="PlatformNotSupportedException">Dedicated workers are unavailable in the browser.</exception>
     internal SqliteSynchronousCommandWorker(int capacity, long capacityBytes)
     {
         ArgumentOutOfRangeExceptionHelper.ThrowIfNegativeOrZero(capacity);
         ThrowIfNegativeOrZero(capacityBytes, nameof(capacityBytes));
+        SqlitePlatform.RequireDedicatedWorkers(SqlitePlatform.SupportsDedicatedWorkers);
         _capacity = capacity;
         _capacityBytes = capacityBytes;
         _processingTask = Task.Factory.StartNew(ProcessCommands, CancellationToken.None, TaskCreationOptions.LongRunning, TaskScheduler.Default);

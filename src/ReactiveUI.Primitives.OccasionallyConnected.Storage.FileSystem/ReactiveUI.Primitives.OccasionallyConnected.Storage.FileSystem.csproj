@@ -4,6 +4,8 @@
     <RootNamespace>ReactiveUI.Primitives.OccasionallyConnected.Storage.FileSystem</RootNamespace>
     <PackageDescription>Durable file-backed storage and journal compaction for local occasionally connected streams.</PackageDescription>
     <EnableSystemTextJsonSourceGenerator>true</EnableSystemTextJsonSourceGenerator>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <EnableLibraryImportSourceGenerator>true</EnableLibraryImportSourceGenerator>
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="..\ReactiveUI.Primitives.OccasionallyConnected.Core\ReactiveUI.Primitives.OccasionallyConnected.Core.csproj" />

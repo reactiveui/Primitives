@@ -109,7 +109,8 @@ public sealed class MergeableServerPayloadsTests
     [Test]
     public async Task TryDecodeInputRejectsContentTypeMismatch()
     {
-        var envelope = MergeableServerPayloads.CreateInput(MergeableInput.ForChange(MergeableChange.IncrementOnlyCounterSet(Client, SupportedSchema))) with { ContentType = "application/octet-stream" };
+        var input = MergeableInput.ForChange(MergeableChange.IncrementOnlyCounterSet(Client, SupportedSchema));
+        var envelope = MergeableServerPayloads.CreateInput(input) with { ContentType = "application/octet-stream" };
 
         var result = MergeableServerPayloads.TryDecodeInput(envelope, MergeableBounds.Default, out _, out var reason);
 

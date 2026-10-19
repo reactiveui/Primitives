@@ -47,6 +47,10 @@ internal static class SqliteConnectionSettings
         }
 
         VerifyFullSynchronous(synchronous);
+        if (SqlitePlatform.RequiresFullFileSync)
+        {
+            SqlitePlatform.ConfigureFullFileSync(connection);
+        }
     }
 
     /// <summary>Applies durability pragmas after schema validation.</summary>

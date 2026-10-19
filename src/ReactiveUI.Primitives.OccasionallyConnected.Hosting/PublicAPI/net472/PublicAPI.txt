@@ -12,16 +12,12 @@ public sealed class OccasionallyConnectedHealthCheck : Microsoft.Extensions.Diag
     public System.Threading.Tasks.Task<Microsoft.Extensions.Diagnostics.HealthChecks.HealthCheckResult> CheckHealthAsync(Microsoft.Extensions.Diagnostics.HealthChecks.HealthCheckContext context, System.Threading.CancellationToken cancellationToken = default) { }
 }
 [System.Diagnostics.DebuggerDisplay("Latest = {_latest}")]
-public sealed class OccasionallyConnectedHealthMonitor : System.IDisposable, System.IObserver<ReactiveUI.Primitives.OccasionallyConnected.SyncState>
+public sealed class OccasionallyConnectedHealthMonitor : System.IDisposable
 {
     public OccasionallyConnectedHealthMonitor(ReactiveUI.Primitives.OccasionallyConnected.IOccasionallyConnectedContext context, System.TimeProvider timeProvider) { }
     public ReactiveUI.Primitives.OccasionallyConnected.OccasionallyConnectedHealthReport Current { get; }
     [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
     public void Dispose() { }
-    public void OnCompleted() { }
-    [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
-    public void OnError(System.Exception error) { }
-    public void OnNext(ReactiveUI.Primitives.OccasionallyConnected.SyncState value) { }
 }
 public static class OccasionallyConnectedHostingExtensions
 {

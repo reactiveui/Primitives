@@ -200,6 +200,7 @@ public sealed partial class FileSystemLocalStoreAdapter : ILocalStoreAdapter
             if (_journal.Length == 0)
             {
                 await AppendAsync(new(next), cancellationToken).ConfigureAwait(false);
+                FileSystemJournalReplacement.FlushDirectory(_directory);
                 _state = next;
             }
             else if (next.Outbox != _state.Outbox || next.ClientId != _state.ClientId)
@@ -318,7 +319,7 @@ public sealed partial class FileSystemLocalStoreAdapter : ILocalStoreAdapter
     /// <summary>Opens the journal for serialized reads and writes.</summary>
     /// <returns>The open journal stream.</returns>
     private FileStream OpenJournal() =>
-        new(_journalPath, FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.Read, StreamBufferBytes, FileOptions.SequentialScan);
+        new(_journalPath, FileMode.Open, FileAccess.ReadWrite, FileShare.Read, StreamBufferBytes, FileOptions.SequentialScan);
 
     /// <summary>Atomically replaces the journal with a compacted state record.</summary>
     /// <param name="next">The state to persist.</param>
@@ -369,7 +370,7 @@ public sealed partial class FileSystemLocalStoreAdapter : ILocalStoreAdapter
             _journal = null;
             try
             {
-                File.Replace(temporaryPath, _journalPath, null);
+                await FileSystemJournalReplacement.ReplaceAsync(temporaryPath, _journalPath, cancellationToken).ConfigureAwait(false);
             }
             catch
             {
@@ -377,10 +378,8 @@ public sealed partial class FileSystemLocalStoreAdapter : ILocalStoreAdapter
                 throw;
             }
 
-            _journalCheckpoint?.Invoke(FileSystemJournalCheckpoint.AfterCompactionJournalReplace);
-            _state = next;
-            _journal = OpenJournal();
-            return Math.Max(0, oldLength - _journal.Length);
+            PublishReplacement(next);
+            return Math.Max(0, oldLength - _journal!.Length);
         }
         finally
         {
@@ -388,6 +387,24 @@ public sealed partial class FileSystemLocalStoreAdapter : ILocalStoreAdapter
             {
                 File.Delete(temporaryPath);
             }
+        }
+    }
+
+    /// <summary>Publishes the replacement only after its directory entry is durable.</summary>
+    /// <param name="next">The state in the replaced journal.</param>
+    private void PublishReplacement(StoreState next)
+    {
+        try
+        {
+            FileSystemJournalReplacement.FlushDirectory(_directory);
+            _journalCheckpoint?.Invoke(FileSystemJournalCheckpoint.AfterCompactionJournalReplace);
+            _journal = OpenJournal();
+            _state = next;
+        }
+        catch
+        {
+            Volatile.Write(ref _initialized, 0);
+            throw;
         }
     }
 

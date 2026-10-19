@@ -97,14 +97,14 @@ Source completion does not imply reviewer approval or a passing current-head CI 
 | [75](https://github.com/reactiveui/Primitives/pull/229#discussion_r4152460427) | LiteDB AOT claims | Open — see remaining acceptance in items 16–33. | Open |
 | [76](https://github.com/reactiveui/Primitives/pull/229#discussion_r4152460432) | Normal parent path aliases | Partial — physical path alias resolution exists; device proof remains. | Open |
 | [77](https://github.com/reactiveui/Primitives/pull/229#discussion_r4152460438) | Mounted network storage detection | Partial — longest mounted path policy exists; target proof remains. | Open |
-| [78](https://github.com/reactiveui/Primitives/pull/229#discussion_r4152460443) | Apple durable flush | Open — see remaining acceptance in items 16–33. | Open |
+| [78](https://github.com/reactiveui/Primitives/pull/229#discussion_r4152460443) | Apple durable flush | Implemented — enable and verify SQLite fullfsync and checkpoint_fullfsync on Apple. Hardware proof remains. | Open |
 | [79](https://github.com/reactiveui/Primitives/pull/229#discussion_r4152460450) | Native Mobile package assets | Implemented in baseline — retain regression evidence. | Open |
 | [80](https://github.com/reactiveui/Primitives/pull/229#discussion_r4152460459) | Installation and key recovery | Implemented in baseline — retain regression evidence. | Open |
 | [81](https://github.com/reactiveui/Primitives/pull/229#discussion_r4152460488) | Mobile drain budget | Open — see remaining acceptance in items 16–33. | Open |
-| [82](https://github.com/reactiveui/Primitives/pull/229#discussion_r4152460493) | File replacement durability | Open — see remaining acceptance in items 16–33. | Open |
+| [82](https://github.com/reactiveui/Primitives/pull/229#discussion_r4152460493) | File replacement durability | Implemented — Unix parent-directory sync and bounded Windows sharing retries. Unix execution proof remains. | Open |
 | [83](https://github.com/reactiveui/Primitives/pull/229#discussion_r4152460499) | Monotonic retry age | Open — see remaining acceptance in items 16–33. | Open |
 | [84](https://github.com/reactiveui/Primitives/pull/229#discussion_r4152460504) | Recoverable replay clock skew | Open — see remaining acceptance in items 16–33. | Open |
-| [85](https://github.com/reactiveui/Primitives/pull/229#discussion_r4152460509) | Browser SQLite rejection | Open — see remaining acceptance in items 16–33. | Open |
+| [85](https://github.com/reactiveui/Primitives/pull/229#discussion_r4152460509) | Browser SQLite rejection | Implemented — reject before creating the dedicated worker. Browser execution proof remains. | Open |
 | [86](https://github.com/reactiveui/Primitives/pull/229#discussion_r4152460515) | Browser persistence and quota | Open — see remaining acceptance in items 16–33. | Open |
 | [87](https://github.com/reactiveui/Primitives/pull/229#discussion_r4152460520) | Lifecycle JavaScript loop | Implemented in baseline — retain regression evidence. | Open |
 | [88](https://github.com/reactiveui/Primitives/pull/229#discussion_r4152460526) | Hidden versus frozen browser policy | Open — see remaining acceptance in items 16–33. | Open |
@@ -150,8 +150,10 @@ Core tests pass 592/592 on net10 and net11. All eight Core targets build with th
 HTTP tests pass 986/986 on net10 and net11, including unsigned signing and eleven idle-poll regressions.
 DI tests pass 87/87 with full package line and branch coverage. Activity tests pass 15/15 under coverage.
 The full feature gate and current-head CI must pass before release readiness is claimed.
+The storage follow-up passes 155 filesystem tests on both net10 and net11 on Windows.
+Server tests pass 598/598 on net11. SQLite platform and connection checks pass 26 tests.
+Windows coverage cannot verify Unix directory synchronization or Apple hardware flush behavior.
 No analyzer severity, coverage filter or quality threshold is weakened.
 
 Provider separation, the neutral atomic server persistence seam and the remaining naming groups are still open.
 This revision does not close GitHub threads or claim release readiness.
-
