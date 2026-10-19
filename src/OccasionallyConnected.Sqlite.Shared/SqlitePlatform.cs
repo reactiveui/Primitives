@@ -46,12 +46,8 @@ internal static class SqlitePlatform
     /// <exception cref="InvalidOperationException">SQLite did not accept the required flags.</exception>
     internal static void ConfigureFullFileSync(SqliteDatabase connection)
     {
-        connection.Execute("PRAGMA fullfsync = ON; PRAGMA checkpoint_fullfsync = ON;");
-        using var command = connection.CreateStatement();
-        command.SetSql("SELECT fullfsync FROM pragma_fullfsync;");
-        VerifyFullFileSync(command.Scalar());
-        command.SetSql("SELECT checkpoint_fullfsync FROM pragma_checkpoint_fullfsync;");
-        VerifyFullFileSync(command.Scalar());
+        ConfigureFullFileSyncFlag(connection, "SELECT fullfsync FROM pragma_fullfsync;", "PRAGMA fullfsync = ON;");
+        ConfigureFullFileSyncFlag(connection, "SELECT checkpoint_fullfsync FROM pragma_checkpoint_fullfsync;", "PRAGMA checkpoint_fullfsync = ON;");
     }
 
     /// <summary>Verifies one required full file synchronization flag.</summary>
@@ -63,5 +59,23 @@ internal static class SqlitePlatform
         {
             throw new InvalidOperationException("SQLite did not enable the required Apple full file synchronization settings.");
         }
+    }
+
+    /// <summary>Reads the current flag through a cached query and restores it only when needed.</summary>
+    /// <param name="connection">The open connection.</param>
+    /// <param name="querySql">The query that reads the flag at execution time.</param>
+    /// <param name="enableSql">The statement that enables the flag.</param>
+    private static void ConfigureFullFileSyncFlag(SqliteDatabase connection, string querySql, string enableSql)
+    {
+        using var command = connection.CreateStatement();
+        command.SetSql(querySql);
+        var value = command.Scalar();
+        if (value is not long enabled || enabled != 1)
+        {
+            connection.Execute(enableSql);
+            value = command.Scalar();
+        }
+
+        VerifyFullFileSync(value);
     }
 }

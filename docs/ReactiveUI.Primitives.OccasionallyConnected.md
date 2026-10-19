@@ -17,7 +17,7 @@ See [API migration](OccasionallyConnected.ApiMigration.md) for the implemented n
 See [remaining work](RemainingTasks.md) for acceptance criteria mapped to this specification.
 The [review reconciliation](GlennReviewReconciliation.md) separates source progress from GitHub thread resolution.
 Provider separation, the atomic server persistence contract and wire interoperability remain open.
-The net11 API revision also needs the selected upstream analyzer correction and valid case models.
+The net11 API revision uses analyzer 5.1.4 and composed case models.
 
 ## 1. Executive summary
 

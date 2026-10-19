@@ -497,6 +497,8 @@ public sealed partial class SyncEngineTests
             await callbackEntered.Task.WaitAsync(GuardTimeout);
 
             await Assert.That(stop.IsCompleted).IsFalse();
+            await session.SubscribeCanceled.Task.WaitAsync(GuardTimeout);
+            await Assert.That(stop.IsCompleted).IsFalse();
             await Assert.That(session.SubscribeCancellationCount).IsEqualTo(ExpectedSingleOperation);
             await Assert.That(session.SubscribeRequests.Count).IsEqualTo(ExpectedSingleOperation);
             await Assert.That(session.DisposeCalls).IsEqualTo(0);

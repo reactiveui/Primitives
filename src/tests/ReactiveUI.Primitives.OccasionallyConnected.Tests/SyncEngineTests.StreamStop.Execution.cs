@@ -52,13 +52,22 @@ public sealed partial class SyncEngineTests
     }
 
     /// <summary>Verifies duplicate stream stops join the same receive callback drain.</summary>
+    /// <param name="delayCancellationObservation">Whether iterator cancellation is held until after callback entry.</param>
     /// <returns>The assertion task.</returns>
     [Test]
-    public async Task ConcurrentStopStreamAsyncCallsShareReceiveCallbackDrain()
+    [Arguments(false)]
+    [Arguments(true)]
+    public async Task ConcurrentStopStreamAsyncCallsShareReceiveCallbackDrain(bool delayCancellationObservation)
     {
         TaskCompletionSource callbackEntered = new(TaskCreationOptions.RunContinuationsAsynchronously);
         using ManualResetEventSlim releaseCallback = new();
-        var session = CreateCallbackGatedReceiveSession(callbackEntered, releaseCallback);
+        TaskCompletionSource releaseCancellationObservation = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        var session = new ReceiveSession
+        {
+            SubscribeCancellationCallbackEntered = callbackEntered,
+            ReleaseSubscribeCancellationCallback = releaseCallback,
+            BeforeSubscribeCancellationObservation = delayCancellationObservation ? releaseCancellationObservation : null,
+        };
         await using var engine = CreateEngine(transport: new() { SessionOverride = session });
         using var registration = engine.RegisterParticipant(CreateReceiveParticipant());
         Task? firstStop = null;
@@ -71,6 +80,16 @@ public sealed partial class SyncEngineTests
             firstStop = Task.Run(async () => await engine.StopStreamAsync(Stream, CancellationToken.None).ConfigureAwait(false));
             await callbackEntered.Task.WaitAsync(GuardTimeout);
             secondStop = engine.StopStreamAsync(Stream, CancellationToken.None).AsTask();
+
+            await Assert.That(firstStop.IsCompleted).IsFalse();
+            await Assert.That(secondStop.IsCompleted).IsFalse();
+            if (delayCancellationObservation)
+            {
+                await Assert.That(session.SubscribeCancellationCount).IsEqualTo(0);
+            }
+
+            _ = releaseCancellationObservation.TrySetResult();
+            await session.SubscribeCanceled.Task.WaitAsync(GuardTimeout);
 
             await Assert.That(firstStop.IsCompleted).IsFalse();
             await Assert.That(secondStop.IsCompleted).IsFalse();
@@ -87,6 +106,7 @@ public sealed partial class SyncEngineTests
         }
         finally
         {
+            _ = releaseCancellationObservation.TrySetResult();
             releaseCallback.Set();
             if (firstStop is not null)
             {

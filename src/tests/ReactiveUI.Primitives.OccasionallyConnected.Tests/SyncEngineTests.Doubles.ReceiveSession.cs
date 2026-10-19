@@ -130,6 +130,9 @@ public sealed partial class SyncEngineTests
         /// <summary>Gets the number of observed subscription cancellations.</summary>
         public int SubscribeCancellationCount { get; private set; }
 
+        /// <summary>Gets an optional gate before the iterator records cancellation.</summary>
+        public TaskCompletionSource? BeforeSubscribeCancellationObservation { get; init; }
+
         /// <summary>Gets the signal set when subscription begins.</summary>
         public TaskCompletionSource SubscribeEntered { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
@@ -493,6 +496,11 @@ public sealed partial class SyncEngineTests
         /// <exception cref="Exception">The configured subscribe cancellation exception.</exception>
         private async ValueTask HandleSubscribeCancellationAsync()
         {
+            if (BeforeSubscribeCancellationObservation is not null)
+            {
+                await BeforeSubscribeCancellationObservation.Task.ConfigureAwait(false);
+            }
+
             SubscribeCancellationCount++;
             _ = SubscribeCanceled.TrySetResult();
             if (ReleaseSubscribeCancellation is not null)

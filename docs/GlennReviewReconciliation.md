@@ -149,10 +149,12 @@ Source completion does not imply reviewer approval or a passing current-head CI 
 Core tests pass 592/592 on net10 and net11. All eight Core targets build with the new case models.
 HTTP tests pass 986/986 on net10 and net11, including unsigned signing and eleven idle-poll regressions.
 DI tests pass 87/87 with full package line and branch coverage. Activity tests pass 15/15 under coverage.
-The full feature gate and current-head CI must pass before release readiness is claimed.
+The full 21-suite feature gate passes locally on Windows net10. Current-head CI remains pending.
 The storage follow-up passes 155 filesystem tests on both net10 and net11 on Windows.
 Server tests pass 598/598 on net11. SQLite platform and connection checks pass 26 tests.
 Windows coverage cannot verify Unix directory synchronization or Apple hardware flush behavior.
+The clean-consumer gate also audits transitive packages. SignalR uses the patched 8.0.32 and 9.0.21 clients.
+The net11 ASP.NET Core and Extensions packages use RC2 to keep their dependency graph aligned.
 No analyzer severity, coverage filter or quality threshold is weakened.
 
 Provider separation, the neutral atomic server persistence seam and the remaining naming groups are still open.
