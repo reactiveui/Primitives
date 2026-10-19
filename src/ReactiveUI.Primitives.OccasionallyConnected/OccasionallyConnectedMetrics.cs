@@ -20,36 +20,41 @@ internal sealed class OccasionallyConnectedMetrics : IDisposable
     /// <summary>The operations unit.</summary>
     private const string OperationsUnit = "operations";
 
+    /// <summary>Whether this recorder owns its meter.</summary>
+    private readonly bool _ownsMeter;
+
     /// <summary>Tracks whether this recorder has been disposed.</summary>
     private int _disposed;
 
     /// <summary>Initializes a new instance of the <see cref="OccasionallyConnectedMetrics"/> class.</summary>
     /// <param name="enabled">Whether this recorder should create instruments and emit measurements.</param>
-    internal OccasionallyConnectedMetrics(bool enabled)
+    /// <param name="meterFactory">The optional host factory whose meter is borrowed.</param>
+    internal OccasionallyConnectedMetrics(bool enabled, IMeterFactory? meterFactory = null)
     {
         if (!enabled)
         {
             return;
         }
 
-        Meter = new(MeterName);
-        OperationsPublished = Meter.CreateCounter<long>("oc.operations.published", unit: OperationsUnit);
-        OperationsSynchronized = Meter.CreateCounter<long>("oc.operations.synchronized", unit: OperationsUnit);
-        OperationsRejected = Meter.CreateCounter<long>("oc.operations.rejected", unit: OperationsUnit);
-        Conflicts = Meter.CreateCounter<long>("oc.conflicts", unit: "conflicts");
-        Retries = Meter.CreateCounter<long>("oc.retries", unit: "retries");
-        Duplicates = Meter.CreateCounter<long>("oc.duplicates", unit: "events");
-        QueuePending = Meter.CreateUpDownCounter<long>("oc.queue.pending", unit: OperationsUnit);
-        QueueBytes = Meter.CreateUpDownCounter<long>("oc.queue.bytes", unit: "bytes");
-        SyncBatchSize = Meter.CreateHistogram<long>("oc.sync.batch.size", unit: OperationsUnit);
-        SyncDuration = Meter.CreateHistogram<double>("oc.sync.duration", unit: "milliseconds");
-        StoreCommitDuration = Meter.CreateHistogram<double>("oc.store.commit.duration", unit: "milliseconds");
-        ConnectionStateChanges = Meter.CreateCounter<long>("oc.connection.state_changes", unit: "transitions");
-        DeadLetters = Meter.CreateCounter<long>("oc.dead_letters", unit: OperationsUnit);
-        QueueOverflows = Meter.CreateCounter<long>("oc.queue.overflow", unit: OperationsUnit);
+        _ownsMeter = meterFactory is null;
+        Meter = meterFactory is null ? new(MeterName) : meterFactory.Create(new(MeterName));
+        OperationsPublished = Meter.CreateCounter<long>("reactiveui.primitives.occasionallyconnected.operations.published", unit: OperationsUnit);
+        OperationsSynchronized = Meter.CreateCounter<long>("reactiveui.primitives.occasionallyconnected.operations.synchronized", unit: OperationsUnit);
+        OperationsRejected = Meter.CreateCounter<long>("reactiveui.primitives.occasionallyconnected.operations.rejected", unit: OperationsUnit);
+        Conflicts = Meter.CreateCounter<long>("reactiveui.primitives.occasionallyconnected.conflicts", unit: "conflicts");
+        Retries = Meter.CreateCounter<long>("reactiveui.primitives.occasionallyconnected.retries", unit: "retries");
+        Duplicates = Meter.CreateCounter<long>("reactiveui.primitives.occasionallyconnected.duplicates", unit: "events");
+        QueuePending = Meter.CreateUpDownCounter<long>("reactiveui.primitives.occasionallyconnected.queue.pending", unit: OperationsUnit);
+        QueueBytes = Meter.CreateUpDownCounter<long>("reactiveui.primitives.occasionallyconnected.queue.bytes", unit: "bytes");
+        SyncBatchSize = Meter.CreateHistogram<long>("reactiveui.primitives.occasionallyconnected.sync.batch.size", unit: OperationsUnit);
+        SyncDuration = Meter.CreateHistogram<double>("reactiveui.primitives.occasionallyconnected.sync.duration", unit: "s");
+        StoreCommitDuration = Meter.CreateHistogram<double>("reactiveui.primitives.occasionallyconnected.store.commit.duration", unit: "s");
+        ConnectionStateChanges = Meter.CreateCounter<long>("reactiveui.primitives.occasionallyconnected.connection.state_changes", unit: "transitions");
+        DeadLetters = Meter.CreateCounter<long>("reactiveui.primitives.occasionallyconnected.dead_letters", unit: OperationsUnit);
+        QueueOverflows = Meter.CreateCounter<long>("reactiveui.primitives.occasionallyconnected.queue.overflow", unit: OperationsUnit);
     }
 
-    /// <summary>Gets the meter owned by this recorder, if enabled.</summary>
+    /// <summary>Gets the owned or borrowed meter used by this recorder, if enabled.</summary>
     internal Meter? Meter { get; }
 
     /// <summary>Gets the published operation counter.</summary>
@@ -102,7 +107,10 @@ internal sealed class OccasionallyConnectedMetrics : IDisposable
             return;
         }
 
-        Meter?.Dispose();
+        if (_ownsMeter)
+        {
+            Meter!.Dispose();
+        }
     }
 
     /// <summary>Records published operations.</summary>
@@ -217,7 +225,7 @@ internal sealed class OccasionallyConnectedMetrics : IDisposable
         instrument?.Record(value);
     }
 
-    /// <summary>Records a non-negative duration in milliseconds.</summary>
+    /// <summary>Records a non-negative duration in seconds.</summary>
     /// <param name="instrument">The instrument to record.</param>
     /// <param name="duration">The duration to record.</param>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -228,6 +236,6 @@ internal sealed class OccasionallyConnectedMetrics : IDisposable
             return;
         }
 
-        instrument?.Record(duration.TotalMilliseconds);
+        instrument?.Record(duration.TotalSeconds);
     }
 }

@@ -11,7 +11,7 @@ using ReactiveUI.Primitives.OccasionallyConnected.DependencyInjection;
 namespace ReactiveUI.Primitives.OccasionallyConnected.DependencyInjection.Tests;
 
 /// <summary>Tests for <see cref="OccasionallyConnectedServiceCollectionExtensions"/>.</summary>
-public sealed class OccasionallyConnectedServiceCollectionExtensionsTests
+public sealed partial class OccasionallyConnectedServiceCollectionExtensionsTests
 {
     /// <summary>The counter stream name used by publication tests.</summary>
     private const string CounterName = "counter";

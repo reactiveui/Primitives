@@ -138,7 +138,7 @@ Source completion does not imply reviewer approval or a passing current-head CI 
 | [116](https://github.com/reactiveui/Primitives/pull/229#discussion_r4152460710) | Negotiated compression | Optional adapter/design decision — not required by framework scope alone. | Open |
 | [117](https://github.com/reactiveui/Primitives/pull/229#discussion_r4152460714) | Strict JSON duplicate handling | Open — see remaining acceptance in items 16–33. | Open |
 | [118](https://github.com/reactiveui/Primitives/pull/229#discussion_r4152460717) | Internal resilience implementation | Implemented locally — internal resilience with public extension point. | Resolved |
-| [119](https://github.com/reactiveui/Primitives/pull/229#discussion_r4152460722) | Host telemetry policy | Partial — host sampling is fixed; metric units and meter-factory work remain open. | Open |
+| [119](https://github.com/reactiveui/Primitives/pull/229#discussion_r4152460722) | Host telemetry policy | Implemented — host sampling and optional meter factories; meter-matching instrument prefix and second-based durations. | Open |
 | [120](https://github.com/reactiveui/Primitives/pull/229#discussion_r4152460726) | Bound configuration validation | Open — see remaining acceptance in items 16–33. | Open |
 | [121](https://github.com/reactiveui/Primitives/pull/229#discussion_r4152460737) | Connectivity and battery policy | Open — see remaining acceptance in items 16–33. | Open |
 | [122](https://github.com/reactiveui/Primitives/pull/229#discussion_r4152460747) | Local store conformance | Implemented in baseline — retain regression evidence. | Open |
@@ -148,13 +148,17 @@ Source completion does not imply reviewer approval or a passing current-head CI 
 
 Core tests pass 592/592 on net10 and net11. All eight Core targets build with the new case models.
 HTTP tests pass 986/986 on net10 and net11, including unsigned signing and eleven idle-poll regressions.
-DI tests pass 87/87 with full package line and branch coverage. Activity tests pass 15/15 under coverage.
-The full 21-suite feature gate passes locally on Windows net10. Current-head CI remains pending.
+DI tests pass 90/90 with full package line and branch coverage. Activity tests pass 15/15 under coverage.
+The host-metrics revision passes 1,712 runtime tests on both net10 and net11, with four capability skips on each.
+Metrics and builder tests cover all handwritten lines and branches. Both runtime variants build for eight targets.
+The storage revision passes the full 21-suite feature gate locally on Windows net10. Current-head CI remains pending.
 The storage follow-up passes 155 filesystem tests on both net10 and net11 on Windows.
+The access-control follow-up passes 159 filesystem tests on net10. Protected and inherited Windows access rules survive replacement.
 Server tests pass 598/598 on net11. SQLite platform and connection checks pass 26 tests.
 Windows coverage cannot verify Unix directory synchronization or Apple hardware flush behavior.
 The clean-consumer gate also audits transitive packages. SignalR uses the patched 8.0.32 and 9.0.21 clients.
 The net11 ASP.NET Core and Extensions packages use RC2 to keep their dependency graph aligned.
+The packed sample uses the Mergeable API. It builds for eight targets and passes all 19 consumer checks on net10.
 No analyzer severity, coverage filter or quality threshold is weakened.
 
 Provider separation, the neutral atomic server persistence seam and the remaining naming groups are still open.

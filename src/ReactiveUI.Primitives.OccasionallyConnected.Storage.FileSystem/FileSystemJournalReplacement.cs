@@ -96,6 +96,7 @@ internal static
 
         // No COPY_ALLOWED: both names must remain on the same volume.
         CheckDeleteSharing(destination);
+        CopyDiscretionaryAccessControl(source, destination);
         const int replaceExistingAndWriteThrough = 0x1 | 0x8;
         if (NativeMethods.MoveFile(source, destination, replaceExistingAndWriteThrough) == 0)
         {
@@ -117,6 +118,50 @@ internal static
         }
     }
 
+    /// <summary>Preserves the committed journal's access rules before publishing new contents.</summary>
+    /// <param name="source">The unpublished replacement.</param>
+    /// <param name="destination">The committed journal.</param>
+    private static void CopyDiscretionaryAccessControl(string source, string destination)
+    {
+        const uint daclInformation = 4;
+        const int insufficientBuffer = 122;
+        const int minimumDescriptorLength = 20;
+        const int maximumDescriptorLength = 131_072;
+        const int invalidSecurityDescriptor = 1338;
+        _ = NativeMethods.GetFileSecurity(destination, daclInformation, IntPtr.Zero, 0, out var length);
+        var error = Marshal.GetLastWin32Error();
+        if (error != insufficientBuffer || length is < minimumDescriptorLength or > maximumDescriptorLength)
+        {
+            throw CreateIOException(error == insufficientBuffer ? invalidSecurityDescriptor : error);
+        }
+
+        var descriptor = Marshal.AllocHGlobal(checked((int)length));
+        try
+        {
+            if (NativeMethods.GetFileSecurity(destination, daclInformation, descriptor, length, out _) == 0)
+            {
+                throw CreateIOException(Marshal.GetLastWin32Error());
+            }
+
+            // SECURITY_DESCRIPTOR_RELATIVE starts with revision, reserved byte, then control.
+            const int daclProtected = 0x1000;
+            const int controlOffset = 2;
+            const uint protectedDaclInformation = 0x80000000;
+            const uint unprotectedDaclInformation = 0x20000000;
+            var inheritance = (Marshal.ReadInt16(descriptor, controlOffset) & daclProtected) != 0
+                ? protectedDaclInformation
+                : unprotectedDaclInformation;
+            if (NativeMethods.SetFileSecurity(source, daclInformation | inheritance, descriptor) == 0)
+            {
+                throw CreateIOException(Marshal.GetLastWin32Error());
+            }
+        }
+        finally
+        {
+            Marshal.FreeHGlobal(descriptor);
+        }
+    }
+
     /// <summary>Preserves the native error code for precise retry classification.</summary>
     /// <param name="error">The operating system error.</param>
     /// <returns>The reported I/O failure.</returns>
@@ -131,6 +176,14 @@ internal static
         class NativeMethods
     {
 #if NET7_0_OR_GREATER
+        [DefaultDllImportSearchPaths(DllImportSearchPath.System32)]
+        [LibraryImport("advapi32.dll", EntryPoint = "GetFileSecurityW", SetLastError = true, StringMarshalling = StringMarshalling.Utf16)]
+        internal static partial int GetFileSecurity(string path, uint information, IntPtr descriptor, uint length, out uint required);
+
+        [DefaultDllImportSearchPaths(DllImportSearchPath.System32)]
+        [LibraryImport("advapi32.dll", EntryPoint = "SetFileSecurityW", SetLastError = true, StringMarshalling = StringMarshalling.Utf16)]
+        internal static partial int SetFileSecurity(string path, uint information, IntPtr descriptor);
+
         [DefaultDllImportSearchPaths(DllImportSearchPath.System32)]
         [LibraryImport("kernel32.dll", EntryPoint = "CreateFileW", SetLastError = true, StringMarshalling = StringMarshalling.Utf16)]
         internal static partial SafeFileHandle OpenForDelete(
@@ -152,6 +205,26 @@ internal static
         [LibraryImport("libc", EntryPoint = "close", SetLastError = true)]
         internal static partial int CloseDirectory(int descriptor);
 #else
+    /// <summary>Reads the requested file security descriptor.</summary>
+    /// <param name="path">The file path.</param>
+    /// <param name="information">The requested security sections.</param>
+    /// <param name="descriptor">The output buffer.</param>
+    /// <param name="length">The output buffer length.</param>
+    /// <param name="required">The required buffer length.</param>
+    /// <returns>The native success indicator.</returns>
+    [DefaultDllImportSearchPaths(DllImportSearchPath.System32)]
+    [DllImport("advapi32.dll", EntryPoint = "GetFileSecurityW", ExactSpelling = true, SetLastError = true, CharSet = CharSet.Unicode)]
+    internal static extern int GetFileSecurity(string path, uint information, IntPtr descriptor, uint length, out uint required);
+
+    /// <summary>Applies the requested file security descriptor.</summary>
+    /// <param name="path">The file path.</param>
+    /// <param name="information">The requested security sections.</param>
+    /// <param name="descriptor">The security descriptor.</param>
+    /// <returns>The native success indicator.</returns>
+    [DefaultDllImportSearchPaths(DllImportSearchPath.System32)]
+    [DllImport("advapi32.dll", EntryPoint = "SetFileSecurityW", ExactSpelling = true, SetLastError = true, CharSet = CharSet.Unicode)]
+    internal static extern int SetFileSecurity(string path, uint information, IntPtr descriptor);
+
     /// <summary>Opens the journal for a delete sharing check.</summary>
     /// <param name="path">The journal path.</param>
     /// <param name="access">The requested native access.</param>

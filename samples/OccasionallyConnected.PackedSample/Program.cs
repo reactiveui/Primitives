@@ -5,7 +5,7 @@
 using System.Runtime.InteropServices;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using ReactiveUI.Primitives.OccasionallyConnected;
-using ReactiveUI.Primitives.OccasionallyConnected.Crdt;
+using ReactiveUI.Primitives.OccasionallyConnected.Mergeable;
 using ReactiveUI.Primitives.OccasionallyConnected.Hosting;
 
 namespace OccasionallyConnected.PackedSample;

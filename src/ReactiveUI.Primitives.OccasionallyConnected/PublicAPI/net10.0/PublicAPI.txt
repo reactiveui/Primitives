@@ -86,6 +86,7 @@ public sealed class OccasionallyConnectedBuilder
     public ReactiveUI.Primitives.OccasionallyConnected.OccasionallyConnectedBuilder UseStore(ReactiveUI.Primitives.OccasionallyConnected.ILocalStoreAdapter store) { }
     public ReactiveUI.Primitives.OccasionallyConnected.OccasionallyConnectedBuilder UseStoreIdentity(string storeIdentity) { }
     public ReactiveUI.Primitives.OccasionallyConnected.OccasionallyConnectedBuilder UseStoreInitialization(ReactiveUI.Primitives.OccasionallyConnected.LocalStoreInitialization initialization) { }
+    public ReactiveUI.Primitives.OccasionallyConnected.OccasionallyConnectedBuilder UseMeterFactory(System.Diagnostics.Metrics.IMeterFactory meterFactory) { }
     public ReactiveUI.Primitives.OccasionallyConnected.OccasionallyConnectedBuilder UseTimeProvider(System.TimeProvider timeProvider) { }
     public ReactiveUI.Primitives.OccasionallyConnected.OccasionallyConnectedBuilder UseTransport(ReactiveUI.Primitives.OccasionallyConnected.IRemoteTransportAdapter transport) { }
     public ReactiveUI.Primitives.OccasionallyConnected.OccasionallyConnectedBuilder WithRegistryCapacity(int capacity) { }

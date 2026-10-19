@@ -2,6 +2,7 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Diagnostics.Metrics;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -67,6 +68,11 @@ public static class OccasionallyConnectedServiceCollectionExtensions
         ConfigureStoreInitialization(contextBuilder, configuration);
         ConfigureSerializer(contextBuilder, configuration, services);
         ConfigureBufferOverflowPolicy(contextBuilder, configuration, services);
+        if (services.GetService<IMeterFactory>() is { } meterFactory)
+        {
+            _ = contextBuilder.UseMeterFactory(meterFactory);
+        }
+
         var context = contextBuilder.Build();
         OccasionallyConnectedLoggerBridge.ObserveStartup(context, logger, options.IncludeStartupExceptionDetails);
         return context;

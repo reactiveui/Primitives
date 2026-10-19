@@ -3,6 +3,7 @@
 // See the LICENSE file in the project root for full license information.
 
 using System.Diagnostics;
+using System.Diagnostics.Metrics;
 using System.Runtime.CompilerServices;
 using ReactiveUI.Primitives.Concurrency;
 
@@ -54,6 +55,9 @@ public sealed class OccasionallyConnectedBuilder
 
     /// <summary>Stores the configured clock.</summary>
     private TimeProvider _timeProvider = TimeProvider.System;
+
+    /// <summary>Stores the optional host meter factory.</summary>
+    private IMeterFactory? _meterFactory;
 
     /// <summary>Stores the optional public sequencer.</summary>
     private ISequencer? _sequencer;
@@ -226,6 +230,17 @@ public sealed class OccasionallyConnectedBuilder
         return this;
     }
 
+    /// <summary>Configures the host factory used to create metrics without transferring its ownership.</summary>
+    /// <param name="meterFactory">The host meter factory.</param>
+    /// <returns>The current builder.</returns>
+    public OccasionallyConnectedBuilder UseMeterFactory(IMeterFactory meterFactory)
+    {
+        EnsureMutable();
+        ArgumentExceptionHelper.ThrowIfNull(meterFactory);
+        _meterFactory = meterFactory;
+        return this;
+    }
+
     /// <summary>Configures observer notifications to use a public sequencer.</summary>
     /// <param name="sequencer">The public sequencer.</param>
     /// <returns>The current builder.</returns>
@@ -294,6 +309,7 @@ public sealed class OccasionallyConnectedBuilder
             StoreOwnership = _storeOwnership,
             TransportOwnership = _transportOwnership,
             TimeProvider = _timeProvider,
+            MeterFactory = _meterFactory,
             NotificationScheduler = notificationScheduler,
             Options = _options,
             StoreInitialization = initialization,

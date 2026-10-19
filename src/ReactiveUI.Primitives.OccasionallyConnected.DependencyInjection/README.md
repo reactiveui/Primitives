@@ -23,6 +23,12 @@ Register the feature with `IServiceCollection.AddOccasionallyConnected(...)`. In
 
 See the [collaboration client example](https://github.com/reactiveui/Primitives/blob/main/src/examples/OccasionallyConnected.Collaboration.Client/README.md) for a working application setup. The [ResilienceLab](https://github.com/reactiveui/Primitives/blob/main/src/examples/OccasionallyConnected.ResilienceLab/README.md) shows integrated synchronization behavior.
 
+## Host metrics
+
+When your host registers `IMeterFactory`, the context borrows its meters. The host controls their lifetime.
+Separate host containers keep separate meters. Context disposal does not dispose a host-owned meter.
+Without that service, the context creates and disposes its own meter. A DI container is not required by the runtime.
+
 ## Startup logs
 
 Startup failure logs omit exception details by default. The context's `StartupTask` still retains the original failure.

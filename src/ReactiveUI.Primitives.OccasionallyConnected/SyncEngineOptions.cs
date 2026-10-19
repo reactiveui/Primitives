@@ -2,6 +2,8 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Diagnostics.Metrics;
+
 #if REACTIVE_SHIM
 namespace ReactiveUI.Primitives.OccasionallyConnected.Reactive;
 #else
@@ -37,6 +39,9 @@ internal sealed record SyncEngineOptions
 
     /// <summary>Gets the clock used for engine lifecycle diagnostics.</summary>
     public TimeProvider TimeProvider { get; init; } = TimeProvider.System;
+
+    /// <summary>Gets the optional host meter factory whose meters remain host owned.</summary>
+    public IMeterFactory? MeterFactory { get; init; }
 
     /// <summary>Gets the configured observer notification scheduler.</summary>
     public IObserverNotificationScheduler NotificationScheduler { get; init; } = ThreadPoolObserverNotificationScheduler.Instance;

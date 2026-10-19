@@ -31,7 +31,7 @@ public sealed class OccasionallyConnectedMetricsTests
     private const string OperationsUnit = "operations";
 
     /// <summary>The pending queue instrument name.</summary>
-    private const string PendingName = "oc.queue.pending";
+    private const string PendingName = "reactiveui.primitives.occasionallyconnected.queue.pending";
 
     /// <summary>The pending queue increase.</summary>
     private const long PendingIncrease = 3;
@@ -76,11 +76,17 @@ public sealed class OccasionallyConnectedMetricsTests
         await Assert.That(instruments).Count().IsEqualTo(InstrumentCount);
         await Assert.That(measurements).Count().IsEqualTo(InstrumentCount);
         await Assert.That(measurements.TrueForAll(static measurement => measurement.Tags.Length == 0)).IsTrue();
-        await Assert.That(instruments.Exists(static item => item.Name == "oc.operations.published" && item.Kind == CounterKind && item.Unit == OperationsUnit)).IsTrue();
+        await Assert.That(instruments.Exists(static item => item.Name == "reactiveui.primitives.occasionallyconnected.operations.published"
+            && item.Kind == CounterKind && item.Unit == OperationsUnit))
+            .IsTrue();
         await Assert.That(instruments.Exists(static item => item.Name == PendingName && item.Kind == "UpDownCounter" && item.Unit == OperationsUnit)).IsTrue();
-        await Assert.That(instruments.Exists(static item => item.Name == "oc.sync.duration" && item.Kind == "Histogram" && item.Unit == "milliseconds")).IsTrue();
-        await Assert.That(instruments.Exists(static item => item.Name == "oc.dead_letters" && item.Kind == CounterKind && item.Unit == OperationsUnit)).IsTrue();
-        await Assert.That(instruments.Exists(static item => item.Name == "oc.queue.overflow" && item.Kind == CounterKind && item.Unit == OperationsUnit)).IsTrue();
+        await Assert.That(instruments.Exists(static item => item.Name == "reactiveui.primitives.occasionallyconnected.sync.duration" && item.Kind == "Histogram" && item.Unit == "s")).IsTrue();
+        await Assert.That(instruments.Exists(static item => item.Name == "reactiveui.primitives.occasionallyconnected.dead_letters"
+            && item.Kind == CounterKind && item.Unit == OperationsUnit))
+            .IsTrue();
+        await Assert.That(instruments.Exists(static item => item.Name == "reactiveui.primitives.occasionallyconnected.queue.overflow"
+            && item.Kind == CounterKind && item.Unit == OperationsUnit))
+            .IsTrue();
     }
 
     /// <summary>Verifies queue deltas and recorder lifetime behavior.</summary>
@@ -95,15 +101,21 @@ public sealed class OccasionallyConnectedMetricsTests
         recorder.RecordQueuePending(PendingDecrease);
         recorder.RecordQueueBytes(ByteIncrease);
         recorder.RecordQueueBytes(ByteDecrease);
+        var ownedMeterCounter = recorder.Meter!.CreateCounter<long>("test.owned.meter");
         recorder.Dispose();
         recorder.Dispose();
         recorder.RecordOperationPublished();
+        ownedMeterCounter.Add(1);
 
         var measurements = capture.GetMeasurements();
         await Assert.That(measurements.Exists(static item => item.Name == PendingName && Math.Abs(item.Value - PendingIncrease) < MeasurementTolerance)).IsTrue();
         await Assert.That(measurements.Exists(static item => item.Name == PendingName && Math.Abs(item.Value - PendingDecrease) < MeasurementTolerance)).IsTrue();
-        await Assert.That(measurements.Exists(static item => item.Name == "oc.queue.bytes" && Math.Abs(item.Value - ByteIncrease) < MeasurementTolerance)).IsTrue();
-        await Assert.That(measurements.Exists(static item => item.Name == "oc.queue.bytes" && Math.Abs(item.Value - ByteDecrease) < MeasurementTolerance)).IsTrue();
+        await Assert.That(measurements.Exists(static item => item.Name == "reactiveui.primitives.occasionallyconnected.queue.bytes"
+            && Math.Abs(item.Value - ByteIncrease) < MeasurementTolerance))
+            .IsTrue();
+        await Assert.That(measurements.Exists(static item => item.Name == "reactiveui.primitives.occasionallyconnected.queue.bytes"
+            && Math.Abs(item.Value - ByteDecrease) < MeasurementTolerance))
+            .IsTrue();
         await Assert.That(measurements).Count().IsEqualTo(QueueMeasurementCount);
     }
 
@@ -129,20 +141,20 @@ public sealed class OccasionallyConnectedMetricsTests
     /// <param name="unit">The expected unit.</param>
     /// <returns>The assertion task.</returns>
     [Test]
-    [Arguments("oc.operations.published", "Counter", "operations")]
-    [Arguments("oc.operations.synchronized", "Counter", "operations")]
-    [Arguments("oc.operations.rejected", "Counter", "operations")]
-    [Arguments("oc.conflicts", "Counter", "conflicts")]
-    [Arguments("oc.retries", "Counter", "retries")]
-    [Arguments("oc.duplicates", "Counter", "events")]
-    [Arguments("oc.queue.pending", "UpDownCounter", "operations")]
-    [Arguments("oc.queue.bytes", "UpDownCounter", "bytes")]
-    [Arguments("oc.sync.batch.size", "Histogram", "operations")]
-    [Arguments("oc.sync.duration", "Histogram", "milliseconds")]
-    [Arguments("oc.store.commit.duration", "Histogram", "milliseconds")]
-    [Arguments("oc.connection.state_changes", "Counter", "transitions")]
-    [Arguments("oc.dead_letters", "Counter", "operations")]
-    [Arguments("oc.queue.overflow", "Counter", "operations")]
+    [Arguments("reactiveui.primitives.occasionallyconnected.operations.published", "Counter", "operations")]
+    [Arguments("reactiveui.primitives.occasionallyconnected.operations.synchronized", "Counter", "operations")]
+    [Arguments("reactiveui.primitives.occasionallyconnected.operations.rejected", "Counter", "operations")]
+    [Arguments("reactiveui.primitives.occasionallyconnected.conflicts", "Counter", "conflicts")]
+    [Arguments("reactiveui.primitives.occasionallyconnected.retries", "Counter", "retries")]
+    [Arguments("reactiveui.primitives.occasionallyconnected.duplicates", "Counter", "events")]
+    [Arguments("reactiveui.primitives.occasionallyconnected.queue.pending", "UpDownCounter", "operations")]
+    [Arguments("reactiveui.primitives.occasionallyconnected.queue.bytes", "UpDownCounter", "bytes")]
+    [Arguments("reactiveui.primitives.occasionallyconnected.sync.batch.size", "Histogram", "operations")]
+    [Arguments("reactiveui.primitives.occasionallyconnected.sync.duration", "Histogram", "s")]
+    [Arguments("reactiveui.primitives.occasionallyconnected.store.commit.duration", "Histogram", "s")]
+    [Arguments("reactiveui.primitives.occasionallyconnected.connection.state_changes", "Counter", "transitions")]
+    [Arguments("reactiveui.primitives.occasionallyconnected.dead_letters", "Counter", "operations")]
+    [Arguments("reactiveui.primitives.occasionallyconnected.queue.overflow", "Counter", "operations")]
     public async Task PublishesExpectedDefinitionAndValue(string name, string kind, string unit)
     {
         using var recorder = new OccasionallyConnectedMetrics(enabled: true);
@@ -200,17 +212,40 @@ public sealed class OccasionallyConnectedMetricsTests
         await Assert.That(measurements.TrueForAll(static item => item.Value == 0)).IsTrue();
     }
 
-    /// <summary>Preserves submillisecond timings for fast local store commits.</summary>
+    /// <summary>Preserves fractional seconds for store commits.</summary>
     /// <returns>The assertion task.</returns>
     [Test]
-    public async Task PreservesFractionalMilliseconds()
+    public async Task PreservesFractionalSeconds()
     {
-        const double elapsedMilliseconds = 0.5;
+        const double elapsedMilliseconds = 1500;
+        const double elapsedSeconds = 1.5;
         using var recorder = new OccasionallyConnectedMetrics(enabled: true);
         using var listener = CreateListener(recorder, out var capture);
         recorder.RecordStoreCommitDuration(TimeSpan.FromMilliseconds(elapsedMilliseconds));
         var measurement = capture.GetMeasurements().Single();
-        await Assert.That(measurement.Value).IsEqualTo(elapsedMilliseconds);
+        await Assert.That(measurement.Value).IsEqualTo(elapsedSeconds);
+    }
+
+    /// <summary>Verifies host meters survive recorder disposal and disabled metrics create nothing.</summary>
+    /// <returns>The assertion task.</returns>
+    [Test]
+    public async Task BorrowsFactoryMeterAndLeavesOtherRecordersActive()
+    {
+        const int expectedCreateCount = 2;
+        using var factory = new RecordingMeterFactory();
+        using var disabled = new OccasionallyConnectedMetrics(false, factory);
+        await Assert.That(factory.CreateCount).IsEqualTo(0);
+        var first = new OccasionallyConnectedMetrics(true, factory);
+        using var second = new OccasionallyConnectedMetrics(true, factory);
+        using var listener = CreateListener(second, out var capture);
+        await Assert.That(factory.CreateCount).IsEqualTo(expectedCreateCount);
+        await Assert.That(factory.OptionsName).IsEqualTo("ReactiveUI.Primitives.OccasionallyConnected");
+        first.Dispose();
+        RecordAll(first, 1);
+        await Assert.That(capture.GetMeasurements()).Count().IsEqualTo(0);
+        RecordAll(second, 1);
+        await Assert.That(capture.GetMeasurements()).Count().IsEqualTo(InstrumentCount);
+        await Assert.That(factory.DisposeCount).IsEqualTo(0);
     }
 
     /// <summary>Records a value through every instrument.</summary>
@@ -227,8 +262,8 @@ public sealed class OccasionallyConnectedMetricsTests
         recorder.RecordQueuePending(value);
         recorder.RecordQueueBytes(value);
         recorder.RecordSyncBatchSize(value);
-        recorder.RecordSyncDuration(TimeSpan.FromMilliseconds(value));
-        recorder.RecordStoreCommitDuration(TimeSpan.FromMilliseconds(value));
+        recorder.RecordSyncDuration(TimeSpan.FromSeconds(value));
+        recorder.RecordStoreCommitDuration(TimeSpan.FromSeconds(value));
         recorder.RecordConnectionStateChange(value);
         recorder.RecordDeadLetter(value);
         recorder.RecordQueueOverflow(value);
@@ -276,6 +311,37 @@ public sealed class OccasionallyConnectedMetricsTests
         Histogram<long> or Histogram<double> => "Histogram",
         _ => throw new InvalidOperationException("Unexpected metric instrument type."),
     };
+
+    /// <summary>Creates a shared host meter for lifetime tests.</summary>
+    private sealed class RecordingMeterFactory : IMeterFactory
+    {
+        /// <summary>The meter owned by the host.</summary>
+        private readonly Meter _meter = new("ReactiveUI.Primitives.OccasionallyConnected");
+
+        /// <summary>Gets the creation count.</summary>
+        internal int CreateCount { get; private set; }
+
+        /// <summary>Gets the disposal count.</summary>
+        internal int DisposeCount { get; private set; }
+
+        /// <summary>Gets the requested meter name.</summary>
+        internal string? OptionsName { get; private set; }
+
+        /// <inheritdoc />
+        public Meter Create(MeterOptions options)
+        {
+            CreateCount++;
+            OptionsName = options.Name;
+            return _meter;
+        }
+
+        /// <inheritdoc />
+        public void Dispose()
+        {
+            DisposeCount++;
+            _meter.Dispose();
+        }
+    }
 
     /// <summary>Captures listener callbacks safely during concurrent recording.</summary>
     private sealed class MetricCapture

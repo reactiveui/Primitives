@@ -27,13 +27,13 @@ public sealed partial class SyncEngineTests
     private const int DiagnosticsStoreBytes = 4096;
 
     /// <summary>The synchronized operations metric name.</summary>
-    private const string SynchronizedOperationsMetricName = "oc.operations.synchronized";
+    private const string SynchronizedOperationsMetricName = "reactiveui.primitives.occasionallyconnected.operations.synchronized";
 
     /// <summary>The pending queue count metric name.</summary>
-    private const string QueuePendingMetricName = "oc.queue.pending";
+    private const string QueuePendingMetricName = "reactiveui.primitives.occasionallyconnected.queue.pending";
 
     /// <summary>The queue retained bytes metric name.</summary>
-    private const string QueueBytesMetricName = "oc.queue.bytes";
+    private const string QueueBytesMetricName = "reactiveui.primitives.occasionallyconnected.queue.bytes";
 
     /// <summary>The diagnostics second payload byte.</summary>
     private const byte DiagnosticsSecondPayloadByte2 = 2;
@@ -81,8 +81,8 @@ public sealed partial class SyncEngineTests
 
         await Assert.That(receipt.OperationId).IsEqualTo(operation.OperationId);
         await Assert.That(participant.CommittedOperation).IsSameReferenceAs(operation);
-        await Assert.That(metricCapture.HasMeasurement("oc.operations.published", ExpectedSingleOperation)).IsTrue();
-        await Assert.That(metricCapture.HasMeasurement("oc.store.commit.duration", elapsed.TotalMilliseconds)).IsTrue();
+        await Assert.That(metricCapture.HasMeasurement("reactiveui.primitives.occasionallyconnected.operations.published", ExpectedSingleOperation)).IsTrue();
+        await Assert.That(metricCapture.HasMeasurement("reactiveui.primitives.occasionallyconnected.store.commit.duration", elapsed.TotalSeconds)).IsTrue();
         await Assert.That(metricCapture.AllMeasurementsUntagged).IsTrue();
         await Assert.That(activityCapture.HasActivity("oc.store.commit")).IsTrue();
         await Assert.That(activityCapture.AllActivitiesUntagged).IsTrue();
@@ -107,9 +107,9 @@ public sealed partial class SyncEngineTests
         await engine.TriggerSyncAsync(CancellationToken.None);
 
         await Assert.That(metricCapture.HasMeasurement(SynchronizedOperationsMetricName, ExpectedSingleOperation)).IsTrue();
-        await Assert.That(metricCapture.HasMeasurement("oc.sync.batch.size", ExpectedSingleOperation)).IsTrue();
-        await Assert.That(metricCapture.HasNonNegativeMeasurement("oc.sync.duration")).IsTrue();
-        await Assert.That(metricCapture.HasMeasurement("oc.connection.state_changes", ExpectedSingleOperation)).IsTrue();
+        await Assert.That(metricCapture.HasMeasurement("reactiveui.primitives.occasionallyconnected.sync.batch.size", ExpectedSingleOperation)).IsTrue();
+        await Assert.That(metricCapture.HasNonNegativeMeasurement("reactiveui.primitives.occasionallyconnected.sync.duration")).IsTrue();
+        await Assert.That(metricCapture.HasMeasurement("reactiveui.primitives.occasionallyconnected.connection.state_changes", ExpectedSingleOperation)).IsTrue();
         await Assert.That(metricCapture.AllMeasurementsUntagged).IsTrue();
         await Assert.That(activityCapture.HasActivity("oc.transport.connect")).IsTrue();
         await Assert.That(activityCapture.HasActivity("oc.sync.push")).IsTrue();
@@ -166,7 +166,7 @@ public sealed partial class SyncEngineTests
 
         await Assert.That(receipt.OperationId).IsEqualTo(saved.OperationId);
         await Assert.That(state.PendingBytes).IsEqualTo(SyncEngine.GetOperationRetainedBytes(saved));
-        await Assert.That(metricCapture.Sum("oc.operations.published")).IsEqualTo(ExpectedSingleOperation);
+        await Assert.That(metricCapture.Sum("reactiveui.primitives.occasionallyconnected.operations.published")).IsEqualTo(ExpectedSingleOperation);
         await Assert.That(metricCapture.Sum(QueuePendingMetricName)).IsEqualTo(ExpectedSingleOperation);
         await Assert.That(metricCapture.Sum(QueueBytesMetricName)).IsEqualTo(state.PendingBytes);
     }
@@ -448,7 +448,7 @@ public sealed partial class SyncEngineTests
         await engine.StartAsync(CancellationToken.None);
         await engine.TriggerSyncAsync(CancellationToken.None);
 
-        await Assert.That(metricCapture.HasMeasurement("oc.conflicts", ExpectedSingleOperation)).IsTrue();
+        await Assert.That(metricCapture.HasMeasurement("reactiveui.primitives.occasionallyconnected.conflicts", ExpectedSingleOperation)).IsTrue();
 
         await engine.StopAsync(CancellationToken.None);
     }
@@ -522,7 +522,7 @@ public sealed partial class SyncEngineTests
         await engine.StartAsync(CancellationToken.None);
         await engine.DisposeAsync();
 
-        await Assert.That(metricCapture.Sum("oc.connection.state_changes")).IsEqualTo(ExpectedCapacityCommitAttempts);
+        await Assert.That(metricCapture.Sum("reactiveui.primitives.occasionallyconnected.connection.state_changes")).IsEqualTo(ExpectedCapacityCommitAttempts);
     }
 
     /// <summary>Verifies diagnostic durations use monotonic time when UTC moves backwards during a commit.</summary>
@@ -542,7 +542,7 @@ public sealed partial class SyncEngineTests
         var receipt = await engine.EnqueueOperationAsync(operation, CancellationToken.None);
 
         await Assert.That(receipt.OperationId).IsEqualTo(operation.OperationId);
-        await Assert.That(metricCapture.HasMeasurement("oc.store.commit.duration", elapsed.TotalMilliseconds)).IsTrue();
+        await Assert.That(metricCapture.HasMeasurement("reactiveui.primitives.occasionallyconnected.store.commit.duration", elapsed.TotalSeconds)).IsTrue();
     }
 
     /// <summary>Verifies recovered pending stream work seeds bounded queue gauges once during initialization.</summary>

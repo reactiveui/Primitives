@@ -30,6 +30,11 @@ The adapter supports one open process per store directory. It rejects authentica
 encryption-at-rest requirements. Use a local filesystem that supports exclusive file
 sharing and atomic file replacement.
 
+Keep the store directory private to your application. Journal and temporary files contain unencrypted payloads.
+Windows replacement preserves the journal's access-control list. A failed permission copy stops replacement.
+Windows sharing conflicts have a bounded retry window. Other permission failures are not retried.
+Unix creation and replacement flush the parent directory before publishing the new state.
+
 ## Release assets
 
 A package asset is a library built for one target framework.

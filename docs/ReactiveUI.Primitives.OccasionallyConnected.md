@@ -1237,19 +1237,24 @@ Trace context is propagated through supported transports. Payloads are never att
 
 | Metric | Type | Unit |
 | --- | --- | --- |
-| `oc.operations.published` | Counter | operations |
-| `oc.operations.synchronized` | Counter | operations |
-| `oc.operations.rejected` | Counter | operations |
-| `oc.conflicts` | Counter | conflicts |
-| `oc.retries` | Counter | retries |
-| `oc.duplicates` | Counter | events |
-| `oc.queue.pending` | UpDownCounter/observable gauge | operations |
-| `oc.queue.bytes` | UpDownCounter/observable gauge | bytes |
-| `oc.sync.batch.size` | Histogram | operations |
-| `oc.sync.duration` | Histogram | milliseconds |
-| `oc.store.commit.duration` | Histogram | milliseconds |
-| `oc.connection.state_changes` | Counter | transitions |
-| `oc.dead_letters` | Counter | operations |
+| `reactiveui.primitives.occasionallyconnected.operations.published` | Counter | operations |
+| `reactiveui.primitives.occasionallyconnected.operations.synchronized` | Counter | operations |
+| `reactiveui.primitives.occasionallyconnected.operations.rejected` | Counter | operations |
+| `reactiveui.primitives.occasionallyconnected.conflicts` | Counter | conflicts |
+| `reactiveui.primitives.occasionallyconnected.retries` | Counter | retries |
+| `reactiveui.primitives.occasionallyconnected.duplicates` | Counter | events |
+| `reactiveui.primitives.occasionallyconnected.queue.pending` | UpDownCounter | operations |
+| `reactiveui.primitives.occasionallyconnected.queue.bytes` | UpDownCounter | bytes |
+| `reactiveui.primitives.occasionallyconnected.sync.batch.size` | Histogram | operations |
+| `reactiveui.primitives.occasionallyconnected.sync.duration` | Histogram | s |
+| `reactiveui.primitives.occasionallyconnected.store.commit.duration` | Histogram | s |
+| `reactiveui.primitives.occasionallyconnected.connection.state_changes` | Counter | transitions |
+| `reactiveui.primitives.occasionallyconnected.dead_letters` | Counter | operations |
+| `reactiveui.primitives.occasionallyconnected.queue.overflow` | Counter | operations |
+
+Use `OccasionallyConnectedBuilder.UseMeterFactory(...)` to borrow a host's `IMeterFactory`.
+The DI integration uses that service when the host registers it. The host owns its meters and their lifetime.
+Without a factory, each context creates and disposes its own meter. Disabled diagnostics create no instruments.
 
 Default tags are low-cardinality: adapter name, transport kind, operation type, lifecycle state, delivery guarantee, and stable reason code. Raw IDs are opt-in.
 

@@ -85,6 +85,10 @@ Use `OperationId.New(false)` to request version 4 on every target. The identifie
 
 Activity sampling belongs to the host's `ActivityListener` or OpenTelemetry configuration.
 `DiagnosticsOptions.ActivitySamplingRatio` is removed. The library checks for listeners before starting an activity.
+Metric names use `reactiveui.primitives.occasionallyconnected.` instead of `oc.`. Update dashboard queries and filters.
+Duration histograms report seconds with unit `s`, not milliseconds. Update any unit conversions in your dashboards.
+Call `OccasionallyConnectedBuilder.UseMeterFactory(...)` to use a host-owned factory without a DI container.
+The DI integration uses a registered `IMeterFactory` automatically. Context disposal does not dispose borrowed meters.
 Startup logs remain redacted unless the host sets `OccasionallyConnectedServiceOptions.IncludeStartupExceptionDetails`.
 That opt-in can expose application data carried in exception messages.
 

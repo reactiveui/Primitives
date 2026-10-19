@@ -4,7 +4,7 @@
 
 using System.Net.Http;
 using ReactiveUI.Primitives.OccasionallyConnected;
-using ReactiveUI.Primitives.OccasionallyConnected.Crdt;
+using ReactiveUI.Primitives.OccasionallyConnected.Mergeable;
 using ReactiveUI.Primitives.OccasionallyConnected.Hosting;
 using ReactiveUI.Primitives.OccasionallyConnected.Storage.Sqlite;
 using ReactiveUI.Primitives.OccasionallyConnected.Transport.Http;
@@ -38,7 +38,7 @@ internal sealed class SampleClient : IAsyncDisposable
             .UseClient(new ClientIdentity(clientId, SampleServer.Tenant))
             .UseStore(store)
             .UseTransport(transport)
-            .UseSerializer(new CrdtPayloadSerializer())
+            .UseSerializer(new MergeablePayloadSerializer())
             .UseStoreInitialization(new LocalStoreInitialization(clientId, 1, RequireAuthenticatedEncryptionAtRest: false) { ClientId = clientId })
             .UseTimeProvider(TimeProvider.System)
             .UseOptions(OccasionallyConnectedOptions.Default with
@@ -64,11 +64,11 @@ internal sealed class SampleClient : IAsyncDisposable
     /// <summary>Gets the public context.</summary>
     internal OccasionallyConnectedContext Context { get; }
 
-    /// <summary>Gets the G-counter stream.</summary>
-    internal IOccasionallyConnectedStream<CrdtState, CrdtInput> Stream { get; }
+    /// <summary>Gets the increment-only counter stream.</summary>
+    internal IOccasionallyConnectedStream<MergeableState, MergeableInput> Stream { get; }
 
     /// <summary>Gets the latest local (optimistic) state.</summary>
-    internal LatestValueObserver<CrdtState> Local { get; } = new();
+    internal LatestValueObserver<MergeableState> Local { get; } = new();
 
     /// <summary>Gets the latest sync state.</summary>
     internal LatestValueObserver<SyncState> Sync { get; } = new();
@@ -104,8 +104,8 @@ internal sealed class SampleClient : IAsyncDisposable
 
     /// <summary>Creates the input that sets this client's G-counter component.</summary>
     /// <param name="value">The new component value.</param>
-    /// <returns>The CRDT input.</returns>
-    internal CrdtInput SetCounter(long value) => CrdtInput.ForMutation(CrdtMutation.GCounterSet(ClientId, value));
+    /// <returns>The counter input.</returns>
+    internal MergeableInput SetCounter(long value) => MergeableInput.ForChange(MergeableChange.IncrementOnlyCounterSet(ClientId, value));
 
     /// <inheritdoc/>
     public async ValueTask DisposeAsync()
@@ -119,15 +119,15 @@ internal sealed class SampleClient : IAsyncDisposable
         _httpClient.Dispose();
     }
 
-    private static StreamDefinition<CrdtState, CrdtInput> CreateDefinition(string clientId, SubscriptionId subscriptionId) => new()
+    private static StreamDefinition<MergeableState, MergeableInput> CreateDefinition(string clientId, SubscriptionId subscriptionId) => new()
     {
         StreamId = SampleServer.Stream,
         SubscriptionId = subscriptionId,
-        Projection = new CrdtLocalProjection(clientId, CrdtKind.GCounter),
-        InputContractId = CrdtContracts.InputContractId,
-        StateContractId = CrdtContracts.StateContractId,
-        InputSchemaVersion = CrdtContracts.SchemaVersion,
-        StateSchemaVersion = CrdtContracts.SchemaVersion,
+        Projection = new MergeableLocalProjection(clientId, MergeableKind.IncrementOnlyCounter),
+        InputContractId = MergeableContracts.InputContractId,
+        StateContractId = MergeableContracts.StateContractId,
+        InputSchemaVersion = MergeableContracts.SchemaVersion,
+        StateSchemaVersion = MergeableContracts.SchemaVersion,
         Subscription = new RemoteSubscriptionOptions
         {
             StreamId = SampleServer.Stream,
@@ -145,7 +145,7 @@ internal sealed class SampleClient : IAsyncDisposable
             ConflictPolicy = ConflictPolicy.Merge,
         },
         Input = new ObserverInputOptions { BufferCapacity = 64, BufferCapacityBytes = 64 * 1024 },
-        InputCapture = CrdtInputCapture.Instance,
+        InputCapture = MergeableInputCapture.Instance,
         // The stream work lane holds min(BufferCapacity, BufferCapacityBytes / MaximumRetainedInputBytes) items, so keep
         // the per-input bound small; a lane of one item rejects concurrent receive and upload work.
         TypedInput = new TypedInputOptions { BufferCapacity = 64, BufferCapacityBytes = 1024 * 1024, MaximumRetainedInputBytes = 4 * 1024 },

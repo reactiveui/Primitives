@@ -4,7 +4,7 @@
 
 using System.Net.Http;
 using ReactiveUI.Primitives.OccasionallyConnected;
-using ReactiveUI.Primitives.OccasionallyConnected.Crdt;
+using ReactiveUI.Primitives.OccasionallyConnected.Mergeable;
 using ReactiveUI.Primitives.OccasionallyConnected.Server;
 using ReactiveUI.Primitives.OccasionallyConnected.Transport.Http;
 
@@ -75,7 +75,7 @@ internal sealed class SampleServer : IAsyncDisposable
                 AuthorizationPolicy = TrustedClientAuthorizationPolicy.Instance,
                 ConflictHandler = new ServerConflictHandlerOptions
                 {
-                    Streams = [CrdtServerStreamRegistration.Create(new CrdtServerStreamRegistrationOptions { StreamId = Stream, Kind = CrdtKind.GCounter })],
+                    Streams = [MergeableServerStreamRegistration.Create(new MergeableServerStreamRegistrationOptions { StreamId = Stream, Kind = MergeableKind.IncrementOnlyCounter })],
                 },
                 EmptyPollDelay = TimeSpan.FromMilliseconds(100),
                 TimeProvider = TimeProvider.System,

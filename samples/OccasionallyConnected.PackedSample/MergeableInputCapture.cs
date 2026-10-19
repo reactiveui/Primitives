@@ -3,27 +3,27 @@
 // See the LICENSE file in the project root for full license information.
 
 using ReactiveUI.Primitives.OccasionallyConnected;
-using ReactiveUI.Primitives.OccasionallyConnected.Crdt;
+using ReactiveUI.Primitives.OccasionallyConnected.Mergeable;
 
 namespace OccasionallyConnected.PackedSample;
 
 /// <summary>
-/// Captures a CRDT input synchronously so <c>stream.Input.OnNext</c> can accept it. The envelope matches what
-/// <see cref="CrdtPayloadSerializer"/> produces for the same input.
+/// Captures a mergeable input synchronously so <c>stream.Input.OnNext</c> can accept it. The envelope matches what
+/// <see cref="MergeablePayloadSerializer"/> produces for the same input.
 /// </summary>
-internal sealed class CrdtInputCapture : IOccasionallyConnectedInputCapture<CrdtInput>
+internal sealed class MergeableInputCapture : IOccasionallyConnectedInputCapture<MergeableInput>
 {
     /// <summary>Gets the shared instance.</summary>
-    internal static CrdtInputCapture Instance { get; } = new();
+    internal static MergeableInputCapture Instance { get; } = new();
 
     /// <inheritdoc/>
-    public PayloadEnvelope Capture(CrdtInput value)
+    public PayloadEnvelope Capture(MergeableInput value)
     {
-        var payload = CrdtCodec.EncodeInput(value);
+        var payload = MergeableCodec.EncodeInput(value);
         return new PayloadEnvelope(
-            CrdtContracts.InputContractId,
-            CrdtContracts.SchemaVersion,
-            new CrdtPayloadSerializer().ContentType,
+            MergeableContracts.InputContractId,
+            MergeableContracts.SchemaVersion,
+            new MergeablePayloadSerializer().ContentType,
             payload,
             JsonPayloadSerializer.ComputePayloadHash(payload));
     }
@@ -33,5 +33,5 @@ internal sealed class CrdtInputCapture : IOccasionallyConnectedInputCapture<Crdt
 
     /// <inheritdoc/>
     /// <remarks>The declaration covers the whole retained envelope, not only the encoded payload.</remarks>
-    public long GetRetainedByteCount(CrdtInput value) => CrdtCodec.EncodeInput(value).Length + EnvelopeOverheadBytes;
+    public long GetRetainedByteCount(MergeableInput value) => MergeableCodec.EncodeInput(value).Length + EnvelopeOverheadBytes;
 }

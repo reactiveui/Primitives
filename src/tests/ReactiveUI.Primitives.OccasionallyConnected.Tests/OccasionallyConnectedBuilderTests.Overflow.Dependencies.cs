@@ -36,7 +36,7 @@ public sealed partial class OccasionallyConnectedBuilderTests
     private const string CustomEvictedReasonCode = "OC.Overflow.CustomEvicted";
 
     /// <summary>The overflow metric instrument name.</summary>
-    private const string QueueOverflowInstrumentName = "oc.queue.overflow";
+    private const string QueueOverflowInstrumentName = "reactiveui.primitives.occasionallyconnected.queue.overflow";
 
     /// <summary>The meter name owned by the synchronization engine.</summary>
     private const string OccasionallyConnectedMeterName = "ReactiveUI.Primitives.OccasionallyConnected";
