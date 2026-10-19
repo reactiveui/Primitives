@@ -226,6 +226,7 @@ public class ReplaySignalTests
     /// <summary>An observer that marshals a replayed value to another thread which emits a new value is not deadlocked, and the new value follows the replay.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
+    [NotInParallel]
     public async Task ObserverMarshallingOnNextDuringReplayDoesNotDeadlock()
     {
         using MarshallingThread dispatcher = new();

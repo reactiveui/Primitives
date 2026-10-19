@@ -1,0 +1,58 @@
+name: OccasionallyConnected package release gates
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'src/ReactiveUI.Primitives.OccasionallyConnected*/**'
+      - 'src/ReactiveUI.Primitives*/**'
+      - 'src/ReactiveUI.Disposables/**'
+      - 'src/Directory.*'
+      - 'src/ReactiveUI.Primitives.slnf'
+      - 'samples/OccasionallyConnected.PackedSample/**'
+      - 'tools/OccasionallyConnected.Ci/**'
+      - 'tools/OccasionallyConnectedPackageInspector.cs'
+      - '.github/workflows/occasionally-connected-packages.yml'
+  workflow_call:
+    inputs:
+      sourceRef:
+        required: false
+        type: string
+        default: ''
+
+permissions:
+  contents: read
+
+concurrency:
+  group: occasionally-connected-packages-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  package-release-gates:
+    runs-on: windows-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+        with:
+          ref: ${{ inputs.sourceRef || github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6
+        with:
+          dotnet-version: |
+            8.0.x
+            9.0.x
+            10.0.x
+            11.0.x
+      - name: Verify stable release filter, dependencies, metadata, and clean consumer
+        shell: bash
+        run: dotnet run --project tools/OccasionallyConnected.Ci/OccasionallyConnected.Ci.csproj -- packages --version "0.1.0" --artifacts-path artifacts/oc-packages/stable --skip-aot
+      - name: Verify prerelease determinism, metadata, and clean consumer including net11
+        shell: bash
+        run: dotnet run --project tools/OccasionallyConnected.Ci/OccasionallyConnected.Ci.csproj -- packages --version "0.1.0-ocpkg.${{ github.run_id }}.${{ github.run_attempt }}" --artifacts-path artifacts/oc-packages/prerelease --skip-aot
+      - name: Retain package gate evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: occasionally-connected-packages
+          path: artifacts/oc-packages
+          if-no-files-found: warn

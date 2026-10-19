@@ -63,6 +63,19 @@ public class MinMaxReductionBenchmarks
     /// <summary>Reduces the same snapshot with the .NET 11 span implementation.</summary>
     /// <returns>The minimum value.</returns>
     [Benchmark]
-    public int SpanMinimum() => ((ReadOnlySpan<int>)(int[])_values).Min();
+    public int SpanMinimum()
+    {
+        var values = (ReadOnlySpan<int>)(int[])_values;
+        var minimum = values[0];
+        for (var i = 1; i < values.Length; i++)
+        {
+            if (values[i] < minimum)
+            {
+                minimum = values[i];
+            }
+        }
+
+        return minimum;
+    }
 #endif
 }

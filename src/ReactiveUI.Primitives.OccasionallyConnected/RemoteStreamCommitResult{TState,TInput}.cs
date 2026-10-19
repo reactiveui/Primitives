@@ -1,0 +1,26 @@
+// Copyright (c) 2019-2026 ReactiveUI Association Incorporated. All rights reserved.
+// ReactiveUI Association Incorporated licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for full license information.
+
+#if REACTIVE_SHIM
+namespace ReactiveUI.Primitives.OccasionallyConnected.Reactive;
+#else
+namespace ReactiveUI.Primitives.OccasionallyConnected;
+#endif
+
+/// <summary>Describes a committed remote batch and the state it produced.</summary>
+/// <typeparam name="TState">The projected local state type.</typeparam>
+/// <typeparam name="TInput">The remote input type.</typeparam>
+/// <param name="Receipt">The durable remote apply receipt.</param>
+/// <param name="Batch">The filtered batch committed to the local store.</param>
+/// <param name="Inputs">The decoded immutable inputs used for projection.</param>
+/// <param name="State">The current state after the remote apply.</param>
+/// <param name="QueueSnapshot">The bounded queue aggregate after the durable remote apply.</param>
+/// <param name="CursorAdvanced">Whether the durable stream cursor advanced.</param>
+internal sealed record RemoteStreamCommitResult<TState, TInput>(
+    RemoteApplyResult Receipt,
+    RemoteEventBatch Batch,
+    IReadOnlyList<TInput> Inputs,
+    LocalStreamCommitterState<TState> State,
+    QueueDiagnosticSnapshot QueueSnapshot,
+    bool CursorAdvanced);

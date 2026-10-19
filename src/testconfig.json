@@ -1,9 +1,4 @@
 {
-    "platform": {
-        "execution": {
-            "parallel": false
-        }
-    },
     "codeCoverage": {
         "Configuration": {
             "Format": "cobertura",

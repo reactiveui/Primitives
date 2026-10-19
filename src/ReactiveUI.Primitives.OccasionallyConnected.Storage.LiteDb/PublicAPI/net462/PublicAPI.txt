@@ -1,0 +1,28 @@
+[assembly: System.Runtime.CompilerServices.InternalsVisibleTo("ReactiveUI.Primitives.OccasionallyConnected.Storage.LiteDb.Tests")]
+namespace ReactiveUI.Primitives.OccasionallyConnected.Storage.LiteDb;
+
+[System.Diagnostics.DebuggerDisplay("LiteDbLocalStoreAdapter: {Capabilities}")]
+public sealed class LiteDbLocalStoreAdapter : ReactiveUI.Primitives.OccasionallyConnected.ILocalStoreAdapter
+{
+    public LiteDbLocalStoreAdapter(string databasePath) { }
+    public LiteDbLocalStoreAdapter(string databasePath, System.TimeProvider timeProvider) { }
+    public ReactiveUI.Primitives.OccasionallyConnected.LocalStoreCapabilities Capabilities { get; }
+    public System.Threading.Tasks.ValueTask<ReactiveUI.Primitives.OccasionallyConnected.RemoteApplyResult> ApplyRemoteBatchAsync(ReactiveUI.Primitives.OccasionallyConnected.RemoteEventBatch batch, ReactiveUI.Primitives.OccasionallyConnected.SnapshotMutation snapshotMutation, System.Threading.CancellationToken cancellationToken) { }
+    public System.Threading.Tasks.ValueTask ApplySyncResultAsync(System.Guid leaseId, ReactiveUI.Primitives.OccasionallyConnected.RemoteSyncResult result, System.Threading.CancellationToken cancellationToken) { }
+    public System.Threading.Tasks.ValueTask<System.Collections.Generic.IReadOnlyList<ReactiveUI.Primitives.OccasionallyConnected.LocalSnapshot>> ApplySyncResultAsync(System.Guid leaseId, ReactiveUI.Primitives.OccasionallyConnected.RemoteSyncResult result, System.Collections.Generic.IReadOnlyList<ReactiveUI.Primitives.OccasionallyConnected.SnapshotMutation> snapshotMutations, System.Threading.CancellationToken cancellationToken) { }
+    public System.Threading.Tasks.ValueTask<ReactiveUI.Primitives.OccasionallyConnected.LocalCommitResult> CommitLocalOperationAsync(ReactiveUI.Primitives.OccasionallyConnected.SyncOperation operation, ReactiveUI.Primitives.OccasionallyConnected.SnapshotMutation snapshotMutation, System.Threading.CancellationToken cancellationToken) { }
+    public System.Threading.Tasks.ValueTask<ReactiveUI.Primitives.OccasionallyConnected.CompactionResult> CompactAsync(ReactiveUI.Primitives.OccasionallyConnected.CompactionRequest request, System.Threading.CancellationToken cancellationToken) { }
+    public System.Threading.Tasks.ValueTask<ReactiveUI.Primitives.OccasionallyConnected.LocalSnapshot> DeadLetterOperationAsync(System.Guid leaseId, ReactiveUI.Primitives.OccasionallyConnected.OperationId operationId, string reasonCode, ReactiveUI.Primitives.OccasionallyConnected.SnapshotMutation snapshotMutation, System.Threading.CancellationToken cancellationToken) { }
+    public System.Threading.Tasks.ValueTask DisposeAsync() { }
+    public System.Threading.Tasks.ValueTask<ReactiveUI.Primitives.OccasionallyConnected.SyncOperationStatus?> GetOperationStatusAsync(ReactiveUI.Primitives.OccasionallyConnected.OperationId operationId, System.Threading.CancellationToken cancellationToken) { }
+    public System.Threading.Tasks.ValueTask<ReactiveUI.Primitives.OccasionallyConnected.SubscriptionId> GetOrCreateSubscriptionIdAsync(ReactiveUI.Primitives.OccasionallyConnected.StreamId streamId, ReactiveUI.Primitives.OccasionallyConnected.SubscriptionId? preferredId, System.Threading.CancellationToken cancellationToken) { }
+    public System.Threading.Tasks.ValueTask<ReactiveUI.Primitives.OccasionallyConnected.RetryState?> GetRetryStateAsync(ReactiveUI.Primitives.OccasionallyConnected.OperationId operationId, System.Threading.CancellationToken cancellationToken) { }
+    public System.Threading.Tasks.ValueTask<System.Collections.Generic.IReadOnlyList<System.Guid>> GetUnappliedEventIdsAsync(ReactiveUI.Primitives.OccasionallyConnected.StreamId streamId, System.Collections.Generic.IReadOnlyList<System.Guid> eventIds, System.Threading.CancellationToken cancellationToken) { }
+    public System.Threading.Tasks.ValueTask InitializeAsync(ReactiveUI.Primitives.OccasionallyConnected.LocalStoreInitialization initialization, System.Threading.CancellationToken cancellationToken) { }
+    public System.Collections.Generic.IAsyncEnumerable<ReactiveUI.Primitives.OccasionallyConnected.LeasedOperationBatch> LeasePendingOperationsAsync(ReactiveUI.Primitives.OccasionallyConnected.OutboxLeaseRequest request, System.Threading.CancellationToken cancellationToken) { }
+    public System.Threading.Tasks.ValueTask<ReactiveUI.Primitives.OccasionallyConnected.RecoveredStream> RecoverStreamAsync(ReactiveUI.Primitives.OccasionallyConnected.StreamId streamId, ReactiveUI.Primitives.OccasionallyConnected.SubscriptionId subscriptionId, System.Threading.CancellationToken cancellationToken) { }
+    public System.Threading.Tasks.ValueTask ReleaseLeaseAsync(System.Guid leaseId, System.Threading.CancellationToken cancellationToken) { }
+    public System.Threading.Tasks.ValueTask RenewLeaseAsync(System.Guid leaseId, System.TimeSpan extension, System.Threading.CancellationToken cancellationToken) { }
+    public System.Threading.Tasks.ValueTask SaveRetryStateAsync(ReactiveUI.Primitives.OccasionallyConnected.OperationId operationId, ReactiveUI.Primitives.OccasionallyConnected.RetryState retryState, System.Threading.CancellationToken cancellationToken) { }
+    public System.Threading.Tasks.ValueTask<ReactiveUI.Primitives.OccasionallyConnected.AttemptBarrierResult> TryBeginRemoteAttemptAsync(System.Guid leaseId, ReactiveUI.Primitives.OccasionallyConnected.OperationId operationId, int nextAttempt, System.Threading.CancellationToken cancellationToken) { }
+}

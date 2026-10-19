@@ -157,12 +157,14 @@ public partial class SignalOperatorMixinsTests
         await VerifyFlatMapTerminalAndErrorBranches();
     }
 
-    /// <summary>Async enumerable sources, race, switch, probe, calm, and fork-join coordinators gate their terminals.</summary>
+    /// <summary>Verifies optimized coordinator and async enumerable branches cover remaining gaps.</summary>
+    /// <param name="token">The test cancellation token.</param>
     /// <returns>A task representing the asynchronous test.</returns>
     [Test]
-    public async Task OptimizedCoordinatorAndAsyncEnumerableBranchesCoverRemainingGaps()
+    [Timeout(30_000)]
+    public async Task OptimizedCoordinatorAndAsyncEnumerableBranchesCoverRemainingGaps(CancellationToken token)
     {
-        await VerifyAsyncEnumerableShiftAndExpireAsync().ConfigureAwait(false);
+        await VerifyAsyncEnumerableShiftAndExpireAsync(token).ConfigureAwait(false);
         await VerifyRaceSyncLatestAndSwitchBranches();
         await VerifyProbeBranches();
         await VerifyCalmAppendAndForkJoinBranches();
@@ -454,19 +456,20 @@ public partial class SignalOperatorMixinsTests
         await Assert.That(subscribeErrors.SequenceEqual(ExpectedInnerSubscribe)).IsTrue();
     }
 
-    /// <summary>Async enumerable sources drain to their subscriber, and shift and expire follow the virtual clock.</summary>
+    /// <summary>Verifies async enumerable subscription, shift timing, and expire timeout branches.</summary>
+    /// <param name="token">The test cancellation token.</param>
     /// <returns>A task representing the asynchronous verification.</returns>
-    private static async Task VerifyAsyncEnumerableShiftAndExpireAsync()
+    private static async Task VerifyAsyncEnumerableShiftAndExpireAsync(CancellationToken token)
     {
         _ = Assert.Throws<ArgumentNullException>(static () => Signal.FromAsyncEnumerable(AsyncValues(One)).Subscribe(null!));
         List<int> asyncValues = [];
         TaskCompletionSource<object?> asyncCompleted = new(TaskCreationOptions.RunContinuationsAsynchronously);
         using CancellationTokenSource asyncToken = new();
-        _ = Signal.FromAsyncEnumerable(AsyncValues(Three), asyncToken.Token).Subscribe(
+        using var asyncSubscription = Signal.FromAsyncEnumerable(AsyncValues(Three), asyncToken.Token).Subscribe(
             asyncValues.Add,
             ex => asyncCompleted.TrySetException(ex),
             () => asyncCompleted.TrySetResult(null));
-        await asyncCompleted.Task.ConfigureAwait(false);
+        await asyncCompleted.Task.WaitAsync(token).ConfigureAwait(false);
         int[] expectedAsyncValues = [0, One, Two];
         await Assert.That(asyncValues.SequenceEqual(expectedAsyncValues)).IsTrue();
         var exact = await Signal.FromAsyncEnumerable(AsyncValues(Sixteen)).CollectArrayAsync().ConfigureAwait(false);

@@ -1,0 +1,1 @@
+{"protocolVersion":"1.0","features":95,"maximumBatchOperations":100,"maximumBatchBytes":1048576,"serverIdempotencyRetentionMilliseconds":86400000,"clientInboxRetentionRequiredMilliseconds":172800000}

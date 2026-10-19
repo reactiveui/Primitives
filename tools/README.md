@@ -2,6 +2,44 @@
 
 Maintenance scripts for the ReactiveUI.Primitives repository.
 
+## OccasionallyConnected CI gates
+
+The .NET CLI in `OccasionallyConnected.Ci` runs the coverage, package, supply-chain,
+mutation, and NativeAOT gates. Run it from the repository root with a .NET 10 SDK:
+
+```sh
+dotnet run --project tools/OccasionallyConnected.Ci/OccasionallyConnected.Ci.csproj -- coverage --framework net10.0 --run-id 123 --run-attempt 1 --runner-os Linux
+dotnet run --project tools/OccasionallyConnected.Ci/OccasionallyConnected.Ci.csproj -- packages --version 0.1.0-ocpkg.123.1 --skip-aot
+dotnet run --project tools/OccasionallyConnected.Ci/OccasionallyConnected.Ci.csproj -- supply-chain --version 0.1.0-ocscan.123
+dotnet run --project tools/OccasionallyConnected.Ci/OccasionallyConnected.Ci.csproj -- mutation --campaign Durability
+dotnet run --project tools/OccasionallyConnected.Ci/OccasionallyConnected.Ci.csproj -- aot --version 0.1.0-ocaot.123.1
+```
+
+Coverage checks the complete OccasionallyConnected test suite list on net8.0,
+net9.0, net10.0, or net11.0. Each adapter runs only on its supported frameworks.
+This matrix runs on every pull request and push to main.
+The Build workflow tests the other suites. It still builds every project.
+This split avoids repeating the feature matrix within one test-run deadline.
+Sonar builds every target. It runs the other suites on every supported target.
+It runs all feature suites on .NET 10 and imports their reports for source coverage.
+The required feature matrix still verifies the other frameworks.
+Sonar passes `--no-build` to reuse its successful Release build.
+Use this option only after building the requested test framework.
+The gate still requires every suite and a fresh coverage report from each suite.
+Sonar still collects feature reports when another suite fails.
+A failed test still fails the job.
+The runtime and SQLite suites share CPU-sized test budgets within each host.
+This bounds competing database fixtures. Each test still runs its own concurrent
+operations and keeps its original assertions and deadlines.
+Producer crash tests and strict admission guards run apart from other database fixtures.
+To check existing Cobertura reports without running tests, use `coverage` with
+repeated `--report-path <file>` and `--package-name <name>` options instead.
+The package command also accepts `--sample-target-frameworks <tfm,tfm>`,
+`--skip-determinism`, and `--skip-sample`. Supply-chain accepts repeated
+`--project-name <name>` options. Packages, supply-chain, and AOT accept
+`--artifacts-path <path>`. The AOT gate requires a Windows x64 build host with
+the native toolchain. Gate logs and reports remain under `artifacts/`.
+
 ## generate-publicapi
 
 Regenerates the **PublicAPI baseline files** consumed by
