@@ -25,30 +25,30 @@ public sealed class ResilienceLabOptionsTests
     /// <summary>Verifies the parser defaults to the CRDT loopback scenario when no arguments are supplied.</summary>
     /// <returns>The assertion task.</returns>
     [Test]
-    public async Task ParseDefaultsToCrdtLoopbackWhenNoArgumentsSupplied()
+    public async Task ParseDefaultsToMergeableLoopbackWhenNoArgumentsSupplied()
     {
         var options = ResilienceLabOptions.Parse([]);
 
-        await Assert.That(options.Scenario).IsEqualTo(CrdtLoopbackScenarioShape.ScenarioName);
+        await Assert.That(options.Scenario).IsEqualTo(MergeableLoopbackScenarioShape.ScenarioName);
     }
 
     /// <summary>Verifies the parser defaults to the CRDT loopback scenario when the scenario switch has no value.</summary>
     /// <returns>The assertion task.</returns>
     [Test]
-    public async Task ParseDefaultsToCrdtLoopbackWhenScenarioSwitchHasNoValue()
+    public async Task ParseDefaultsToMergeableLoopbackWhenScenarioSwitchHasNoValue()
     {
         var options = ResilienceLabOptions.Parse(["--scenario"]);
 
-        await Assert.That(options.Scenario).IsEqualTo(CrdtLoopbackScenarioShape.ScenarioName);
+        await Assert.That(options.Scenario).IsEqualTo(MergeableLoopbackScenarioShape.ScenarioName);
     }
 
     /// <summary>Verifies the parser defaults to the CRDT loopback scenario when the scenario switch is missing.</summary>
     /// <returns>The assertion task.</returns>
     [Test]
-    public async Task ParseDefaultsToCrdtLoopbackWhenScenarioSwitchIsMissing()
+    public async Task ParseDefaultsToMergeableLoopbackWhenScenarioSwitchIsMissing()
     {
         var options = ResilienceLabOptions.Parse(["--other", RequestedScenario]);
 
-        await Assert.That(options.Scenario).IsEqualTo(CrdtLoopbackScenarioShape.ScenarioName);
+        await Assert.That(options.Scenario).IsEqualTo(MergeableLoopbackScenarioShape.ScenarioName);
     }
 }

@@ -8,7 +8,7 @@ These examples accompany the first v1 release of OccasionallyConnected. The feat
 
 - `crdt-loopback` demonstrates G-counter, PN-counter, OR-set, and last-writer-wins register behavior between trusted clients, including duplicate operation handling and receive acknowledgements. This is the default scenario.
 - `durable-http-lost-ack` drops a successful HTTP push response after the server commits it. The client restarts and retries the same operation. A separate SQLite-backed observer checks that server idempotency prevents a duplicate durable effect.
-- `retry-backoff` checks retry hints, persisted attempt counts, bounded delays, and the configured attempt limit with deterministic jitter.
+- `retry-backoff` checks retry hints, persisted attempt counts, bounded delays, and the configured attempt limit through a public context and SQLite store. Equal minimum and maximum delays make the run repeatable.
 - `duplicate-reordered-delivery` sends a batch twice and merges OR-set states in forward, reverse, and duplicate order. It checks that results stay stable.
 - `capability-downgrade` checks that a peer missing exactly-once capabilities rejects an exactly-once connection while still accepting an at-least-once push.
 - `backpressure` checks that a full outbox rejects a publish with `BufferStrategy.Reject` and releases a blocked publish after synchronization frees capacity.

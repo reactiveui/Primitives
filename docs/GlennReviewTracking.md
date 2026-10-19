@@ -1,6 +1,20 @@
 # Glenn review tracking
 
-## Audit snapshot
+## Current revision on 13 October 2026
+
+The committed baseline is `239916db4c52f87f0eacd26b7854e10b43fb5773` on `OccasionallyConnected`.
+All applicable checks on that baseline pass, including SonarCloud. CodeQL also finished after the earlier audit.
+The working revision is not yet committed and does not inherit that CI result.
+
+The user approved breaking framework revisions before release. Keep the component contracts composable.
+Applications own domain rules, credentials, deployment, backup policy and OS background scheduling.
+Optional transport and platform adapters are not automatic first-release blockers.
+
+[GlennReviewReconciliation.md](GlennReviewReconciliation.md) maps all 123 threads to technical status.
+[RemainingTasks.md](RemainingTasks.md) is the current specification-based backlog.
+The dated evidence below records the earlier implementation work; it does not certify this new API revision.
+
+## Historical audit snapshot
 
 Reviewed and tested on **4 October 2026** against PR [#229](https://github.com/reactiveui/Primitives/pull/229).
 The PR and local HEAD were `9a65c2dde097cd4bee446dafd09dc710ac347ae1`.
@@ -18,10 +32,10 @@ from checks on the committed PR head. Follow-up implementation closes the server
 Local capacity accounting and selected-key metadata reads now have passing regression and measurement evidence.
 Final conformance and stable/prerelease package checks pass. No review threads or PR settings were changed.
 
-## Status summary
+## Historical status summary
 
 Items **1–15 are complete for the support scope stated below**.
-Their remedies have source, regression and workflow evidence. Items 11–15 rely heavily on uncommitted work.
+Their remedies have source, regression and workflow evidence. The working-tree changes described here reached the committed baseline above.
 Completion does not mean reviewer approval, a published release, real-device certification or green remote CI.
 
 Status meanings:
@@ -51,11 +65,11 @@ These checks do not verify uncommitted changes.
 | 8. Reinstall and backup restore | Complete, fail-closed policy | Reinstall creates a fresh identity/key. Matching backups preserve identity. Missing or mismatched secure state fails without silently discarding pending data. Older matching backups still need an external freshness check. |
 | 9. Encryption and rollback guarantees | Complete by narrowing claims | Records bind authentication to their context. Documentation and tests explicitly exclude standalone whole-file freshness and deletion protection. An external protected checkpoint is required for those threats. |
 | 10. WebSocket receive progress and faults | Complete | Bounded event admission does not block acknowledgement reception. Terminal receive faults reach pending and future requests with the original classification. |
-| 11. Reusable storage conformance kit | Verified in working tree | The reusable kit covers shipped store implementations on applicable targets. Full suites pass on .NET 8–11, including browser and native process-kill cases. Capabilities stay narrowed where evidence is absent. |
-| 12. SQLite connection and statement reuse | Verified in working tree | Both local SQLite and the server journal retain owned connections and bounded prepared-statement caches. Full server suites pass on .NET 8 and 9. |
-| 13. SQLite read/query costs | Verified in working tree | Protected point reads, derived-key reuse, indexed server selection, transactional capacity counters and selected-key metadata batches replace warm history scans and N+1 reads. Cold migration and external-change integrity validation still scan records on purpose. |
-| 14. Server polling and database scheduling | Verified in working tree | Empty polls avoid write reservations. Bounded workers run database work. Shared wakeup epochs notify all subscribers of one hub. Separate hubs/processes still need fallback polling. |
-| 15. Filesystem journal persistence | Verified in working tree | Incremental transaction frames reduce whole-state writes. Recovery drops only an incomplete final frame. Complete corrupt frames fail closed. Platform flush guarantees remain item 16. |
+| 11. Reusable storage conformance kit | Implemented in committed baseline | The reusable kit covers shipped store implementations on applicable targets. Full suites pass on .NET 8–11, including browser and native process-kill cases. Capabilities stay narrowed where evidence is absent. |
+| 12. SQLite connection and statement reuse | Implemented in committed baseline | Both local SQLite and the server journal retain owned connections and bounded prepared-statement caches. Full server suites pass on .NET 8 and 9. |
+| 13. SQLite read/query costs | Implemented in committed baseline | Protected point reads, derived-key reuse, indexed server selection, transactional capacity counters and selected-key metadata batches replace warm history scans and N+1 reads. Cold migration and external-change integrity validation still scan records on purpose. |
+| 14. Server polling and database scheduling | Implemented in committed baseline | Empty polls avoid write reservations. Bounded workers run database work. Shared wakeup epochs notify all subscribers of one hub. Separate hubs/processes still need fallback polling. |
+| 15. Filesystem journal persistence | Implemented in committed baseline | Incremental transaction frames reduce whole-state writes. Recovery drops only an incomplete final frame. Complete corrupt frames fail closed. Platform flush guarantees remain item 16. |
 
 ### 1–2. Release and stable packages
 
@@ -79,13 +93,13 @@ This checks the actual release path without creating a release or publishing pac
 
 ### 3–4. CRDT merge and reclamation
 
-Evidence: [merge functions](../src/ReactiveUI.Primitives.OccasionallyConnected.Core/Crdt/CrdtFunctions.cs),
-[bounds](../src/ReactiveUI.Primitives.OccasionallyConnected.Core/Crdt/CrdtBounds.cs), and
-[OR-set checkpoint logic](../src/ReactiveUI.Primitives.OccasionallyConnected.Core/Crdt/CrdtFunctions.ORSet.cs).
+Evidence: [merge functions](../src/ReactiveUI.Primitives.OccasionallyConnected.Core/Mergeable/MergeableFunctions.cs),
+[bounds](../src/ReactiveUI.Primitives.OccasionallyConnected.Core/Mergeable/MergeableBounds.cs), and
+[Add-wins set checkpoint logic](../src/ReactiveUI.Primitives.OccasionallyConnected.Core/Mergeable/MergeableFunctions.AddWinsSet.cs).
 
-[Register tests](../src/tests/ReactiveUI.Primitives.OccasionallyConnected.Core.Tests/CrdtFunctionsTests.LwwRegister.cs)
+[Register tests](../src/tests/ReactiveUI.Primitives.OccasionallyConnected.Core.Tests/MergeableFunctionsTests.LastWriterWinsValue.cs)
 cover commutative, associative and idempotent ties, including canonical timestamps.
-[OR-set tests](../src/tests/ReactiveUI.Primitives.OccasionallyConnected.Core.Tests/CrdtFunctionsTests.ORSet.cs)
+[Add-wins set tests](../src/tests/ReactiveUI.Primitives.OccasionallyConnected.Core.Tests/MergeableFunctionsTests.AddWinsSet.cs)
 include a 6,000-element merge, repeated removal cycles, stale replay, concurrent dots,
 unobserved prefixes, codec round trips and checkpoint merge laws.
 
@@ -315,9 +329,9 @@ The remaining non-CodeQL failure is
 [Windows .NET 8 coverage](https://github.com/reactiveui/Primitives/actions/runs/37158665870/job/111307279537).
 Do not mark remote CI green from local results.
 
-## Items 16–33: retained backlog
+## Items 16–33: historical backlog
 
-These remain open in [RemainingTasks.md](RemainingTasks.md).
+The current status is in [RemainingTasks.md](RemainingTasks.md). The table below preserves the earlier acceptance notes.
 The acceptance notes below preserve the supplied list. They are not a new exhaustive audit of each feature.
 
 | Item | Status | Acceptance still to record |
@@ -343,12 +357,10 @@ The acceptance notes below preserve the supplied list. They are not a new exhaus
 
 ## Next updates
 
-1. Preserve and review the current uncommitted changes. Record their eventual commit SHA here.
-2. Retain the connection ownership, transaction and cancellation regressions for item 12.
-3. Retain the accounting invariants and native execution measurements for item 13.
-4. Rerun relevant TUnit and package gates when these source files change. Keep the dated evidence above.
-5. Record any eventual signed release execution. Keep host checks separate from device checks.
-6. Update this dated CI snapshot after the new changes reach the PR head.
-7. Reconcile review threads without treating source presence as reviewer approval.
+1. Validate the approved API and composition revision with fresh TUnit and package checks.
+2. Preserve the connection ownership, transactional accounting and conformance regressions.
+3. Keep whole-file rollback protection and device certification separate from source implementation.
+4. Update the current reconciliation after each reviewed change.
+5. Record the source commit and final CI evidence before asking for rereview.
 
-When an item changes, retain its original number. Record the source commit, evidence and remaining limits.
+Keep original task numbers. Do not equate GitHub thread resolution with reviewer agreement or source completion.

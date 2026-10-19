@@ -68,7 +68,7 @@ public static class OccasionallyConnectedServiceCollectionExtensions
         ConfigureSerializer(contextBuilder, configuration, services);
         ConfigureBufferOverflowPolicy(contextBuilder, configuration, services);
         var context = contextBuilder.Build();
-        OccasionallyConnectedLoggerBridge.ObserveStartup(context, logger);
+        OccasionallyConnectedLoggerBridge.ObserveStartup(context, logger, options.IncludeStartupExceptionDetails);
         return context;
     }
 

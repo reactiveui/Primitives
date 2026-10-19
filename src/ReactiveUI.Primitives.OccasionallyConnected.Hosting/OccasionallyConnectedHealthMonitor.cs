@@ -9,7 +9,7 @@ namespace ReactiveUI.Primitives.OccasionallyConnected.Hosting;
 
 /// <summary>Tracks the latest synchronization state of a context so health checks can read it without waiting.</summary>
 [DebuggerDisplay("Latest = {_latest}")]
-public sealed class OccasionallyConnectedHealthMonitor : IObserver<SyncState>, IDisposable
+public sealed class OccasionallyConnectedHealthMonitor : IDisposable
 {
     /// <summary>The state reported before the context publishes its first state.</summary>
     private readonly SyncState _initialState;
@@ -20,8 +20,14 @@ public sealed class OccasionallyConnectedHealthMonitor : IObserver<SyncState>, I
     /// <summary>The subscription to the context states.</summary>
     private readonly IDisposable _subscription;
 
+    /// <summary>Serializes state updates with terminal error handling.</summary>
+    private readonly Lock _gate = new();
+
     /// <summary>The latest observed state.</summary>
     private SyncState? _latest;
+
+    /// <summary>Indicates that the observable terminated with an error.</summary>
+    private bool _faulted;
 
     /// <summary>Initializes a new instance of the <see cref="OccasionallyConnectedHealthMonitor"/> class.</summary>
     /// <param name="context">The monitored context.</param>
@@ -33,7 +39,7 @@ public sealed class OccasionallyConnectedHealthMonitor : IObserver<SyncState>, I
         ArgumentExceptionHelper.ThrowIfNull(timeProvider);
         _timeProvider = timeProvider;
         _initialState = new(SyncLifecycleStatus.Created, NetworkAvailable: false, 0, 0, timeProvider.GetUtcNow(), null, null, null);
-        _subscription = context.SyncStates.Subscribe(this);
+        _subscription = context.SyncStates.Subscribe(RecordState, RecordError);
     }
 
     /// <summary>Gets the health report for the latest observed state.</summary>
@@ -41,22 +47,43 @@ public sealed class OccasionallyConnectedHealthMonitor : IObserver<SyncState>, I
         OccasionallyConnectedHealth.Evaluate(Volatile.Read(ref _latest) ?? _initialState, _timeProvider.GetUtcNow());
 
     /// <inheritdoc/>
-    public void OnNext(SyncState value)
-    {
-        ArgumentExceptionHelper.ThrowIfNull(value);
-        Volatile.Write(ref _latest, value);
-    }
-
-    /// <inheritdoc/>
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public void OnError(Exception error) => ArgumentExceptionHelper.ThrowIfNull(error);
-
-    /// <inheritdoc/>
-    public void OnCompleted()
-    {
-    }
-
-    /// <inheritdoc/>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void Dispose() => _subscription.Dispose();
+
+    /// <summary>Records a state from the subscribed context until that sequence faults.</summary>
+    /// <param name="value">The context state.</param>
+    private void RecordState(SyncState value)
+    {
+        ArgumentExceptionHelper.ThrowIfNull(value);
+        lock (_gate)
+        {
+            if (!_faulted)
+            {
+                Volatile.Write(ref _latest, value);
+            }
+        }
+    }
+
+    /// <summary>Latches terminal context failures without exposing exception details.</summary>
+    /// <param name="error">The terminal failure.</param>
+    private void RecordError(Exception error)
+    {
+        ArgumentExceptionHelper.ThrowIfNull(error);
+        lock (_gate)
+        {
+            if (_faulted)
+            {
+                return;
+            }
+
+            var latest = Volatile.Read(ref _latest) ?? _initialState;
+            Volatile.Write(ref _latest, latest with
+            {
+                Status = SyncLifecycleStatus.Faulted,
+                ChangedAtUtc = _timeProvider.GetUtcNow(),
+                ReasonCode = OccasionallyConnectedHealth.FaultedReasonCode,
+            });
+            _faulted = true;
+        }
+    }
 }

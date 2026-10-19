@@ -9,17 +9,7 @@ namespace ReactiveUI.Primitives.OccasionallyConnected;
 public sealed record OccasionallyConnectedOptions
 {
     /// <summary>Gets the shared valid default configuration.</summary>
-    public static OccasionallyConnectedOptions Default { get; } = new()
-    {
-        Outbox = new(),
-        Inbox = new(),
-        Batching = new(),
-        Retry = RetryOptions.Default,
-        CircuitBreaker = new(),
-        Retention = new(),
-        Security = new(),
-        Diagnostics = new(),
-    };
+    public static OccasionallyConnectedOptions Default { get; } = new();
 
     /// <summary>Gets a value indicating whether the context starts automatically.</summary>
     public bool AutoStart { get; init; }
@@ -40,28 +30,28 @@ public sealed record OccasionallyConnectedOptions
     public ExactlyOnceExpiryBehavior ExactlyOnceExpiryBehavior { get; init; } = ExactlyOnceExpiryBehavior.StopAndReport;
 
     /// <summary>Gets the durable outgoing capacity configuration.</summary>
-    public required OutboxOptions Outbox { get; init; }
+    public OutboxOptions Outbox { get; init; } = new();
 
     /// <summary>Gets the durable incoming capacity configuration.</summary>
-    public required InboxOptions Inbox { get; init; }
+    public InboxOptions Inbox { get; init; } = new();
 
     /// <summary>Gets the outgoing batching configuration.</summary>
-    public required BatchingOptions Batching { get; init; }
+    public BatchingOptions Batching { get; init; } = new();
 
     /// <summary>Gets the retry configuration.</summary>
-    public required RetryOptions Retry { get; init; }
+    public RetryOptions Retry { get; init; } = RetryOptions.Default;
 
     /// <summary>Gets the endpoint circuit-breaker configuration.</summary>
-    public required CircuitBreakerOptions CircuitBreaker { get; init; }
+    public CircuitBreakerOptions CircuitBreaker { get; init; } = new();
 
     /// <summary>Gets the durable data retention configuration.</summary>
-    public required RetentionOptions Retention { get; init; }
+    public RetentionOptions Retention { get; init; } = new();
 
     /// <summary>Gets the bounded security configuration.</summary>
-    public required SecurityOptions Security { get; init; }
+    public SecurityOptions Security { get; init; } = new();
 
     /// <summary>Gets the diagnostic configuration.</summary>
-    public required DiagnosticsOptions Diagnostics { get; init; }
+    public DiagnosticsOptions Diagnostics { get; init; } = new();
 
     /// <summary>Validates this configuration and all nested option records.</summary>
     /// <exception cref="ArgumentNullException">A required nested configuration is missing.</exception>

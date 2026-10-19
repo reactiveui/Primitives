@@ -34,6 +34,7 @@ public static class OccasionallyConnectedServiceCollectionExtensions
 public sealed class OccasionallyConnectedServiceOptions
 {
     public OccasionallyConnectedServiceOptions() { }
+    public bool IncludeStartupExceptionDetails { get; set; }
     public int MaximumNamedStreams { get; set; }
     public int MaximumStreamNameLength { get; set; }
     public ReactiveUI.Primitives.OccasionallyConnected.OccasionallyConnectedOptions Options { get; set; }

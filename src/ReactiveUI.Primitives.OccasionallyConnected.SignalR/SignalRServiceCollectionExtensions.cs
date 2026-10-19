@@ -8,7 +8,9 @@ using System.Diagnostics.CodeAnalysis;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.AspNetCore.SignalR;
+using Microsoft.AspNetCore.SignalR.Protocol;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace ReactiveUI.Primitives.OccasionallyConnected.SignalR;
 
@@ -52,13 +54,19 @@ public static class SignalRServiceCollectionExtensions
         public ISignalRServerBuilder AddOccasionallyConnectedSignalR()
         {
             ArgumentNullException.ThrowIfNull(services);
-            return services.AddSignalR(static options =>
+            var builder = services.AddSignalR();
+            services.TryAddEnumerable(ServiceDescriptor.Singleton<IHubProtocol, SignalRHubProtocol>());
+
+            // SignalR admits all registered protocols by default. Keep this private protocol opt-in.
+            _ = services.PostConfigure<HubOptions>(static options => options.SupportedProtocols?.Remove(SignalRHubProtocol.ProtocolName));
+            return builder.AddHubOptions<OccasionallyConnectedHub>(static options =>
             {
                 options.MaximumReceiveMessageSize = SignalRCarrier.MaximumBytes * FramingMultiplier;
                 options.StreamBufferCapacity = 1;
                 options.MaximumParallelInvocationsPerClient = InvocationCapacity;
                 options.EnableDetailedErrors = false;
-            }).AddJsonProtocol(static options => options.PayloadSerializerOptions.TypeInfoResolver = SignalRCarrierJsonContext.Default);
+                options.SupportedProtocols = [SignalRHubProtocol.ProtocolName];
+            });
         }
     }
 }

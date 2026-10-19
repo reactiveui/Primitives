@@ -147,7 +147,7 @@ public sealed partial class SyncEngineTests
             DateTimeOffset.UnixEpoch);
     }
 
-    /// <summary>Creates engine options with deterministic diagnostics sampling.</summary>
+    /// <summary>Creates engine options with host-controlled diagnostics.</summary>
     /// <param name="enabled">Whether diagnostics are enabled.</param>
     /// <returns>The options.</returns>
     private static OccasionallyConnectedOptions CreateDiagnosticsOptions(bool enabled) =>
@@ -156,7 +156,6 @@ public sealed partial class SyncEngineTests
             Diagnostics = OccasionallyConnectedOptions.Default.Diagnostics with
             {
                 Enabled = enabled,
-                ActivitySamplingRatio = 1D,
             },
         };
 

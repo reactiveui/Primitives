@@ -10,22 +10,10 @@ namespace ReactiveUI.Primitives.OccasionallyConnected.Tests;
 
 /// <summary>Tests for <see cref="OccasionallyConnectedActivities"/>.</summary>
 [NotInParallel]
-public sealed class OccasionallyConnectedActivitiesTests
+public sealed partial class OccasionallyConnectedActivitiesTests
 {
-    /// <summary>The deterministic fractional sampling ratio used by the sampler test.</summary>
-    private const double HalfSamplingRatio = 0.5D;
-
-    /// <summary>The expected number of sampler invocations in the deterministic sampler test.</summary>
-    private const int ExpectedSamplerCalls = 2;
-
     /// <summary>The number of concurrent activity starts to perform.</summary>
     private const int ConcurrentStartCount = 64;
-
-    /// <summary>A ratio guaranteed to reject the deterministic default trace.</summary>
-    private const double TinySamplingRatio = 0.000001D;
-
-    /// <summary>A ratio guaranteed to accept the deterministic default trace.</summary>
-    private const double LargeSamplingRatio = 0.999999D;
 
     /// <summary>The name used by parent activities in these tests.</summary>
     private const string ParentOperationName = "parent";
@@ -122,53 +110,6 @@ public sealed class OccasionallyConnectedActivitiesTests
         await Assert.That(activity).IsNull();
     }
 
-    /// <summary>Verifies sampling ratios of zero and one respectively reject and admit activities.</summary>
-    /// <returns>A task representing the assertions.</returns>
-    [Test]
-    public async Task BoundarySamplingRatiosRespectTheirLimits()
-    {
-        using var listener = CreateListener();
-        using var rejected = new OccasionallyConnectedActivities(samplingRatio: 0D);
-        using var admitted = new OccasionallyConnectedActivities();
-
-        var rejectedActivity = rejected.Start(OccasionallyConnectedActivityName.ContextStart);
-        using var admittedActivity = admitted.Start(OccasionallyConnectedActivityName.ContextStart);
-
-        await Assert.That(rejectedActivity).IsNull();
-        await Assert.That(admittedActivity).IsNotNull();
-    }
-
-    /// <summary>Verifies fractional sampling is deterministic for a known parent trace.</summary>
-    /// <returns>A task representing the assertions.</returns>
-    [Test]
-    public async Task FractionalSamplingUsesDeterministicDefaultTraceSelection()
-    {
-        using var listener = CreateListener();
-        using var rejected = new OccasionallyConnectedActivities(samplingRatio: TinySamplingRatio);
-        using var admitted = new OccasionallyConnectedActivities(samplingRatio: LargeSamplingRatio);
-        using var parent = new Activity(ParentOperationName)
-            .SetParentId("00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01")
-            .Start();
-
-        var rejectedActivity = rejected.Start(OccasionallyConnectedActivityName.ContextStart);
-        using var admittedActivity = admitted.Start(OccasionallyConnectedActivityName.ContextStart);
-
-        await Assert.That(rejectedActivity).IsNull();
-        await Assert.That(admittedActivity).IsNotNull();
-    }
-
-    /// <summary>Verifies invalid sampling ratios are rejected during construction.</summary>
-    /// <returns>A task representing the assertions.</returns>
-    [Test]
-    public async Task InvalidSamplingRatiosAreRejected()
-    {
-        await Assert.That(static () => new OccasionallyConnectedActivities(samplingRatio: -1D)).ThrowsExactly<ArgumentOutOfRangeException>();
-        await Assert.That(static () => new OccasionallyConnectedActivities(samplingRatio: double.NaN)).ThrowsExactly<ArgumentOutOfRangeException>();
-        await Assert.That(static () => new OccasionallyConnectedActivities(samplingRatio: double.PositiveInfinity)).ThrowsExactly<ArgumentOutOfRangeException>();
-        await Assert.That(static () => new OccasionallyConnectedActivities(samplingRatio: double.NegativeInfinity)).ThrowsExactly<ArgumentOutOfRangeException>();
-        await Assert.That(static () => new OccasionallyConnectedActivities(samplingRatio: 2D)).ThrowsExactly<ArgumentOutOfRangeException>();
-    }
-
     /// <summary>Verifies unknown bounded activity values are rejected.</summary>
     /// <returns>A task representing the assertions.</returns>
     [Test]
@@ -177,33 +118,6 @@ public sealed class OccasionallyConnectedActivitiesTests
         using var recorder = new OccasionallyConnectedActivities();
 
         await Assert.That(() => recorder.Start((OccasionallyConnectedActivityName)(-1))).ThrowsExactly<ArgumentOutOfRangeException>();
-    }
-
-    /// <summary>Verifies injected sampling receives a stable parent trace identifier and has deterministic results.</summary>
-    /// <returns>A task representing the assertions.</returns>
-    [Test]
-    public async Task InjectedSamplerUsesTheCurrentTraceIdentifierDeterministically()
-    {
-        using var listener = CreateListener();
-        var observedTraceIds = new List<ActivityTraceId>();
-        using var recorder = new OccasionallyConnectedActivities(
-            samplingRatio: HalfSamplingRatio,
-            sampler: (traceId, _) =>
-            {
-                observedTraceIds.Add(traceId);
-                return traceId.ToHexString().StartsWith("4bf92f", StringComparison.Ordinal);
-            });
-        using var parent = new Activity(ParentOperationName)
-            .SetParentId("00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01")
-            .Start();
-
-        using var first = recorder.Start(OccasionallyConnectedActivityName.SyncReceive);
-        using var second = recorder.Start(OccasionallyConnectedActivityName.SyncReceive);
-
-        await Assert.That(first).IsNotNull();
-        await Assert.That(second).IsNotNull();
-        await Assert.That(observedTraceIds.Count).IsEqualTo(ExpectedSamplerCalls);
-        await Assert.That(observedTraceIds.TrueForAll(traceId => traceId == RequireActivity(parent).TraceId)).IsTrue();
     }
 
     /// <summary>Verifies concurrent starts are safe and each listener callback observes a defined operation.</summary>
@@ -228,61 +142,22 @@ public sealed class OccasionallyConnectedActivitiesTests
         await Assert.That(Array.TrueForAll(startedOperations.ToArray(), static name => name == "oc.sync.push")).IsTrue();
     }
 
-    /// <summary>Rejects invalid configuration before publishing a source to process listeners.</summary>
+    /// <summary>Leaves sampling decisions entirely to the host listener.</summary>
     /// <returns>The assertion task.</returns>
     [Test]
-    public async Task InvalidConfigurationDoesNotCreateAnActivitySource()
+    public async Task HostListenerCanRejectEveryActivity()
     {
-        var published = 0;
-        using var listener = new ActivityListener
-        {
-            ShouldListenTo = source =>
-            {
-                if (source.Name != OccasionallyConnectedActivities.DiagnosticSourceName)
-                {
-                    return false;
-                }
-
-                published++;
-                return false;
-            },
-            Sample = static (ref ActivityCreationOptions<ActivityContext> _) => ActivitySamplingResult.None,
-        };
-        ActivitySource.AddActivityListener(listener);
-        published = 0;
-        await Assert.That(static () => new OccasionallyConnectedActivities(samplingRatio: double.NaN))
-            .ThrowsExactly<ArgumentOutOfRangeException>();
-        await Assert.That(published).IsEqualTo(0);
+        var result = await RunActivityProbeAsync("reject");
+        await Assert.That(result).IsEqualTo("True|1");
     }
 
-    /// <summary>Root activities need a nonconstant sampling seed when no ambient parent exists.</summary>
-    /// <param name="hierarchicalParent">Whether the parent uses a hierarchical identifier.</param>
+    /// <summary>Skips activity creation when the host has no listener.</summary>
     /// <returns>The assertion task.</returns>
     [Test]
-    [Arguments(false)]
-    [Arguments(true)]
-    public async Task RootActivityDoesNotSampleTheDefaultTraceIdentifier(bool hierarchicalParent)
+    public async Task NoListenerDoesNotCreateAnActivityOrChangeTheParent()
     {
-        var previous = Activity.Current;
-        ActivityTraceId sampled = default;
-        using var recorder = new OccasionallyConnectedActivities(sampler: (trace, _) =>
-        {
-            sampled = trace;
-            return false;
-        });
-        try
-        {
-            Activity.Current = null;
-            using var parent = hierarchicalParent
-                ? new Activity(ParentOperationName).SetIdFormat(ActivityIdFormat.Hierarchical).Start()
-                : null;
-            using var activity = recorder.Start(OccasionallyConnectedActivityName.ContextStart);
-            await Assert.That(sampled).IsNotEqualTo(default(ActivityTraceId));
-        }
-        finally
-        {
-            Activity.Current = previous;
-        }
+        var result = await RunActivityProbeAsync("none");
+        await Assert.That(result).IsEqualTo("True|True");
     }
 
     /// <summary>Requires the listener-observed activity without nullability suppression.</summary>

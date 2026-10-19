@@ -5,6 +5,7 @@ using System.Globalization;
 using System.Net;
 using System.Net.Http;
 using System.Runtime.CompilerServices;
+using System.Text;
 namespace ReactiveUI.Primitives.OccasionallyConnected.Transport.Http.Tests;
 
 /// <summary>Tests HTTP replay authentication on the client adapter.</summary>
@@ -126,7 +127,29 @@ public sealed partial class HttpRemoteTransportAdapterTests
         await Assert.That(GetSingleHeader(headers, ReplayNonceHeader)).IsNotNull();
         await Assert.That(GetSingleHeader(headers, ReplaySentAtHeader)).IsNotNull();
         await Assert.That(GetSingleHeader(headers, ReplaySessionIdHeader)).IsEqualTo(ReplaySessionId);
-        await Assert.That(GetSingleHeader(headers, ReplayMacHeader)).IsNotNull();
+        var mac = GetSingleHeader(headers, ReplayMacHeader);
+        var signedRequest = new HttpReplayRequest
+        {
+            Operation = HttpReplayOperationKind.Push,
+            Principal = new(ReplayEndpointTenantId, ReplayEndpointClientId),
+            MessageId = GetSingleHeader(headers, ReplayMessageIdHeader)!,
+            Nonce = GetSingleHeader(headers, ReplayNonceHeader)!,
+            SentAtUtc = ReplayObservedUtc,
+            ReplaySessionId = ReplaySessionId,
+            ReplayMac = mac,
+            CanonicalRequest = new HttpCanonicalRequestBuilder(new()).Build(
+                HttpReplayOperationKind.Push,
+                "POST",
+                PushRoute.Trim('/'),
+                [],
+                ReplayObservedUtc,
+                Encoding.UTF8.GetBytes(handler.Requests[1].Body)),
+        };
+        HttpReplayEnvelopeHasher.ValidateReplayMacSyntax(signedRequest);
+        HttpReplayEnvelopeHasher hasher = new();
+        var envelope = hasher.Create(signedRequest);
+        await Assert.That(mac).IsEqualTo(hasher.ComputeMac("replay-secret-1"u8.ToArray(), envelope.MacInput));
+        await Assert.That(headers.Single(static header => header.Key == ReplayMacHeader).Value.Count()).IsEqualTo(1);
         await Assert.That(GetSingleHeader(headers, ReplaySessionSecretHeader)).IsNull();
     }
 

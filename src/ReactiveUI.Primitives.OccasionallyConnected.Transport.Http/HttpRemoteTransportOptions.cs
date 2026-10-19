@@ -109,7 +109,7 @@ public sealed record HttpRemoteTransportOptions
     /// <summary>Gets the maximum JSON reader depth accepted by the protocol codec.</summary>
     public int MaximumJsonDepth { get; init; } = DefaultJsonDepth;
 
-    /// <summary>Gets the clock used to observe HTTP retry hints.</summary>
+    /// <summary>Gets the clock used to observe HTTP retry hints and pace empty subscription polls.</summary>
     public TimeProvider TimeProvider { get; init; } = TimeProvider.System;
 
     /// <summary>Gets the replay protection settings used by this adapter.</summary>

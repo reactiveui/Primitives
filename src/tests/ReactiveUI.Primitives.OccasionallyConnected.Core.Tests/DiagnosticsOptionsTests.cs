@@ -10,9 +10,6 @@ namespace ReactiveUI.Primitives.OccasionallyConnected.Tests;
 /// <summary>Tests privacy-preserving diagnostic configuration.</summary>
 public sealed class DiagnosticsOptionsTests
 {
-    /// <summary>The documented default activity sampling ratio.</summary>
-    private const double DefaultActivitySamplingRatio = 0.1;
-
     /// <summary>The documented default queued fault limit.</summary>
     private const int DefaultMaximumQueuedFaults = 256;
 
@@ -21,18 +18,6 @@ public sealed class DiagnosticsOptionsTests
 
     /// <summary>The documented default high-water mark.</summary>
     private const double DefaultHighWaterMark = 0.8;
-
-    /// <summary>The invalid ratio below the lower boundary.</summary>
-    private const double BelowMinimumSamplingRatio = -0.1;
-
-    /// <summary>The invalid ratio above the upper boundary.</summary>
-    private const double AboveMaximumSamplingRatio = 1.1;
-
-    /// <summary>The accepted minimum sampling ratio.</summary>
-    private const double MinimumSamplingRatio = 0;
-
-    /// <summary>The accepted maximum sampling ratio.</summary>
-    private const double MaximumSamplingRatio = 1;
 
     /// <summary>The invalid high-water mark below the lower boundary.</summary>
     private const double BelowMinimumHighWaterMark = -0.1;
@@ -48,35 +33,9 @@ public sealed class DiagnosticsOptionsTests
 
         await Assert.That(options.Enabled).IsTrue();
         await Assert.That(options.IncludeHashedIdentifiers).IsFalse();
-        await Assert.That(options.ActivitySamplingRatio).IsEqualTo(DefaultActivitySamplingRatio);
         await Assert.That(options.MaximumQueuedFaults).IsEqualTo(DefaultMaximumQueuedFaults);
         await Assert.That(options.MaximumQueuedFaultBytes).IsEqualTo(DefaultMaximumQueuedFaultBytes);
         await Assert.That(options.HighWaterMark).IsEqualTo(DefaultHighWaterMark);
-    }
-
-    /// <summary>Verifies sampling is finite and inclusive between zero and one.</summary>
-    /// <param name="ratio">The invalid ratio.</param>
-    /// <returns>A task that represents the asynchronous assertion work.</returns>
-    [Test]
-    [Arguments(BelowMinimumSamplingRatio)]
-    [Arguments(AboveMaximumSamplingRatio)]
-    [Arguments(double.NaN)]
-    [Arguments(double.PositiveInfinity)]
-    public async Task InvalidSamplingRatiosAreRejected(double ratio)
-    {
-        var exception = Assert.ThrowsExactly<ArgumentOutOfRangeException>(
-            () => (new DiagnosticsOptions { ActivitySamplingRatio = ratio }).Validate());
-
-        await Assert.That(exception.ParamName).IsEqualTo(nameof(DiagnosticsOptions.ActivitySamplingRatio));
-        await Assert.That(exception.ActualValue).IsEqualTo(ratio);
-    }
-
-    /// <summary>Verifies sampling accepts both inclusive boundaries.</summary>
-    [Test]
-    public void SamplingBoundariesAreAccepted()
-    {
-        (new DiagnosticsOptions { ActivitySamplingRatio = MinimumSamplingRatio }).Validate();
-        (new DiagnosticsOptions { ActivitySamplingRatio = MaximumSamplingRatio }).Validate();
     }
 
     /// <summary>Verifies the queued fault limit remains positive.</summary>

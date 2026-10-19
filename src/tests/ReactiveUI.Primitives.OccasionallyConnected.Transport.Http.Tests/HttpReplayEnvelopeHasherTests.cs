@@ -261,6 +261,7 @@ public sealed class HttpReplayEnvelopeHasherTests
         var exception = CaptureHttpException(() => hasher.Create(request));
         await Assert.That(exception.Kind).IsEqualTo(HttpTransportFailureKind.PayloadTooLarge);
         await Assert.That(exception.StatusCode).IsEqualTo(HttpStatusCode.RequestEntityTooLarge);
+        await Assert.That(() => hasher.CreateSigningInput(request with { ReplayMac = null })).ThrowsExactly<HttpRemoteTransportException>();
     }
 
     /// <summary>Verifies oversized replay text fields are rejected before framed input allocation.</summary>
@@ -397,6 +398,53 @@ public sealed class HttpReplayEnvelopeHasherTests
         var request = CreateRequest(StableBody) with { Operation = HttpReplayOperationKind.Connect, ReplaySessionId = null, ReplayMac = null };
         var envelope = hasher.Create(request);
         await Assert.That(envelope.MacInput.Length).IsGreaterThan(0);
+        await Assert.That(hasher.FixedTimeEquals(envelope.MacInput, hasher.CreateSigningInput(request))).IsTrue();
+    }
+
+    /// <summary>Verifies unsigned input produces the same authenticated fields as a signed envelope.</summary>
+    /// <returns>The asynchronous test operation.</returns>
+    [Test]
+    public async Task CreateSigningInputMatchesSignedEnvelopeWithoutProof()
+    {
+        HttpReplayEnvelopeHasher hasher = new();
+        var unsigned = CreateRequest(StableBody) with { ReplayMac = null };
+        var signingInput = hasher.CreateSigningInput(unsigned);
+        var secret = "session-1"u8.ToArray();
+        var mac = hasher.ComputeMac(secret, signingInput);
+        var signed = unsigned with { ReplayMac = mac };
+        HttpReplayEnvelopeHasher.ValidateReplayMacSyntax(signed);
+        var envelope = hasher.Create(signed);
+        await Assert.That(hasher.FixedTimeEquals(signingInput, envelope.MacInput)).IsTrue();
+        using var hmac = new HMACSHA256(secret);
+        var expectedMac = HttpReplayBase64Url.Encode(hmac.ComputeHash(signingInput.ToArray()));
+        await Assert.That(mac).IsEqualTo(expectedMac);
+        await Assert.That(() => hasher.Create(unsigned)).ThrowsExactly<HttpRemoteTransportException>();
+    }
+
+    /// <summary>Verifies unsigned input still requires a valid session used by the proof.</summary>
+    /// <param name="sessionId">The invalid session identifier.</param>
+    /// <returns>The asynchronous test operation.</returns>
+    [Test]
+    [Arguments(null)]
+    [Arguments("")]
+    [Arguments(NewlineHeader)]
+    public async Task CreateSigningInputRejectsInvalidSession(string? sessionId)
+    {
+        HttpReplayEnvelopeHasher hasher = new();
+        var unsigned = CreateRequest(StableBody) with { ReplaySessionId = sessionId, ReplayMac = null };
+        await Assert.That(() => hasher.CreateSigningInput(unsigned)).ThrowsExactly<HttpRemoteTransportException>();
+    }
+
+    /// <summary>Verifies proof text affects the fingerprint but not the unsigned input.</summary>
+    /// <returns>The asynchronous test operation.</returns>
+    [Test]
+    public async Task CreateSigningInputExcludesProofFromCanonicalFields()
+    {
+        HttpReplayEnvelopeHasher hasher = new();
+        var first = CreateRequest(StableBody);
+        var second = first with { ReplayMac = Changed };
+        await Assert.That(hasher.FixedTimeEquals(hasher.CreateSigningInput(first), hasher.CreateSigningInput(second))).IsTrue();
+        await Assert.That(hasher.FixedTimeEquals(hasher.Create(first).EnvelopeFingerprint, hasher.Create(second).EnvelopeFingerprint)).IsFalse();
     }
 
     /// <summary>Changes one replay request field while holding every other field fixed.</summary>

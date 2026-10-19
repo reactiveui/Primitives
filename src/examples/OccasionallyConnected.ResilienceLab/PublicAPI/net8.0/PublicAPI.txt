@@ -1,8 +1,8 @@
 namespace ReactiveUI.Primitives.OccasionallyConnected.ResilienceLab;
 
-public static class CrdtLoopbackScenarioShape
+public static class MergeableLoopbackScenarioShape
 {
-    public static System.Collections.Generic.IReadOnlyList<ReactiveUI.Primitives.OccasionallyConnected.Crdt.CrdtKind> CoveredKinds { get; }
+    public static System.Collections.Generic.IReadOnlyList<ReactiveUI.Primitives.OccasionallyConnected.Mergeable.MergeableKind> CoveredKinds { get; }
     public static string ScenarioName { get; }
     public static ReactiveUI.Primitives.OccasionallyConnected.RemoteTransportCapabilities VolatileLoopbackCapabilities { get; }
 }

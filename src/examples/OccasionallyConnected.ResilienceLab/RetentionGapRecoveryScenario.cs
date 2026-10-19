@@ -3,7 +3,7 @@
 // See the LICENSE file in the project root for full license information.
 
 using System.Runtime.CompilerServices;
-using ReactiveUI.Primitives.OccasionallyConnected.Crdt;
+using ReactiveUI.Primitives.OccasionallyConnected.Mergeable;
 using ReactiveUI.Primitives.OccasionallyConnected.Server;
 
 namespace ReactiveUI.Primitives.OccasionallyConnected.ResilienceLab;
@@ -84,11 +84,11 @@ internal static class RetentionGapRecoveryScenario
         var checkpoint = recovery.Checkpoint;
         var snapshotValue = checkpoint is null
             ? 0
-            : CrdtCodec.DecodeState(checkpoint.ClientState.Payload, ResilienceLabLoopback.Bounds).Value.Counter;
+            : MergeableCodec.DecodeState(checkpoint.ClientState.Payload, ResilienceLabLoopback.Bounds).Value.Counter;
 
         await PublishAsync(hub, ResumedValue, token).ConfigureAwait(false);
         var resumed = await ReadPageAsync(hub, checkpoint?.FrontierCursor, token).ConfigureAwait(false);
-        var resumedValue = CrdtLoopbackReceiver.DecodeStates(resumed, ResilienceLabLoopback.Bounds)[^1].Value.Counter;
+        var resumedValue = MergeableLoopbackReceiver.DecodeStates(resumed, ResilienceLabLoopback.Bounds)[^1].Value.Counter;
 
         return
         [
@@ -116,7 +116,7 @@ internal static class RetentionGapRecoveryScenario
     {
         var seed = SeedBase + (int)value;
         _ = await hub.ApplyOperationsAsync(
-            ResilienceLabLoopback.CreateBatch(seed, seed + SeedBase, Stream, value, CrdtMutation.GCounterSet(ClientId, value)),
+            ResilienceLabLoopback.CreateBatch(seed, seed + SeedBase, Stream, value, MergeableChange.IncrementOnlyCounterSet(ClientId, value)),
             Client,
             cancellationToken).ConfigureAwait(false);
     }
@@ -162,8 +162,8 @@ internal static class RetentionGapRecoveryScenario
             StreamId = Stream,
             SubscriptionId = Subscription,
             ExpiredCursor = expiredCursor,
-            ClientStateContractId = CrdtContracts.StateContractId,
-            ClientStateSchemaVersion = CrdtContracts.SchemaVersion,
+            ClientStateContractId = MergeableContracts.StateContractId,
+            ClientStateSchemaVersion = MergeableContracts.SchemaVersion,
             SnapshotFormatVersion = 1,
             PendingOperations = [],
             MaximumResponseBytes = MaximumResponseBytes,

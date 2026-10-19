@@ -23,6 +23,6 @@ public sealed record ResilienceLabOptions(string Scenario)
             }
         }
 
-        return new(CrdtLoopbackScenarioShape.ScenarioName);
+        return new(MergeableLoopbackScenarioShape.ScenarioName);
     }
 }

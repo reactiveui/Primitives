@@ -2,7 +2,7 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
-using ReactiveUI.Primitives.OccasionallyConnected.Crdt;
+using ReactiveUI.Primitives.OccasionallyConnected.Mergeable;
 using ReactiveUI.Primitives.OccasionallyConnected.Server;
 
 namespace ReactiveUI.Primitives.OccasionallyConnected.ResilienceLab;
@@ -55,7 +55,7 @@ internal static class CapabilityDowngradeScenario
             clock,
             ResilienceLabLoopback.CreateJournalLimits(TimeSpan.FromMinutes(ResilienceLabLoopback.GuardTimeoutSeconds)),
             Stream));
-        var limitedFeatures = CrdtLoopbackScenarioShape.VolatileLoopbackCapabilities;
+        var limitedFeatures = MergeableLoopbackScenarioShape.VolatileLoopbackCapabilities;
 
         var exactlyOnce = await TryConnectAsync(hub, limitedFeatures, DeliveryGuarantee.ExactlyOnce, token).ConfigureAwait(false);
         var fullPeer = await TryConnectAsync(hub, limitedFeatures | ExactlyOnceFeatures, DeliveryGuarantee.ExactlyOnce, token)
@@ -67,7 +67,7 @@ internal static class CapabilityDowngradeScenario
             ResilienceLabLoopback.CreateConnectRequest(ClientId, DeliveryGuarantee.AtLeastOnce),
             token).ConfigureAwait(false);
         var push = await session.PushAsync(
-            ResilienceLabLoopback.CreateBatch(BatchSeed, OperationSeed, Stream, 1, CrdtMutation.GCounterSet(ClientId, 1)),
+            ResilienceLabLoopback.CreateBatch(BatchSeed, OperationSeed, Stream, 1, MergeableChange.IncrementOnlyCounterSet(ClientId, 1)),
             token).ConfigureAwait(false);
         var atomicAcknowledge = (session.NegotiatedCapabilities.Features & RemoteTransportCapabilities.AtomicApplyAndAcknowledge) != 0;
 

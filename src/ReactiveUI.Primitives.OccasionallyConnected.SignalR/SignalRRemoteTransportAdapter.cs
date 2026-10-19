@@ -5,6 +5,7 @@
 using System.Net;
 using System.Runtime.CompilerServices;
 using Microsoft.AspNetCore.SignalR.Client;
+using Microsoft.AspNetCore.SignalR.Protocol;
 using Microsoft.Extensions.DependencyInjection;
 using ReactiveUI.Primitives.OccasionallyConnected.Transport.Http;
 
@@ -145,10 +146,13 @@ public sealed class SignalRRemoteTransportAdapter : IRemoteTransportAdapter
     /// <summary>Creates a physical connection without retry or reconnect handlers.</summary>
     /// <returns>The unstarted connection.</returns>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private HubConnection BuildConnection() => new HubConnectionBuilder()
-        .WithUrl(_options.Endpoint, options => _options.ConfigureConnection?.Invoke(options))
-        .AddJsonProtocol(static options => options.PayloadSerializerOptions.TypeInfoResolver = SignalRCarrierJsonContext.Default)
-        .Build();
+    private HubConnection BuildConnection()
+    {
+        var builder = new HubConnectionBuilder()
+            .WithUrl(_options.Endpoint, options => _options.ConfigureConnection?.Invoke(options));
+        _ = builder.Services.AddSingleton<IHubProtocol, SignalRHubProtocol>();
+        return builder.Build();
+    }
 
     /// <summary>Releases a disposed session from the adapter's ownership set.</summary>
     /// <param name="session">The disposed session.</param>

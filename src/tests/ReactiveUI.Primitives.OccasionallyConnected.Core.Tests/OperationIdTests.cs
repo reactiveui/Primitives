@@ -9,6 +9,25 @@ namespace ReactiveUI.Primitives.OccasionallyConnected.Tests;
 /// <summary>Tests for <see cref="OperationId"/>.</summary>
 public sealed class OperationIdTests
 {
+    /// <summary>Verifies the default GUID version follows the target framework.</summary>
+    /// <returns>The asynchronous assertions.</returns>
+    [Test]
+    public async Task NewUsesTheFrameworkDefaultGuidVersion()
+    {
+#if NET9_0_OR_GREATER
+        const char expectedVersion = '7';
+#else
+        const char expectedVersion = '4';
+#endif
+        await Assert.That(OperationId.New().Value.ToString("D")[14]).IsEqualTo(expectedVersion);
+    }
+
+    /// <summary>Verifies callers can explicitly request random version 4 identifiers.</summary>
+    /// <returns>The asynchronous assertions.</returns>
+    [Test]
+    public async Task NewSupportsVersion4OptOut() =>
+        await Assert.That(OperationId.New(false).Value.ToString("D")[14]).IsEqualTo('4');
+
     /// <summary>Verifies new operation identifiers are non-empty.</summary>
     /// <returns>A task that represents the asynchronous operation.</returns>
     [Test]

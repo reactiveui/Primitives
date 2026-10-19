@@ -83,10 +83,10 @@ public static class CollaborationStreamRegistrations
 {
     public static ReactiveUI.Primitives.OccasionallyConnected.StreamId ActivityStream { get; }
     public static System.Collections.Generic.IReadOnlyList<ReactiveUI.Primitives.OccasionallyConnected.Server.ServerConflictStreamRegistration> CreateAll() { }
-    public static ReactiveUI.Primitives.OccasionallyConnected.StreamId GCounterStream { get; }
-    public static ReactiveUI.Primitives.OccasionallyConnected.StreamId LwwRegisterStream { get; }
-    public static ReactiveUI.Primitives.OccasionallyConnected.StreamId ORSetStream { get; }
-    public static ReactiveUI.Primitives.OccasionallyConnected.StreamId PNCounterStream { get; }
+    public static ReactiveUI.Primitives.OccasionallyConnected.StreamId IncrementOnlyCounterStream { get; }
+    public static ReactiveUI.Primitives.OccasionallyConnected.StreamId LastWriterWinsValueStream { get; }
+    public static ReactiveUI.Primitives.OccasionallyConnected.StreamId AddWinsSetStream { get; }
+    public static ReactiveUI.Primitives.OccasionallyConnected.StreamId CounterStream { get; }
 }
 [System.Diagnostics.DebuggerDisplay("Configured host identity policy")]
 public sealed class ConfiguredIdentityAuthorizationPolicy : ReactiveUI.Primitives.OccasionallyConnected.IServerStreamAuthorizationPolicy

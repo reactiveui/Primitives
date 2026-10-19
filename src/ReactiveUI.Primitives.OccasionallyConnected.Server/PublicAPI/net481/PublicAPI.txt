@@ -2,75 +2,75 @@
 namespace ReactiveUI.Primitives.OccasionallyConnected.Server;
 
 [System.Diagnostics.DebuggerDisplay("{_options.Kind,nq} {_options.InitialVersion,nq}")]
-public sealed class CrdtInitialStateFactory : ReactiveUI.Primitives.OccasionallyConnected.Server.IServerInitialStateFactory
+public sealed class MergeableInitialStateFactory : ReactiveUI.Primitives.OccasionallyConnected.Server.IServerInitialStateFactory
 {
-    public CrdtInitialStateFactory(ReactiveUI.Primitives.OccasionallyConnected.Server.CrdtInitialStateFactoryOptions options) { }
+    public MergeableInitialStateFactory(ReactiveUI.Primitives.OccasionallyConnected.Server.MergeableInitialStateFactoryOptions options) { }
     public System.Threading.Tasks.ValueTask<ReactiveUI.Primitives.OccasionallyConnected.ServerState> CreateInitialStateAsync(ReactiveUI.Primitives.OccasionallyConnected.StreamId streamId, System.Threading.CancellationToken cancellationToken) { }
 }
 [System.Diagnostics.DebuggerDisplay("{Kind,nq} {InitialVersion,nq}")]
-public record CrdtInitialStateFactoryOptions : System.IEquatable<ReactiveUI.Primitives.OccasionallyConnected.Server.CrdtInitialStateFactoryOptions>
+public record MergeableInitialStateFactoryOptions : System.IEquatable<ReactiveUI.Primitives.OccasionallyConnected.Server.MergeableInitialStateFactoryOptions>
 {
-    public ReactiveUI.Primitives.OccasionallyConnected.Crdt.CrdtBounds Bounds { get; init; }
+    public ReactiveUI.Primitives.OccasionallyConnected.Mergeable.MergeableBounds Bounds { get; init; }
     public string InitialVersion { get; init; }
-    public required ReactiveUI.Primitives.OccasionallyConnected.Crdt.CrdtKind Kind { get; init; }
+    public required ReactiveUI.Primitives.OccasionallyConnected.Mergeable.MergeableKind Kind { get; init; }
 }
 [System.Diagnostics.DebuggerDisplay("{_options.Kind,nq}")]
-public sealed class CrdtResolver : ReactiveUI.Primitives.OccasionallyConnected.IConflictResolver
+public sealed class MergeableResolver : ReactiveUI.Primitives.OccasionallyConnected.IConflictResolver
 {
-    public CrdtResolver(ReactiveUI.Primitives.OccasionallyConnected.Server.CrdtResolverOptions options) { }
+    public MergeableResolver(ReactiveUI.Primitives.OccasionallyConnected.Server.MergeableResolverOptions options) { }
     public System.Threading.Tasks.ValueTask<ReactiveUI.Primitives.OccasionallyConnected.ConflictResolutionResult> ResolveAsync(ReactiveUI.Primitives.OccasionallyConnected.ConflictContext context, System.Threading.CancellationToken cancellationToken) { }
 }
 [System.Diagnostics.DebuggerDisplay("{Kind,nq}")]
-public record CrdtResolverOptions : System.IEquatable<ReactiveUI.Primitives.OccasionallyConnected.Server.CrdtResolverOptions>
+public record MergeableResolverOptions : System.IEquatable<ReactiveUI.Primitives.OccasionallyConnected.Server.MergeableResolverOptions>
 {
-    public ReactiveUI.Primitives.OccasionallyConnected.Crdt.CrdtBounds Bounds { get; init; }
-    public required ReactiveUI.Primitives.OccasionallyConnected.Crdt.CrdtKind Kind { get; init; }
+    public ReactiveUI.Primitives.OccasionallyConnected.Mergeable.MergeableBounds Bounds { get; init; }
+    public required ReactiveUI.Primitives.OccasionallyConnected.Mergeable.MergeableKind Kind { get; init; }
     public required ReactiveUI.Primitives.OccasionallyConnected.Server.IServerConflictVersionFactory VersionFactory { get; init; }
 }
 [System.Diagnostics.DebuggerDisplay("{_prefix,nq}")]
-public sealed class CrdtSequentialVersionFactory : ReactiveUI.Primitives.OccasionallyConnected.Server.IServerConflictVersionFactory
+public sealed class MergeableSequentialVersionFactory : ReactiveUI.Primitives.OccasionallyConnected.Server.IServerConflictVersionFactory
 {
-    public CrdtSequentialVersionFactory() { }
-    public CrdtSequentialVersionFactory(ReactiveUI.Primitives.OccasionallyConnected.Server.CrdtSequentialVersionFactoryOptions options) { }
+    public MergeableSequentialVersionFactory() { }
+    public MergeableSequentialVersionFactory(ReactiveUI.Primitives.OccasionallyConnected.Server.MergeableSequentialVersionFactoryOptions options) { }
     public string CreateNextVersion(ReactiveUI.Primitives.OccasionallyConnected.ConflictContext context, ReactiveUI.Primitives.OccasionallyConnected.SyncOperation operation) { }
 }
 [System.Diagnostics.DebuggerDisplay("{Prefix,nq}")]
-public record CrdtSequentialVersionFactoryOptions : System.IEquatable<ReactiveUI.Primitives.OccasionallyConnected.Server.CrdtSequentialVersionFactoryOptions>
+public record MergeableSequentialVersionFactoryOptions : System.IEquatable<ReactiveUI.Primitives.OccasionallyConnected.Server.MergeableSequentialVersionFactoryOptions>
 {
     public string Prefix { get; init; }
 }
 [System.Diagnostics.DebuggerDisplay("{_options.Kind,nq}")]
-public sealed class CrdtServerDomainHandler : ReactiveUI.Primitives.OccasionallyConnected.Server.IServerDomainHandler
+public sealed class MergeableServerDomainHandler : ReactiveUI.Primitives.OccasionallyConnected.Server.IServerDomainHandler
 {
-    public CrdtServerDomainHandler(ReactiveUI.Primitives.OccasionallyConnected.Server.CrdtServerDomainHandlerOptions options) { }
+    public MergeableServerDomainHandler(ReactiveUI.Primitives.OccasionallyConnected.Server.MergeableServerDomainHandlerOptions options) { }
     public System.Threading.Tasks.ValueTask<ReactiveUI.Primitives.OccasionallyConnected.Server.ServerDomainApplyResult> ApplyAsync(ReactiveUI.Primitives.OccasionallyConnected.Server.ServerDomainApplyContext context, System.Threading.CancellationToken cancellationToken) { }
 }
 [System.Diagnostics.DebuggerDisplay("{Kind,nq}")]
-public record CrdtServerDomainHandlerOptions : System.IEquatable<ReactiveUI.Primitives.OccasionallyConnected.Server.CrdtServerDomainHandlerOptions>
+public record MergeableServerDomainHandlerOptions : System.IEquatable<ReactiveUI.Primitives.OccasionallyConnected.Server.MergeableServerDomainHandlerOptions>
 {
-    public ReactiveUI.Primitives.OccasionallyConnected.Crdt.CrdtBounds Bounds { get; init; }
-    public required ReactiveUI.Primitives.OccasionallyConnected.Crdt.CrdtKind Kind { get; init; }
+    public ReactiveUI.Primitives.OccasionallyConnected.Mergeable.MergeableBounds Bounds { get; init; }
+    public required ReactiveUI.Primitives.OccasionallyConnected.Mergeable.MergeableKind Kind { get; init; }
 }
-public static class CrdtServerPayloads
+public static class MergeableServerPayloads
 {
     public static string ContentType { get; }
     [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
-    public static ReactiveUI.Primitives.OccasionallyConnected.PayloadEnvelope CreateInput(ReactiveUI.Primitives.OccasionallyConnected.Crdt.CrdtInput input) { }
-    public static ReactiveUI.Primitives.OccasionallyConnected.PayloadEnvelope CreateInput(ReactiveUI.Primitives.OccasionallyConnected.Crdt.CrdtInput input, ReactiveUI.Primitives.OccasionallyConnected.Crdt.CrdtBounds bounds) { }
+    public static ReactiveUI.Primitives.OccasionallyConnected.PayloadEnvelope CreateInput(ReactiveUI.Primitives.OccasionallyConnected.Mergeable.MergeableInput input) { }
+    public static ReactiveUI.Primitives.OccasionallyConnected.PayloadEnvelope CreateInput(ReactiveUI.Primitives.OccasionallyConnected.Mergeable.MergeableInput input, ReactiveUI.Primitives.OccasionallyConnected.Mergeable.MergeableBounds bounds) { }
     [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
-    public static ReactiveUI.Primitives.OccasionallyConnected.PayloadEnvelope CreateState(ReactiveUI.Primitives.OccasionallyConnected.Crdt.CrdtState state) { }
-    public static ReactiveUI.Primitives.OccasionallyConnected.PayloadEnvelope CreateState(ReactiveUI.Primitives.OccasionallyConnected.Crdt.CrdtState state, ReactiveUI.Primitives.OccasionallyConnected.Crdt.CrdtBounds bounds) { }
+    public static ReactiveUI.Primitives.OccasionallyConnected.PayloadEnvelope CreateState(ReactiveUI.Primitives.OccasionallyConnected.Mergeable.MergeableState state) { }
+    public static ReactiveUI.Primitives.OccasionallyConnected.PayloadEnvelope CreateState(ReactiveUI.Primitives.OccasionallyConnected.Mergeable.MergeableState state, ReactiveUI.Primitives.OccasionallyConnected.Mergeable.MergeableBounds bounds) { }
 }
-public static class CrdtServerStreamRegistration
+public static class MergeableServerStreamRegistration
 {
-    public static ReactiveUI.Primitives.OccasionallyConnected.Server.ServerConflictStreamRegistration Create(ReactiveUI.Primitives.OccasionallyConnected.Server.CrdtServerStreamRegistrationOptions options) { }
+    public static ReactiveUI.Primitives.OccasionallyConnected.Server.ServerConflictStreamRegistration Create(ReactiveUI.Primitives.OccasionallyConnected.Server.MergeableServerStreamRegistrationOptions options) { }
 }
 [System.Diagnostics.DebuggerDisplay("{StreamId,nq} {Kind,nq}")]
-public record CrdtServerStreamRegistrationOptions : System.IEquatable<ReactiveUI.Primitives.OccasionallyConnected.Server.CrdtServerStreamRegistrationOptions>
+public record MergeableServerStreamRegistrationOptions : System.IEquatable<ReactiveUI.Primitives.OccasionallyConnected.Server.MergeableServerStreamRegistrationOptions>
 {
-    public ReactiveUI.Primitives.OccasionallyConnected.Crdt.CrdtBounds Bounds { get; init; }
+    public ReactiveUI.Primitives.OccasionallyConnected.Mergeable.MergeableBounds Bounds { get; init; }
     public string InitialVersion { get; init; }
-    public required ReactiveUI.Primitives.OccasionallyConnected.Crdt.CrdtKind Kind { get; init; }
+    public required ReactiveUI.Primitives.OccasionallyConnected.Mergeable.MergeableKind Kind { get; init; }
     public required ReactiveUI.Primitives.OccasionallyConnected.StreamId StreamId { get; init; }
     public ReactiveUI.Primitives.OccasionallyConnected.Server.IServerConflictVersionFactory VersionFactory { get; init; }
 }

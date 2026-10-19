@@ -55,25 +55,25 @@ public sealed class WebSocketRemoteTransportAdapter : IRemoteTransportAdapter
         cancellationToken.ThrowIfCancellationRequested();
 
         var socket = new ClientWebSocket();
-        WebSocketRemoteTransportSession? session = null;
         try
         {
+            _options.ConfigureSocket?.Invoke(socket.Options);
             await socket.ConnectAsync(_options.Endpoint, cancellationToken).ConfigureAwait(false);
-            session = new(socket, _options);
-            await session.HandshakeAsync(request, cancellationToken).ConfigureAwait(false);
-            return session;
+            var session = new WebSocketRemoteTransportSession(socket, _options);
+            try
+            {
+                await session.HandshakeAsync(request, cancellationToken).ConfigureAwait(false);
+                return session;
+            }
+            catch
+            {
+                await session.DisposeAsync().ConfigureAwait(false);
+                throw;
+            }
         }
         catch
         {
-            if (session is not null)
-            {
-                await session.DisposeAsync().ConfigureAwait(false);
-            }
-            else
-            {
-                socket.Dispose();
-            }
-
+            socket.Dispose();
             throw;
         }
     }

@@ -24,6 +24,7 @@ public sealed class WebSocketRemoteTransportException : System.Exception, Reacti
 public record WebSocketRemoteTransportOptions : System.IEquatable<ReactiveUI.Primitives.OccasionallyConnected.Transport.WebSockets.WebSocketRemoteTransportOptions>
 {
     public required System.Uri Endpoint { get; init; }
+    public System.Action<System.Net.WebSockets.ClientWebSocketOptions>? ConfigureSocket { get; init; }
     public int MaximumMessageBytes { get; init; }
     public int ReceiveBufferBytes { get; init; }
     public int MaximumBufferedSubscriptionBytes { get; init; }

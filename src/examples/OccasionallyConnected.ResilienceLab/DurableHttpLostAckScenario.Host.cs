@@ -14,7 +14,7 @@ using Microsoft.AspNetCore.Http.Extensions;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Primitives;
-using ReactiveUI.Primitives.OccasionallyConnected.Crdt;
+using ReactiveUI.Primitives.OccasionallyConnected.Mergeable;
 using ReactiveUI.Primitives.OccasionallyConnected.Server;
 using ReactiveUI.Primitives.OccasionallyConnected.Transport.Http;
 
@@ -178,7 +178,7 @@ internal static partial class DurableHttpLostAckScenario
                 AuthorizationPolicy = new LabAuthorizationPolicy(TenantId),
                 ConflictHandler = new()
                 {
-                    Streams = [CrdtServerStreamRegistration.Create(new() { StreamId = Stream, Kind = CrdtKind.GCounter, Bounds = CreateBounds() })],
+                    Streams = [MergeableServerStreamRegistration.Create(new() { StreamId = Stream, Kind = MergeableKind.IncrementOnlyCounter, Bounds = CreateBounds() })],
                     MaximumProducedEvents = SmallCapacity,
                 },
                 TimeProvider = timeProvider,

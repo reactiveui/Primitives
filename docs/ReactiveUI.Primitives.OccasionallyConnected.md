@@ -6,6 +6,19 @@
 > Primary API model: BCL `IObservable<T>` plus explicit asynchronous commands  
 > Normative terms: **MUST**, **SHOULD**, and **MAY** have their RFC 2119 meanings.
 
+## Current framework revision
+
+The 13 October 2026 review revision treats this as a framework of composable components.
+The user approved breaking changes before release. The goals and non-goals below still apply.
+Applications own domain policy, credentials and background scheduling.
+Neutral contracts must not force SQLite, a UI toolkit or one transport on those applications.
+
+See [API migration](OccasionallyConnected.ApiMigration.md) for the implemented naming and default changes.
+See [remaining work](RemainingTasks.md) for acceptance criteria mapped to this specification.
+The [review reconciliation](GlennReviewReconciliation.md) separates source progress from GitHub thread resolution.
+Provider separation, the atomic server persistence contract and wire interoperability remain open.
+The net11 API revision also needs the selected upstream analyzer correction and valid case models.
+
 ## 1. Executive summary
 
 `ReactiveUI.Primitives.OccasionallyConnected` provides local-first reactive streams whose logical subscriptions and outbound writes survive intermittent connectivity, process termination, application crashes, and power loss. It preserves the familiar `IObservable<T>`/`IObserver<T>` consumption model while making durability, replay, synchronization, conflict handling, and bounded resource use explicit.
@@ -1080,7 +1093,7 @@ Operations carry `BaseVersion`. The server compares it with the current aggregat
 ### 11.2 Built-in strategies
 
 - `LastWriterWinsResolver`: uses the server commit time and a deterministic tie-breaker `(serverTime, clientId, operationId)`. Client clocks MUST NOT decide the winner.
-- `CrdtResolver`: supports explicitly registered CRDT types such as grow-only counters, PN-counters, observed-remove sets, and last-writer registers. Equal register stamps use a deterministic bytewise tie-break. OR-set reclamation requires an explicit `CrdtFunctions.CheckpointORSet` call with fully applied per-client stream prefixes. Persist and synchronize its active bindings and permanent `ORSetFrontier` together. This prevents delayed replicas from restoring removed dots. Checkpoint payloads use binary version two. Existing states without checkpoints retain version-one bytes. Upgrade all readers before sharing checkpoints. See the Core package README for checkpoint rules and limits.
+- `MergeableResolver`: supports explicitly registered CRDT types such as grow-only counters, PN-counters, observed-remove sets, and last-writer registers. Equal register stamps use a deterministic bytewise tie-break. OR-set reclamation requires an explicit `MergeableFunctions.CheckpointAddWinsSet` call with fully applied per-client stream prefixes. Persist and synchronize its active bindings and permanent `AddWinsSetFrontier` together. This prevents delayed replicas from restoring removed dots. Checkpoint payloads use binary version two. Existing states without checkpoints retain version-one bytes. Upgrade all readers before sharing checkpoints. See the Core package README for checkpoint rules and limits.
 - `CustomDomainResolver`: application-supplied deterministic pure logic registered per contract/stream pattern.
 
 ### 11.3 Client reconciliation
@@ -1164,14 +1177,14 @@ public sealed record OccasionallyConnectedOptions
     public int MaxConcurrentStreams { get; init; } = 4;
     public ExactlyOnceExpiryBehavior ExactlyOnceExpiryBehavior { get; init; } =
         ExactlyOnceExpiryBehavior.StopAndReport;
-    public required OutboxOptions Outbox { get; init; }
-    public required InboxOptions Inbox { get; init; }
-    public required BatchingOptions Batching { get; init; }
-    public required RetryOptions Retry { get; init; }
-    public required CircuitBreakerOptions CircuitBreaker { get; init; }
-    public required RetentionOptions Retention { get; init; }
-    public required SecurityOptions Security { get; init; }
-    public required DiagnosticsOptions Diagnostics { get; init; }
+    public OutboxOptions Outbox { get; init; } = new();
+    public InboxOptions Inbox { get; init; } = new();
+    public BatchingOptions Batching { get; init; } = new();
+    public RetryOptions Retry { get; init; } = RetryOptions.Default;
+    public CircuitBreakerOptions CircuitBreaker { get; init; } = new();
+    public RetentionOptions Retention { get; init; } = new();
+    public SecurityOptions Security { get; init; } = new();
+    public DiagnosticsOptions Diagnostics { get; init; } = new();
 }
 ```
 

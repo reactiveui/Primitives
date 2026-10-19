@@ -2,7 +2,7 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
-using ReactiveUI.Primitives.OccasionallyConnected.Crdt;
+using ReactiveUI.Primitives.OccasionallyConnected.Mergeable;
 using ReactiveUI.Primitives.OccasionallyConnected.Server;
 
 namespace ReactiveUI.Primitives.OccasionallyConnected.ResilienceLab;
@@ -114,7 +114,7 @@ internal static class BackpressureScenario
     /// <param name="cancellationToken">The cancellation token.</param>
     /// <returns>The outcome name.</returns>
     private static async ValueTask<string> TryPublishAsync(
-        IOccasionallyConnectedStream<CrdtState, CrdtInput> stream,
+        IOccasionallyConnectedStream<MergeableState, MergeableInput> stream,
         long value,
         RemotePublishOptions options,
         CancellationToken cancellationToken)
@@ -143,6 +143,6 @@ internal static class BackpressureScenario
                 new(ResilienceLabLoopback.TenantId, ClientId),
                 cancellationToken),
             cancellationToken).ConfigureAwait(false);
-        return CrdtLoopbackReceiver.DecodeStates(page, ResilienceLabLoopback.Bounds)[^1].Value.Counter;
+        return MergeableLoopbackReceiver.DecodeStates(page, ResilienceLabLoopback.Bounds)[^1].Value.Counter;
     }
 }

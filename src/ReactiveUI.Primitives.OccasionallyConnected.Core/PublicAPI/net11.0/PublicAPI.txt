@@ -144,10 +144,9 @@ public enum DeliveryGuarantee
     AtLeastOnce = 1,
     ExactlyOnce = 2,
 }
-[System.Diagnostics.DebuggerDisplay("Enabled={Enabled}; Sampling={ActivitySamplingRatio}; Faults={MaximumQueuedFaults}; FaultBytes={MaximumQueuedFaultBytes}")]
+[System.Diagnostics.DebuggerDisplay("Enabled={Enabled}; Faults={MaximumQueuedFaults}; FaultBytes={MaximumQueuedFaultBytes}")]
 public record DiagnosticsOptions : System.IEquatable<ReactiveUI.Primitives.OccasionallyConnected.DiagnosticsOptions>
 {
-    public double ActivitySamplingRatio { get; init; }
     public bool Enabled { get; init; }
     public double HighWaterMark { get; init; }
     public bool IncludeHashedIdentifiers { get; init; }
@@ -479,10 +478,6 @@ public interface IRetryPolicy
 {
     ReactiveUI.Primitives.OccasionallyConnected.RetryDecision GetDecision(ReactiveUI.Primitives.OccasionallyConnected.RetryFailure failure, ReactiveUI.Primitives.OccasionallyConnected.RetryState state) { }
 }
-public interface IRetryRandomSource
-{
-    double NextDouble() { }
-}
 public interface ISchemaRegistry
 {
     System.Collections.Generic.IReadOnlyList<ReactiveUI.Primitives.OccasionallyConnected.IPayloadUpcaster> GetUpcastChain(string contractId, int fromVersion, int toVersion) { }
@@ -779,19 +774,19 @@ public record OccasionallyConnectedFault : System.IEquatable<ReactiveUI.Primitiv
 public record OccasionallyConnectedOptions : System.IEquatable<ReactiveUI.Primitives.OccasionallyConnected.OccasionallyConnectedOptions>
 {
     public bool AutoStart { get; init; }
-    public required ReactiveUI.Primitives.OccasionallyConnected.BatchingOptions Batching { get; init; }
-    public required ReactiveUI.Primitives.OccasionallyConnected.CircuitBreakerOptions CircuitBreaker { get; init; }
-    public required ReactiveUI.Primitives.OccasionallyConnected.DiagnosticsOptions Diagnostics { get; init; }
+    public ReactiveUI.Primitives.OccasionallyConnected.BatchingOptions Batching { get; init; }
+    public ReactiveUI.Primitives.OccasionallyConnected.CircuitBreakerOptions CircuitBreaker { get; init; }
+    public ReactiveUI.Primitives.OccasionallyConnected.DiagnosticsOptions Diagnostics { get; init; }
     public ReactiveUI.Primitives.OccasionallyConnected.ExactlyOnceExpiryBehavior ExactlyOnceExpiryBehavior { get; init; }
-    public required ReactiveUI.Primitives.OccasionallyConnected.InboxOptions Inbox { get; init; }
+    public ReactiveUI.Primitives.OccasionallyConnected.InboxOptions Inbox { get; init; }
     public int MaxConcurrentStreams { get; init; }
     public int MaxConflictResolutionRounds { get; init; }
     public int MaximumPriority { get; init; }
     public int MinimumPriority { get; init; }
-    public required ReactiveUI.Primitives.OccasionallyConnected.OutboxOptions Outbox { get; init; }
-    public required ReactiveUI.Primitives.OccasionallyConnected.RetentionOptions Retention { get; init; }
-    public required ReactiveUI.Primitives.OccasionallyConnected.RetryOptions Retry { get; init; }
-    public required ReactiveUI.Primitives.OccasionallyConnected.SecurityOptions Security { get; init; }
+    public ReactiveUI.Primitives.OccasionallyConnected.OutboxOptions Outbox { get; init; }
+    public ReactiveUI.Primitives.OccasionallyConnected.RetentionOptions Retention { get; init; }
+    public ReactiveUI.Primitives.OccasionallyConnected.RetryOptions Retry { get; init; }
+    public ReactiveUI.Primitives.OccasionallyConnected.SecurityOptions Security { get; init; }
     public static ReactiveUI.Primitives.OccasionallyConnected.OccasionallyConnectedOptions Default { get; }
     public void Validate() { }
 }
@@ -805,7 +800,9 @@ public readonly record struct OperationId : System.IEquatable<ReactiveUI.Primiti
 {
     public OperationId(System.Guid Value) { }
     public System.Guid Value { get; init; }
+    [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
     public static ReactiveUI.Primitives.OccasionallyConnected.OperationId New() { }
+    public static ReactiveUI.Primitives.OccasionallyConnected.OperationId New(bool useVersion7) { }
 }
 [System.Diagnostics.DebuggerDisplay("{DeliveryGuarantee,nq} {Durability,nq} {Priority,nq}")]
 public record OperationPolicy : System.IEquatable<ReactiveUI.Primitives.OccasionallyConnected.OperationPolicy>
@@ -1438,9 +1435,8 @@ public enum SyncLifecycleStatus
     Faulted = 9,
 }
 [System.Diagnostics.DebuggerDisplay("{OperationId,nq} {Type,nq}")]
-public record SyncOperation : System.IEquatable<ReactiveUI.Primitives.OccasionallyConnected.SyncOperation>, System.Runtime.CompilerServices.IUnion
+public record SyncOperation : System.IEquatable<ReactiveUI.Primitives.OccasionallyConnected.SyncOperation>
 {
-    object System.Runtime.CompilerServices.IUnion.Value { get; }
     public string? BaseVersion { get; init; }
     public required long ClientSequence { get; init; }
     public System.Collections.Generic.IReadOnlyDictionary<string, string> Metadata { get; init; }
@@ -1536,10 +1532,10 @@ public record VersionRange : System.IEquatable<ReactiveUI.Primitives.Occasionall
     public System.Version Maximum { get; init; }
     public System.Version Minimum { get; init; }
 }
-namespace Crdt
+namespace Mergeable
 {
 [System.Diagnostics.DebuggerDisplay("Components = {MaximumCounterComponents}, EncodedBytes = {MaximumEncodedBytes}")]
-public record CrdtBounds : System.IEquatable<ReactiveUI.Primitives.OccasionallyConnected.Crdt.CrdtBounds>
+public record MergeableBounds : System.IEquatable<ReactiveUI.Primitives.OccasionallyConnected.Mergeable.MergeableBounds>
 {
     public int MaximumClientIdUtf8Bytes { get; init; }
     public int MaximumCounterComponents { get; init; }
@@ -1549,145 +1545,141 @@ public record CrdtBounds : System.IEquatable<ReactiveUI.Primitives.OccasionallyC
     public int MaximumEncodedBytes { get; init; }
     public int MaximumRegisterBytes { get; init; }
     public int MaximumTombstones { get; init; }
-    public static ReactiveUI.Primitives.OccasionallyConnected.Crdt.CrdtBounds Default { get; }
+    public static ReactiveUI.Primitives.OccasionallyConnected.Mergeable.MergeableBounds Default { get; }
     public void Validate() { }
 }
-public static class CrdtCodec
+public static class MergeableCodec
 {
     [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
-    public static ReactiveUI.Primitives.OccasionallyConnected.Crdt.CrdtInput DecodeInput(System.ReadOnlyMemory<byte> payload) { }
-    public static ReactiveUI.Primitives.OccasionallyConnected.Crdt.CrdtInput DecodeInput(System.ReadOnlyMemory<byte> payload, ReactiveUI.Primitives.OccasionallyConnected.Crdt.CrdtBounds bounds) { }
+    public static ReactiveUI.Primitives.OccasionallyConnected.Mergeable.MergeableInput DecodeInput(System.ReadOnlyMemory<byte> payload) { }
+    public static ReactiveUI.Primitives.OccasionallyConnected.Mergeable.MergeableInput DecodeInput(System.ReadOnlyMemory<byte> payload, ReactiveUI.Primitives.OccasionallyConnected.Mergeable.MergeableBounds bounds) { }
     [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
-    public static ReactiveUI.Primitives.OccasionallyConnected.Crdt.CrdtState DecodeState(System.ReadOnlyMemory<byte> payload) { }
-    public static ReactiveUI.Primitives.OccasionallyConnected.Crdt.CrdtState DecodeState(System.ReadOnlyMemory<byte> payload, ReactiveUI.Primitives.OccasionallyConnected.Crdt.CrdtBounds bounds) { }
+    public static ReactiveUI.Primitives.OccasionallyConnected.Mergeable.MergeableState DecodeState(System.ReadOnlyMemory<byte> payload) { }
+    public static ReactiveUI.Primitives.OccasionallyConnected.Mergeable.MergeableState DecodeState(System.ReadOnlyMemory<byte> payload, ReactiveUI.Primitives.OccasionallyConnected.Mergeable.MergeableBounds bounds) { }
     [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
-    public static byte[] EncodeInput(ReactiveUI.Primitives.OccasionallyConnected.Crdt.CrdtInput input) { }
-    public static byte[] EncodeInput(ReactiveUI.Primitives.OccasionallyConnected.Crdt.CrdtInput input, ReactiveUI.Primitives.OccasionallyConnected.Crdt.CrdtBounds bounds) { }
+    public static byte[] EncodeInput(ReactiveUI.Primitives.OccasionallyConnected.Mergeable.MergeableInput input) { }
+    public static byte[] EncodeInput(ReactiveUI.Primitives.OccasionallyConnected.Mergeable.MergeableInput input, ReactiveUI.Primitives.OccasionallyConnected.Mergeable.MergeableBounds bounds) { }
     [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
-    public static byte[] EncodeState(ReactiveUI.Primitives.OccasionallyConnected.Crdt.CrdtState state) { }
-    public static byte[] EncodeState(ReactiveUI.Primitives.OccasionallyConnected.Crdt.CrdtState state, ReactiveUI.Primitives.OccasionallyConnected.Crdt.CrdtBounds bounds) { }
+    public static byte[] EncodeState(ReactiveUI.Primitives.OccasionallyConnected.Mergeable.MergeableState state) { }
+    public static byte[] EncodeState(ReactiveUI.Primitives.OccasionallyConnected.Mergeable.MergeableState state, ReactiveUI.Primitives.OccasionallyConnected.Mergeable.MergeableBounds bounds) { }
     [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
-    public static void ValidateInput(ReactiveUI.Primitives.OccasionallyConnected.Crdt.CrdtInput input) { }
-    public static void ValidateInput(ReactiveUI.Primitives.OccasionallyConnected.Crdt.CrdtInput input, ReactiveUI.Primitives.OccasionallyConnected.Crdt.CrdtBounds bounds) { }
+    public static void ValidateInput(ReactiveUI.Primitives.OccasionallyConnected.Mergeable.MergeableInput input) { }
+    public static void ValidateInput(ReactiveUI.Primitives.OccasionallyConnected.Mergeable.MergeableInput input, ReactiveUI.Primitives.OccasionallyConnected.Mergeable.MergeableBounds bounds) { }
 }
-public static class CrdtContracts
+public static class MergeableContracts
 {
     public static string InputContractId { get; }
     public static int SchemaVersion { get; }
     public static string StateContractId { get; }
 }
 [System.Diagnostics.DebuggerDisplay("{ClientId,nq}:{ClientSequence}")]
-public record CrdtDot : System.IComparable, System.IComparable<ReactiveUI.Primitives.OccasionallyConnected.Crdt.CrdtDot>, System.IEquatable<ReactiveUI.Primitives.OccasionallyConnected.Crdt.CrdtDot>
+public record ElementTag : System.IComparable, System.IComparable<ReactiveUI.Primitives.OccasionallyConnected.Mergeable.ElementTag>, System.IEquatable<ReactiveUI.Primitives.OccasionallyConnected.Mergeable.ElementTag>
 {
     public required string ClientId { get; init; }
     public required long ClientSequence { get; init; }
-    public int CompareTo(ReactiveUI.Primitives.OccasionallyConnected.Crdt.CrdtDot? other) { }
+    public int CompareTo(ReactiveUI.Primitives.OccasionallyConnected.Mergeable.ElementTag? other) { }
     public int CompareTo(object? obj) { }
 }
-[System.Diagnostics.DebuggerDisplay("{Dot,nq} Bytes = {ElementLength}")]
-public record CrdtDotElement : System.IEquatable<ReactiveUI.Primitives.OccasionallyConnected.Crdt.CrdtDotElement>
+[System.Diagnostics.DebuggerDisplay("{Tag,nq} Bytes = {ElementLength}")]
+public record TaggedElement : System.IEquatable<ReactiveUI.Primitives.OccasionallyConnected.Mergeable.TaggedElement>
 {
-    public required ReactiveUI.Primitives.OccasionallyConnected.Crdt.CrdtDot Dot { get; init; }
+    public required ReactiveUI.Primitives.OccasionallyConnected.Mergeable.ElementTag Tag { get; init; }
     public System.ReadOnlyMemory<byte> Element { get; init; }
     public int ElementLength { get; }
 }
-public static class CrdtFunctions
+public static class MergeableFunctions
 {
     [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
-    public static ReactiveUI.Primitives.OccasionallyConnected.Crdt.CrdtState CheckpointORSet(ReactiveUI.Primitives.OccasionallyConnected.Crdt.CrdtState state, System.Collections.Generic.IReadOnlyDictionary<string, long> observedPrefixes) { }
-    public static ReactiveUI.Primitives.OccasionallyConnected.Crdt.CrdtState CheckpointORSet(ReactiveUI.Primitives.OccasionallyConnected.Crdt.CrdtState state, System.Collections.Generic.IReadOnlyDictionary<string, long> observedPrefixes, ReactiveUI.Primitives.OccasionallyConnected.Crdt.CrdtBounds bounds) { }
+    public static ReactiveUI.Primitives.OccasionallyConnected.Mergeable.MergeableState CheckpointAddWinsSet(ReactiveUI.Primitives.OccasionallyConnected.Mergeable.MergeableState state, System.Collections.Generic.IReadOnlyDictionary<string, long> observedPrefixes) { }
+    public static ReactiveUI.Primitives.OccasionallyConnected.Mergeable.MergeableState CheckpointAddWinsSet(ReactiveUI.Primitives.OccasionallyConnected.Mergeable.MergeableState state, System.Collections.Generic.IReadOnlyDictionary<string, long> observedPrefixes, ReactiveUI.Primitives.OccasionallyConnected.Mergeable.MergeableBounds bounds) { }
     [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
-    public static ReactiveUI.Primitives.OccasionallyConnected.Crdt.CrdtState ApplyLocal(ReactiveUI.Primitives.OccasionallyConnected.Crdt.CrdtState state, ReactiveUI.Primitives.OccasionallyConnected.Crdt.CrdtInput input, string authenticatedClientId, long clientSequence) { }
-    public static ReactiveUI.Primitives.OccasionallyConnected.Crdt.CrdtState ApplyLocal(ReactiveUI.Primitives.OccasionallyConnected.Crdt.CrdtState state, ReactiveUI.Primitives.OccasionallyConnected.Crdt.CrdtInput input, string authenticatedClientId, long clientSequence, ReactiveUI.Primitives.OccasionallyConnected.Crdt.CrdtBounds bounds) { }
+    public static ReactiveUI.Primitives.OccasionallyConnected.Mergeable.MergeableState ApplyLocal(ReactiveUI.Primitives.OccasionallyConnected.Mergeable.MergeableState state, ReactiveUI.Primitives.OccasionallyConnected.Mergeable.MergeableInput input, string authenticatedClientId, long clientSequence) { }
+    public static ReactiveUI.Primitives.OccasionallyConnected.Mergeable.MergeableState ApplyLocal(ReactiveUI.Primitives.OccasionallyConnected.Mergeable.MergeableState state, ReactiveUI.Primitives.OccasionallyConnected.Mergeable.MergeableInput input, string authenticatedClientId, long clientSequence, ReactiveUI.Primitives.OccasionallyConnected.Mergeable.MergeableBounds bounds) { }
     public static int CompareWriteStamps(ReactiveUI.Primitives.OccasionallyConnected.ConflictWriteStamp? left, ReactiveUI.Primitives.OccasionallyConnected.ConflictWriteStamp? right) { }
-    public static ReactiveUI.Primitives.OccasionallyConnected.Crdt.CrdtState Empty(ReactiveUI.Primitives.OccasionallyConnected.Crdt.CrdtKind kind) { }
-    public static ReactiveUI.Primitives.OccasionallyConnected.Crdt.CrdtValue GetValue(ReactiveUI.Primitives.OccasionallyConnected.Crdt.CrdtState state) { }
+    public static ReactiveUI.Primitives.OccasionallyConnected.Mergeable.MergeableState Empty(ReactiveUI.Primitives.OccasionallyConnected.Mergeable.MergeableKind kind) { }
+    public static ReactiveUI.Primitives.OccasionallyConnected.Mergeable.MergeableValue GetValue(ReactiveUI.Primitives.OccasionallyConnected.Mergeable.MergeableState state) { }
     [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
-    public static ReactiveUI.Primitives.OccasionallyConnected.Crdt.CrdtState Merge(ReactiveUI.Primitives.OccasionallyConnected.Crdt.CrdtState left, ReactiveUI.Primitives.OccasionallyConnected.Crdt.CrdtState right) { }
-    public static ReactiveUI.Primitives.OccasionallyConnected.Crdt.CrdtState Merge(ReactiveUI.Primitives.OccasionallyConnected.Crdt.CrdtState left, ReactiveUI.Primitives.OccasionallyConnected.Crdt.CrdtState right, ReactiveUI.Primitives.OccasionallyConnected.Crdt.CrdtBounds bounds) { }
+    public static ReactiveUI.Primitives.OccasionallyConnected.Mergeable.MergeableState Merge(ReactiveUI.Primitives.OccasionallyConnected.Mergeable.MergeableState left, ReactiveUI.Primitives.OccasionallyConnected.Mergeable.MergeableState right) { }
+    public static ReactiveUI.Primitives.OccasionallyConnected.Mergeable.MergeableState Merge(ReactiveUI.Primitives.OccasionallyConnected.Mergeable.MergeableState left, ReactiveUI.Primitives.OccasionallyConnected.Mergeable.MergeableState right, ReactiveUI.Primitives.OccasionallyConnected.Mergeable.MergeableBounds bounds) { }
     [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
-    public static ReactiveUI.Primitives.OccasionallyConnected.Crdt.CrdtState ReplaceAuthoritativeState(ReactiveUI.Primitives.OccasionallyConnected.Crdt.CrdtState state) { }
-    public static ReactiveUI.Primitives.OccasionallyConnected.Crdt.CrdtState ReplaceAuthoritativeState(ReactiveUI.Primitives.OccasionallyConnected.Crdt.CrdtState state, ReactiveUI.Primitives.OccasionallyConnected.Crdt.CrdtBounds bounds) { }
+    public static ReactiveUI.Primitives.OccasionallyConnected.Mergeable.MergeableState ReplaceAuthoritativeState(ReactiveUI.Primitives.OccasionallyConnected.Mergeable.MergeableState state) { }
+    public static ReactiveUI.Primitives.OccasionallyConnected.Mergeable.MergeableState ReplaceAuthoritativeState(ReactiveUI.Primitives.OccasionallyConnected.Mergeable.MergeableState state, ReactiveUI.Primitives.OccasionallyConnected.Mergeable.MergeableBounds bounds) { }
     [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
-    public static void ValidateState(ReactiveUI.Primitives.OccasionallyConnected.Crdt.CrdtState state) { }
-    public static void ValidateState(ReactiveUI.Primitives.OccasionallyConnected.Crdt.CrdtState state, ReactiveUI.Primitives.OccasionallyConnected.Crdt.CrdtBounds bounds) { }
+    public static void ValidateState(ReactiveUI.Primitives.OccasionallyConnected.Mergeable.MergeableState state) { }
+    public static void ValidateState(ReactiveUI.Primitives.OccasionallyConnected.Mergeable.MergeableState state, ReactiveUI.Primitives.OccasionallyConnected.Mergeable.MergeableBounds bounds) { }
 }
 [System.Diagnostics.DebuggerDisplay("{Kind,nq}")]
-public record CrdtInput : System.IEquatable<ReactiveUI.Primitives.OccasionallyConnected.Crdt.CrdtInput>, System.Runtime.CompilerServices.IUnion
+public record MergeableInput : System.IEquatable<ReactiveUI.Primitives.OccasionallyConnected.Mergeable.MergeableInput>
 {
-    object System.Runtime.CompilerServices.IUnion.Value { get; }
-    public required ReactiveUI.Primitives.OccasionallyConnected.Crdt.CrdtInputKind Kind { get; init; }
-    public ReactiveUI.Primitives.OccasionallyConnected.Crdt.CrdtMutation? Mutation { get; init; }
-    public ReactiveUI.Primitives.OccasionallyConnected.Crdt.CrdtState? State { get; init; }
-    public static ReactiveUI.Primitives.OccasionallyConnected.Crdt.CrdtInput ForAuthoritativeState(ReactiveUI.Primitives.OccasionallyConnected.Crdt.CrdtState state) { }
-    public static ReactiveUI.Primitives.OccasionallyConnected.Crdt.CrdtInput ForMutation(ReactiveUI.Primitives.OccasionallyConnected.Crdt.CrdtMutation mutation) { }
+    public ReactiveUI.Primitives.OccasionallyConnected.Mergeable.MergeableInputKind Kind { get; }
+    public object Value { get; }
+    public static ReactiveUI.Primitives.OccasionallyConnected.Mergeable.MergeableInput ForAuthoritativeState(ReactiveUI.Primitives.OccasionallyConnected.Mergeable.MergeableState state) { }
+    public static ReactiveUI.Primitives.OccasionallyConnected.Mergeable.MergeableInput ForChange(ReactiveUI.Primitives.OccasionallyConnected.Mergeable.MergeableChange change) { }
 }
-public enum CrdtInputKind
+public enum MergeableInputKind
 {
     None = 0,
-    Mutation = 1,
+    Change = 1,
     AuthoritativeState = 2,
 }
-public enum CrdtKind
+public enum MergeableKind
 {
     None = 0,
-    GCounter = 1,
-    PNCounter = 2,
-    ORSet = 3,
-    LwwRegister = 4,
+    IncrementOnlyCounter = 1,
+    Counter = 2,
+    AddWinsSet = 3,
+    LastWriterWinsValue = 4,
 }
-[System.Diagnostics.DebuggerDisplay("{Kind,nq} {ActorId,nq}")]
-public record CrdtMutation : System.IEquatable<ReactiveUI.Primitives.OccasionallyConnected.Crdt.CrdtMutation>, System.Runtime.CompilerServices.IUnion
+[System.Diagnostics.DebuggerDisplay("{ToKind(),nq} {ClientId,nq}")]
+public record MergeableChange : System.IEquatable<ReactiveUI.Primitives.OccasionallyConnected.Mergeable.MergeableChange>
 {
-    object System.Runtime.CompilerServices.IUnion.Value { get; }
-    public string? ActorId { get; init; }
+    public string? ClientId { get; }
     public int ByteLength { get; }
-    public System.ReadOnlyMemory<byte> Bytes { get; init; }
-    public long GCounterComponent { get; init; }
-    public required ReactiveUI.Primitives.OccasionallyConnected.Crdt.CrdtMutationKind Kind { get; init; }
-    public System.Collections.Generic.IReadOnlyList<ReactiveUI.Primitives.OccasionallyConnected.Crdt.CrdtDot> ObservedDots { get; init; }
-    public long PNCounterNegativeComponent { get; init; }
-    public long PNCounterPositiveComponent { get; init; }
-    public ReactiveUI.Primitives.OccasionallyConnected.ConflictWriteStamp? RegisterStamp { get; init; }
-    public static ReactiveUI.Primitives.OccasionallyConnected.Crdt.CrdtMutation GCounterSet(string actorId, long component) { }
+    public System.ReadOnlyMemory<byte> Bytes { get; }
+    public long IncrementOnlyTotal { get; }
+    public ReactiveUI.Primitives.OccasionallyConnected.Mergeable.MergeableChangeKind ToKind() { }
+    public System.Collections.Generic.IReadOnlyList<ReactiveUI.Primitives.OccasionallyConnected.Mergeable.ElementTag> TagsToRemove { get; }
+    public long DecrementTotal { get; }
+    public long IncrementTotal { get; }
+    public ReactiveUI.Primitives.OccasionallyConnected.ConflictWriteStamp? LatestWriteStamp { get; }
+    public static ReactiveUI.Primitives.OccasionallyConnected.Mergeable.MergeableChange IncrementOnlyCounterSet(string clientId, long component) { }
     [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
-    public static ReactiveUI.Primitives.OccasionallyConnected.Crdt.CrdtMutation LwwRegisterSet(System.ReadOnlyMemory<byte> value) { }
-    public static ReactiveUI.Primitives.OccasionallyConnected.Crdt.CrdtMutation LwwRegisterSet(System.ReadOnlyMemory<byte> value, ReactiveUI.Primitives.OccasionallyConnected.ConflictWriteStamp? stamp) { }
-    public static ReactiveUI.Primitives.OccasionallyConnected.Crdt.CrdtMutation ORSetAdd(System.ReadOnlyMemory<byte> element) { }
-    public static ReactiveUI.Primitives.OccasionallyConnected.Crdt.CrdtMutation ORSetRemove(System.ReadOnlyMemory<byte> element, System.Collections.Generic.IReadOnlyList<ReactiveUI.Primitives.OccasionallyConnected.Crdt.CrdtDot> observedDots) { }
-    public static ReactiveUI.Primitives.OccasionallyConnected.Crdt.CrdtMutation PNCounterSet(string actorId, long positiveComponent, long negativeComponent) { }
+    public static ReactiveUI.Primitives.OccasionallyConnected.Mergeable.MergeableChange LastWriterWinsValueSet(System.ReadOnlyMemory<byte> value) { }
+    public static ReactiveUI.Primitives.OccasionallyConnected.Mergeable.MergeableChange LastWriterWinsValueSet(System.ReadOnlyMemory<byte> value, ReactiveUI.Primitives.OccasionallyConnected.ConflictWriteStamp? stamp) { }
+    public static ReactiveUI.Primitives.OccasionallyConnected.Mergeable.MergeableChange AddWinsSetAdd(System.ReadOnlyMemory<byte> element) { }
+    public static ReactiveUI.Primitives.OccasionallyConnected.Mergeable.MergeableChange AddWinsSetRemove(System.ReadOnlyMemory<byte> element, System.Collections.Generic.IReadOnlyList<ReactiveUI.Primitives.OccasionallyConnected.Mergeable.ElementTag> observedDots) { }
+    public static ReactiveUI.Primitives.OccasionallyConnected.Mergeable.MergeableChange CounterSet(string clientId, long positiveComponent, long negativeComponent) { }
 }
-public enum CrdtMutationKind
+public enum MergeableChangeKind
 {
     None = 0,
-    GCounterSet = 1,
-    PNCounterSet = 2,
-    ORSetAdd = 3,
-    ORSetRemove = 4,
-    LwwRegisterSet = 5,
+    IncrementOnlyCounterSet = 1,
+    CounterSet = 2,
+    AddWinsSetAdd = 3,
+    AddWinsSetRemove = 4,
+    LastWriterWinsValueSet = 5,
 }
 [System.Diagnostics.DebuggerDisplay("{Kind,nq} Value = {Value}")]
-public record CrdtState : System.IEquatable<ReactiveUI.Primitives.OccasionallyConnected.Crdt.CrdtState>, System.Runtime.CompilerServices.IUnion
+public record MergeableState : System.IEquatable<ReactiveUI.Primitives.OccasionallyConnected.Mergeable.MergeableState>
 {
-    object System.Runtime.CompilerServices.IUnion.Value { get; }
-    public System.Collections.Generic.IReadOnlyList<ReactiveUI.Primitives.OccasionallyConnected.Crdt.CrdtDotElement> DotBindings { get; init; }
-    public System.Collections.Generic.IReadOnlyDictionary<string, long> GCounterComponents { get; init; }
-    public required ReactiveUI.Primitives.OccasionallyConnected.Crdt.CrdtKind Kind { get; init; }
-    public System.Collections.Generic.IReadOnlyDictionary<string, long> PNCounterNegativeComponents { get; init; }
-    public System.Collections.Generic.IReadOnlyDictionary<string, long> ORSetFrontier { get; init; }
-    public System.Collections.Generic.IReadOnlyDictionary<string, long> PNCounterPositiveComponents { get; init; }
-    public ReactiveUI.Primitives.OccasionallyConnected.ConflictWriteStamp? RegisterStamp { get; init; }
-    public System.ReadOnlyMemory<byte> RegisterValue { get; init; }
-    public int RegisterValueLength { get; }
-    public System.Collections.Generic.IReadOnlyList<ReactiveUI.Primitives.OccasionallyConnected.Crdt.CrdtDotElement> Tombstones { get; init; }
-    public ReactiveUI.Primitives.OccasionallyConnected.Crdt.CrdtValue Value { get; }
+    public System.Collections.Generic.IReadOnlyList<ReactiveUI.Primitives.OccasionallyConnected.Mergeable.TaggedElement> Elements { get; init; }
+    public System.Collections.Generic.IReadOnlyDictionary<string, long> IncrementOnlyTotalsByClient { get; init; }
+    public required ReactiveUI.Primitives.OccasionallyConnected.Mergeable.MergeableKind Kind { get; init; }
+    public System.Collections.Generic.IReadOnlyDictionary<string, long> DecrementsByClient { get; init; }
+    public System.Collections.Generic.IReadOnlyDictionary<string, long> AddWinsSetFrontier { get; init; }
+    public System.Collections.Generic.IReadOnlyDictionary<string, long> IncrementsByClient { get; init; }
+    public ReactiveUI.Primitives.OccasionallyConnected.ConflictWriteStamp? LatestWriteStamp { get; init; }
+    public System.ReadOnlyMemory<byte> LatestValue { get; init; }
+    public int LatestValueLength { get; }
+    public System.Collections.Generic.IReadOnlyList<ReactiveUI.Primitives.OccasionallyConnected.Mergeable.TaggedElement> RemovedTags { get; init; }
+    public ReactiveUI.Primitives.OccasionallyConnected.Mergeable.MergeableValue Value { get; }
 }
 [System.Diagnostics.DebuggerDisplay("{Kind,nq} Counter = {Counter}")]
-public record CrdtValue : System.IEquatable<ReactiveUI.Primitives.OccasionallyConnected.Crdt.CrdtValue>
+public record MergeableValue : System.IEquatable<ReactiveUI.Primitives.OccasionallyConnected.Mergeable.MergeableValue>
 {
     public System.ReadOnlyMemory<byte> Bytes { get; init; }
     public long Counter { get; init; }
     public System.Collections.Generic.IReadOnlyList<System.ReadOnlyMemory<byte>> Elements { get; init; }
-    public required ReactiveUI.Primitives.OccasionallyConnected.Crdt.CrdtKind Kind { get; init; }
+    public required ReactiveUI.Primitives.OccasionallyConnected.Mergeable.MergeableKind Kind { get; init; }
 }
 }

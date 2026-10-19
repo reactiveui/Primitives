@@ -110,6 +110,9 @@ public sealed partial class SignalRRemoteTransportAdapterTests
         /// <summary>Gets the borrowed real core server hub.</summary>
         internal IServerStreamHub CoreHub => _hub;
 
+        /// <summary>Gets the unrelated host hub address.</summary>
+        internal Uri UnrelatedEndpoint => new(Endpoint, "/unrelated");
+
         /// <inheritdoc/>
         public async ValueTask DisposeAsync()
         {
@@ -122,6 +125,8 @@ public sealed partial class SignalRRemoteTransportAdapterTests
         /// <param name="maximumOperations">The server batch limit.</param>
         /// <param name="dropPushResponse">Whether one committed push response is lost.</param>
         /// <param name="peerFailure">The malicious peer response to inject.</param>
+        /// <param name="configureServices">Optional host service configuration.</param>
+        /// <param name="configureHostFirst">Whether the host configures its services first.</param>
         /// <returns>The server.</returns>
 #if NET8_0 && !NET9_0_OR_GREATER
         [RequiresUnreferencedCode("Hosts ASP.NET Core 8 SignalR, which does not support trimming.")]
@@ -129,7 +134,9 @@ public sealed partial class SignalRRemoteTransportAdapterTests
         internal static async Task<TestServer> StartAsync(
             int maximumOperations = 100,
             bool dropPushResponse = false,
-            SignalRPeerFailure peerFailure = SignalRPeerFailure.None)
+            SignalRPeerFailure peerFailure = SignalRPeerFailure.None,
+            Action<IServiceCollection>? configureServices = null,
+            bool configureHostFirst = true)
         {
             var domain = new DomainHandler();
             var policy = new AuthorizationPolicy();
@@ -137,11 +144,24 @@ public sealed partial class SignalRRemoteTransportAdapterTests
             var builder = WebApplication.CreateBuilder();
             _ = builder.Logging.ClearProviders();
             _ = builder.WebHost.ConfigureKestrel(static options => options.Listen(IPAddress.Loopback, 0));
+            if (configureHostFirst)
+            {
+                configureServices?.Invoke(builder.Services);
+            }
+
             _ = builder.Services.AddOccasionallyConnectedSignalR();
+            if (!configureHostFirst)
+            {
+                configureServices?.Invoke(builder.Services);
+            }
+
+            _ = builder.Services.AddSignalR().AddHubOptions<LostResponseHub>(static options =>
+                options.SupportedProtocols = [SignalRHubProtocol.ProtocolName]);
             _ = builder.Services.AddSingleton(CreateEndpoint(hub, policy, maximumOperations))
                 .AddSingleton(new LostResponseState { DropPushResponse = dropPushResponse, PeerFailure = peerFailure });
             var app = builder.Build();
             _ = app.Use(AuthenticateTestRequest);
+            _ = app.MapHub<UnrelatedHub>("/unrelated");
             if (dropPushResponse || peerFailure != SignalRPeerFailure.None)
             {
                 _ = app.MapHub<LostResponseHub>("/sync");

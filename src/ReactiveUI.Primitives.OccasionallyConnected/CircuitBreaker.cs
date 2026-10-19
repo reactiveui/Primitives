@@ -12,7 +12,7 @@ namespace ReactiveUI.Primitives.OccasionallyConnected;
 
 /// <summary>Coordinates deterministic admission for one remote endpoint.</summary>
 [DebuggerDisplay("{_endpoint,nq}; {_state,nq}")]
-public sealed class CircuitBreaker
+internal sealed class CircuitBreaker
 {
     /// <summary>Synchronizes state transitions and snapshots.</summary>
     private readonly Lock _gate = new();
@@ -40,7 +40,7 @@ public sealed class CircuitBreaker
 
     /// <summary>Initializes a new instance of the <see cref="CircuitBreaker"/> class with default options.</summary>
     /// <param name="endpoint">The non-empty endpoint identifier.</param>
-    public CircuitBreaker(string endpoint)
+    internal CircuitBreaker(string endpoint)
         : this(endpoint, new(), TimeProvider.System)
     {
     }
@@ -50,7 +50,7 @@ public sealed class CircuitBreaker
     /// <param name="options">The breaker configuration.</param>
     /// <param name="timeProvider">The time source.</param>
     /// <exception cref="ArgumentException">An argument is <see langword="null"/>, empty, or whitespace.</exception>
-    public CircuitBreaker(string endpoint, CircuitBreakerOptions options, TimeProvider timeProvider)
+    internal CircuitBreaker(string endpoint, CircuitBreakerOptions options, TimeProvider timeProvider)
     {
         ArgumentExceptionHelper.ThrowIfNull(endpoint);
         ArgumentExceptionHelper.ThrowIfNull(options);
@@ -68,7 +68,7 @@ public sealed class CircuitBreaker
     }
 
     /// <summary>Gets an immutable snapshot of the breaker state.</summary>
-    public CircuitBreakerSnapshot Snapshot
+    internal CircuitBreakerSnapshot Snapshot
     {
         get
         {
@@ -81,7 +81,7 @@ public sealed class CircuitBreaker
 
     /// <summary>Attempts to admit a connection or handshake operation.</summary>
     /// <returns><see langword="true"/> when this operation may proceed; otherwise, <see langword="false"/>.</returns>
-    public bool TryAcquire()
+    internal bool TryAcquire()
     {
         lock (_gate)
         {
@@ -101,7 +101,7 @@ public sealed class CircuitBreaker
     }
 
     /// <summary>Records a transient transport or handshake failure.</summary>
-    public void RecordTransientFailure()
+    internal void RecordTransientFailure()
     {
         lock (_gate)
         {
@@ -127,7 +127,7 @@ public sealed class CircuitBreaker
     }
 
     /// <summary>Records a successful connection or handshake and resets failure state.</summary>
-    public void RecordSuccess()
+    internal void RecordSuccess()
     {
         lock (_gate)
         {
@@ -138,7 +138,7 @@ public sealed class CircuitBreaker
     }
 
     /// <summary>Releases an acquired half-open probe that was cancelled or abandoned.</summary>
-    public void AbandonProbe()
+    internal void AbandonProbe()
     {
         lock (_gate)
         {

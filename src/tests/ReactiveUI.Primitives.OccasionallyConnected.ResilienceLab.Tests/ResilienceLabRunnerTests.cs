@@ -16,11 +16,11 @@ public sealed class ResilienceLabRunnerTests
     /// <summary>The deterministic retry-backoff scenario name.</summary>
     private const string RetryBackoffScenarioName = "retry-backoff";
 
-    /// <summary>The expected authoritative GCounter value.</summary>
-    private const int ExpectedGCounterValue = 8;
+    /// <summary>The expected authoritative IncrementOnlyCounter value.</summary>
+    private const int ExpectedIncrementOnlyCounterValue = 8;
 
-    /// <summary>The expected authoritative PNCounter value.</summary>
-    private const int ExpectedPNCounterValue = 2;
+    /// <summary>The expected authoritative Counter value.</summary>
+    private const int ExpectedCounterValue = 2;
 
     /// <summary>The expected receive acknowledgement frontier state.</summary>
     private const string ExpectedAcknowledgedFrontier = "acknowledged";
@@ -29,7 +29,7 @@ public sealed class ResilienceLabRunnerTests
     private const string ExpectedSharedFrontier = "same";
 
     /// <summary>The expected active OR-set value.</summary>
-    private const string ExpectedORSetValue = "blue";
+    private const string ExpectedAddWinsSetValue = "blue";
 
     /// <summary>The expected LWW register value.</summary>
     private const string ExpectedLwwValue = "second";
@@ -43,21 +43,21 @@ public sealed class ResilienceLabRunnerTests
     /// <summary>Verifies the CRDT loopback scenario completes every corrected convergence invariant.</summary>
     /// <returns>The assertion task.</returns>
     [Test]
-    public async Task RunAsyncCrdtLoopbackCompletesExpectedInvariants()
+    public async Task RunAsyncMergeableLoopbackCompletesExpectedInvariants()
     {
         await using var writer = new StringWriter();
 
         var result = await ResilienceLabRunner.RunAsync(
-            new(CrdtLoopbackScenarioShape.ScenarioName),
+            new(MergeableLoopbackScenarioShape.ScenarioName),
             writer,
             CancellationToken.None);
 
-        await Assert.That(result.Scenario).IsEqualTo(CrdtLoopbackScenarioShape.ScenarioName);
+        await Assert.That(result.Scenario).IsEqualTo(MergeableLoopbackScenarioShape.ScenarioName);
         await Assert.That(result.Succeeded).IsTrue();
         await Assert.That(result.ExitCode).IsEqualTo(0);
-        await AssertGCounterCasesAsync(result);
-        await AssertPNCounterCasesAsync(result);
-        await AssertORSetCasesAsync(result);
+        await AssertIncrementOnlyCounterCasesAsync(result);
+        await AssertCounterCasesAsync(result);
+        await AssertAddWinsSetCasesAsync(result);
         await AssertLwwCasesAsync(result);
         await AssertReceiveCasesAsync(result);
     }
@@ -353,18 +353,18 @@ public sealed class ResilienceLabRunnerTests
     /// <summary>Asserts G-counter case results.</summary>
     /// <param name="result">The scenario result.</param>
     /// <returns>The assertion task.</returns>
-    private static async Task AssertGCounterCasesAsync(ResilienceLabRunResult result)
+    private static async Task AssertIncrementOnlyCounterCasesAsync(ResilienceLabRunResult result)
     {
         await AssertPassedCaseAsync(
             result,
             "gcounter.client-a-receives-authoritative-value",
-            ExpectedGCounterValue,
-            ExpectedGCounterValue);
+            ExpectedIncrementOnlyCounterValue,
+            ExpectedIncrementOnlyCounterValue);
         await AssertPassedCaseAsync(
             result,
             "gcounter.client-b-receives-authoritative-value",
-            ExpectedGCounterValue,
-            ExpectedGCounterValue);
+            ExpectedIncrementOnlyCounterValue,
+            ExpectedIncrementOnlyCounterValue);
         await AssertPassedCaseAsync(
             result,
             "gcounter.clients-share-authoritative-frontier",
@@ -373,30 +373,30 @@ public sealed class ResilienceLabRunnerTests
         await AssertPassedCaseAsync(
             result,
             "gcounter.converges-and-replay-is-idempotent",
-            ExpectedGCounterValue,
-            ExpectedGCounterValue);
+            ExpectedIncrementOnlyCounterValue,
+            ExpectedIncrementOnlyCounterValue);
         await AssertPassedCaseAsync(
             result,
             "gcounter.received-history-forward-reverse-commutes",
-            ExpectedGCounterValue,
-            ExpectedGCounterValue);
+            ExpectedIncrementOnlyCounterValue,
+            ExpectedIncrementOnlyCounterValue);
     }
 
     /// <summary>Asserts PN-counter case results.</summary>
     /// <param name="result">The scenario result.</param>
     /// <returns>The assertion task.</returns>
-    private static async Task AssertPNCounterCasesAsync(ResilienceLabRunResult result)
+    private static async Task AssertCounterCasesAsync(ResilienceLabRunResult result)
     {
         await AssertPassedCaseAsync(
             result,
             "pncounter.client-a-receives-authoritative-value",
-            ExpectedPNCounterValue,
-            ExpectedPNCounterValue);
+            ExpectedCounterValue,
+            ExpectedCounterValue);
         await AssertPassedCaseAsync(
             result,
             "pncounter.client-b-receives-authoritative-value",
-            ExpectedPNCounterValue,
-            ExpectedPNCounterValue);
+            ExpectedCounterValue,
+            ExpectedCounterValue);
         await AssertPassedCaseAsync(
             result,
             "pncounter.clients-share-authoritative-frontier",
@@ -405,30 +405,30 @@ public sealed class ResilienceLabRunnerTests
         await AssertPassedCaseAsync(
             result,
             "pncounter.converges-after-different-receive-order",
-            ExpectedPNCounterValue,
-            ExpectedPNCounterValue);
+            ExpectedCounterValue,
+            ExpectedCounterValue);
         await AssertPassedCaseAsync(
             result,
             "pncounter.received-history-forward-reverse-commutes",
-            ExpectedPNCounterValue,
-            ExpectedPNCounterValue);
+            ExpectedCounterValue,
+            ExpectedCounterValue);
     }
 
     /// <summary>Asserts OR-set case results.</summary>
     /// <param name="result">The scenario result.</param>
     /// <returns>The assertion task.</returns>
-    private static async Task AssertORSetCasesAsync(ResilienceLabRunResult result)
+    private static async Task AssertAddWinsSetCasesAsync(ResilienceLabRunResult result)
     {
         await AssertPassedCaseAsync(
             result,
             "orset.client-a-receives-authoritative-value",
-            ExpectedORSetValue,
-            ExpectedORSetValue);
+            ExpectedAddWinsSetValue,
+            ExpectedAddWinsSetValue);
         await AssertPassedCaseAsync(
             result,
             "orset.client-b-receives-authoritative-value",
-            ExpectedORSetValue,
-            ExpectedORSetValue);
+            ExpectedAddWinsSetValue,
+            ExpectedAddWinsSetValue);
         await AssertPassedCaseAsync(
             result,
             "orset.clients-share-authoritative-frontier",
@@ -437,13 +437,13 @@ public sealed class ResilienceLabRunnerTests
         await AssertPassedCaseAsync(
             result,
             "orset.observed-remove-and-duplicate-add-do-not-resurrect",
-            ExpectedORSetValue,
-            ExpectedORSetValue);
+            ExpectedAddWinsSetValue,
+            ExpectedAddWinsSetValue);
         await AssertPassedCaseAsync(
             result,
             "orset.received-history-forward-reverse-commutes",
-            ExpectedORSetValue,
-            ExpectedORSetValue);
+            ExpectedAddWinsSetValue,
+            ExpectedAddWinsSetValue);
     }
 
     /// <summary>Asserts LWW register case results.</summary>

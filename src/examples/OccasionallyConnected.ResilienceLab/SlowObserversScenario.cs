@@ -2,7 +2,7 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
-using ReactiveUI.Primitives.OccasionallyConnected.Crdt;
+using ReactiveUI.Primitives.OccasionallyConnected.Mergeable;
 using ReactiveUI.Primitives.OccasionallyConnected.Server;
 
 namespace ReactiveUI.Primitives.OccasionallyConnected.ResilienceLab;
@@ -68,7 +68,7 @@ internal static class SlowObserversScenario
         await using var context = ResilienceLabContext.Create(new(directory, hub, ClientId, OutboxOperations));
         var stream = context.GetOrCreateStream(ResilienceLabContext.CreateDefinition(Stream, ClientId));
         using var gate = new ManualResetEventSlim(false);
-        var localObserver = new ResilienceLabBlockingObserver<CrdtState>(
+        var localObserver = new ResilienceLabBlockingObserver<MergeableState>(
             gate,
             ResilienceLabLoopback.GuardTimeout,
             static state => state.Value.Counter == PublishCount);
@@ -115,8 +115,8 @@ internal static class SlowObserversScenario
     /// <param name="cancellationToken">The cancellation token.</param>
     /// <returns>The publish receipts.</returns>
     private static async ValueTask<List<PublishReceipt>> PublishWhileBlockedAsync(
-        IOccasionallyConnectedStream<CrdtState, CrdtInput> stream,
-        ResilienceLabBlockingObserver<CrdtState> localObserver,
+        IOccasionallyConnectedStream<MergeableState, MergeableInput> stream,
+        ResilienceLabBlockingObserver<MergeableState> localObserver,
         ResilienceLabBlockingObserver<SyncState> syncObserver,
         CancellationToken cancellationToken)
     {

@@ -3,6 +3,7 @@
 // See the LICENSE file in the project root for full license information.
 
 using System.Diagnostics;
+using System.Net.WebSockets;
 
 namespace ReactiveUI.Primitives.OccasionallyConnected.Transport.WebSockets;
 
@@ -18,6 +19,10 @@ public sealed record WebSocketRemoteTransportOptions
 
     /// <summary>Gets or initializes the WebSocket endpoint.</summary>
     public required Uri Endpoint { get; init; }
+
+    /// <summary>Gets the host callback that configures each new socket before it connects.</summary>
+    /// <remarks>Use this to supply credentials, headers, proxy, certificates and keep-alive settings supported by the platform.</remarks>
+    public Action<ClientWebSocketOptions>? ConfigureSocket { get; init; }
 
     /// <summary>Gets or initializes the maximum complete protocol message size.</summary>
     public int MaximumMessageBytes { get; init; } = 1_048_576;

@@ -22,33 +22,33 @@ Prerelease versions include .NET 11 preview assets from the source targets you b
 Create a CRDT state and apply local input with the public core helpers:
 
 ```csharp
-using ReactiveUI.Primitives.OccasionallyConnected.Crdt;
+using ReactiveUI.Primitives.OccasionallyConnected.Mergeable;
 
-var state = CrdtFunctions.Empty(CrdtKind.GCounter);
-var input = CrdtInput.ForMutation(CrdtMutation.GCounterSet("device-a", 1));
-var next = CrdtFunctions.ApplyLocal(state, input, "device-a", clientSequence: 1);
+var state = MergeableFunctions.Empty(MergeableKind.IncrementOnlyCounter);
+var input = MergeableInput.ForChange(MergeableChange.IncrementOnlyCounterSet("device-a", 1));
+var next = MergeableFunctions.ApplyLocal(state, input, "device-a", clientSequence: 1);
 ```
 
 ## CRDT merge and limits
 
 Register merges compare server write stamps first. Equal stamps, including two missing stamps, use the larger byte value in lexicographic order. This compares bytes from left to right. A longer value wins when both values share the same prefix.
 
-`CrdtBounds.MaximumElements` limits distinct active OR-set values. Removed values and repeated values do not count. The default element limit matches the 16,384 dot-binding limit. You can lower each limit. A merge that exceeds a configured limit fails instead of silently losing data.
+`MergeableBounds.MaximumElements` limits distinct active OR-set values. Removed values and repeated values do not count. The default element limit matches the 16,384 dot-binding limit. You can lower each limit. A merge that exceeds a configured limit fails instead of silently losing data.
 
 ## OR-set checkpoints
 
 An OR-set retains removed dots until you supply a checkpoint. A dot identifies an add by client id and durable stream sequence. A checkpoint records a **frontier**: each client's sequence through which you have applied every operation in that stream.
 
-Call `CheckpointORSet` only after your durable ingestion path proves those complete prefixes. The largest received sequence is not enough. A missing earlier operation makes that prefix unsafe.
+Call `CheckpointAddWinsSet` only after your durable ingestion path proves those complete prefixes. The largest received sequence is not enough. A missing earlier operation makes that prefix unsafe.
 
 ```csharp
-var checkpoint = CrdtFunctions.CheckpointORSet(
+var checkpoint = MergeableFunctions.CheckpointAddWinsSet(
     setState,
     new Dictionary<string, long> { ["device-a"] = fullyAppliedSequence });
-var checkpointBytes = CrdtCodec.EncodeState(checkpoint);
+var checkpointBytes = MergeableCodec.EncodeState(checkpoint);
 ```
 
-Persist the whole checkpoint atomically. Keep its active bindings and `ORSetFrontier` together. Synchronize the whole state with other replicas. A missing binding below the frontier stays removed when a delayed replica or replayed add arrives. Adds above the frontier and adds from other clients still survive.
+Persist the whole checkpoint atomically. Keep its active bindings and `AddWinsSetFrontier` together. Synchronize the whole state with other replicas. A missing binding below the frontier stays removed when a delayed replica or replayed add arrives. Adds above the frontier and adds from other clients still survive.
 
 The frontier never expires. Never drop it, decrease it, or reset a client's sequence under the same client id. Its client count uses `MaximumCounterComponents`. Checkpoint before the retained-dot or tombstone limit is exhausted. Without a proven prefix, the library keeps exact tombstones and fails at the limit.
 

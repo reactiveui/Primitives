@@ -248,17 +248,6 @@ public sealed class OccasionallyConnectedBuilder
         return this;
     }
 
-    /// <summary>Configures the retry random source used by engine retry policies.</summary>
-    /// <param name="retryRandomSource">The retry random source.</param>
-    /// <returns>The current builder.</returns>
-    public OccasionallyConnectedBuilder UseRetryRandomSource(IRetryRandomSource retryRandomSource)
-    {
-        EnsureMutable();
-        ArgumentExceptionHelper.ThrowIfNull(retryRandomSource);
-        _retryRandomSource = retryRandomSource;
-        return this;
-    }
-
     /// <summary>Registers the deterministic policy used when a publication selects <see cref="BufferStrategy.Custom"/>.</summary>
     /// <param name="policy">The buffer overflow policy.</param>
     /// <returns>The current builder.</returns>
@@ -334,6 +323,17 @@ public sealed class OccasionallyConnectedBuilder
         });
         _built = true;
         return context;
+    }
+
+    /// <summary>Configures deterministic retry jitter for tests.</summary>
+    /// <param name="retryRandomSource">The retry random source.</param>
+    /// <returns>The current builder.</returns>
+    internal OccasionallyConnectedBuilder UseRetryRandomSource(IRetryRandomSource retryRandomSource)
+    {
+        EnsureMutable();
+        ArgumentExceptionHelper.ThrowIfNull(retryRandomSource);
+        _retryRandomSource = retryRandomSource;
+        return this;
     }
 
     /// <summary>Configures a JSON serializer from an allowlisted schema registry.</summary>

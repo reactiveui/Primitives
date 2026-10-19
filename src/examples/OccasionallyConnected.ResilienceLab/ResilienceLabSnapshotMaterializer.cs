@@ -2,7 +2,7 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
-using ReactiveUI.Primitives.OccasionallyConnected.Crdt;
+using ReactiveUI.Primitives.OccasionallyConnected.Mergeable;
 using ReactiveUI.Primitives.OccasionallyConnected.Server;
 
 namespace ReactiveUI.Primitives.OccasionallyConnected.ResilienceLab;
@@ -18,11 +18,11 @@ internal sealed class ResilienceLabSnapshotMaterializer : IServerSnapshotMateria
     {
         ArgumentNullException.ThrowIfNull(context);
         cancellationToken.ThrowIfCancellationRequested();
-        var state = CrdtCodec.DecodeState(context.CapturedServerState.State.Payload, ResilienceLabLoopback.Bounds);
+        var state = MergeableCodec.DecodeState(context.CapturedServerState.State.Payload, ResilienceLabLoopback.Bounds);
         return ValueTask.FromResult(new ServerSnapshotMaterializationResult
         {
             Status = ServerSnapshotMaterializationStatus.Materialized,
-            ClientState = CrdtServerPayloads.CreateState(state, ResilienceLabLoopback.Bounds),
+            ClientState = MergeableServerPayloads.CreateState(state, ResilienceLabLoopback.Bounds),
         });
     }
 }

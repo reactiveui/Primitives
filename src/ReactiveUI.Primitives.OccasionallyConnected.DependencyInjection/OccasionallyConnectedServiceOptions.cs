@@ -10,6 +10,9 @@ namespace ReactiveUI.Primitives.OccasionallyConnected.DependencyInjection;
 [DebuggerDisplay("MaximumNamedStreams = {MaximumNamedStreams}, MaximumStreamNameLength = {MaximumStreamNameLength}")]
 public sealed class OccasionallyConnectedServiceOptions
 {
+    /// <summary>Gets or sets whether startup logs include the original exception, which may contain sensitive information.</summary>
+    public bool IncludeStartupExceptionDetails { get; set; }
+
     /// <summary>Gets or sets the runtime context options captured when the singleton context is created.</summary>
     public OccasionallyConnectedOptions Options { get; set; } = OccasionallyConnectedOptions.Default;
 

@@ -184,7 +184,7 @@ internal sealed partial class SyncEngine : ISyncEngine, IOccasionallyConnectedSt
         _operationStates = new(options.MaxDiagnosticSubscriptions, options.NotificationScheduler, latestState: false, GetGlobalOperationStateSize, ReportGlobalSyncDeliveryFault);
         _faults = new(options.MaxDiagnosticSubscriptions, options.NotificationScheduler, latestState: false, GetGlobalFaultSize);
         _metrics = new(options.Options.Diagnostics.Enabled);
-        _activities = new(options.Options.Diagnostics.Enabled, options.Options.Diagnostics.ActivitySamplingRatio);
+        _activities = new(options.Options.Diagnostics.Enabled);
         _scheduler = new(new(options.MaxRegisteredStreams, options.MaxSchedulerDescriptorBytes, options.Options.MinimumPriority, options.Options.MaximumPriority), options.TimeProvider);
         _snapshotRecoveryAdmissionQueue = new(_gate, options.Options.MaxConcurrentStreams);
         _circuitBreaker = new(CircuitBreakerEndpoint, options.Options.CircuitBreaker, options.TimeProvider);

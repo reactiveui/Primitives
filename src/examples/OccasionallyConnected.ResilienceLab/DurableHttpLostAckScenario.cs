@@ -3,7 +3,7 @@
 // See the LICENSE file in the project root for full license information.
 
 using System.Runtime.ExceptionServices;
-using ReactiveUI.Primitives.OccasionallyConnected.Crdt;
+using ReactiveUI.Primitives.OccasionallyConnected.Mergeable;
 using ReactiveUI.Primitives.OccasionallyConnected.Storage.Sqlite;
 using static ReactiveUI.Primitives.OccasionallyConnected.ResilienceLab.DurableHttpLostAckProofEvaluator;
 
@@ -502,5 +502,5 @@ internal static partial class DurableHttpLostAckScenario
     /// <summary>Creates the CRDT input published by the scenario.</summary>
     /// <returns>The counter input.</returns>
     [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
-    private static CrdtInput CreateCounterInput() => CrdtInput.ForMutation(CrdtMutation.GCounterSet(WriterClientId, 1));
+    private static MergeableInput CreateCounterInput() => MergeableInput.ForChange(MergeableChange.IncrementOnlyCounterSet(WriterClientId, 1));
 }

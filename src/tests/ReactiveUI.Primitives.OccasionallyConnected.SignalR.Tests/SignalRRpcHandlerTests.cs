@@ -6,6 +6,7 @@
 using System.Diagnostics.CodeAnalysis;
 #endif
 using Microsoft.AspNetCore.SignalR.Client;
+using Microsoft.AspNetCore.SignalR.Protocol;
 using Microsoft.Extensions.DependencyInjection;
 using ReactiveUI.Primitives.OccasionallyConnected.Transport.Http;
 
@@ -29,10 +30,10 @@ public sealed class SignalRRpcHandlerTests
     public async Task InvalidPeerResponseIsRejected(SignalRPeerFailure failure)
     {
         await using var server = await SignalRRemoteTransportAdapterTests.TestServer.StartAsync(peerFailure: failure);
-        await using var connection = new HubConnectionBuilder()
-            .WithUrl(server.Endpoint, static options => options.Headers.Add("Authorization", "Bearer test"))
-            .AddJsonProtocol(static options => options.PayloadSerializerOptions.TypeInfoResolver = SignalRCarrierJsonContext.Default)
-            .Build();
+        var builder = new HubConnectionBuilder()
+            .WithUrl(server.Endpoint, static options => options.Headers.Add("Authorization", "Bearer test"));
+        _ = builder.Services.AddSingleton<IHubProtocol, SignalRHubProtocol>();
+        await using var connection = builder.Build();
         await connection.StartAsync();
         using var client = new HttpMessageInvoker(new SignalRRpcHandler(connection));
         using var request = new HttpRequestMessage(HttpMethod.Get, "https://signalr.invalid/unknown");

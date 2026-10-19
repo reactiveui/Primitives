@@ -32,7 +32,7 @@ public static class ResilienceLabRunner
     /// <param name="requested">The unknown scenario name.</param>
     /// <returns>The failed case list.</returns>
     private static IReadOnlyList<ResilienceLabCaseResult> CreateUnknownScenarioCases(string requested) =>
-        [ResilienceLabCaseResult.Fail("scenario", CrdtLoopbackScenarioShape.ScenarioName, requested)];
+        [ResilienceLabCaseResult.Fail("scenario", MergeableLoopbackScenarioShape.ScenarioName, requested)];
 
     /// <summary>Selects the scenario runner for a command-line scenario name.</summary>
     /// <param name="scenario">The scenario name.</param>
@@ -40,8 +40,8 @@ public static class ResilienceLabRunner
     private static Func<CancellationToken, ValueTask<IReadOnlyList<ResilienceLabCaseResult>>>? SelectScenario(string scenario) =>
         scenario switch
         {
-            _ when string.Equals(scenario, CrdtLoopbackScenarioShape.ScenarioName, StringComparison.Ordinal) =>
-                CrdtLoopbackScenario.RunAsync,
+            _ when string.Equals(scenario, MergeableLoopbackScenarioShape.ScenarioName, StringComparison.Ordinal) =>
+                MergeableLoopbackScenario.RunAsync,
             RetryBackoffScenario.ScenarioName => static token => RetryBackoffScenario.RunAsync(TimeProvider.System, token),
             DurableHttpLostAckScenario.ScenarioName => DurableHttpLostAckScenario.RunAsync,
             DuplicateReorderedDeliveryScenario.ScenarioName => DuplicateReorderedDeliveryScenario.RunAsync,

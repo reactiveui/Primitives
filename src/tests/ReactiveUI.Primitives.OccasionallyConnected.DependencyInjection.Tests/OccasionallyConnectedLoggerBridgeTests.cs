@@ -34,14 +34,35 @@ public sealed class OccasionallyConnectedLoggerBridgeTests
         await Assert.That(context.StartupTask.IsFaulted).IsTrue();
     }
 
+    /// <summary>Includes the original exception only when the host explicitly opts in.</summary>
+    /// <returns>The assertion task.</returns>
+    [Test]
+    public async Task HostCanOptInToOriginalStartupException()
+    {
+        var startupFailure = new InvalidOperationException("host-approved exception details");
+        var loggerProvider = new DependencyInjectionTestDoubles.RecordingLoggerProvider();
+        await using var provider = CreateProvider(loggerProvider, startupFailure, includeExceptionDetails: true);
+        var context = provider.GetRequiredService<OccasionallyConnectedContext>();
+
+        await Assert.That(async () => await context.StartupTask).ThrowsExactly<InvalidOperationException>();
+        var entry = await loggerProvider.WaitForEntryAsync(DependencyInjectionTestDoubles.GuardTimeout);
+
+        await Assert.That(entry.Exception).IsSameReferenceAs(startupFailure);
+        await Assert.That(context.StartupTask.Exception?.InnerException).IsSameReferenceAs(startupFailure);
+        await Assert.That(entry.Message).DoesNotContain(startupFailure.Message);
+    }
+
     /// <summary>Verifies logger callback failures do not replace the public startup failure.</summary>
+    /// <param name="includeExceptionDetails">Whether the host enables exception details.</param>
     /// <returns>A task representing the assertions.</returns>
     [Test]
-    public async Task ThrowingStartupLoggerLeavesStartupTaskFaultedWithOriginalFailure()
+    [Arguments(false)]
+    [Arguments(true)]
+    public async Task ThrowingStartupLoggerLeavesStartupTaskFaultedWithOriginalFailure(bool includeExceptionDetails)
     {
         var startupFailure = new InvalidOperationException("startup failed");
         var loggerProvider = new DependencyInjectionTestDoubles.ThrowingLoggerProvider();
-        await using var provider = CreateProvider(loggerProvider, startupFailure);
+        await using var provider = CreateProvider(loggerProvider, startupFailure, includeExceptionDetails: includeExceptionDetails);
         var context = provider.GetRequiredService<OccasionallyConnectedContext>();
 
         await Assert.That(async () => await context.StartupTask)
@@ -89,11 +110,13 @@ public sealed class OccasionallyConnectedLoggerBridgeTests
     /// <param name="loggerProvider">The logger provider.</param>
     /// <param name="startupFailure">The optional startup failure.</param>
     /// <param name="autoStart">Whether the context should auto-start.</param>
+    /// <param name="includeExceptionDetails">Whether the host permits original startup exceptions in logs.</param>
     /// <returns>The service provider.</returns>
     private static ServiceProvider CreateProvider(
         ILoggerProvider loggerProvider,
         Exception? startupFailure,
-        bool autoStart = true)
+        bool autoStart = true,
+        bool includeExceptionDetails = false)
     {
         ServiceCollection services = new();
         _ = services.AddSingleton<DependencyInjectionTestDoubles.RecordingStoreAdapter>();
@@ -101,6 +124,7 @@ public sealed class OccasionallyConnectedLoggerBridgeTests
         _ = services.AddSingleton(loggerProvider);
         _ = services.AddLogging();
         ConfigureOccasionallyConnected(services, autoStart);
+        _ = services.Configure<OccasionallyConnectedServiceOptions>(options => options.IncludeStartupExceptionDetails = includeExceptionDetails);
         return services.BuildServiceProvider(validateScopes: true);
     }
 

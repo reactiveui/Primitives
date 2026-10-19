@@ -4,7 +4,7 @@
 
 using System.Net.Http;
 using System.Runtime.CompilerServices;
-using ReactiveUI.Primitives.OccasionallyConnected.Crdt;
+using ReactiveUI.Primitives.OccasionallyConnected.Mergeable;
 using ReactiveUI.Primitives.OccasionallyConnected.ResilienceLab;
 using ReactiveUI.Primitives.OccasionallyConnected.Server;
 using ReactiveUI.Primitives.OccasionallyConnected.Transport.Http;
@@ -121,7 +121,7 @@ public sealed class RetentionGapRecoveryScenarioTests
     {
         var seed = SeedBase + (int)value;
         _ = await hub.ApplyOperationsAsync(
-            ResilienceLabLoopback.CreateBatch(seed, seed + SeedBase, stream, value, CrdtMutation.GCounterSet(WriterClientId, value)),
+            ResilienceLabLoopback.CreateBatch(seed, seed + SeedBase, stream, value, MergeableChange.IncrementOnlyCounterSet(WriterClientId, value)),
             new(ResilienceLabLoopback.TenantId, WriterClientId),
             CancellationToken.None);
     }
@@ -137,7 +137,7 @@ public sealed class RetentionGapRecoveryScenarioTests
     }
 
     /// <summary>Owns one reader context and the transport resources behind it.</summary>
-    private sealed class ReaderRun : IAsyncDisposable, IObserver<CrdtState>
+    private sealed class ReaderRun : IAsyncDisposable, IObserver<MergeableState>
     {
         /// <summary>The outbox operation limit of the reader context.</summary>
         private const int OutboxOperations = 16;
@@ -197,7 +197,7 @@ public sealed class RetentionGapRecoveryScenarioTests
             var loopbackOptions = ResilienceLabLoopback.CreateLoopbackOptions(
                 hub,
                 ReaderClientId,
-                CrdtLoopbackScenarioShape.VolatileLoopbackCapabilities | RemoteTransportCapabilities.SnapshotRecovery);
+                MergeableLoopbackScenarioShape.VolatileLoopbackCapabilities | RemoteTransportCapabilities.SnapshotRecovery);
             if (useHttp)
             {
                 _endpoint = new(new()
@@ -251,7 +251,7 @@ public sealed class RetentionGapRecoveryScenarioTests
         }
 
         /// <inheritdoc/>
-        public void OnNext(CrdtState value)
+        public void OnNext(MergeableState value)
         {
             TaskCompletionSource<long>? completed = null;
             var counter = value.Value.Counter;

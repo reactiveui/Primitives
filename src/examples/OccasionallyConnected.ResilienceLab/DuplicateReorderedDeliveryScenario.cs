@@ -4,7 +4,7 @@
 
 using System.Runtime.CompilerServices;
 using System.Text;
-using ReactiveUI.Primitives.OccasionallyConnected.Crdt;
+using ReactiveUI.Primitives.OccasionallyConnected.Mergeable;
 using ReactiveUI.Primitives.OccasionallyConnected.Server;
 
 namespace ReactiveUI.Primitives.OccasionallyConnected.ResilienceLab;
@@ -73,7 +73,7 @@ internal static class DuplicateReorderedDeliveryScenario
             OperationSeed,
             Stream,
             1,
-            CrdtMutation.GCounterSet(ClientAId, CounterValue));
+            MergeableChange.IncrementOnlyCounterSet(ClientAId, CounterValue));
 
         var original = await hub.ApplyOperationsAsync(batch, client, token).ConfigureAwait(false);
         var duplicate = await hub.ApplyOperationsAsync(batch, client, token).ConfigureAwait(false);
@@ -83,7 +83,7 @@ internal static class DuplicateReorderedDeliveryScenario
                 client,
                 token),
             token).ConfigureAwait(false);
-        var canonicalState = CrdtLoopbackReceiver.DecodeStates(page, ResilienceLabLoopback.Bounds)[^1];
+        var canonicalState = MergeableLoopbackReceiver.DecodeStates(page, ResilienceLabLoopback.Bounds)[^1];
 
         List<ResilienceLabCaseResult> cases =
         [
@@ -104,14 +104,14 @@ internal static class DuplicateReorderedDeliveryScenario
     private static List<ResilienceLabCaseResult> CreateReorderCases()
     {
         var bounds = ResilienceLabLoopback.Bounds;
-        var empty = CrdtFunctions.Empty(CrdtKind.ORSet);
-        var blue = CrdtFunctions.ApplyLocal(empty, AddInput(Blue), ClientAId, 1, bounds);
-        var red = CrdtFunctions.ApplyLocal(empty, AddInput(Red), ClientBId, 1, bounds);
-        var green = CrdtFunctions.ApplyLocal(empty, AddInput(Green), ClientCId, 1, bounds);
-        var observed = CrdtFunctions.Merge(blue, red, bounds);
-        var removeRed = CrdtFunctions.ApplyLocal(
+        var empty = MergeableFunctions.Empty(MergeableKind.AddWinsSet);
+        var blue = MergeableFunctions.ApplyLocal(empty, AddInput(Blue), ClientAId, 1, bounds);
+        var red = MergeableFunctions.ApplyLocal(empty, AddInput(Red), ClientBId, 1, bounds);
+        var green = MergeableFunctions.ApplyLocal(empty, AddInput(Green), ClientCId, 1, bounds);
+        var observed = MergeableFunctions.Merge(blue, red, bounds);
+        var removeRed = MergeableFunctions.ApplyLocal(
             observed,
-            CrdtInput.ForMutation(CrdtMutation.ORSetRemove(ToBytes(Red), [CrdtLoopbackORSetProjection.FindObservedDot(observed, Red)])),
+            MergeableInput.ForChange(MergeableChange.AddWinsSetRemove(ToBytes(Red), [MergeableLoopbackAddWinsSetProjection.FindObservedDot(observed, Red)])),
             ClientAId,
             RemoveSequence,
             bounds);
@@ -134,12 +134,12 @@ internal static class DuplicateReorderedDeliveryScenario
     /// <param name="bounds">The CRDT bounds.</param>
     /// <param name="states">The replica states in delivery order.</param>
     /// <returns>The merged state.</returns>
-    private static CrdtState Merge(CrdtBounds bounds, params CrdtState[] states)
+    private static MergeableState Merge(MergeableBounds bounds, params MergeableState[] states)
     {
         var merged = states[0];
         for (var index = 1; index < states.Length; index++)
         {
-            merged = CrdtFunctions.Merge(merged, states[index], bounds);
+            merged = MergeableFunctions.Merge(merged, states[index], bounds);
         }
 
         return merged;
@@ -155,15 +155,15 @@ internal static class DuplicateReorderedDeliveryScenario
     /// <param name="element">The element text.</param>
     /// <returns>The CRDT input.</returns>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static CrdtInput AddInput(string element) =>
-        CrdtInput.ForMutation(CrdtMutation.ORSetAdd(ToBytes(element)));
+    private static MergeableInput AddInput(string element) =>
+        MergeableInput.ForChange(MergeableChange.AddWinsSetAdd(ToBytes(element)));
 
     /// <summary>Gets the sorted element display of an OR-set state.</summary>
     /// <param name="state">The OR-set state.</param>
     /// <returns>The sorted element display.</returns>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static string Display(CrdtState state) =>
-        CrdtLoopbackORSetProjection.GetElementDisplay(state);
+    private static string Display(MergeableState state) =>
+        MergeableLoopbackAddWinsSetProjection.GetElementDisplay(state);
 
     /// <summary>Converts text to UTF-8 bytes.</summary>
     /// <param name="value">The text.</param>

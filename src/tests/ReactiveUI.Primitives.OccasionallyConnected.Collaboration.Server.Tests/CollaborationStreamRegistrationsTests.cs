@@ -7,7 +7,7 @@ using System.Runtime.CompilerServices;
 using System.Text.Json;
 using ReactiveUI.Primitives.OccasionallyConnected;
 using ReactiveUI.Primitives.OccasionallyConnected.Collaboration.Server;
-using ReactiveUI.Primitives.OccasionallyConnected.Crdt;
+using ReactiveUI.Primitives.OccasionallyConnected.Mergeable;
 using ReactiveUI.Primitives.OccasionallyConnected.Server;
 
 namespace ReactiveUI.Primitives.OccasionallyConnected.Collaboration.Server.Tests;
@@ -90,7 +90,7 @@ public sealed class CollaborationStreamRegistrationsTests
     /// <summary>Verifies the example registers the custom stream and all built-in CRDT families.</summary>
     /// <returns>The assertion task.</returns>
     [Test]
-    public async Task CreateAllRegistersCustomStreamAndEveryCrdtFamily()
+    public async Task CreateAllRegistersCustomStreamAndEveryMergeableFamily()
     {
         var registrations = CollaborationStreamRegistrations.CreateAll();
         var streams = new HashSet<string>(StringComparer.Ordinal);
@@ -101,14 +101,14 @@ public sealed class CollaborationStreamRegistrationsTests
         }
 
         await Assert.That(streams.Contains(CollaborationStreamRegistrations.ActivityStream.Value)).IsTrue();
-        await Assert.That(streams.Contains(CollaborationStreamRegistrations.GCounterStream.Value)).IsTrue();
-        await Assert.That(streams.Contains(CollaborationStreamRegistrations.PNCounterStream.Value)).IsTrue();
-        await Assert.That(streams.Contains(CollaborationStreamRegistrations.ORSetStream.Value)).IsTrue();
-        await Assert.That(streams.Contains(CollaborationStreamRegistrations.LwwRegisterStream.Value)).IsTrue();
-        await Assert.That(HasCrdtRegistration(registrations, CrdtKind.GCounter)).IsTrue();
-        await Assert.That(HasCrdtRegistration(registrations, CrdtKind.PNCounter)).IsTrue();
-        await Assert.That(HasCrdtRegistration(registrations, CrdtKind.ORSet)).IsTrue();
-        await Assert.That(HasCrdtRegistration(registrations, CrdtKind.LwwRegister)).IsTrue();
+        await Assert.That(streams.Contains(CollaborationStreamRegistrations.IncrementOnlyCounterStream.Value)).IsTrue();
+        await Assert.That(streams.Contains(CollaborationStreamRegistrations.CounterStream.Value)).IsTrue();
+        await Assert.That(streams.Contains(CollaborationStreamRegistrations.AddWinsSetStream.Value)).IsTrue();
+        await Assert.That(streams.Contains(CollaborationStreamRegistrations.LastWriterWinsValueStream.Value)).IsTrue();
+        await Assert.That(HasMergeableRegistration(registrations, MergeableKind.IncrementOnlyCounter)).IsTrue();
+        await Assert.That(HasMergeableRegistration(registrations, MergeableKind.Counter)).IsTrue();
+        await Assert.That(HasMergeableRegistration(registrations, MergeableKind.AddWinsSet)).IsTrue();
+        await Assert.That(HasMergeableRegistration(registrations, MergeableKind.LastWriterWinsValue)).IsTrue();
     }
 
     /// <summary>Verifies the custom activity stream demonstrates custom conflict behavior instead of aliasing every policy to LWW.</summary>
@@ -514,14 +514,14 @@ public sealed class CollaborationStreamRegistrationsTests
     /// <param name="registrations">The registrations to inspect.</param>
     /// <param name="kind">The CRDT kind to find.</param>
     /// <returns><see langword="true"/> when the expected registration exists.</returns>
-    private static bool HasCrdtRegistration(IReadOnlyList<ServerConflictStreamRegistration> registrations, CrdtKind kind)
+    private static bool HasMergeableRegistration(IReadOnlyList<ServerConflictStreamRegistration> registrations, MergeableKind kind)
     {
         var expected = kind switch
         {
-            CrdtKind.GCounter => CollaborationStreamRegistrations.GCounterStream,
-            CrdtKind.PNCounter => CollaborationStreamRegistrations.PNCounterStream,
-            CrdtKind.ORSet => CollaborationStreamRegistrations.ORSetStream,
-            CrdtKind.LwwRegister => CollaborationStreamRegistrations.LwwRegisterStream,
+            MergeableKind.IncrementOnlyCounter => CollaborationStreamRegistrations.IncrementOnlyCounterStream,
+            MergeableKind.Counter => CollaborationStreamRegistrations.CounterStream,
+            MergeableKind.AddWinsSet => CollaborationStreamRegistrations.AddWinsSetStream,
+            MergeableKind.LastWriterWinsValue => CollaborationStreamRegistrations.LastWriterWinsValueStream,
             _ => default,
         };
 

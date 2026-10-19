@@ -4,7 +4,7 @@
 
 using System.Runtime.CompilerServices;
 using ReactiveUI.Primitives.OccasionallyConnected;
-using ReactiveUI.Primitives.OccasionallyConnected.Crdt;
+using ReactiveUI.Primitives.OccasionallyConnected.Mergeable;
 using ReactiveUI.Primitives.OccasionallyConnected.Server;
 
 namespace ReactiveUI.Primitives.OccasionallyConnected.Collaboration.Server;
@@ -37,26 +37,26 @@ public static class CollaborationStreamRegistrations
     public static StreamId ActivityStream { get; } = new("collaboration/activity");
 
     /// <summary>Gets the grow-only counter stream identifier.</summary>
-    public static StreamId GCounterStream { get; } = new("collaboration/crdt/g-counter");
+    public static StreamId IncrementOnlyCounterStream { get; } = new("collaboration/crdt/g-counter");
 
     /// <summary>Gets the positive-negative counter stream identifier.</summary>
-    public static StreamId PNCounterStream { get; } = new("collaboration/crdt/pn-counter");
+    public static StreamId CounterStream { get; } = new("collaboration/crdt/pn-counter");
 
     /// <summary>Gets the observed-remove set stream identifier.</summary>
-    public static StreamId ORSetStream { get; } = new("collaboration/crdt/or-set");
+    public static StreamId AddWinsSetStream { get; } = new("collaboration/crdt/or-set");
 
     /// <summary>Gets the last-writer-wins register stream identifier.</summary>
-    public static StreamId LwwRegisterStream { get; } = new("collaboration/crdt/lww-register");
+    public static StreamId LastWriterWinsValueStream { get; } = new("collaboration/crdt/lww-register");
 
     /// <summary>Creates all public stream registrations demonstrated by the server example.</summary>
     /// <returns>The configured stream registrations.</returns>
     public static IReadOnlyList<ServerConflictStreamRegistration> CreateAll() =>
     [
         CreateActivityRegistration(),
-        CreateCrdtRegistration(GCounterStream, CrdtKind.GCounter),
-        CreateCrdtRegistration(PNCounterStream, CrdtKind.PNCounter),
-        CreateCrdtRegistration(ORSetStream, CrdtKind.ORSet),
-        CreateCrdtRegistration(LwwRegisterStream, CrdtKind.LwwRegister),
+        CreateMergeableRegistration(IncrementOnlyCounterStream, MergeableKind.IncrementOnlyCounter),
+        CreateMergeableRegistration(CounterStream, MergeableKind.Counter),
+        CreateMergeableRegistration(AddWinsSetStream, MergeableKind.AddWinsSet),
+        CreateMergeableRegistration(LastWriterWinsValueStream, MergeableKind.LastWriterWinsValue),
     ];
 
     /// <summary>Creates the custom activity stream registration.</summary>
@@ -80,8 +80,8 @@ public static class CollaborationStreamRegistrations
     /// <param name="kind">The CRDT family.</param>
     /// <returns>The CRDT stream registration.</returns>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static ServerConflictStreamRegistration CreateCrdtRegistration(StreamId streamId, CrdtKind kind) =>
-        CrdtServerStreamRegistration.Create(new()
+    private static ServerConflictStreamRegistration CreateMergeableRegistration(StreamId streamId, MergeableKind kind) =>
+        MergeableServerStreamRegistration.Create(new()
         {
             StreamId = streamId,
             Kind = kind,

@@ -1,17 +1,6 @@
 [assembly: System.Runtime.CompilerServices.InternalsVisibleTo("ReactiveUI.Primitives.OccasionallyConnected.Tests")]
 namespace ReactiveUI.Primitives.OccasionallyConnected;
 
-[System.Diagnostics.DebuggerDisplay("{_endpoint,nq}; {_state,nq}")]
-public sealed class CircuitBreaker
-{
-    public CircuitBreaker(string endpoint) { }
-    public CircuitBreaker(string endpoint, ReactiveUI.Primitives.OccasionallyConnected.CircuitBreakerOptions options, System.TimeProvider timeProvider) { }
-    public ReactiveUI.Primitives.OccasionallyConnected.CircuitBreakerSnapshot Snapshot { get; }
-    public void AbandonProbe() { }
-    public void RecordSuccess() { }
-    public void RecordTransientFailure() { }
-    public bool TryAcquire() { }
-}
 public enum CircuitBreakerState
 {
     Closed = 0,
@@ -92,7 +81,6 @@ public sealed class OccasionallyConnectedBuilder
     public ReactiveUI.Primitives.OccasionallyConnected.OccasionallyConnectedBuilder UseJsonSerializer(ReactiveUI.Primitives.OccasionallyConnected.SchemaRegistry schemaRegistry, int maximumPayloadBytes) { }
     public ReactiveUI.Primitives.OccasionallyConnected.OccasionallyConnectedBuilder UseOperationIdSource(ReactiveUI.Primitives.OccasionallyConnected.IOperationIdSource operationIdSource) { }
     public ReactiveUI.Primitives.OccasionallyConnected.OccasionallyConnectedBuilder UseOptions(ReactiveUI.Primitives.OccasionallyConnected.OccasionallyConnectedOptions options) { }
-    public ReactiveUI.Primitives.OccasionallyConnected.OccasionallyConnectedBuilder UseRetryRandomSource(ReactiveUI.Primitives.OccasionallyConnected.IRetryRandomSource retryRandomSource) { }
     public ReactiveUI.Primitives.OccasionallyConnected.OccasionallyConnectedBuilder UseSequencer(ReactiveUI.Primitives.Concurrency.ISequencer sequencer) { }
     public ReactiveUI.Primitives.OccasionallyConnected.OccasionallyConnectedBuilder UseSerializer(ReactiveUI.Primitives.OccasionallyConnected.IPayloadSerializer serializer) { }
     public ReactiveUI.Primitives.OccasionallyConnected.OccasionallyConnectedBuilder UseStore(ReactiveUI.Primitives.OccasionallyConnected.ILocalStoreAdapter store) { }
@@ -163,14 +151,6 @@ public static class OccasionallyConnectedExtensions
         public System.IObservable<ReactiveUI.Primitives.OccasionallyConnected.PendingSyncSummary> ObservePending() { }
         public System.IObservable<TState> WhereSynchronized() { }
     }}
-[System.Diagnostics.DebuggerDisplay("MinimumDelay = {_options.MinimumDelay}, MaximumDelay = {_options.MaximumDelay}")]
-public sealed class RetryPolicy : ReactiveUI.Primitives.OccasionallyConnected.IRetryPolicy
-{
-    public RetryPolicy() { }
-    public RetryPolicy(ReactiveUI.Primitives.OccasionallyConnected.RetryOptions options) { }
-    public RetryPolicy(ReactiveUI.Primitives.OccasionallyConnected.RetryOptions options, System.TimeProvider timeProvider, ReactiveUI.Primitives.OccasionallyConnected.IRetryRandomSource randomSource) { }
-    public ReactiveUI.Primitives.OccasionallyConnected.RetryDecision GetDecision(ReactiveUI.Primitives.OccasionallyConnected.RetryFailure failure, ReactiveUI.Primitives.OccasionallyConnected.RetryState state) { }
-}
 [System.Diagnostics.DebuggerDisplay("StreamId = {_streamId}, Disposed = {_disposed}")]
 public sealed class RemoteObserverAdapter<T> : ReactiveUI.Primitives.OccasionallyConnected.IRemoteObserver<T>, System.IAsyncDisposable
 {
@@ -189,25 +169,25 @@ public sealed class SchemaRegistry : ReactiveUI.Primitives.OccasionallyConnected
     public ReactiveUI.Primitives.OccasionallyConnected.SchemaRegistry Register<T>(string contractId, int schemaVersion, System.Text.Json.Serialization.Metadata.JsonTypeInfo<T> jsonTypeInfo) { }
     public ReactiveUI.Primitives.OccasionallyConnected.SchemaRegistry RegisterUpcaster(ReactiveUI.Primitives.OccasionallyConnected.IPayloadUpcaster upcaster) { }
 }
-namespace Crdt
+namespace Mergeable
 {
 [System.Diagnostics.DebuggerDisplay("{AuthenticatedClientId,nq} {InitialState.Kind,nq}")]
-public sealed class CrdtLocalProjection : ReactiveUI.Primitives.OccasionallyConnected.ILocalProjection<ReactiveUI.Primitives.OccasionallyConnected.Crdt.CrdtState, ReactiveUI.Primitives.OccasionallyConnected.Crdt.CrdtInput>
+public sealed class MergeableLocalProjection : ReactiveUI.Primitives.OccasionallyConnected.ILocalProjection<ReactiveUI.Primitives.OccasionallyConnected.Mergeable.MergeableState, ReactiveUI.Primitives.OccasionallyConnected.Mergeable.MergeableInput>
 {
-    public CrdtLocalProjection(string authenticatedClientId, ReactiveUI.Primitives.OccasionallyConnected.Crdt.CrdtKind kind) { }
-    public CrdtLocalProjection(string authenticatedClientId, ReactiveUI.Primitives.OccasionallyConnected.Crdt.CrdtState initialState, ReactiveUI.Primitives.OccasionallyConnected.Crdt.CrdtBounds bounds) { }
+    public MergeableLocalProjection(string authenticatedClientId, ReactiveUI.Primitives.OccasionallyConnected.Mergeable.MergeableKind kind) { }
+    public MergeableLocalProjection(string authenticatedClientId, ReactiveUI.Primitives.OccasionallyConnected.Mergeable.MergeableState initialState, ReactiveUI.Primitives.OccasionallyConnected.Mergeable.MergeableBounds bounds) { }
     public string AuthenticatedClientId { get; }
-    public ReactiveUI.Primitives.OccasionallyConnected.Crdt.CrdtState InitialState { get; }
-    public ReactiveUI.Primitives.OccasionallyConnected.Crdt.CrdtState ApplyLocal(ReactiveUI.Primitives.OccasionallyConnected.Crdt.CrdtState state, ReactiveUI.Primitives.OccasionallyConnected.Crdt.CrdtInput input, ReactiveUI.Primitives.OccasionallyConnected.SyncOperation operation) { }
-    public ReactiveUI.Primitives.OccasionallyConnected.Crdt.CrdtState ApplyRemote(ReactiveUI.Primitives.OccasionallyConnected.Crdt.CrdtState state, ReactiveUI.Primitives.OccasionallyConnected.Crdt.CrdtInput input, ReactiveUI.Primitives.OccasionallyConnected.RemoteEvent remoteEvent) { }
+    public ReactiveUI.Primitives.OccasionallyConnected.Mergeable.MergeableState InitialState { get; }
+    public ReactiveUI.Primitives.OccasionallyConnected.Mergeable.MergeableState ApplyLocal(ReactiveUI.Primitives.OccasionallyConnected.Mergeable.MergeableState state, ReactiveUI.Primitives.OccasionallyConnected.Mergeable.MergeableInput input, ReactiveUI.Primitives.OccasionallyConnected.SyncOperation operation) { }
+    public ReactiveUI.Primitives.OccasionallyConnected.Mergeable.MergeableState ApplyRemote(ReactiveUI.Primitives.OccasionallyConnected.Mergeable.MergeableState state, ReactiveUI.Primitives.OccasionallyConnected.Mergeable.MergeableInput input, ReactiveUI.Primitives.OccasionallyConnected.RemoteEvent remoteEvent) { }
     [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
-    public ReactiveUI.Primitives.OccasionallyConnected.Crdt.CrdtState Reconcile(ReactiveUI.Primitives.OccasionallyConnected.Crdt.CrdtState state, ReactiveUI.Primitives.OccasionallyConnected.ConflictResolutionResult result) { }
+    public ReactiveUI.Primitives.OccasionallyConnected.Mergeable.MergeableState Reconcile(ReactiveUI.Primitives.OccasionallyConnected.Mergeable.MergeableState state, ReactiveUI.Primitives.OccasionallyConnected.ConflictResolutionResult result) { }
 }
 [System.Diagnostics.DebuggerDisplay("{ContentType,nq}")]
-public sealed class CrdtPayloadSerializer : ReactiveUI.Primitives.OccasionallyConnected.IPayloadSerializer
+public sealed class MergeablePayloadSerializer : ReactiveUI.Primitives.OccasionallyConnected.IPayloadSerializer
 {
-    public CrdtPayloadSerializer() { }
-    public CrdtPayloadSerializer(ReactiveUI.Primitives.OccasionallyConnected.Crdt.CrdtBounds bounds) { }
+    public MergeablePayloadSerializer() { }
+    public MergeablePayloadSerializer(ReactiveUI.Primitives.OccasionallyConnected.Mergeable.MergeableBounds bounds) { }
     public string ContentType { get; }
     public System.Threading.Tasks.ValueTask<object> DeserializeAsync(ReactiveUI.Primitives.OccasionallyConnected.PayloadEnvelope envelope, System.Type targetType, System.Threading.CancellationToken cancellationToken) { }
     public System.Threading.Tasks.ValueTask<ReactiveUI.Primitives.OccasionallyConnected.PayloadEnvelope> SerializeAsync<T>(string contractId, int schemaVersion, T value, System.Threading.CancellationToken cancellationToken) { }

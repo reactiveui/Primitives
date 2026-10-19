@@ -21,7 +21,8 @@ internal static class OccasionallyConnectedLoggerBridge
     /// <summary>Observes the context startup task.</summary>
     /// <param name="context">The context to observe.</param>
     /// <param name="logger">The optional logger.</param>
-    internal static void ObserveStartup(OccasionallyConnectedContext context, ILogger? logger)
+    /// <param name="includeExceptionDetails">Whether the host permits the original exception in logs.</param>
+    internal static void ObserveStartup(OccasionallyConnectedContext context, ILogger? logger, bool includeExceptionDetails)
     {
         if (logger is null)
         {
@@ -29,7 +30,7 @@ internal static class OccasionallyConnectedLoggerBridge
             return;
         }
 
-        _ = ObserveWithLoggingAsync(context.StartupTask, logger);
+        _ = ObserveWithLoggingAsync(context.StartupTask, logger, includeExceptionDetails);
     }
 
     /// <summary>Observes startup failure without logging.</summary>
@@ -50,19 +51,20 @@ internal static class OccasionallyConnectedLoggerBridge
     /// <summary>Observes startup failure and isolates logger failures.</summary>
     /// <param name="startupTask">The startup task.</param>
     /// <param name="logger">The logger.</param>
+    /// <param name="includeExceptionDetails">Whether the host permits the original exception in logs.</param>
     /// <returns>The observation task.</returns>
-    private static async Task ObserveWithLoggingAsync(Task startupTask, ILogger logger)
+    private static async Task ObserveWithLoggingAsync(Task startupTask, ILogger logger, bool includeExceptionDetails)
     {
         try
         {
             await startupTask.ConfigureAwait(false);
         }
-        catch
+        catch (Exception startupFailure)
         {
             _ = startupTask.Exception;
             try
             {
-                LogStartupFailure(logger, null);
+                LogStartupFailure(logger, includeExceptionDetails ? startupFailure : null);
             }
             catch (Exception exception)
             {

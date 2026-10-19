@@ -19,6 +19,9 @@ internal sealed partial class HttpRemoteTransportSession : IRemoteTransportSessi
     /// </summary>
     private const string RetentionGapReasonCode = "server-receive-retention-gap";
 
+    /// <summary>The minimum elapsed time between empty subscription polls.</summary>
+    private static readonly TimeSpan MinimumEmptyPollInterval = TimeSpan.FromSeconds(1);
+
     /// <summary>The adapter options.</summary>
     private readonly HttpRemoteTransportOptions _options;
 
@@ -434,15 +437,14 @@ internal sealed partial class HttpRemoteTransportSession : IRemoteTransportSessi
             Nonce = nonce,
             SentAtUtc = observedUtc,
             ReplaySessionId = _replaySessionId,
-            ReplayMac = "placeholder",
             CanonicalRequest = canonical,
         };
-        var envelope = _replayHasher.Create(replayRequest);
+        var signingInput = _replayHasher.CreateSigningInput(replayRequest);
         byte[]? secret = null;
         try
         {
             secret = _replaySessionSecret.Copy();
-            var mac = _replayHasher.ComputeMac(secret, envelope.MacInput);
+            var mac = _replayHasher.ComputeMac(secret, signingInput);
             request.Headers.Add(HttpReplayHeaders.MessageId, messageId);
             request.Headers.Add(HttpReplayHeaders.Nonce, nonce);
             request.Headers.Add(HttpReplayHeaders.SentAt, observedUtc.ToString("O", CultureInfo.InvariantCulture));
@@ -836,9 +838,11 @@ internal sealed partial class HttpRemoteTransportSession : IRemoteTransportSessi
                 while (true)
                 {
                     _linked.Token.ThrowIfCancellationRequested();
+                    var pollStarted = _owner._options.TimeProvider.GetTimestamp();
                     var batches = await _owner.ReceiveSubscribeResponseAsync(_request, _cursor, _linked.Token).ConfigureAwait(false);
                     if (batches.Length == 0)
                     {
+                        await WaitForEmptyPollAsync(pollStarted).ConfigureAwait(false);
                         continue;
                     }
 
@@ -859,6 +863,25 @@ internal sealed partial class HttpRemoteTransportSession : IRemoteTransportSessi
             }
 
             return false;
+        }
+
+        /// <summary>Paces fast empty responses without extending an ordinary long poll.</summary>
+        /// <param name="pollStarted">The monotonic timestamp before the poll.</param>
+        /// <returns>The cancellable pacing task.</returns>
+        private async Task WaitForEmptyPollAsync(long pollStarted)
+        {
+            var clock = _owner._options.TimeProvider;
+            var remaining = MinimumEmptyPollInterval - clock.GetElapsedTime(pollStarted);
+            if (remaining <= TimeSpan.Zero)
+            {
+                return;
+            }
+
+#if NET8_0_OR_GREATER
+            await Task.Delay(remaining, clock, _linked.Token).ConfigureAwait(false);
+#else
+            await clock.Delay(remaining, _linked.Token).ConfigureAwait(false);
+#endif
         }
 
         /// <summary>Stores a decoded response while the subscription is still active.</summary>

@@ -3,7 +3,7 @@
 // See the LICENSE file in the project root for full license information.
 
 using System.Globalization;
-using ReactiveUI.Primitives.OccasionallyConnected.Crdt;
+using ReactiveUI.Primitives.OccasionallyConnected.Mergeable;
 using ReactiveUI.Primitives.OccasionallyConnected.Sqlite;
 using ReactiveUI.Primitives.OccasionallyConnected.Storage.Sqlite;
 using static ReactiveUI.Primitives.OccasionallyConnected.ResilienceLab.DurableHttpLostAckProofEvaluator;
@@ -24,9 +24,9 @@ internal static partial class DurableHttpLostAckScenario
             return null;
         }
 
-        var serializer = new CrdtPayloadSerializer(CreateBounds());
-        var deserialized = await serializer.DeserializeAsync(snapshot.State, typeof(CrdtState), cancellationToken).ConfigureAwait(false);
-        return deserialized is CrdtState state ? state.Value.Counter : null;
+        var serializer = new MergeablePayloadSerializer(CreateBounds());
+        var deserialized = await serializer.DeserializeAsync(snapshot.State, typeof(MergeableState), cancellationToken).ConfigureAwait(false);
+        return deserialized is MergeableState state ? state.Value.Counter : null;
     }
 
     /// <summary>Reads durable state through a session's initialized SQLite store.</summary>
@@ -276,7 +276,7 @@ internal static partial class DurableHttpLostAckScenario
 
     /// <summary>Creates the CRDT bounds used by the lab stream.</summary>
     /// <returns>The result.</returns>
-    private static CrdtBounds CreateBounds() =>
+    private static MergeableBounds CreateBounds() =>
         new()
         {
             MaximumCounterComponents = SmallCapacity,

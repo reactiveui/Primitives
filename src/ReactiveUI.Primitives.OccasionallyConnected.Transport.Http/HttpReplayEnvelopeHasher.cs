@@ -89,6 +89,32 @@ internal sealed class HttpReplayEnvelopeHasher
         return new(requestHash, macInput, envelopeFingerprint, canonicalBytes.Length, replayHeaders.SessionId, replayHeaders.Mac);
     }
 
+    /// <summary>Creates the canonical MAC input before a request has a replay proof.</summary>
+    /// <param name="request">The unsigned replay request.</param>
+    /// <returns>The owned canonical MAC input.</returns>
+    /// <exception cref="ArgumentNullException">The request or canonical request is null.</exception>
+    /// <exception cref="HttpRemoteTransportException">Input is invalid or too large.</exception>
+    internal ReadOnlyMemory<byte> CreateSigningInput(HttpReplayRequest request)
+    {
+        ArgumentExceptionHelper.ThrowIfNull(request);
+        ArgumentExceptionHelper.ThrowIfNull(request.CanonicalRequest);
+        var replayPlan = CreateReplayPlan(request, _maximumCanonicalRequestBytes);
+        var sessionId = request.Operation == HttpReplayOperationKind.Connect
+            ? string.Empty
+            : request.ReplaySessionId ?? throw new HttpRemoteTransportException(HttpTransportFailureKind.ValidationRejected, HttpStatusCode.BadRequest);
+
+        var sessionBytes = request.Operation == HttpReplayOperationKind.Connect ? 0 : GetBoundedHeaderByteCount(sessionId, _maximumCanonicalRequestBytes);
+        var canonicalBytes = request.CanonicalRequest.Bytes;
+        if (canonicalBytes.Length > _maximumCanonicalRequestBytes)
+        {
+            throw new HttpRemoteTransportException(HttpTransportFailureKind.PayloadTooLarge, HttpStatusCode.RequestEntityTooLarge);
+        }
+
+        var requestHash = ComputeHash(canonicalBytes);
+        var macInputLength = GetMacInputLength(replayPlan, sessionBytes, requestHash.Length, _maximumCanonicalRequestBytes);
+        return CreateMacInput(request, requestHash, sessionId, macInputLength);
+    }
+
     /// <summary>Computes the replay MAC header value for a session secret and MAC input.</summary>
     /// <param name="sessionSecret">The session secret bytes.</param>
     /// <param name="macInput">The canonical replay MAC input.</param>

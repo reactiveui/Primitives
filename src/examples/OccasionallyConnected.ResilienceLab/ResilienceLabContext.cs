@@ -2,7 +2,7 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
-using ReactiveUI.Primitives.OccasionallyConnected.Crdt;
+using ReactiveUI.Primitives.OccasionallyConnected.Mergeable;
 using ReactiveUI.Primitives.OccasionallyConnected.Storage.Sqlite;
 
 namespace ReactiveUI.Primitives.OccasionallyConnected.ResilienceLab;
@@ -27,7 +27,7 @@ internal static class ResilienceLabContext
             new LoopbackTransportAdapter(ResilienceLabLoopback.CreateLoopbackOptions(
                 settings.Hub,
                 settings.ClientId,
-                CrdtLoopbackScenarioShape.VolatileLoopbackCapabilities)));
+                MergeableLoopbackScenarioShape.VolatileLoopbackCapabilities)));
     }
 
     /// <summary>Creates a context that owns a new SQLite store and the supplied transport.</summary>
@@ -42,7 +42,7 @@ internal static class ResilienceLabContext
             .UseClient(new(settings.ClientId, ResilienceLabLoopback.TenantId))
             .UseStore(store)
             .UseTransport(transport)
-            .UseSerializer(new CrdtPayloadSerializer(ResilienceLabLoopback.Bounds))
+            .UseSerializer(new MergeablePayloadSerializer(ResilienceLabLoopback.Bounds))
             .UseStoreInitialization(new(settings.ClientId, 1, RequireAuthenticatedEncryptionAtRest: false) { ClientId = settings.ClientId })
             .UseTimeProvider(TimeProvider.System)
             .UseOptions(OccasionallyConnectedOptions.Default with
@@ -58,15 +58,15 @@ internal static class ResilienceLabContext
     /// <param name="streamId">The stream identifier.</param>
     /// <param name="clientId">The client identifier.</param>
     /// <returns>The stream definition.</returns>
-    internal static StreamDefinition<CrdtState, CrdtInput> CreateDefinition(StreamId streamId, string clientId) =>
+    internal static StreamDefinition<MergeableState, MergeableInput> CreateDefinition(StreamId streamId, string clientId) =>
         new()
         {
             StreamId = streamId,
-            Projection = new CrdtLocalProjection(clientId, new CrdtState { Kind = CrdtKind.GCounter }, ResilienceLabLoopback.Bounds),
-            InputContractId = CrdtContracts.InputContractId,
-            StateContractId = CrdtContracts.StateContractId,
-            InputSchemaVersion = CrdtContracts.SchemaVersion,
-            StateSchemaVersion = CrdtContracts.SchemaVersion,
+            Projection = new MergeableLocalProjection(clientId, new MergeableState { Kind = MergeableKind.IncrementOnlyCounter }, ResilienceLabLoopback.Bounds),
+            InputContractId = MergeableContracts.InputContractId,
+            StateContractId = MergeableContracts.StateContractId,
+            InputSchemaVersion = MergeableContracts.SchemaVersion,
+            StateSchemaVersion = MergeableContracts.SchemaVersion,
             TypedInput = new() { BufferCapacity = ResilienceLabLoopback.Capacity, BufferCapacityBytes = OutboxBytes, MaximumRetainedInputBytes = OutboxBytes },
         };
 
@@ -75,8 +75,8 @@ internal static class ResilienceLabContext
     /// <param name="value">The client's counter component.</param>
     /// <returns>The CRDT input.</returns>
     [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
-    internal static CrdtInput CreateCounterInput(string clientId, long value) =>
-        CrdtInput.ForMutation(CrdtMutation.GCounterSet(clientId, value));
+    internal static MergeableInput CreateCounterInput(string clientId, long value) =>
+        MergeableInput.ForChange(MergeableChange.IncrementOnlyCounterSet(clientId, value));
 
     /// <summary>Creates a unique temporary directory for one scenario run.</summary>
     /// <param name="prefix">The directory name prefix.</param>

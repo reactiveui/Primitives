@@ -2,7 +2,7 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
-using ReactiveUI.Primitives.OccasionallyConnected.Crdt;
+using ReactiveUI.Primitives.OccasionallyConnected.Mergeable;
 using ReactiveUI.Primitives.OccasionallyConnected.Storage.Sqlite;
 using ReactiveUI.Primitives.OccasionallyConnected.Transport.Http;
 
@@ -52,7 +52,7 @@ internal static partial class DurableHttpLostAckScenario
                 transport);
 
         /// <summary>Gets the stream registration operation.</summary>
-        internal Func<OccasionallyConnectedContext, ClientSessionSettings, IOccasionallyConnectedStream<CrdtState, CrdtInput>> CreateStream { get; init; } =
+        internal Func<OccasionallyConnectedContext, ClientSessionSettings, IOccasionallyConnectedStream<MergeableState, MergeableInput>> CreateStream { get; init; } =
             static (context, settings) => context.GetOrCreateStream(CreateStreamDefinition(settings.ClientId, settings.SubscriptionId));
     }
 }

@@ -4,7 +4,7 @@
 
 using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
-using ReactiveUI.Primitives.OccasionallyConnected.Crdt;
+using ReactiveUI.Primitives.OccasionallyConnected.Mergeable;
 using ReactiveUI.Primitives.OccasionallyConnected.Storage.Sqlite;
 using ReactiveUI.Primitives.OccasionallyConnected.Transport.Http;
 
@@ -185,11 +185,10 @@ internal static partial class DurableHttpLostAckScenario
             .UseClient(new(clientId, TenantId))
             .UseStore(store)
             .UseTransport(transport)
-            .UseSerializer(new CrdtPayloadSerializer(CreateBounds()))
+            .UseSerializer(new MergeablePayloadSerializer(CreateBounds()))
             .UseStoreInitialization(CreateStoreInitialization(clientId, storeIdentity))
             .UseTimeProvider(clock)
             .UseOperationIdSource(operationIdSource)
-            .UseRetryRandomSource(FixedRetryRandomSource.Instance)
             .UseOptions(CreateOptions())
             .Build();
 
@@ -197,16 +196,16 @@ internal static partial class DurableHttpLostAckScenario
     /// <param name="clientId">The client id.</param>
     /// <param name="subscriptionId">The subscription id.</param>
     /// <returns>The result.</returns>
-    private static StreamDefinition<CrdtState, CrdtInput> CreateStreamDefinition(string clientId, SubscriptionId subscriptionId) =>
+    private static StreamDefinition<MergeableState, MergeableInput> CreateStreamDefinition(string clientId, SubscriptionId subscriptionId) =>
         new()
         {
             StreamId = Stream,
             SubscriptionId = subscriptionId,
-            Projection = new CrdtLocalProjection(clientId, new CrdtState { Kind = CrdtKind.GCounter }, CreateBounds()),
-            InputContractId = CrdtContracts.InputContractId,
-            StateContractId = CrdtContracts.StateContractId,
-            InputSchemaVersion = CrdtContracts.SchemaVersion,
-            StateSchemaVersion = CrdtContracts.SchemaVersion,
+            Projection = new MergeableLocalProjection(clientId, new MergeableState { Kind = MergeableKind.IncrementOnlyCounter }, CreateBounds()),
+            InputContractId = MergeableContracts.InputContractId,
+            StateContractId = MergeableContracts.StateContractId,
+            InputSchemaVersion = MergeableContracts.SchemaVersion,
+            StateSchemaVersion = MergeableContracts.SchemaVersion,
             Subscription = CreateSubscriptionOptions(subscriptionId),
             Publish = CreatePublishOptions(),
             TypedInput = new() { BufferCapacity = SmallCapacity, BufferCapacityBytes = PayloadBytes, MaximumRetainedInputBytes = TypedInputBytes },
@@ -622,7 +621,7 @@ internal static partial class DurableHttpLostAckScenario
         /// <param name="telemetry">The telemetry.</param>
         internal ClientSession(
             OccasionallyConnectedContext context,
-            IOccasionallyConnectedStream<CrdtState, CrdtInput> stream,
+            IOccasionallyConnectedStream<MergeableState, MergeableInput> stream,
             SqliteLocalStoreAdapter store,
             HttpClient httpClient,
             StreamTelemetry telemetry)
@@ -638,7 +637,7 @@ internal static partial class DurableHttpLostAckScenario
         internal OccasionallyConnectedContext Context { get; }
 
         /// <summary>Gets the stream.</summary>
-        internal IOccasionallyConnectedStream<CrdtState, CrdtInput> ConnectedStream { get; }
+        internal IOccasionallyConnectedStream<MergeableState, MergeableInput> ConnectedStream { get; }
 
         /// <summary>Gets the initialized durable local store owned by the context.</summary>
         internal SqliteLocalStoreAdapter Store { get; }
@@ -665,7 +664,7 @@ internal static partial class DurableHttpLostAckScenario
     internal sealed class StreamTelemetry : IDisposable
     {
         /// <summary>The remote.</summary>
-        private readonly RecordingObserver<RemoteMessage<CrdtInput>> _remote = new();
+        private readonly RecordingObserver<RemoteMessage<MergeableInput>> _remote = new();
 
         /// <summary>The operation states.</summary>
         private readonly RecordingObserver<SyncOperationStatus> _operationStates = new();
@@ -674,14 +673,14 @@ internal static partial class DurableHttpLostAckScenario
         private readonly RecordingObserver<OccasionallyConnectedFault> _faults = new();
 
         /// <summary>The local.</summary>
-        private readonly RecordingObserver<CrdtState> _local = new();
+        private readonly RecordingObserver<MergeableState> _local = new();
 
         /// <summary>The subscriptions.</summary>
         private readonly List<IDisposable> _subscriptions;
 
         /// <summary>Initializes a new instance of the <see cref="StreamTelemetry"/> class.</summary>
         /// <param name="stream">The stream.</param>
-        internal StreamTelemetry(IOccasionallyConnectedStream<CrdtState, CrdtInput> stream) =>
+        internal StreamTelemetry(IOccasionallyConnectedStream<MergeableState, MergeableInput> stream) =>
             _subscriptions =
             [
                 stream.Local.Subscribe(_local),
@@ -746,17 +745,6 @@ internal static partial class DurableHttpLostAckScenario
         /// <inheritdoc/>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public OperationId New() => operationId;
-    }
-
-    /// <summary>Deterministic retry jitter source.</summary>
-    private sealed class FixedRetryRandomSource : IRetryRandomSource
-    {
-        /// <summary>Gets the deterministic retry random source.</summary>
-        internal static FixedRetryRandomSource Instance { get; } = new();
-
-        /// <inheritdoc/>
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public double NextDouble() => 0;
     }
 
     /// <summary>Authorizes all lab operations for one trusted tenant.</summary>

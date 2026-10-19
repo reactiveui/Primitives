@@ -4,7 +4,7 @@
 
 using System.Globalization;
 using System.Runtime.CompilerServices;
-using ReactiveUI.Primitives.OccasionallyConnected.Crdt;
+using ReactiveUI.Primitives.OccasionallyConnected.Mergeable;
 using ReactiveUI.Primitives.OccasionallyConnected.Server;
 
 namespace ReactiveUI.Primitives.OccasionallyConnected.ResilienceLab;
@@ -37,13 +37,13 @@ internal static class ResilienceLabLoopback
     private const int MaximumStreams = 8;
 
     /// <summary>The finite CRDT component and element bound.</summary>
-    private const int CrdtComponents = 8;
+    private const int MergeableComponents = 8;
 
     /// <summary>The finite CRDT element and register byte bound.</summary>
-    private const int CrdtElementBytes = 64;
+    private const int MergeableElementBytes = 64;
 
     /// <summary>The finite CRDT encoded payload byte bound.</summary>
-    private const int CrdtEncodedBytes = 2048;
+    private const int MergeableEncodedBytes = 2048;
 
     /// <summary>The server idempotency retention in minutes.</summary>
     private const int IdempotencyRetentionMinutes = 30;
@@ -61,16 +61,16 @@ internal static class ResilienceLabLoopback
         DateTimeStyles.AssumeUniversal);
 
     /// <summary>Gets the finite CRDT bounds shared by the lab scenarios.</summary>
-    internal static CrdtBounds Bounds { get; } = new()
+    internal static MergeableBounds Bounds { get; } = new()
     {
-        MaximumCounterComponents = CrdtComponents,
-        MaximumDotBindings = CrdtComponents,
-        MaximumTombstones = CrdtComponents,
-        MaximumElements = CrdtComponents,
-        MaximumElementBytes = CrdtElementBytes,
-        MaximumRegisterBytes = CrdtElementBytes,
-        MaximumEncodedBytes = CrdtEncodedBytes,
-        MaximumClientIdUtf8Bytes = CrdtElementBytes,
+        MaximumCounterComponents = MergeableComponents,
+        MaximumDotBindings = MergeableComponents,
+        MaximumTombstones = MergeableComponents,
+        MaximumElements = MergeableComponents,
+        MaximumElementBytes = MergeableElementBytes,
+        MaximumRegisterBytes = MergeableElementBytes,
+        MaximumEncodedBytes = MergeableEncodedBytes,
+        MaximumClientIdUtf8Bytes = MergeableElementBytes,
     };
 
     /// <summary>Gets the guard timeout that bounds every lab wait.</summary>
@@ -92,8 +92,8 @@ internal static class ResilienceLabLoopback
         var registrations = new ServerConflictStreamRegistration[streams.Length];
         for (var index = 0; index < streams.Length; index++)
         {
-            registrations[index] = CrdtServerStreamRegistration.Create(
-                new() { StreamId = streams[index], Kind = CrdtKind.GCounter, Bounds = Bounds });
+            registrations[index] = MergeableServerStreamRegistration.Create(
+                new() { StreamId = streams[index], Kind = MergeableKind.IncrementOnlyCounter, Bounds = Bounds });
         }
 
         return new()
@@ -158,7 +158,7 @@ internal static class ResilienceLabLoopback
             MaximumCompletedOperations = MaximumEvents,
             MaximumLogicalBatchBytes = BatchBytes,
             MaximumMetadataEntries = MaximumStreams,
-            MaximumStringBytes = CrdtEncodedBytes,
+            MaximumStringBytes = MergeableEncodedBytes,
         };
 
     /// <summary>Creates a trusted client connect request for one delivery guarantee.</summary>
@@ -181,7 +181,7 @@ internal static class ResilienceLabLoopback
         int operationSeed,
         StreamId streamId,
         long sequence,
-        CrdtMutation mutation) =>
+        MergeableChange mutation) =>
         new(
             CreateGuid(batchSeed),
             [
@@ -192,7 +192,7 @@ internal static class ResilienceLabLoopback
                     ClientSequence = sequence,
                     TimestampUtc = InitialTime,
                     Type = SyncOperationType.Update,
-                    Payload = CrdtServerPayloads.CreateInput(CrdtInput.ForMutation(mutation), Bounds),
+                    Payload = MergeableServerPayloads.CreateInput(MergeableInput.ForChange(mutation), Bounds),
                     Policy = OperationPolicy.Default,
                 },
             ]);

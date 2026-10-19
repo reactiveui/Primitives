@@ -10,7 +10,7 @@ namespace ReactiveUI.Primitives.OccasionallyConnected;
 
 /// <summary>Computes bounded decorrelated-jitter retry decisions for durable operations.</summary>
 [System.Diagnostics.DebuggerDisplay("MinimumDelay = {_options.MinimumDelay}, MaximumDelay = {_options.MaximumDelay}")]
-public sealed class RetryPolicy : IRetryPolicy
+internal sealed class RetryPolicy : IRetryPolicy
 {
     /// <summary>The multiplier used by decorrelated jitter.</summary>
     private const int DecorrelatedJitterMultiplier = 3;
@@ -28,14 +28,14 @@ public sealed class RetryPolicy : IRetryPolicy
     private readonly TimeProvider _timeProvider;
 
     /// <summary>Initializes a new instance of the <see cref="RetryPolicy"/> class.</summary>
-    public RetryPolicy()
+    internal RetryPolicy()
         : this(RetryOptions.Default, TimeProvider.System, DefaultRandomSource)
     {
     }
 
     /// <summary>Initializes a new instance of the <see cref="RetryPolicy"/> class.</summary>
     /// <param name="options">The retry options.</param>
-    public RetryPolicy(RetryOptions options)
+    internal RetryPolicy(RetryOptions options)
         : this(options, TimeProvider.System, DefaultRandomSource)
     {
     }
@@ -44,7 +44,7 @@ public sealed class RetryPolicy : IRetryPolicy
     /// <param name="options">The retry options.</param>
     /// <param name="timeProvider">The time provider used to compute due times.</param>
     /// <param name="randomSource">The deterministic random source used for jitter.</param>
-    public RetryPolicy(
+    internal RetryPolicy(
         RetryOptions options,
         TimeProvider timeProvider,
         IRetryRandomSource randomSource)

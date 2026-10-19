@@ -718,6 +718,9 @@ public sealed partial class WebSocketRemoteTransportAdapterTests
         /// <summary>Gets the most recent message type received by the peer.</summary>
         internal string? LastMessageType => _messageTypes.LastOrDefault();
 
+        /// <summary>Gets the host-supplied authorization header received during the socket upgrade.</summary>
+        internal string? AuthorizationHeader { get; private set; }
+
         /// <summary>Gets the task that completes when the peer stops accepting the client connection.</summary>
         internal Task Completion => _acceptTask;
 
@@ -777,6 +780,7 @@ public sealed partial class WebSocketRemoteTransportAdapterTests
             try
             {
                 var context = await _listener.GetContextAsync().ConfigureAwait(false);
+                AuthorizationHeader = context.Request.Headers[nameof(HttpRequestHeader.Authorization)];
                 var webSocket = (await context.AcceptWebSocketAsync(null).ConfigureAwait(false)).WebSocket;
                 while (!_shutdown.IsCancellationRequested && webSocket.State == WebSocketState.Open)
                 {

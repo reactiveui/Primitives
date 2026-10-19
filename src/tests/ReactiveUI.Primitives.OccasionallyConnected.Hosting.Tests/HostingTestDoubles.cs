@@ -118,6 +118,22 @@ internal static class HostingTestDoubles
             }
         }
 
+        /// <summary>Delivers a terminal failure from the monitored source.</summary>
+        /// <param name="error">The source failure.</param>
+        internal void Fail(Exception error)
+        {
+            IObserver<SyncState>[] observers;
+            lock (_gate)
+            {
+                observers = [.. _observers];
+            }
+
+            foreach (var observer in observers)
+            {
+                observer.OnError(error);
+            }
+        }
+
         /// <summary>Removes an observer.</summary>
         /// <param name="observer">The observer.</param>
         private void Remove(IObserver<SyncState> observer)

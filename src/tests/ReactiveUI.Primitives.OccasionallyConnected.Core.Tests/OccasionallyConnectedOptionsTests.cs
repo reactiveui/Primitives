@@ -34,6 +34,16 @@ public sealed class OccasionallyConnectedOptionsTests
     /// <summary>The documented default outbox byte capacity.</summary>
     private const long DefaultOutboxBytes = 64L * 1024 * 1024;
 
+    /// <summary>Verifies a directly constructed options record is valid and complete.</summary>
+    /// <returns>The asynchronous assertions.</returns>
+    [Test]
+    public async Task ConstructorCreatesACompleteValidConfiguration()
+    {
+        var options = new OccasionallyConnectedOptions();
+        options.Validate();
+        await Assert.That(options).IsEqualTo(OccasionallyConnectedOptions.Default);
+    }
+
     /// <summary>Verifies the shared default is complete and valid.</summary>
     /// <returns>A task that represents the asynchronous assertion work.</returns>
     [Test]
