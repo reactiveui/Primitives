@@ -10,10 +10,10 @@
   </PropertyGroup>
 
   <!-- Alias Lock to the dedicated System.Threading.Lock on .NET 9+, and to a plain object elsewhere. -->
-  <ItemGroup Condition="$([MSBuild]::IsTargetFrameworkCompatible('$(TargetFramework)', 'net9.0'))">
+  <ItemGroup Condition="$([MSBuild]::IsTargetFrameworkCompatible('$(TargetFramework)', 'net10.0'))">
     <Using Include="System.Threading.Lock" Alias="Lock"/>
   </ItemGroup>
-  <ItemGroup Condition="!$([MSBuild]::IsTargetFrameworkCompatible('$(TargetFramework)', 'net9.0'))">
+  <ItemGroup Condition="!$([MSBuild]::IsTargetFrameworkCompatible('$(TargetFramework)', 'net10.0'))">
     <Using Include="System.Object" Alias="Lock"/>
   </ItemGroup>
 

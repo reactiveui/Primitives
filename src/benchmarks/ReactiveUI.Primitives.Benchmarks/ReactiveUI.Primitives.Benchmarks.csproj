@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFrameworks>net8.0;net10.0;net11.0</TargetFrameworks>
+    <TargetFrameworks>net10.0;net11.0</TargetFrameworks>
     <!-- Pass -p:BenchmarkPlatform=windows or unix to compile the other platform's configs. -->
     <BenchmarkPlatform Condition="'$(BenchmarkPlatform)' == '' and $([MSBuild]::IsOsPlatform('Windows'))">windows</BenchmarkPlatform>
     <BenchmarkPlatform Condition="'$(BenchmarkPlatform)' == ''">unix</BenchmarkPlatform>

@@ -62,7 +62,7 @@ path, so you can scope a run to a single library while iterating.
     Use `generate-publicapi.ps1`. This repo's Windows/Apple legs are generated on the
     dockur Windows guest (`~/dockur-windows`); the repo is shared in-guest as
     `\\host.lan\Data\rxui\Primitives`.
-  * **Linux** builds `net8.0+`, Android, and the Windows-desktop TFMs cross-platform
+  * **Linux** builds `net10.0+`, Android, and the Windows-desktop TFMs cross-platform
     (the script sets `EnableWindowsTargeting=true`). It cannot produce Apple
     (`-ios` / `-maccatalyst` / `-tvos` / `-macos`) baselines.
   * **macOS** additionally builds the Apple TFMs.

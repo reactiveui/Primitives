@@ -52,33 +52,7 @@
             ]
         },
         {
-            "description": "These packages carry one pin per target framework, each conditioned on the framework it belongs to, so an update has to stay inside its own band. Offered the next major, a net8 pin would resolve a net10 package behind a net8 condition.",
-            "matchManagers": [
-                "nuget"
-            ],
-            "matchPackageNames": [
-                "/^Microsoft\\.AspNetCore\\./",
-                "/^Microsoft\\.Extensions\\./",
-                "/^Microsoft\\.Maui\\./"
-            ],
-            "matchCurrentVersion": "/^8\\./",
-            "allowedVersions": "<9.0.0"
-        },
-        {
-            "description": "The same, for the net9 band.",
-            "matchManagers": [
-                "nuget"
-            ],
-            "matchPackageNames": [
-                "/^Microsoft\\.AspNetCore\\./",
-                "/^Microsoft\\.Extensions\\./",
-                "/^Microsoft\\.Maui\\./"
-            ],
-            "matchCurrentVersion": "/^9\\./",
-            "allowedVersions": "<10.0.0"
-        },
-        {
-            "description": "The same, for the net10 band.",
+            "description": "These packages carry one pin per target framework, each conditioned on the framework it belongs to, so an update has to stay inside its own band. Offered the next major, a net10 pin would resolve a net11 package behind a net10 condition. This rule covers the net10 band.",
             "matchManagers": [
                 "nuget"
             ],

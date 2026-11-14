@@ -340,17 +340,17 @@ R3Async types.
 
 ## Target frameworks
 
-A target framework (TFM) is the .NET version and platform a build targets, such as `net8.0`. Most packages share one
-list: `net8.0`, `net9.0`, `net10.0`, `net11.0`, `net462`, `net472`, `net48` and `net481`. The repository calls that list
+A target framework (TFM) is the .NET version and platform a build targets, such as `net10.0`. Most packages share one
+list: `net10.0`, `net11.0`, `net462`, `net47`, `net471`, `net472`, `net48` and `net481`. The repository calls that list
 `$(LibraryTargetFrameworks)` and sets it in `src/Directory.Build.props`.
 
 | Package | Target frameworks |
 |---------|-------------------|
 | `ReactiveUI.Disposables`, `ReactiveUI.Primitives.Core`, `ReactiveUI.Primitives.Async.Core`, `ReactiveUI.Primitives.Async`, `ReactiveUI.Primitives.Async.Reactive` | The shared list above. |
 | `ReactiveUI.Primitives`, `ReactiveUI.Primitives.Reactive` | The shared list, plus `net10.0-android` and `net11.0-android`, plus the Apple TFMs `net10.0-ios`, `net11.0-ios`, `net10.0-tvos`, `net11.0-tvos`, `net10.0-macos`, `net11.0-macos`, `net10.0-maccatalyst` and `net11.0-maccatalyst`. The mobile and Apple TFMs build on Windows or macOS. |
-| `ReactiveUI.Primitives.Wpf`, `ReactiveUI.Primitives.Wpf.Reactive`, `ReactiveUI.Primitives.WinForms`, `ReactiveUI.Primitives.WinForms.Reactive` | `net8.0-windows`, `net9.0-windows`, `net10.0-windows`, `net11.0-windows`, `net462`, `net472`, `net48`, `net481`. |
-| `ReactiveUI.Primitives.WinUI`, `ReactiveUI.Primitives.WinUI.Reactive` | `net8.0-windows10.0.19041.0`, `net9.0-windows10.0.19041.0`, `net10.0-windows10.0.19041.0`, `net11.0-windows10.0.19041.0`. |
-| `ReactiveUI.Primitives.Blazor`, `ReactiveUI.Primitives.Blazor.Reactive`, `ReactiveUI.Primitives.Avalonia`, `ReactiveUI.Primitives.Avalonia.Reactive` | `net8.0`, `net9.0`, `net10.0`, `net11.0`. |
+| `ReactiveUI.Primitives.Wpf`, `ReactiveUI.Primitives.Wpf.Reactive`, `ReactiveUI.Primitives.WinForms`, `ReactiveUI.Primitives.WinForms.Reactive` | `net10.0-windows`, `net11.0-windows`, `net462`, `net47`, `net471`, `net472`, `net48`, `net481`. |
+| `ReactiveUI.Primitives.WinUI`, `ReactiveUI.Primitives.WinUI.Reactive` | `net10.0-windows10.0.19041.0`, `net11.0-windows10.0.19041.0`. |
+| `ReactiveUI.Primitives.Blazor`, `ReactiveUI.Primitives.Blazor.Reactive`, `ReactiveUI.Primitives.Avalonia`, `ReactiveUI.Primitives.Avalonia.Reactive` | `net10.0`, `net11.0`. |
 | `ReactiveUI.Primitives.Maui`, `ReactiveUI.Primitives.Maui.Reactive` | `net10.0`, `net11.0`. |
 | `ReactiveUI.Primitives.ObservableEvents`, `ReactiveUI.Primitives.R3Bridge.Generator` | `netstandard2.0`. |
 
