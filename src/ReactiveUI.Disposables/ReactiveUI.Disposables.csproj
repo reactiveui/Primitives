@@ -12,8 +12,4 @@
     <InternalsVisibleTo Include="ReactiveUI.Primitives.Blazor.Tests"/>
   </ItemGroup>
 
-  <ItemGroup Condition="$(TargetFramework.EndsWith('net462'))">
-    <PackageReference Include="System.ValueTuple"/>
-  </ItemGroup>
-
 </Project>

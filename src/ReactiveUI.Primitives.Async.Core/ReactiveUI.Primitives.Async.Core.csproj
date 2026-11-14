@@ -11,10 +11,6 @@
     <PackageDescription>Type-agnostic core of ReactiveUI.Primitives.Async, shared by the lean and Reactive leaves.</PackageDescription>
   </PropertyGroup>
 
-  <ItemGroup Condition="'$(TargetFramework)' == 'net462'">
-    <PackageReference Include="System.ValueTuple"/>
-  </ItemGroup>
-
   <ItemGroup Condition="$(TargetFramework.StartsWith('net4'))">
     <PackageReference Include="Microsoft.Bcl.TimeProvider"/>
     <PackageReference Include="System.Threading.Channels"/>

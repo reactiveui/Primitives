@@ -313,13 +313,13 @@ parameterless events and `System.Reactive.Unit` for `.Reactive` or standalone Sy
 
 - `ReactiveUI.Disposables`, `ReactiveUI.Primitives.Core`, `ReactiveUI.Primitives.Async.Core`,
   `ReactiveUI.Primitives.Async`, and `ReactiveUI.Primitives.Async.Reactive` target `net10.0`,
-  `net11.0`, `net462`, `net47`, `net471`, `net472`, `net48`, and `net481`.
+  `net11.0`, `net47`, `net471`, `net472`, `net48`, and `net481`.
 - `ReactiveUI.Primitives.ObservableEvents` and `ReactiveUI.Primitives.R3Bridge.Generator` target `netstandard2.0`.
 - `ReactiveUI.Primitives` and `ReactiveUI.Primitives.Reactive` target the same eight general-library TFMs plus
   `net10.0-android` and `net11.0-android`; on Windows or macOS they also target net10/net11 iOS, tvOS, macOS, and Mac
   Catalyst for platform sequencers.
 - WPF and WinForms packages, including `.Reactive` variants, target `net10.0-windows` and `net11.0-windows` plus
-  `net462`, `net47`, `net471`, `net472`, `net48`, and `net481`.
+  `net47`, `net471`, `net472`, `net48`, and `net481`.
 - WinUI packages, including `.Reactive` variants, target `net10.0-windows10.0.19041.0` and
   `net11.0-windows10.0.19041.0`.
 - Avalonia packages, including `.Reactive` variants, target `net10.0` and `net11.0` and reference
