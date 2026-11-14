@@ -16,6 +16,7 @@ jobs:
             productNamespacePrefix: ReactiveUI.Primitives
             solutionFile: ReactiveUI.Primitives.slnf
             installWorkloads: true
+            testProjects: tests/**/*.csproj
             minverMinimumMajorMinor: '0.1'
             sonarProjectKey: reactiveui_Primitives
             sonarOrganization: reactiveui

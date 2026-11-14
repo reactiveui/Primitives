@@ -23,6 +23,7 @@ jobs:
       # The Uno projects compile the WinUI sequencer source, which the WinUI tests cover; the filter has no tests.
       msbuildPerformTests: false
       installWorkloads: true
+      testProjects: tests/**/*.csproj
       minverMinimumMajorMinor: '0.1'
       testTimeout: '15m'
     secrets:
