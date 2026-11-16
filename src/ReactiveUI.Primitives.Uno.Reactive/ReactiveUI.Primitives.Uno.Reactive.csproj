@@ -1,4 +1,4 @@
-<Project Sdk="Uno.Sdk">
+<Project Sdk="Uno.Sdk/7.0.22">
 
   <!-- System.Reactive-flavoured Uno leaf: the WinUI.Reactive scheduler compiled for every Uno head.
        REACTIVE_SHIM + the System.Reactive dependency come from Directory.Build.props via the name suffix. -->

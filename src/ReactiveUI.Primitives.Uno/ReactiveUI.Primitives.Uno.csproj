@@ -1,4 +1,4 @@
-<Project Sdk="Uno.Sdk">
+<Project Sdk="Uno.Sdk/7.0.22">
 
   <!-- The WinUI dispatcher queue sequencer, compiled for every Uno head. Uno.WinUI and the Windows App SDK both
        declare Microsoft.UI.Dispatching.DispatcherQueue, so the WinUI source builds unchanged. -->

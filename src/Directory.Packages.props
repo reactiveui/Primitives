@@ -55,7 +55,7 @@
     <PackageVersion Include="Avalonia" Version="$(AvaloniaVersion)"/>
     <PackageVersion Include="Microsoft.Bcl.TimeProvider" Version="10.0.15"/>
     <PackageVersion Include="Microsoft.WindowsAppSDK" Version="2.6.5"/>
-    <!-- The Uno.WinUI release Uno.Sdk in global.json pins; the Uno projects reference it explicitly. -->
+    <!-- The Uno.WinUI release used by the project SDK; the Uno projects reference it explicitly. -->
     <PackageVersion Include="Uno.WinUI" Version="7.0.65"/>
   </ItemGroup>
   <!-- .NET Framework legs -->
