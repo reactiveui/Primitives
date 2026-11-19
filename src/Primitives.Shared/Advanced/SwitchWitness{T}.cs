@@ -95,10 +95,7 @@ public sealed class SwitchWitness<T> : IDisposable
             IsInnerActive = true;
         }
 
-        var subscription = source.Subscribe(
-            value => OnNext(current, value),
-            error => OnError(current, error),
-            () => OnCompleted(current));
+        var subscription = source.Subscribe(new InnerWitness(this, current));
 
         // Only the newest subscription is kept, whichever order overlapping subscriptions return in.
         IDisposable? displaced;
@@ -234,5 +231,23 @@ public sealed class SwitchWitness<T> : IDisposable
         /// <inheritdoc/>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Drain() => _ = Owner._delivery.DrainTo(Owner.Observer);
+    }
+
+    /// <summary>Receives the notifications of one source and passes them on, tagged with the version the source was subscribed at.</summary>
+    /// <param name="parent">The coordinator.</param>
+    /// <param name="version">The version of the source.</param>
+    private sealed class InnerWitness(SwitchWitness<T> parent, int version) : IObserver<T>
+    {
+        /// <inheritdoc/>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void OnNext(T value) => parent.OnNext(version, value);
+
+        /// <inheritdoc/>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void OnError(Exception error) => parent.OnError(version, error);
+
+        /// <inheritdoc/>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void OnCompleted() => parent.OnCompleted(version);
     }
 }

@@ -30,6 +30,12 @@ public sealed class ChainWitness<T> : IDisposable
     /// <summary>Whether a terminal notification has been queued or the witness disposed; written under the gate.</summary>
     private bool _done;
 
+    /// <summary>The inner sources that have completed, so a subscribe can tell its source ended before it returned.</summary>
+    private int _completions;
+
+    /// <summary>The observer every inner source is subscribed with; the sources run one at a time, so one serves them all.</summary>
+    private Arm? _arm;
+
     /// <summary>Initializes a new instance of the <see cref="ChainWitness{T}"/> class.</summary>
     /// <param name="observer">The downstream observer.</param>
     public ChainWitness(IObserver<T> observer) => Observer = observer;
@@ -133,6 +139,7 @@ public sealed class ChainWitness<T> : IDisposable
     /// <summary>Marks the active inner source complete.</summary>
     private void OnInnerCompleted()
     {
+        _ = Interlocked.Increment(ref _completions);
         lock (_gate)
         {
             IsActive = false;
@@ -211,7 +218,17 @@ public sealed class ChainWitness<T> : IDisposable
             return;
         }
 
-        Subscriptions.Add(next.Subscribe(OnInnerNext, OnError, OnInnerCompleted));
+        // One observer serves every source, because they run one at a time. A source that ended during its own subscribe has
+        // nothing left to dispose, so its subscription is released now and does not wait for the whole chain to end.
+        var completedBefore = Volatile.Read(ref _completions);
+        var subscription = next.Subscribe(_arm ??= new(this));
+        if (Volatile.Read(ref _completions) != completedBefore)
+        {
+            subscription.Dispose();
+            return;
+        }
+
+        Subscriptions.Add(subscription);
     }
 
     /// <summary>Drains this witness's queued notifications for the delivery gate.</summary>
@@ -221,5 +238,22 @@ public sealed class ChainWitness<T> : IDisposable
         /// <inheritdoc/>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Drain() => _ = Owner._delivery.DrainTo(Owner.Observer);
+    }
+
+    /// <summary>Receives the notifications of whichever inner source is running and passes them to the witness.</summary>
+    /// <param name="parent">The witness.</param>
+    private sealed class Arm(ChainWitness<T> parent) : IObserver<T>
+    {
+        /// <inheritdoc/>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void OnNext(T value) => parent.OnInnerNext(value);
+
+        /// <inheritdoc/>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void OnError(Exception error) => parent.OnError(error);
+
+        /// <inheritdoc/>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void OnCompleted() => parent.OnInnerCompleted();
     }
 }

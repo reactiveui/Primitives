@@ -57,7 +57,7 @@ public sealed class RepeatSourceSignal<T> : IRequireCurrentThread<T>
     /// <returns>The repeat coordinator.</returns>
     private RepeatSourceCoordinator<T> SubscribeCore(IObserver<T> observer, IDisposable cancel)
     {
-        RepeatSourceCoordinator<T> coordinator = new(_source, _repeatCount, new GuardedWitness<T>(observer, cancel));
+        RepeatSourceCoordinator<T> coordinator = new(_source, _repeatCount, new GuardedWitness<T>(observer, cancel), cancel as IsDisposed);
         return coordinator.Run();
     }
 }
