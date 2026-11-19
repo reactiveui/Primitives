@@ -2,6 +2,9 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Diagnostics.CodeAnalysis;
+using System.Runtime.CompilerServices;
+
 #if REACTIVE_SHIM
 namespace ReactiveUI.Primitives.Reactive;
 #else
@@ -18,16 +21,14 @@ public static partial class LinqExtensions
     /// <param name="allowNullable">Reserved for nullable overload resolution.</param>
     /// <returns>A disposable that cancels the subscription.</returns>
     /// <exception cref="ArgumentNullException"><paramref name="source"/> or <paramref name="observer"/> is <see langword="null"/>.</exception>
-    [System.Runtime.CompilerServices.OverloadResolutionPriority(1)]
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [OverloadResolutionPriority(1)]
     public static IDisposable SubscribeSafe<T>(
         IObservable<T?> source,
         IObserver<T> observer,
         params bool[] allowNullable)
-        where T : class
-    {
-        _ = allowNullable;
-        return SubscribeSafeCore(source, (IObserver<T?>)observer);
-    }
+        where T : class =>
+        SubscribeSafeWitness.Subscribe(source, observer, allowNullable);
 
     /// <summary>Subscribes a nullable value observer with downstream exception protection from static-call syntax.</summary>
     /// <typeparam name="T">The non-nullable value type.</typeparam>
@@ -36,16 +37,14 @@ public static partial class LinqExtensions
     /// <param name="allowNullable">Reserved for nullable overload resolution.</param>
     /// <returns>A disposable that cancels the subscription.</returns>
     /// <exception cref="ArgumentNullException"><paramref name="source"/> or <paramref name="observer"/> is <see langword="null"/>.</exception>
-    [System.Runtime.CompilerServices.OverloadResolutionPriority(1)]
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [OverloadResolutionPriority(1)]
     public static IDisposable SubscribeSafe<T>(
         IObservable<T?> source,
         IObserver<T?> observer,
         params bool[] allowNullable)
-        where T : struct
-    {
-        _ = allowNullable;
-        return SubscribeSafeCore(source, observer);
-    }
+        where T : struct =>
+        SubscribeSafeWitness.Subscribe(source, observer, allowNullable);
 
     /// <summary>Subscribes nullable reference callbacks with downstream exception protection from static-call syntax.</summary>
     /// <typeparam name="T">The non-nullable reference value type.</typeparam>
@@ -55,17 +54,15 @@ public static partial class LinqExtensions
     /// <param name="allowNullable">Reserved for nullable overload resolution.</param>
     /// <returns>A disposable that cancels the subscription.</returns>
     /// <exception cref="ArgumentNullException">A required argument is <see langword="null"/>.</exception>
-    [System.Runtime.CompilerServices.OverloadResolutionPriority(1)]
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [OverloadResolutionPriority(1)]
     public static IDisposable SubscribeSafe<T>(
         IObservable<T?> source,
         Action<T> onNext,
         Action<Exception> onError,
         params bool[] allowNullable)
-        where T : class
-    {
-        _ = allowNullable;
-        return SubscribeSafeCore(source, Witness.Create<T?>(value => onNext(value!), onError));
-    }
+        where T : class =>
+        SubscribeSafeWitness.Subscribe(source, onNext, onError, allowNullable);
 
     /// <summary>Subscribes nullable value callbacks with downstream exception protection from static-call syntax.</summary>
     /// <typeparam name="T">The non-nullable value type.</typeparam>
@@ -75,17 +72,15 @@ public static partial class LinqExtensions
     /// <param name="allowNullable">Reserved for nullable overload resolution.</param>
     /// <returns>A disposable that cancels the subscription.</returns>
     /// <exception cref="ArgumentNullException">A required argument is <see langword="null"/>.</exception>
-    [System.Runtime.CompilerServices.OverloadResolutionPriority(1)]
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [OverloadResolutionPriority(1)]
     public static IDisposable SubscribeSafe<T>(
         IObservable<T?> source,
         Action<T?> onNext,
         Action<Exception> onError,
         params bool[] allowNullable)
-        where T : struct
-    {
-        _ = allowNullable;
-        return SubscribeSafeCore(source, Witness.Create(onNext, onError));
-    }
+        where T : struct =>
+        SubscribeSafeWitness.Subscribe(source, onNext, onError, allowNullable);
 
     /// <summary>Subscribes nullable reference callbacks with downstream exception protection from static-call syntax.</summary>
     /// <typeparam name="T">The non-nullable reference value type.</typeparam>
@@ -96,18 +91,16 @@ public static partial class LinqExtensions
     /// <param name="allowNullable">Reserved for nullable overload resolution.</param>
     /// <returns>A disposable that cancels the subscription.</returns>
     /// <exception cref="ArgumentNullException">A required argument is <see langword="null"/>.</exception>
-    [System.Runtime.CompilerServices.OverloadResolutionPriority(1)]
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [OverloadResolutionPriority(1)]
     public static IDisposable SubscribeSafe<T>(
         IObservable<T?> source,
         Action<T> onNext,
         Action<Exception> onError,
         Action onCompleted,
         params bool[] allowNullable)
-        where T : class
-    {
-        _ = allowNullable;
-        return SubscribeSafeCore(source, Witness.Create<T?>(value => onNext(value!), onError, onCompleted));
-    }
+        where T : class =>
+        SubscribeSafeWitness.Subscribe(source, onNext, onError, onCompleted, allowNullable);
 
     /// <summary>Subscribes nullable value callbacks with downstream exception protection from static-call syntax.</summary>
     /// <typeparam name="T">The non-nullable value type.</typeparam>
@@ -118,18 +111,16 @@ public static partial class LinqExtensions
     /// <param name="allowNullable">Reserved for nullable overload resolution.</param>
     /// <returns>A disposable that cancels the subscription.</returns>
     /// <exception cref="ArgumentNullException">A required argument is <see langword="null"/>.</exception>
-    [System.Runtime.CompilerServices.OverloadResolutionPriority(1)]
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [OverloadResolutionPriority(1)]
     public static IDisposable SubscribeSafe<T>(
         IObservable<T?> source,
         Action<T?> onNext,
         Action<Exception> onError,
         Action onCompleted,
         params bool[] allowNullable)
-        where T : struct
-    {
-        _ = allowNullable;
-        return SubscribeSafeCore(source, Witness.Create(onNext, onError, onCompleted));
-    }
+        where T : struct =>
+        SubscribeSafeWitness.Subscribe(source, onNext, onError, onCompleted, allowNullable);
 
     /// <summary>Subscribes a nullable reference value callback with downstream exception protection from static-call syntax.</summary>
     /// <typeparam name="T">The non-nullable reference value type.</typeparam>
@@ -139,16 +130,14 @@ public static partial class LinqExtensions
     /// <returns>A disposable that cancels the subscription.</returns>
     /// <exception cref="ArgumentNullException">A required argument is <see langword="null"/>.</exception>
     /// <remarks>With no error handler, a source error is rethrown to the caller of the source's <c>OnError</c>.</remarks>
-    [System.Runtime.CompilerServices.OverloadResolutionPriority(1)]
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [OverloadResolutionPriority(1)]
     public static IDisposable SubscribeSafe<T>(
         IObservable<T?> source,
         Action<T> onNext,
         params bool[] allowNullable)
-        where T : class
-    {
-        _ = allowNullable;
-        return SubscribeSafeCore(source, Witness.Create<T?>(value => onNext(value!)));
-    }
+        where T : class =>
+        SubscribeSafeWitness.Subscribe(source, onNext, allowNullable);
 
     /// <summary>Subscribes a nullable value callback with downstream exception protection from static-call syntax.</summary>
     /// <typeparam name="T">The non-nullable value type.</typeparam>
@@ -158,16 +147,14 @@ public static partial class LinqExtensions
     /// <returns>A disposable that cancels the subscription.</returns>
     /// <exception cref="ArgumentNullException">A required argument is <see langword="null"/>.</exception>
     /// <remarks>With no error handler, a source error is rethrown to the caller of the source's <c>OnError</c>.</remarks>
-    [System.Runtime.CompilerServices.OverloadResolutionPriority(1)]
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [OverloadResolutionPriority(1)]
     public static IDisposable SubscribeSafe<T>(
         IObservable<T?> source,
         Action<T?> onNext,
         params bool[] allowNullable)
-        where T : struct
-    {
-        _ = allowNullable;
-        return SubscribeSafeCore(source, Witness.Create(onNext));
-    }
+        where T : struct =>
+        SubscribeSafeWitness.Subscribe(source, onNext, allowNullable);
 
     /// <summary>Subscribes non-nullable value callbacks with downstream exception protection from static-call syntax.</summary>
     /// <typeparam name="T">The non-nullable value type.</typeparam>
@@ -177,16 +164,14 @@ public static partial class LinqExtensions
     /// <returns>A disposable that cancels the subscription.</returns>
     /// <exception cref="ArgumentNullException">A required argument is <see langword="null"/>.</exception>
     /// <remarks>With no error handler, a source error is rethrown to the caller of the source's <c>OnError</c>.</remarks>
-    [System.Runtime.CompilerServices.OverloadResolutionPriority(1)]
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [OverloadResolutionPriority(1)]
     public static IDisposable SubscribeSafe<T>(
         IObservable<T> source,
         Action<T> onNext,
         params byte[] allowValueType)
-        where T : struct
-    {
-        _ = allowValueType;
-        return SubscribeSafeCore(source, Witness.Create(onNext));
-    }
+        where T : struct =>
+        SubscribeSafeWitness.Subscribe(source, onNext, allowValueType);
 
     /// <summary>Subscribes a non-nullable value observer with downstream exception protection from static-call syntax.</summary>
     /// <typeparam name="T">The non-nullable value type.</typeparam>
@@ -195,16 +180,14 @@ public static partial class LinqExtensions
     /// <param name="allowValueType">Reserved for value-type overload resolution.</param>
     /// <returns>A disposable that cancels the subscription.</returns>
     /// <exception cref="ArgumentNullException"><paramref name="source"/> or <paramref name="observer"/> is <see langword="null"/>.</exception>
-    [System.Runtime.CompilerServices.OverloadResolutionPriority(1)]
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [OverloadResolutionPriority(1)]
     public static IDisposable SubscribeSafe<T>(
         IObservable<T> source,
         IObserver<T> observer,
         params byte[] allowValueType)
-        where T : struct
-    {
-        _ = allowValueType;
-        return SubscribeSafeCore(source, observer);
-    }
+        where T : struct =>
+        SubscribeSafeWitness.Subscribe(source, observer, allowValueType);
 
     /// <summary>Subscribes non-nullable value callbacks with downstream exception protection from static-call syntax.</summary>
     /// <typeparam name="T">The non-nullable value type.</typeparam>
@@ -214,17 +197,15 @@ public static partial class LinqExtensions
     /// <param name="allowValueType">Reserved for value-type overload resolution.</param>
     /// <returns>A disposable that cancels the subscription.</returns>
     /// <exception cref="ArgumentNullException">A required argument is <see langword="null"/>.</exception>
-    [System.Runtime.CompilerServices.OverloadResolutionPriority(1)]
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [OverloadResolutionPriority(1)]
     public static IDisposable SubscribeSafe<T>(
         IObservable<T> source,
         Action<T> onNext,
         Action<Exception> onError,
         params byte[] allowValueType)
-        where T : struct
-    {
-        _ = allowValueType;
-        return SubscribeSafeCore(source, Witness.Create(onNext, onError));
-    }
+        where T : struct =>
+        SubscribeSafeWitness.Subscribe(source, onNext, onError, allowValueType);
 
     /// <summary>Subscribes non-nullable value callbacks with downstream exception protection from static-call syntax.</summary>
     /// <typeparam name="T">The non-nullable value type.</typeparam>
@@ -235,18 +216,16 @@ public static partial class LinqExtensions
     /// <param name="allowValueType">Reserved for value-type overload resolution.</param>
     /// <returns>A disposable that cancels the subscription.</returns>
     /// <exception cref="ArgumentNullException">A required argument is <see langword="null"/>.</exception>
-    [System.Runtime.CompilerServices.OverloadResolutionPriority(1)]
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [OverloadResolutionPriority(1)]
     public static IDisposable SubscribeSafe<T>(
         IObservable<T> source,
         Action<T> onNext,
         Action<Exception> onError,
         Action onCompleted,
         params byte[] allowValueType)
-        where T : struct
-    {
-        _ = allowValueType;
-        return SubscribeSafeCore(source, Witness.Create(onNext, onError, onCompleted));
-    }
+        where T : struct =>
+        SubscribeSafeWitness.Subscribe(source, onNext, onError, onCompleted, allowValueType);
 
     /// <summary>Subscribes nullable reference error callbacks with downstream exception protection from static-call syntax.</summary>
     /// <typeparam name="T">The non-nullable reference value type.</typeparam>
@@ -255,16 +234,14 @@ public static partial class LinqExtensions
     /// <param name="allowNullable">Reserved for nullable overload resolution.</param>
     /// <returns>A disposable that cancels the subscription.</returns>
     /// <exception cref="ArgumentNullException">A required argument is <see langword="null"/>.</exception>
-    [System.Runtime.CompilerServices.OverloadResolutionPriority(1)]
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [OverloadResolutionPriority(1)]
     public static IDisposable SubscribeSafeErrors<T>(
         IObservable<T?> source,
         Action<Exception> onError,
         params bool[] allowNullable)
-        where T : class
-    {
-        _ = allowNullable;
-        return SubscribeSafeCore(source, Witness.Create<T?>(static _ => { }, onError));
-    }
+        where T : class =>
+        SubscribeSafeWitness.SubscribeErrors(source, onError, allowNullable);
 
     /// <summary>Subscribes nullable value error callbacks with downstream exception protection from static-call syntax.</summary>
     /// <typeparam name="T">The non-nullable value type.</typeparam>
@@ -273,8 +250,9 @@ public static partial class LinqExtensions
     /// <param name="allowNullable">Reserved for nullable overload resolution.</param>
     /// <returns>A disposable that cancels the subscription.</returns>
     /// <exception cref="ArgumentNullException">A required argument is <see langword="null"/>.</exception>
-    [System.Runtime.CompilerServices.OverloadResolutionPriority(1)]
-    [System.Diagnostics.CodeAnalysis.SuppressMessage(
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [OverloadResolutionPriority(1)]
+    [SuppressMessage(
         "Design",
         "SST2318:Members should not have identical bodies",
         Justification = "The class-constrained and struct-constrained overloads cannot forward to one another.")]
@@ -282,11 +260,8 @@ public static partial class LinqExtensions
         IObservable<T?> source,
         Action<Exception> onError,
         params bool[] allowNullable)
-        where T : struct
-    {
-        _ = allowNullable;
-        return SubscribeSafeCore(source, Witness.Create<T?>(static _ => { }, onError));
-    }
+        where T : struct =>
+        SubscribeSafeWitness.SubscribeErrors(source, onError, allowNullable);
 
     /// <summary>Subscribes nullable reference error and completion callbacks with downstream exception protection from static-call syntax.</summary>
     /// <typeparam name="T">The non-nullable reference value type.</typeparam>
@@ -296,17 +271,15 @@ public static partial class LinqExtensions
     /// <param name="allowNullable">Reserved for nullable overload resolution.</param>
     /// <returns>A disposable that cancels the subscription.</returns>
     /// <exception cref="ArgumentNullException">A required argument is <see langword="null"/>.</exception>
-    [System.Runtime.CompilerServices.OverloadResolutionPriority(1)]
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [OverloadResolutionPriority(1)]
     public static IDisposable SubscribeSafeErrors<T>(
         IObservable<T?> source,
         Action<Exception> onError,
         Action onCompleted,
         params bool[] allowNullable)
-        where T : class
-    {
-        _ = allowNullable;
-        return SubscribeSafeCore(source, Witness.Create<T?>(static _ => { }, onError, onCompleted));
-    }
+        where T : class =>
+        SubscribeSafeWitness.SubscribeErrors(source, onError, onCompleted, allowNullable);
 
     /// <summary>Subscribes nullable value error and completion callbacks with downstream exception protection from static-call syntax.</summary>
     /// <typeparam name="T">The non-nullable value type.</typeparam>
@@ -316,8 +289,9 @@ public static partial class LinqExtensions
     /// <param name="allowNullable">Reserved for nullable overload resolution.</param>
     /// <returns>A disposable that cancels the subscription.</returns>
     /// <exception cref="ArgumentNullException">A required argument is <see langword="null"/>.</exception>
-    [System.Runtime.CompilerServices.OverloadResolutionPriority(1)]
-    [System.Diagnostics.CodeAnalysis.SuppressMessage(
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [OverloadResolutionPriority(1)]
+    [SuppressMessage(
         "Design",
         "SST2318:Members should not have identical bodies",
         Justification = "The class-constrained and struct-constrained overloads cannot forward to one another.")]
@@ -326,11 +300,8 @@ public static partial class LinqExtensions
         Action<Exception> onError,
         Action onCompleted,
         params bool[] allowNullable)
-        where T : struct
-    {
-        _ = allowNullable;
-        return SubscribeSafeCore(source, Witness.Create<T?>(static _ => { }, onError, onCompleted));
-    }
+        where T : struct =>
+        SubscribeSafeWitness.SubscribeErrors(source, onError, onCompleted, allowNullable);
 
     /// <summary>Subscribes non-nullable value error callbacks with downstream exception protection from static-call syntax.</summary>
     /// <typeparam name="T">The non-nullable value type.</typeparam>
@@ -339,16 +310,14 @@ public static partial class LinqExtensions
     /// <param name="allowValueType">Reserved for value-type overload resolution.</param>
     /// <returns>A disposable that cancels the subscription.</returns>
     /// <exception cref="ArgumentNullException">A required argument is <see langword="null"/>.</exception>
-    [System.Runtime.CompilerServices.OverloadResolutionPriority(1)]
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [OverloadResolutionPriority(1)]
     public static IDisposable SubscribeSafeErrors<T>(
         IObservable<T> source,
         Action<Exception> onError,
         params byte[] allowValueType)
-        where T : struct
-    {
-        _ = allowValueType;
-        return SubscribeSafeCore(source, Witness.Create<T>(static _ => { }, onError));
-    }
+        where T : struct =>
+        SubscribeSafeWitness.SubscribeErrors(source, onError, allowValueType);
 
     /// <summary>Subscribes non-nullable value error and completion callbacks with downstream exception protection from static-call syntax.</summary>
     /// <typeparam name="T">The non-nullable value type.</typeparam>
@@ -358,32 +327,13 @@ public static partial class LinqExtensions
     /// <param name="allowValueType">Reserved for value-type overload resolution.</param>
     /// <returns>A disposable that cancels the subscription.</returns>
     /// <exception cref="ArgumentNullException">A required argument is <see langword="null"/>.</exception>
-    [System.Runtime.CompilerServices.OverloadResolutionPriority(1)]
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [OverloadResolutionPriority(1)]
     public static IDisposable SubscribeSafeErrors<T>(
         IObservable<T> source,
         Action<Exception> onError,
         Action onCompleted,
         params byte[] allowValueType)
-        where T : struct
-    {
-        _ = allowValueType;
-        return SubscribeSafeCore(source, Witness.Create<T>(static _ => { }, onError, onCompleted));
-    }
-
-    /// <summary>Subscribes an observer with downstream exception protection.</summary>
-    /// <typeparam name="T">The value type.</typeparam>
-    /// <param name="source">The source sequence.</param>
-    /// <param name="observer">The observer to subscribe.</param>
-    /// <returns>A disposable that cancels the subscription.</returns>
-    /// <exception cref="ArgumentNullException"><paramref name="source"/> or <paramref name="observer"/> is <see langword="null"/>.</exception>
-    private static SubscribeSafeWitness<T> SubscribeSafeCore<T>(IObservable<T> source, IObserver<T> observer)
-    {
-        ArgumentExceptionHelper.ThrowIfNull(source);
-
-        ArgumentExceptionHelper.ThrowIfNull(observer);
-
-        SubscribeSafeWitness<T> safe = new(observer);
-        safe.SetSubscription(source.Subscribe(safe));
-        return safe;
-    }
+        where T : struct =>
+        SubscribeSafeWitness.SubscribeErrors(source, onError, onCompleted, allowValueType);
 }

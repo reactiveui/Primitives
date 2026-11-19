@@ -4,7 +4,6 @@
 
 using System.Runtime.CompilerServices;
 using ReactiveUI.Primitives.Advanced;
-using ReactiveUI.Primitives.Disposables;
 
 namespace ReactiveUI.Primitives.Extensions.Operators;
 
@@ -23,8 +22,8 @@ public sealed class SelectLatestAsyncObservable<TSource, TResult>(IObservable<TS
         InvalidOperationExceptionHelper.ThrowIfNull(selector);
         ArgumentExceptionHelper.ThrowIfNull(observer);
         SelectLatestAsyncSink sink = new(observer, selector);
-        var sub = source.Subscribe(sink);
-        return new DisposableBag(sub, sink);
+        sink.Attach(source.Subscribe(sink));
+        return sink;
     }
 
     /// <summary>Processes source values and owns the subscription state.</summary>
@@ -38,6 +37,9 @@ public sealed class SelectLatestAsyncObservable<TSource, TResult>(IObservable<TS
 
         /// <summary>Serializes downstream deliveries.</summary>
         private SerializedDelivery<TResult> _delivery = new();
+
+        /// <summary>Upstream subscription handle.</summary>
+        private IDisposable? _subscription;
 
         /// <summary>Identifier of the most recent projection; a result carrying an older identifier is dropped.</summary>
         private long _currentId;
@@ -106,6 +108,19 @@ public sealed class SelectLatestAsyncObservable<TSource, TResult>(IObservable<TS
             lock (_gate)
             {
                 _disposed = true;
+                _latestTask = null;
+            }
+
+            SinkSubscription.Dispose(ref _subscription);
+        }
+
+        /// <summary>Attaches the upstream subscription handle.</summary>
+        /// <param name="subscription">The upstream subscription handle.</param>
+        internal void Attach(IDisposable? subscription)
+        {
+            if (subscription is not null)
+            {
+                SinkSubscription.Set(ref _subscription, subscription);
             }
         }
 
@@ -207,8 +222,21 @@ public sealed class SelectLatestAsyncObservable<TSource, TResult>(IObservable<TS
         private void Flush() => _delivery.Flush(new PendingDrain(this));
 
         /// <summary>Delivers the queued notifications to the downstream observer.</summary>
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private void DrainPending() => _ = _delivery.DrainTo(downstream);
+        private void DrainPending()
+        {
+            try
+            {
+                if (_delivery.DrainTo(downstream))
+                {
+                    SinkSubscription.Dispose(ref _subscription);
+                }
+            }
+            catch
+            {
+                Dispose();
+                throw;
+            }
+        }
 
         /// <summary>Drains this sink's queued notifications for the delivery gate.</summary>
         /// <param name="Owner">The sink.</param>

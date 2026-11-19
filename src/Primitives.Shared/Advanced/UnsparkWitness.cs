@@ -21,21 +21,67 @@ public sealed class UnsparkWitness<T> : IObserver<Spark<T>>, IDisposable
     /// <summary>The upstream subscription.</summary>
     private IDisposable? _subscription;
 
+    /// <summary>Non-zero after a terminal notification or disposal.</summary>
+    private int _stopped;
+
     /// <summary>Initializes a new instance of the <see cref="UnsparkWitness{T}"/> class.</summary>
     /// <param name="observer">The downstream observer.</param>
     public UnsparkWitness(IObserver<T> observer) => _observer = observer;
 
     /// <inheritdoc/>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public void OnNext(Spark<T> value) => value.Accept(_observer);
+    public void OnNext(Spark<T> value)
+    {
+        if (Volatile.Read(ref _stopped) != 0)
+        {
+            return;
+        }
+
+        switch (value.Kind)
+        {
+            case SparkKind.OnNext:
+            {
+                SinkDelivery.Next(_observer, value.Value, this);
+                break;
+            }
+
+            case SparkKind.OnError:
+            {
+                OnError(value.Exception);
+                break;
+            }
+
+            default:
+            {
+                OnCompleted();
+                break;
+            }
+        }
+    }
 
     /// <inheritdoc/>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public void OnError(Exception error) => SinkTerminal.Fault(_observer, error, this);
+    public void OnError(Exception error)
+    {
+        if (Interlocked.Exchange(ref _stopped, 1) != 0)
+        {
+            return;
+        }
+
+        SinkTerminal.Fault(_observer, error, this);
+    }
 
     /// <inheritdoc/>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public void OnCompleted() => SinkTerminal.Complete(_observer, this);
+    public void OnCompleted()
+    {
+        if (Interlocked.Exchange(ref _stopped, 1) != 0)
+        {
+            return;
+        }
+
+        SinkTerminal.Complete(_observer, this);
+    }
 
     /// <summary>Assigns the upstream subscription, disposing the incoming one when the slot is occupied.</summary>
     /// <param name="subscription">The upstream subscription.</param>
@@ -44,5 +90,9 @@ public sealed class UnsparkWitness<T> : IObserver<Spark<T>>, IDisposable
 
     /// <inheritdoc/>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public void Dispose() => SinkSubscription.Dispose(ref _subscription);
+    public void Dispose()
+    {
+        Volatile.Write(ref _stopped, 1);
+        SinkSubscription.Dispose(ref _subscription);
+    }
 }

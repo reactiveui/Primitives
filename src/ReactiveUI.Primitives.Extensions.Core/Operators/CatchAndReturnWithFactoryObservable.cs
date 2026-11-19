@@ -17,6 +17,18 @@ public sealed class CatchAndReturnWithFactoryObservable<T, TException>(
     Func<TException, T> fallbackFactory) : IObservable<T>
     where TException : Exception
 {
+    /// <summary>Creates a typed error-recovery sequence, validating <paramref name="fallbackFactory"/> eagerly.</summary>
+    /// <param name="source">Upstream source.</param>
+    /// <param name="fallbackFactory">Builds the fallback from the caught exception.</param>
+    /// <returns>A recovered observable sequence.</returns>
+    public static CatchAndReturnWithFactoryObservable<T, TException> Create(
+        IObservable<T> source,
+        Func<TException, T> fallbackFactory)
+    {
+        ArgumentExceptionHelper.ThrowIfNull(fallbackFactory);
+        return new(source, fallbackFactory);
+    }
+
     /// <inheritdoc/>
     public IDisposable Subscribe(IObserver<T> observer)
     {

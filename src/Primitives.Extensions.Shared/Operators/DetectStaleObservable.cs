@@ -16,7 +16,7 @@ namespace ReactiveUI.Primitives.Extensions.Operators;
 /// <param name="source">The source observable.</param>
 /// <param name="stalenessPeriod">The period after which the sequence is considered stale.</param>
 /// <param name="scheduler">The scheduler to run the staleness timer on.</param>
-internal sealed class DetectStaleObservable<T>(
+public sealed class DetectStaleObservable<T>(
     IObservable<T> source,
     TimeSpan stalenessPeriod,
     ISequencer scheduler) : IObservable<Stale<T>>

@@ -174,4 +174,22 @@ public partial class ReactiveExtensionsTests
         subject.OnNext("beta");
         await Assert.That(results).IsCollectionEqualTo(["alpha", null, "beta"]);
     }
+
+    /// <summary>Tests AsSignal short-circuiting empty and silent signals.</summary>
+    /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
+    [Test]
+    public async Task AsSignal_EmptyAndSilentSignals_ReturnCanonicalInstances()
+    {
+        var emptyCompleted = false;
+        using var emptySub = ReactiveUI.Primitives.Signals.Signal.Empty<int>().AsSignal().Subscribe(
+            static _ => { },
+            () => emptyCompleted = true);
+
+        var silentEmitted = false;
+        using var silentSub = ReactiveUI.Primitives.Signals.Signal.Silent<int>().AsSignal().Subscribe(
+            _ => silentEmitted = true);
+
+        await Assert.That(emptyCompleted).IsTrue();
+        await Assert.That(silentEmitted).IsFalse();
+    }
 }

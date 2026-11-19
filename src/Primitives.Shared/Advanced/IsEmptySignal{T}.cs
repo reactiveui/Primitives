@@ -48,20 +48,11 @@ public sealed class IsEmptySignal<T> : IRequireCurrentThread<bool>
             return EmptyDisposable.Instance;
         }
 
-        if (!IsRequiredSubscribeOnCurrentThread() || !CurrentThreadSequencer.IsScheduleRequired)
-        {
-            return SubscribeCore(observer);
-        }
-
-        SingleDisposable subscription = new();
-        _ = Sequencer.CurrentThread.Schedule(
-            (Self: this, subscription, observer),
-            static (_, s) =>
-            {
-                s.subscription.Create(s.Self.SubscribeCore(s.observer));
-                return EmptyDisposable.Instance;
-            });
-        return subscription;
+        return !IsRequiredSubscribeOnCurrentThread() || !CurrentThreadSequencer.IsScheduleRequired
+            ? SubscribeCore(observer)
+            : CurrentThreadSequencer.RunTrampoline(
+                (Self: this, observer),
+                static s => s.Self.SubscribeCore(s.observer));
     }
 
     /// <summary>Subscribes the emptiness sink to the source.</summary>

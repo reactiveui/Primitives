@@ -26,9 +26,13 @@ public static partial class LinqExtensions
         /// <exception cref="ArgumentNullException">A source is <see langword="null"/>.</exception>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         [OverloadResolutionPriority(-1)]
-        public IObservable<(T First, T2 Second)> CombineLatest<T2>(IObservable<T2> source2) =>
-            source.CombineLatest(source2, static (v1, v2) =>
-                    (v1, v2));
+        public IObservable<(
+            T First,
+            T2 Second)> CombineLatest<T2>(
+            IObservable<T2> source2) =>
+            CombineLatestSignal.CreateTuple(
+                source,
+                source2);
 
         /// <summary>Combines latest values from 3 observable sources into tuple values.</summary>
         /// <typeparam name="T2">The element type of source 2.</typeparam>
@@ -39,14 +43,16 @@ public static partial class LinqExtensions
         /// <exception cref="ArgumentNullException">A source is <see langword="null"/>.</exception>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         [OverloadResolutionPriority(-1)]
-        public IObservable<(T First, T2 Second, T3 Third)> CombineLatest<T2, T3>(
+        public IObservable<(
+            T First,
+            T2 Second,
+            T3 Third)> CombineLatest<T2, T3>(
             IObservable<T2> source2,
             IObservable<T3> source3) =>
-            source.CombineLatest(
+            CombineLatestSignal.CreateTuple(
+                source,
                 source2,
-                source3,
-                static (v1, v2, v3) =>
-                    (v1, v2, v3));
+                source3);
 
         /// <summary>Combines latest values from 4 observable sources into tuple values.</summary>
         /// <typeparam name="T2">The element type of source 2.</typeparam>
@@ -59,16 +65,19 @@ public static partial class LinqExtensions
         /// <exception cref="ArgumentNullException">A source is <see langword="null"/>.</exception>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         [OverloadResolutionPriority(-1)]
-        public IObservable<(T First, T2 Second, T3 Third, T4 Fourth)> CombineLatest<T2, T3, T4>(
+        public IObservable<(
+            T First,
+            T2 Second,
+            T3 Third,
+            T4 Fourth)> CombineLatest<T2, T3, T4>(
             IObservable<T2> source2,
             IObservable<T3> source3,
             IObservable<T4> source4) =>
-            source.CombineLatest(
+            CombineLatestSignal.CreateTuple(
+                source,
                 source2,
                 source3,
-                source4,
-                static (v1, v2, v3, v4) =>
-                    (v1, v2, v3, v4));
+                source4);
 
         /// <summary>Combines latest values from 5 observable sources into tuple values.</summary>
         /// <typeparam name="T2">The element type of source 2.</typeparam>
@@ -83,18 +92,22 @@ public static partial class LinqExtensions
         /// <exception cref="ArgumentNullException">A source is <see langword="null"/>.</exception>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         [OverloadResolutionPriority(-1)]
-        public IObservable<(T First, T2 Second, T3 Third, T4 Fourth, T5 Fifth)> CombineLatest<T2, T3, T4, T5>(
+        public IObservable<(
+            T First,
+            T2 Second,
+            T3 Third,
+            T4 Fourth,
+            T5 Fifth)> CombineLatest<T2, T3, T4, T5>(
             IObservable<T2> source2,
             IObservable<T3> source3,
             IObservable<T4> source4,
             IObservable<T5> source5) =>
-            source.CombineLatest(
+            CombineLatestSignal.CreateTuple(
+                source,
                 source2,
                 source3,
                 source4,
-                source5,
-                static (v1, v2, v3, v4, v5) =>
-                    (v1, v2, v3, v4, v5));
+                source5);
 
         /// <summary>Combines latest values from 6 observable sources into tuple values.</summary>
         /// <typeparam name="T2">The element type of source 2.</typeparam>
@@ -123,14 +136,13 @@ public static partial class LinqExtensions
             IObservable<T4> source4,
             IObservable<T5> source5,
             IObservable<T6> source6) =>
-            source.CombineLatest(
+            CombineLatestSignal.CreateTuple(
+                source,
                 source2,
                 source3,
                 source4,
                 source5,
-                source6,
-                static (v1, v2, v3, v4, v5, v6) =>
-                    (v1, v2, v3, v4, v5, v6));
+                source6);
 
         /// <summary>Combines latest values from 7 observable sources into tuple values.</summary>
         /// <typeparam name="T2">The element type of source 2.</typeparam>
@@ -163,15 +175,14 @@ public static partial class LinqExtensions
             IObservable<T5> source5,
             IObservable<T6> source6,
             IObservable<T7> source7) =>
-            source.CombineLatest(
+            CombineLatestSignal.CreateTuple(
+                source,
                 source2,
                 source3,
                 source4,
                 source5,
                 source6,
-                source7,
-                static (v1, v2, v3, v4, v5, v6, v7) =>
-                    (v1, v2, v3, v4, v5, v6, v7));
+                source7);
 
         /// <summary>Combines latest values from 8 observable sources into tuple values.</summary>
         /// <typeparam name="T2">The element type of source 2.</typeparam>
@@ -212,16 +223,15 @@ public static partial class LinqExtensions
             IObservable<T6> source6,
             IObservable<T7> source7,
             IObservable<T8> source8) =>
-            source.CombineLatest(
+            CombineLatestSignal.CreateTuple(
+                source,
                 source2,
                 source3,
                 source4,
                 source5,
                 source6,
                 source7,
-                source8,
-                static (v1, v2, v3, v4, v5, v6, v7, v8) =>
-                    (v1, v2, v3, v4, v5, v6, v7, v8));
+                source8);
 
         /// <summary>Combines latest values from 9 observable sources into tuple values.</summary>
         /// <typeparam name="T2">The element type of source 2.</typeparam>
@@ -266,7 +276,8 @@ public static partial class LinqExtensions
             IObservable<T7> source7,
             IObservable<T8> source8,
             IObservable<T9> source9) =>
-            source.CombineLatest(
+            CombineLatestSignal.CreateTuple(
+                source,
                 source2,
                 source3,
                 source4,
@@ -274,9 +285,7 @@ public static partial class LinqExtensions
                 source6,
                 source7,
                 source8,
-                source9,
-                static (v1, v2, v3, v4, v5, v6, v7, v8, v9) =>
-                    (v1, v2, v3, v4, v5, v6, v7, v8, v9));
+                source9);
 
         /// <summary>Combines latest values from 10 observable sources into tuple values.</summary>
         /// <typeparam name="T2">The element type of source 2.</typeparam>
@@ -325,7 +334,8 @@ public static partial class LinqExtensions
             IObservable<T8> source8,
             IObservable<T9> source9,
             IObservable<T10> source10) =>
-            source.CombineLatest(
+            CombineLatestSignal.CreateTuple(
+                source,
                 source2,
                 source3,
                 source4,
@@ -334,9 +344,7 @@ public static partial class LinqExtensions
                 source7,
                 source8,
                 source9,
-                source10,
-                static (v1, v2, v3, v4, v5, v6, v7, v8, v9, v10) =>
-                    (v1, v2, v3, v4, v5, v6, v7, v8, v9, v10));
+                source10);
 
         /// <summary>Combines latest values from 11 observable sources into tuple values.</summary>
         /// <typeparam name="T2">The element type of source 2.</typeparam>
@@ -389,7 +397,8 @@ public static partial class LinqExtensions
             IObservable<T9> source9,
             IObservable<T10> source10,
             IObservable<T11> source11) =>
-            source.CombineLatest(
+            CombineLatestSignal.CreateTuple(
+                source,
                 source2,
                 source3,
                 source4,
@@ -399,9 +408,7 @@ public static partial class LinqExtensions
                 source8,
                 source9,
                 source10,
-                source11,
-                static (v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11) =>
-                    (v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11));
+                source11);
 
         /// <summary>Combines latest values from 12 observable sources into tuple values.</summary>
         /// <typeparam name="T2">The element type of source 2.</typeparam>
@@ -458,7 +465,8 @@ public static partial class LinqExtensions
             IObservable<T10> source10,
             IObservable<T11> source11,
             IObservable<T12> source12) =>
-            source.CombineLatest(
+            CombineLatestSignal.CreateTuple(
+                source,
                 source2,
                 source3,
                 source4,
@@ -469,9 +477,7 @@ public static partial class LinqExtensions
                 source9,
                 source10,
                 source11,
-                source12,
-                static (v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12) =>
-                    (v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12));
+                source12);
 
         /// <summary>Combines latest values from 13 observable sources into tuple values.</summary>
         /// <typeparam name="T2">The element type of source 2.</typeparam>
@@ -532,7 +538,8 @@ public static partial class LinqExtensions
             IObservable<T11> source11,
             IObservable<T12> source12,
             IObservable<T13> source13) =>
-            source.CombineLatest(
+            CombineLatestSignal.CreateTuple(
+                source,
                 source2,
                 source3,
                 source4,
@@ -544,9 +551,7 @@ public static partial class LinqExtensions
                 source10,
                 source11,
                 source12,
-                source13,
-                static (v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12, v13) =>
-                    (v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12, v13));
+                source13);
 
         /// <summary>Combines latest values from 14 observable sources into tuple values.</summary>
         /// <typeparam name="T2">The element type of source 2.</typeparam>
@@ -611,7 +616,8 @@ public static partial class LinqExtensions
             IObservable<T12> source12,
             IObservable<T13> source13,
             IObservable<T14> source14) =>
-            source.CombineLatest(
+            CombineLatestSignal.CreateTuple(
+                source,
                 source2,
                 source3,
                 source4,
@@ -624,9 +630,7 @@ public static partial class LinqExtensions
                 source11,
                 source12,
                 source13,
-                source14,
-                static (v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12, v13, v14) =>
-                    (v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12, v13, v14));
+                source14);
 
         /// <summary>Combines latest values from 15 observable sources into tuple values.</summary>
         /// <typeparam name="T2">The element type of source 2.</typeparam>
@@ -695,7 +699,8 @@ public static partial class LinqExtensions
             IObservable<T13> source13,
             IObservable<T14> source14,
             IObservable<T15> source15) =>
-            source.CombineLatest(
+            CombineLatestSignal.CreateTuple(
+                source,
                 source2,
                 source3,
                 source4,
@@ -709,9 +714,7 @@ public static partial class LinqExtensions
                 source12,
                 source13,
                 source14,
-                source15,
-                static (v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12, v13, v14, v15) =>
-                    (v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12, v13, v14, v15));
+                source15);
 
         /// <summary>Combines latest values from 16 observable sources into tuple values.</summary>
         /// <typeparam name="T2">The element type of source 2.</typeparam>
@@ -784,7 +787,8 @@ public static partial class LinqExtensions
             IObservable<T14> source14,
             IObservable<T15> source15,
             IObservable<T16> source16) =>
-            source.CombineLatest(
+            CombineLatestSignal.CreateTuple(
+                source,
                 source2,
                 source3,
                 source4,
@@ -799,8 +803,6 @@ public static partial class LinqExtensions
                 source13,
                 source14,
                 source15,
-                source16,
-                static (v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12, v13, v14, v15, v16) =>
-                    (v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12, v13, v14, v15, v16));
+                source16);
     }
 }

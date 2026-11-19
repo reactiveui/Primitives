@@ -16,11 +16,31 @@ namespace ReactiveUI.Primitives.Extensions.Operators;
 /// <param name="Scheduler">Scheduler that times each retry delay.</param>
 /// <param name="OnError">Optional callback invoked on every retryable upstream error.</param>
 /// <param name="ShouldRetry">Decides whether an error is retryable, or <see langword="null"/> to retry every error. An error it rejects goes straight downstream.</param>
-internal readonly record struct RetryBackoffPolicy(
+[System.Diagnostics.DebuggerDisplay("RetryBackoffPolicy: MaxRetries = {MaxRetries}, InitialDelay = {InitialDelay}")]
+public readonly record struct RetryBackoffPolicy(
     int MaxRetries,
     TimeSpan InitialDelay,
     double BackoffFactor,
     TimeSpan? MaxDelay,
     ISequencer Scheduler,
     Action<Exception>? OnError,
-    Func<Exception, bool>? ShouldRetry = null);
+    Func<Exception, bool>? ShouldRetry)
+{
+    /// <summary>Initializes a new instance of the <see cref="RetryBackoffPolicy"/> struct that retries every error.</summary>
+    /// <param name="maxRetries">Maximum number of retries.</param>
+    /// <param name="initialDelay">Delay before the first retry.</param>
+    /// <param name="backoffFactor">Multiplier applied to the delay per retry attempt.</param>
+    /// <param name="maxDelay">Cap on the computed delay, or <see langword="null"/> for no cap.</param>
+    /// <param name="scheduler">Scheduler that times each retry delay.</param>
+    /// <param name="onError">Optional callback invoked on every retryable upstream error.</param>
+    public RetryBackoffPolicy(
+        int maxRetries,
+        TimeSpan initialDelay,
+        double backoffFactor,
+        TimeSpan? maxDelay,
+        ISequencer scheduler,
+        Action<Exception>? onError)
+        : this(maxRetries, initialDelay, backoffFactor, maxDelay, scheduler, onError, null)
+    {
+    }
+}

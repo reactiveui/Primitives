@@ -43,6 +43,42 @@ public sealed class SelectManySignal<TSource, TResult> : IObservable<TResult>
     /// <summary>Gets the constant inner observable, when this is constant-inner based.</summary>
     private IObservable<TResult>? Inner { get; }
 
+    /// <summary>Creates a concurrent <c>SelectMany</c> sequence with empty/never short-circuiting.</summary>
+    /// <param name="source">The source observable.</param>
+    /// <param name="selector">The selector that creates an inner observable for each source value.</param>
+    /// <returns>The merged observable sequence.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="source"/> or <paramref name="selector"/> is <see langword="null"/>.</exception>
+    public static IObservable<TResult> Create(IObservable<TSource> source, Func<TSource, IObservable<TResult>> selector)
+    {
+        ArgumentExceptionHelper.ThrowIfNull(source);
+        ArgumentExceptionHelper.ThrowIfNull(selector);
+
+        return source switch
+        {
+            ImmutableEmptySignal<TSource> => ImmutableEmptySignal<TResult>.Instance,
+            ImmutableNeverSignal<TSource> => ImmutableNeverSignal<TResult>.Instance,
+            _ => new SelectManySignal<TSource, TResult>(source, selector),
+        };
+    }
+
+    /// <summary>Creates a concurrent constant-inner <c>SelectMany</c> sequence with empty/never short-circuiting.</summary>
+    /// <param name="source">The source observable.</param>
+    /// <param name="other">The inner observable used for each source value.</param>
+    /// <returns>The merged observable sequence.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="source"/> or <paramref name="other"/> is <see langword="null"/>.</exception>
+    public static IObservable<TResult> Create(IObservable<TSource> source, IObservable<TResult> other)
+    {
+        ArgumentExceptionHelper.ThrowIfNull(source);
+        ArgumentExceptionHelper.ThrowIfNull(other);
+
+        return source switch
+        {
+            ImmutableEmptySignal<TSource> => ImmutableEmptySignal<TResult>.Instance,
+            ImmutableNeverSignal<TSource> => ImmutableNeverSignal<TResult>.Instance,
+            _ => new SelectManySignal<TSource, TResult>(source, other),
+        };
+    }
+
     /// <inheritdoc/>
     public IDisposable Subscribe(IObserver<TResult> observer)
     {

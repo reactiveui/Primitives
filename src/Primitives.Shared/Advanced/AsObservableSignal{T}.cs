@@ -2,6 +2,8 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Runtime.CompilerServices;
+
 #if REACTIVE_SHIM
 namespace ReactiveUI.Primitives.Reactive.Advanced;
 #else
@@ -25,6 +27,25 @@ public sealed class AsObservableSignal<T> : IRequireCurrentThread<T>
         ArgumentExceptionHelper.ThrowIfNull(source);
 
         _source = source;
+    }
+
+    /// <summary>Validates <paramref name="source"/> and returns it unchanged.</summary>
+    /// <param name="source">The source observable.</param>
+    /// <returns>The supplied <paramref name="source"/>.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="source"/> is <see langword="null"/>.</exception>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static IObservable<T> Identity(IObservable<T> source) =>
+        source ?? throw new ArgumentNullException(nameof(source));
+
+    /// <summary>Wraps <paramref name="source"/> in an <see cref="AsObservableSignal{T}"/> unless it already is one.</summary>
+    /// <param name="source">The source observable.</param>
+    /// <returns>An <see cref="AsObservableSignal{T}"/> hiding the concrete type of <paramref name="source"/>.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="source"/> is <see langword="null"/>.</exception>
+    public static AsObservableSignal<T> Wrap(IObservable<T> source)
+    {
+        ArgumentExceptionHelper.ThrowIfNull(source);
+
+        return source as AsObservableSignal<T> ?? new AsObservableSignal<T>(source);
     }
 
     /// <inheritdoc/>

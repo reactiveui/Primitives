@@ -3,7 +3,6 @@
 // See the LICENSE file in the project root for full license information.
 
 using System.Diagnostics.CodeAnalysis;
-using ReactiveUI.Primitives.Async.Advanced;
 using ReactiveUI.Primitives.Async.Disposables;
 using ReactiveUI.Primitives.Async.Signals;
 
@@ -18,7 +17,7 @@ internal sealed class ConnectableSignalAsyncState<T> : IDisposable
         "Style",
         "SST1401:Field should be private",
         Justification = "The helper class that drives this state enters the gate directly.")]
-    internal readonly AsyncSerialGate Gate = new();
+    internal readonly ReactiveUI.Primitives.Async.Internal.AsyncFlowGate Gate = new();
 
     /// <summary>Guards the disposal latch so only the first caller tears the state down.</summary>
     private readonly Lock _disposalGate = new();
@@ -52,11 +51,8 @@ internal sealed class ConnectableSignalAsyncState<T> : IDisposable
     internal CancellationToken DisposedCancellationToken { get; }
 
     /// <inheritdoc/>
-    public void Dispose()
-    {
-        Gate.Dispose();
-        DisposedCts.Dispose();
-    }
+    [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+    public void Dispose() => DisposedCts.Dispose();
 
     /// <summary>Claims disposal for the first caller to ask.</summary>
     /// <returns><see langword="true"/> when this call owns disposal; otherwise, <see langword="false"/>.</returns>

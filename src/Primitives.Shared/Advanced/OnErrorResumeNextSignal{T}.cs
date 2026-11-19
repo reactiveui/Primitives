@@ -20,7 +20,28 @@ public sealed class OnErrorResumeNextSignal<T> : IRequireCurrentThread<T>
 
     /// <summary>Initializes a new instance of the <see cref="OnErrorResumeNextSignal{T}"/> class.</summary>
     /// <param name="sources">The sources to subscribe in order.</param>
-    public OnErrorResumeNextSignal(IEnumerable<IObservable<T>> sources) => _sources = sources;
+    /// <exception cref="ArgumentNullException"><paramref name="sources"/> is <see langword="null"/>.</exception>
+    public OnErrorResumeNextSignal(IEnumerable<IObservable<T>> sources)
+    {
+        ArgumentExceptionHelper.ThrowIfNull(sources);
+
+        _sources = sources;
+    }
+
+    /// <summary>Continues with <paramref name="second"/> after <paramref name="first"/> completes or errors.</summary>
+    /// <param name="first">The first sequence.</param>
+    /// <param name="second">The second sequence.</param>
+    /// <returns>The combined sequence.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="first"/> or <paramref name="second"/> is <see langword="null"/>.</exception>
+    public static IObservable<T> Create(IObservable<T> first, IObservable<T> second)
+    {
+        ArgumentExceptionHelper.ThrowIfNull(first);
+        ArgumentExceptionHelper.ThrowIfNull(second);
+
+        return first is ImmutableEmptySignal<T>
+            ? second
+            : new OnErrorResumeNextSignal<T>([first, second]);
+    }
 
     /// <inheritdoc/>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]

@@ -32,6 +32,26 @@ public sealed class StartWithEnumerableSignal<T> : IInlineSignal<T>
         _values = values;
     }
 
+    /// <summary>Prepends <paramref name="values"/> before <paramref name="source"/>, simplifying 0- and 1-element arrays.</summary>
+    /// <param name="source">The source observable.</param>
+    /// <param name="values">The values to emit before <paramref name="source"/>.</param>
+    /// <returns>The prepended observable sequence.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="source"/> or <paramref name="values"/> is <see langword="null"/>.</exception>
+    public static IObservable<T> Create(IObservable<T> source, params T[] values)
+    {
+        ArgumentExceptionHelper.ThrowIfNull(source);
+        ArgumentExceptionHelper.ThrowIfNull(values);
+
+        if (values.Length == 0)
+        {
+            return source;
+        }
+
+        return values.Length == 1
+            ? new PrependSignal<T>(source, values[0])
+            : new StartWithEnumerableSignal<T>(source, values);
+    }
+
     /// <inheritdoc/>
     public IDisposable Subscribe(IObserver<T> observer)
     {

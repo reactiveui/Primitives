@@ -2,6 +2,7 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using ReactiveUI.Primitives.Advanced;
 using ReactiveUI.Primitives.Disposables;
 
 namespace ReactiveUI.Primitives.Signals;
@@ -52,9 +53,12 @@ public sealed class ProjectedReadOnlyState<TSource, TResult> : IObservable<TResu
     {
         get
         {
-            ThrowIfDisposed();
-            _lastError.Rethrow();
-            return _lastValue!;
+            lock (_gate)
+            {
+                ThrowIfDisposed();
+                _lastError.Rethrow();
+                return _lastValue!;
+            }
         }
     }
 
@@ -99,6 +103,7 @@ public sealed class ProjectedReadOnlyState<TSource, TResult> : IObservable<TResu
             _isStopped = true;
         }
 
+        Interlocked.Exchange(ref _subscription, null)?.Dispose();
         _broadcaster.Completed();
         _broadcaster.Clear();
     }
@@ -120,6 +125,7 @@ public sealed class ProjectedReadOnlyState<TSource, TResult> : IObservable<TResu
             _lastError = error;
         }
 
+        Interlocked.Exchange(ref _subscription, null)?.Dispose();
         _broadcaster.Error(error);
         _broadcaster.Clear();
     }
@@ -132,19 +138,23 @@ public sealed class ProjectedReadOnlyState<TSource, TResult> : IObservable<TResu
         {
             result = _selector(value);
         }
-        catch (Exception error)
+        catch (Exception error) when (!CoreFatalExceptionHelper.IsFatal(error))
         {
             OnError(error);
             return;
         }
 
-        if (Volatile.Read(ref _isStopped))
+        lock (_gate)
         {
-            return;
+            if (_isStopped)
+            {
+                return;
+            }
+
+            _lastValue = result;
+            _hasValue = true;
         }
 
-        _lastValue = result;
-        Volatile.Write(ref _hasValue, true);
         _broadcaster.Next(result);
     }
 
@@ -187,20 +197,32 @@ public sealed class ProjectedReadOnlyState<TSource, TResult> : IObservable<TResu
     /// <inheritdoc/>
     public void Dispose()
     {
-        if (_isDisposed)
+        if (Volatile.Read(ref _isDisposed))
         {
             return;
         }
 
-        _subscription!.Dispose();
+        DisposeCore();
+    }
+
+    /// <summary>Marks the state disposed under <see cref="_gate"/> and releases the upstream subscription.</summary>
+    internal void DisposeCore()
+    {
         lock (_gate)
         {
+            if (_isDisposed)
+            {
+                return;
+            }
+
+            Volatile.Write(ref _isDisposed, true);
+            _isStopped = true;
             _broadcaster.Clear();
             _lastError = null;
             _lastValue = default;
-            _isStopped = true;
-            _isDisposed = true;
         }
+
+        Interlocked.Exchange(ref _subscription, null)?.Dispose();
     }
 
     /// <summary>Removes a subscriber.</summary>

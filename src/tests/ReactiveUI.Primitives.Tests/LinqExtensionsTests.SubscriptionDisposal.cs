@@ -20,7 +20,7 @@ public partial class LinqExtensionsTests
         using Signal<int> source = new();
         using Signal<int> inner = new();
         RecordingWitness<int> observer = new();
-        LinqExtensions.FlatMapCoordinator<int, int> coordinator = new(source, _ => inner, observer);
+        Advanced.FlatMapCoordinator<int, int> coordinator = new(source, _ => inner, observer);
         using var subscription = coordinator.Run();
 
         coordinator.Dispose();
@@ -40,7 +40,7 @@ public partial class LinqExtensionsTests
         using Signal<int> source = new();
         using Signal<int> inner = new();
         RecordingWitness<int> observer = new();
-        LinqExtensions.FlatMapCoordinator<int, int> coordinator = new(source, _ => inner, observer);
+        Advanced.FlatMapCoordinator<int, int> coordinator = new(source, _ => inner, observer);
 
         coordinator.Dispose();
         using var subscription = coordinator.Run();

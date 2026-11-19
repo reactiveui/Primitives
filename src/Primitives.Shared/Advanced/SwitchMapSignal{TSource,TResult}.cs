@@ -58,6 +58,42 @@ public sealed class SwitchMapSignal<TSource, TResult> : IObservable<TResult>
         _skipNullSources = skipNullSources;
     }
 
+    /// <summary>Creates a fused project-and-switch sequence with empty/never short-circuiting.</summary>
+    /// <param name="source">The source observable.</param>
+    /// <param name="selector">Projects each source value to an inner observable.</param>
+    /// <returns>An observable that mirrors the latest projected inner observable.</returns>
+    public static IObservable<TResult> Create(IObservable<TSource> source, Func<TSource, IObservable<TResult>> selector)
+    {
+        ArgumentExceptionHelper.ThrowIfNull(source);
+        ArgumentExceptionHelper.ThrowIfNull(selector);
+
+        return source switch
+        {
+            ImmutableEmptySignal<TSource> => ImmutableEmptySignal<TResult>.Instance,
+            ImmutableNeverSignal<TSource> => ImmutableNeverSignal<TResult>.Instance,
+            _ => new SwitchMapSignal<TSource, TResult>(source, selector),
+        };
+    }
+
+    /// <summary>Creates a fused non-null-filter, project, and switch sequence with empty/never short-circuiting.</summary>
+    /// <param name="source">The nullable source observable.</param>
+    /// <param name="selector">Projects each non-null source value to an inner observable.</param>
+    /// <returns>An observable that mirrors the latest projected inner observable.</returns>
+    public static IObservable<TResult> CreateSkipNull(
+        IObservable<TSource?> source,
+        Func<TSource, IObservable<TResult>> selector)
+    {
+        ArgumentExceptionHelper.ThrowIfNull(source);
+        ArgumentExceptionHelper.ThrowIfNull(selector);
+
+        return source switch
+        {
+            ImmutableEmptySignal<TSource?> => ImmutableEmptySignal<TResult>.Instance,
+            ImmutableNeverSignal<TSource?> => ImmutableNeverSignal<TResult>.Instance,
+            _ => new SwitchMapSignal<TSource, TResult>(source!, selector, skipNullSources: true),
+        };
+    }
+
     /// <inheritdoc/>
     public IDisposable Subscribe(IObserver<TResult> observer)
     {
@@ -133,7 +169,7 @@ public sealed class SwitchMapSignal<TSource, TResult> : IObservable<TResult>
             {
                 inner = _selector(value);
             }
-            catch (Exception ex)
+            catch (Exception ex) when (!FatalExceptionHelper.IsFatal(ex))
             {
                 OnError(ex);
                 return;

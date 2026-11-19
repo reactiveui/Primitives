@@ -34,6 +34,36 @@ public sealed class EmitIfQuietSignal<T> : IObservable<T>
     /// <summary>Gets the sequencer that schedules delayed emissions.</summary>
     private ISequencer Sequencer { get; }
 
+    /// <summary>Creates a throttled signal using the default sequencer, returning <paramref name="source"/> unchanged when <paramref name="dueTime"/> is non-positive.</summary>
+    /// <param name="source">The source observable.</param>
+    /// <param name="dueTime">The quiet period before emitting the latest value.</param>
+    /// <returns>A throttled signal.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="source"/> is <see langword="null"/>.</exception>
+    public static IObservable<T> Create(IObservable<T> source, TimeSpan dueTime)
+    {
+        ArgumentExceptionHelper.ThrowIfNull(source);
+
+        return dueTime <= TimeSpan.Zero
+            ? source
+            : new EmitIfQuietSignal<T>(source, dueTime, Concurrency.Sequencer.Default);
+    }
+
+    /// <summary>Creates a throttled signal on <paramref name="sequencer"/>, returning <paramref name="source"/> unchanged when <paramref name="dueTime"/> is non-positive.</summary>
+    /// <param name="source">The source observable.</param>
+    /// <param name="dueTime">The quiet period before emitting the latest value.</param>
+    /// <param name="sequencer">The sequencer that schedules delayed emissions.</param>
+    /// <returns>A throttled signal.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="source"/> or <paramref name="sequencer"/> is <see langword="null"/>.</exception>
+    public static IObservable<T> Create(IObservable<T> source, TimeSpan dueTime, ISequencer sequencer)
+    {
+        ArgumentExceptionHelper.ThrowIfNull(source);
+        ArgumentExceptionHelper.ThrowIfNull(sequencer);
+
+        return dueTime <= TimeSpan.Zero
+            ? source
+            : new EmitIfQuietSignal<T>(source, dueTime, sequencer);
+    }
+
     /// <inheritdoc/>
     public IDisposable Subscribe(IObserver<T> observer)
     {

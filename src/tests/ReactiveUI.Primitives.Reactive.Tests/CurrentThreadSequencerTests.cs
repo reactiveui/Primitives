@@ -42,4 +42,31 @@ public class CurrentThreadSequencerTests
 
         await Assert.That(observedInsideTrampoline.Value).IsFalse();
     }
+
+    /// <summary>Verifies <see cref="CurrentThreadSequencer.RunTrampoline{TState}"/> schedules when outside the trampoline and runs inline inside it.</summary>
+    /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
+    [Test]
+    public async Task WhenRunTrampolineInvokedOutsideAndInside_ThenExecutesBothPaths()
+    {
+        StrongBox<int> steps = new();
+        StrongBox<bool> disposed = new();
+
+        var outer = CurrentThreadSequencer.RunTrampoline(
+            (steps, disposed),
+            static state =>
+            {
+                state.steps.Value++;
+                return CurrentThreadSequencer.RunTrampoline(
+                    state,
+                    static innerState =>
+                    {
+                        innerState.steps.Value++;
+                        return Disposable.Create(innerState.disposed, static box => box.Value = true);
+                    });
+            });
+
+        await Assert.That(steps.Value).IsEqualTo(1 + 1);
+        outer.Dispose();
+        await Assert.That(disposed.Value).IsTrue();
+    }
 }

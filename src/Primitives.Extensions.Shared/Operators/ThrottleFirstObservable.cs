@@ -15,11 +15,31 @@ namespace ReactiveUI.Primitives.Extensions.Operators;
 /// <param name="source">The source observable.</param>
 /// <param name="window">The window duration.</param>
 /// <param name="scheduler">The scheduler to use for timing.</param>
-internal sealed class ThrottleFirstObservable<T>(
+public sealed class ThrottleFirstObservable<T>(
     IObservable<T> source,
     TimeSpan window,
     ISequencer scheduler) : IObservable<T>
 {
+    /// <summary>Initializes a new instance of the <see cref="ThrottleFirstObservable{T}"/> class using <see cref="Sequencer.Default"/>.</summary>
+    /// <param name="source">The source observable.</param>
+    /// <param name="window">The window duration.</param>
+    public ThrottleFirstObservable(IObservable<T> source, TimeSpan window)
+        : this(source, window, Sequencer.Default)
+    {
+    }
+
+    /// <summary>Creates a throttle-first sequence, defaulting a <see langword="null"/> <paramref name="scheduler"/> to <see cref="Sequencer.Default"/>.</summary>
+    /// <param name="source">The source observable.</param>
+    /// <param name="window">The window duration.</param>
+    /// <param name="scheduler">Optional scheduler to use for timing.</param>
+    /// <returns>A throttle-first sequence.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static ThrottleFirstObservable<T> Create(
+        IObservable<T> source,
+        TimeSpan window,
+        ISequencer? scheduler) =>
+        new(source, window, scheduler ?? Sequencer.Default);
+
     /// <inheritdoc/>
     public IDisposable Subscribe(IObserver<T> observer)
     {

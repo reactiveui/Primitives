@@ -36,5 +36,5 @@ public class SequencerPeriodicMixinsTests
     /// <param name="subscription">The subscription under test.</param>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static void InvokeTick(IDisposable subscription) =>
-        ((SequencerPeriodicExtensions.PeriodicSubscription<Action>)subscription).Tick();
+        ((ReactiveUI.Primitives.Advanced.PeriodicSubscription<Action>)subscription).Tick();
 }

@@ -14,10 +14,17 @@ namespace ReactiveUI.Primitives.Extensions.Operators;
 /// <typeparam name="T">The element type emitted to the downstream observer.</typeparam>
 /// <param name="source">The source enumerable whose elements are pumped on subscription.</param>
 /// <param name="scheduler">An optional scheduler that dispatches the pump.</param>
-internal sealed class FromArrayObservable<T>(
+public sealed class FromArrayObservable<T>(
     IEnumerable<T> source,
     ISequencer? scheduler) : IObservable<T>
 {
+    /// <summary>Initializes a new instance of the <see cref="FromArrayObservable{T}"/> class that pumps elements inline.</summary>
+    /// <param name="source">The source enumerable whose elements are pumped on subscription.</param>
+    public FromArrayObservable(IEnumerable<T> source)
+        : this(source, null)
+    {
+    }
+
     /// <inheritdoc/>
     public IDisposable Subscribe(IObserver<T> observer)
     {

@@ -2,6 +2,8 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Runtime.CompilerServices;
+
 #if REACTIVE_SHIM
 namespace ReactiveUI.Primitives.Async.Reactive;
 #else
@@ -19,24 +21,7 @@ public static class AsyncContextExtensions
         /// <returns><see langword="true"/> if the specified <see cref="AsyncContext"/> matches the current <see
         /// cref="SynchronizationContext"/> or <see cref="TaskScheduler"/>; otherwise, <see langword="false"/>.</returns>
         /// <remarks>A sequencer matches only when the current task scheduler wraps that same sequencer instance.</remarks>
-        public bool IsSameAsCurrentAsyncContext()
-        {
-            ArgumentExceptionHelper.ThrowIfNull(context);
-
-            if (context.SynchronizationContext is not null)
-            {
-                return context.SynchronizationContext == SynchronizationContext.Current;
-            }
-
-            if (context.Sequencer is not null)
-            {
-                return TaskScheduler.Current is AsyncContext.SequencerTaskScheduler adapter
-                       && ReferenceEquals(adapter.Sequencer, context.Sequencer);
-            }
-
-            return context.TaskScheduler is not null
-                ? context.TaskScheduler == TaskScheduler.Current
-                : TaskScheduler.Current == TaskScheduler.Default;
-        }
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public bool IsSameAsCurrentAsyncContext() => AsyncContext.IsSameAsCurrent(context);
     }
 }

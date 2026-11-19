@@ -152,6 +152,21 @@ public class ThrottleUntilTrueObservableTests
             static (source, observer) => Throttled(source, new(), static _ => true).Subscribe(observer),
             static observer => observer.OnNext(1));
 
+    /// <summary>Verifies a throwing downstream completion handler disposes the sink and rethrows.</summary>
+    /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
+    [Test]
+    public async Task WhenDownstreamOnCompletedThrows_ThenDisposesAndRethrows()
+    {
+        VirtualClock scheduler = new();
+        SyncDirectSource<int> source = new();
+        InvalidOperationException expected = new("boom");
+        using var sub = Throttled(source, scheduler, static _ => true).Subscribe(
+            ReactiveUI.Primitives.Advanced.Witness.Create<int>(static _ => { }, static _ => { }, () => throw expected));
+
+        _ = Assert.Throws<InvalidOperationException>(() => source.Observer.OnCompleted());
+        await Assert.That(source.DisposeCount).IsEqualTo(1);
+    }
+
     /// <summary>Creates a throttle using the supplied clock and bypass predicate.</summary>
     /// <param name="source">The source sequence.</param>
     /// <param name="scheduler">The virtual clock timing throttled emissions.</param>

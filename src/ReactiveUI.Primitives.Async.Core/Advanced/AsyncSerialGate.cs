@@ -26,6 +26,9 @@ public sealed class AsyncSerialGate : IDisposable
     /// <summary>Disposal latch; non-zero once this instance has been disposed.</summary>
     private int _disposedValue;
 
+    /// <summary>Reference count guarding <see cref="_semaphore"/> disposal against concurrent wait or release calls.</summary>
+    private int _semaphoreRefs = 1;
+
     /// <summary>Gets the number of awaiters parked on the slow path.</summary>
     internal int WaitersCount => Volatile.Read(ref _waiters);
 
@@ -55,7 +58,24 @@ public sealed class AsyncSerialGate : IDisposable
             return;
         }
 
-        _semaphore.Dispose();
+        ReleaseSemaphoreRef();
+    }
+
+    /// <summary>Attempts one compare-exchange step to retain a reference to a live semaphore, updating <paramref name="current"/> on contention.</summary>
+    /// <param name="semaphoreRefs">The reference count field.</param>
+    /// <param name="current">The observed positive count; updated with the latest value when the exchange loses a race.</param>
+    /// <returns><see langword="true"/> when the reference was retained; <see langword="false"/> when the caller must retry or stop.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    internal static bool AdvanceRetainAttempt(ref int semaphoreRefs, ref int current)
+    {
+        var previous = Interlocked.CompareExchange(ref semaphoreRefs, current + 1, current);
+        if (previous == current)
+        {
+            return true;
+        }
+
+        current = previous;
+        return false;
     }
 
     /// <summary>Acquires ownership for the supplied caller thread, allowing same-thread reentry.</summary>
@@ -91,6 +111,7 @@ public sealed class AsyncSerialGate : IDisposable
     /// <summary>Slow path: park as a waiter and retry the acquire CAS after each semaphore signal.</summary>
     /// <param name="cancellationToken">Cancellation token observed while waiting.</param>
     /// <returns>A <see cref="Lease"/> for the acquired gate.</returns>
+    /// <exception cref="ObjectDisposedException">The gate has been disposed.</exception>
     internal async ValueTask<Lease> WaitForEntryAsync(CancellationToken cancellationToken)
     {
         _ = Interlocked.Increment(ref _waiters);
@@ -103,7 +124,17 @@ public sealed class AsyncSerialGate : IDisposable
                     return new(this);
                 }
 
-                await _semaphore.WaitAsync(cancellationToken).ConfigureAwait(false);
+                cancellationToken.ThrowIfCancellationRequested();
+                ObjectDisposedExceptionHelper.ThrowIf(!TryRetainSemaphore(), this);
+
+                try
+                {
+                    await _semaphore.WaitAsync(cancellationToken).ConfigureAwait(false);
+                }
+                finally
+                {
+                    ReleaseSemaphoreRef();
+                }
             }
         }
         finally
@@ -115,12 +146,44 @@ public sealed class AsyncSerialGate : IDisposable
     /// <summary>Signals one parked waiter if any are present; a late signal is consumed by the next waiter.</summary>
     private void WakeNextWaiter()
     {
-        if (Volatile.Read(ref _waiters) == 0)
+        if (Volatile.Read(ref _waiters) == 0 || !TryRetainSemaphore())
         {
             return;
         }
 
-        _ = _semaphore.Release();
+        try
+        {
+            _ = _semaphore.Release();
+        }
+        finally
+        {
+            ReleaseSemaphoreRef();
+        }
+    }
+
+    /// <summary>Attempts to retain a reference to <see cref="_semaphore"/> before touching it.</summary>
+    /// <returns><see langword="true"/> when <see cref="_semaphore"/> is still live; otherwise <see langword="false"/>.</returns>
+    private bool TryRetainSemaphore()
+    {
+        var current = Volatile.Read(ref _semaphoreRefs);
+        while (current > 0)
+        {
+            if (AdvanceRetainAttempt(ref _semaphoreRefs, ref current))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /// <summary>Releases one reference to <see cref="_semaphore"/>, disposing it when the count reaches zero.</summary>
+    private void ReleaseSemaphoreRef()
+    {
+        if (Interlocked.Decrement(ref _semaphoreRefs) == 0)
+        {
+            _semaphore.Dispose();
+        }
     }
 
     /// <summary>Holds one acquisition of an <see cref="AsyncSerialGate"/> and releases it on disposal.</summary>

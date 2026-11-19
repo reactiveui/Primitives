@@ -2,6 +2,8 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Runtime.CompilerServices;
+
 namespace ReactiveUI.Primitives.Async;
 
 /// <summary>Provides CombineLatest overloads for enumerable collections of asynchronous observable sequences.</summary>
@@ -17,12 +19,9 @@ public static partial class SignalAsyncExtensions
         /// after all sources have produced at least one value.</returns>
         /// <exception cref="ArgumentNullException">Thrown if <paramref name="sources"/> is <see langword="null"/>.</exception>
         /// <remarks>Snapshots share a subscription-owned buffer. Consume them inside OnNextAsync or copy them before retaining them; subsequent emissions overwrite the buffer.</remarks>
-        public IObservableAsync<IReadOnlyList<TSource>> SyncLatest()
-        {
-            ArgumentExceptionHelper.ThrowIfNull(sources);
-
-            return new SyncLatestEnumerableSignal<TSource, IReadOnlyList<TSource>>(sources, static s => s);
-        }
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public IObservableAsync<IReadOnlyList<TSource>> SyncLatest() =>
+            SyncLatestEnumerableSignal<TSource, IReadOnlyList<TSource>>.CreateSnapshot(sources);
 
         /// <summary>Combines the latest value from each asynchronous observable sequence in the supplied collection and projects the resulting snapshot into a result value.</summary>
         /// <typeparam name="TResult">The projected result type.</typeparam>
@@ -31,13 +30,9 @@ public static partial class SignalAsyncExtensions
         /// sources have produced at least one value.</returns>
         /// <exception cref="ArgumentNullException">Thrown if <paramref name="sources"/> or <paramref name="resultSelector"/>
         /// is <see langword="null"/>.</exception>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public IObservableAsync<TResult> SyncLatest<TResult>(
-            Func<IReadOnlyList<TSource>, TResult> resultSelector)
-        {
-            ArgumentExceptionHelper.ThrowIfNull(sources);
-            ArgumentExceptionHelper.ThrowIfNull(resultSelector);
-
-            return new SyncLatestEnumerableSignal<TSource, TResult>(sources, resultSelector);
-        }
+            Func<IReadOnlyList<TSource>, TResult> resultSelector) =>
+            new SyncLatestEnumerableSignal<TSource, TResult>(sources, resultSelector);
     }
 }

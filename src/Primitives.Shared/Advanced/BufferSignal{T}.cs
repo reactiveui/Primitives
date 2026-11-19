@@ -13,6 +13,15 @@ namespace ReactiveUI.Primitives.Advanced;
 [System.Diagnostics.DebuggerDisplay("BufferSignal: Window = {Window}, Source = {Source}")]
 public sealed class BufferSignal<T> : IObservable<IList<T>>
 {
+    /// <summary>Initializes a new instance of the <see cref="BufferSignal{T}"/> class on <see cref="Sequencer.Default"/>.</summary>
+    /// <param name="source">The source observable.</param>
+    /// <param name="timeSpan">The buffer window duration.</param>
+    /// <exception cref="ArgumentNullException"><paramref name="source"/> is <see langword="null"/>.</exception>
+    public BufferSignal(IObservable<T> source, TimeSpan timeSpan)
+        : this(source, timeSpan, Sequencer.Default)
+    {
+    }
+
     /// <summary>Initializes a new instance of the <see cref="BufferSignal{T}"/> class.</summary>
     /// <param name="source">The source observable.</param>
     /// <param name="timeSpan">The buffer window duration.</param>

@@ -17,7 +17,8 @@ namespace ReactiveUI.Primitives.Extensions.Operators;
 /// <param name="condition">The reactive condition observable.</param>
 /// <param name="trueScheduler">The scheduler to use when condition is true.</param>
 /// <param name="falseScheduler">The scheduler to use when condition is false.</param>
-internal sealed class ObserveOnIfObservable<T>(
+[System.Diagnostics.DebuggerDisplay("ObserveOnIfObservable: Source = {_source}")]
+public sealed class ObserveOnIfObservable<T>(
     IObservable<T> source,
     IObservable<bool> condition,
     ISequencer trueScheduler,
@@ -35,15 +36,27 @@ internal sealed class ObserveOnIfObservable<T>(
     /// <summary>The scheduler to use when condition is false.</summary>
     private readonly ISequencer _falseScheduler = InvalidOperationExceptionHelper.Check(falseScheduler);
 
+    /// <summary>Initializes a new instance of the <see cref="ObserveOnIfObservable{T}"/> class that runs inline when the condition is <see langword="false"/>.</summary>
+    /// <param name="source">The source observable.</param>
+    /// <param name="condition">The reactive condition observable.</param>
+    /// <param name="scheduler">The scheduler to use when condition is true.</param>
+    public ObserveOnIfObservable(
+        IObservable<T> source,
+        IObservable<bool> condition,
+        ISequencer scheduler)
+        : this(source, condition, scheduler, Sequencer.Immediate)
+    {
+    }
+
     /// <inheritdoc/>
     public IDisposable Subscribe(IObserver<T> observer)
     {
         ArgumentExceptionHelper.ThrowIfNull(observer);
 
         ObserveOnIfSink sink = new(observer, _trueScheduler, _falseScheduler);
-        var conditionSub = _condition.Subscribe(sink.ConditionObserver);
-        var sourceSub = _source.Subscribe(sink);
-        return new DisposableBag(sourceSub, conditionSub, sink);
+        sink.SetConditionSubscription(_condition.Subscribe(sink.ConditionObserver));
+        sink.SetSourceSubscription(_source.Subscribe(sink));
+        return sink;
     }
 
     /// <summary>Sink that forwards each value on whichever scheduler the latest condition value selects.</summary>
@@ -67,6 +80,20 @@ internal sealed class ObserveOnIfObservable<T>(
         /// <summary>The scheduler to use when condition is false.</summary>
         private readonly ISequencer _falseScheduler = InvalidOperationExceptionHelper.Check(falseScheduler);
 
+        /// <summary>The condition stream subscription.</summary>
+        [System.Diagnostics.CodeAnalysis.SuppressMessage(
+            "Usage",
+            "CA2213:Disposable fields should be disposed",
+            Justification = "Disposed atomically via SinkSubscription.Dispose.")]
+        private IDisposable? _conditionSub;
+
+        /// <summary>The source stream subscription.</summary>
+        [System.Diagnostics.CodeAnalysis.SuppressMessage(
+            "Usage",
+            "CA2213:Disposable fields should be disposed",
+            Justification = "Disposed atomically via SinkSubscription.Dispose.")]
+        private IDisposable? _sourceSub;
+
         /// <summary>The scheduler chosen by the latest condition value.</summary>
         private ISequencer _currentScheduler = falseScheduler;
 
@@ -81,6 +108,18 @@ internal sealed class ObserveOnIfObservable<T>(
 
         /// <summary>Gets a new observer that feeds condition values into this sink.</summary>
         public IObserver<bool> ConditionObserver => new ConditionObserverImpl(this);
+
+        /// <summary>Assigns the condition subscription.</summary>
+        /// <param name="subscription">The condition subscription.</param>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void SetConditionSubscription(IDisposable subscription) =>
+            SinkSubscription.Set(ref _conditionSub, subscription);
+
+        /// <summary>Assigns the source subscription.</summary>
+        /// <param name="subscription">The source subscription.</param>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void SetSourceSubscription(IDisposable subscription) =>
+            SinkSubscription.Set(ref _sourceSub, subscription);
 
         /// <inheritdoc/>
         public void OnNext(T value)
@@ -112,7 +151,14 @@ internal sealed class ObserveOnIfObservable<T>(
                 _done = true;
             }
 
-            _downstream.OnError(error);
+            try
+            {
+                _downstream.OnError(error);
+            }
+            finally
+            {
+                Dispose();
+            }
         }
 
         /// <inheritdoc/>
@@ -128,7 +174,14 @@ internal sealed class ObserveOnIfObservable<T>(
                 _done = true;
             }
 
-            _downstream.OnCompleted();
+            try
+            {
+                _downstream.OnCompleted();
+            }
+            finally
+            {
+                Dispose();
+            }
         }
 
         /// <inheritdoc/>
@@ -138,6 +191,9 @@ internal sealed class ObserveOnIfObservable<T>(
             {
                 _done = true;
             }
+
+            SinkSubscription.Dispose(ref _sourceSub);
+            SinkSubscription.Dispose(ref _conditionSub);
         }
 
         /// <summary>Updates the scheduler selected by the condition stream.</summary>

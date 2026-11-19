@@ -9,8 +9,8 @@ namespace ReactiveUI.Primitives.Async.Tests;
 /// <summary>Tests stateless replay observer removal and initial-value restoration.</summary>
 public sealed class StatelessReplayLatestSignalAsyncStateObserverLeaseTests
 {
-    /// <summary>The gate has been disposed independently of its signal state.</summary>
-    private const int GateDisposed = 2;
+    /// <summary>The gate is held by another flow and the signal is cancelled.</summary>
+    private const int HeldAndCancelled = 1;
 
     /// <summary>The whole signal state has been disposed.</summary>
     private const int StateDisposed = 3;
@@ -23,8 +23,7 @@ public sealed class StatelessReplayLatestSignalAsyncStateObserverLeaseTests
     /// <returns>A task representing the asynchronous test.</returns>
     [Test]
     [Arguments(0)]
-    [Arguments(1)]
-    [Arguments(GateDisposed)]
+    [Arguments(HeldAndCancelled)]
     [Arguments(StateDisposed)]
     [Arguments(AnotherObserver)]
     public async Task WhenStatelessReplayLeaseDisposed_ThenLastRemovalResetsValue(int stateKind)
@@ -32,6 +31,7 @@ public sealed class StatelessReplayLatestSignalAsyncStateObserverLeaseTests
         const int InitialValue = 1;
         const int PublishedValue = 2;
         StatelessReplayLatestSignalAsyncState<int> state = new(new(InitialValue));
+        TaskCompletionSource releaseGate = new(TaskCreationOptions.RunContinuationsAsynchronously);
         try
         {
             CallbackWitnessAsync<int> observer = new(static (_, _) => default);
@@ -41,33 +41,19 @@ public sealed class StatelessReplayLatestSignalAsyncStateObserverLeaseTests
             state.Value = new(PublishedValue);
             state.IsDisposed = stateKind == StateDisposed;
             StatelessReplayLatestSignalAsyncStateObserverLease<int> lease = new(state, observer);
-            using AsyncSerialGate.Lease? held = stateKind is 1 or GateDisposed
-                ? await state.Gate.EnterForThreadAsync(-1, CancellationToken.None)
-                : null;
-            switch (stateKind)
+            if (stateKind == HeldAndCancelled)
             {
-                case 1:
-                {
-                    await state.DisposedCts.CancelAsync();
-                    break;
-                }
-
-                case GateDisposed:
-                {
-                    state.Gate.Dispose();
-                    break;
-                }
-
-                case StateDisposed:
-                {
-                    state.Dispose();
-                    break;
-                }
+                _ = AsyncFlowGateHolder.HoldAsync(state.Gate, releaseGate.Task);
+                await state.DisposedCts.CancelAsync();
+            }
+            else if (stateKind == StateDisposed)
+            {
+                state.Dispose();
             }
 
             await lease.DisposeAsync();
             await lease.DisposeAsync();
-            await Assert.That(state.Observers.Contains(observer)).IsEqualTo(stateKind is 1 or GateDisposed or StateDisposed);
+            await Assert.That(state.Observers.Contains(observer)).IsEqualTo(stateKind is HeldAndCancelled or StateDisposed);
             if (stateKind == StateDisposed)
             {
                 return;
@@ -77,6 +63,7 @@ public sealed class StatelessReplayLatestSignalAsyncStateObserverLeaseTests
         }
         finally
         {
+            _ = releaseGate.TrySetResult();
             state.Dispose();
         }
     }

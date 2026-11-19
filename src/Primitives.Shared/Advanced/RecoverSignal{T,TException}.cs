@@ -13,18 +13,44 @@ namespace ReactiveUI.Primitives.Advanced;
 /// <summary>Mirrors the source and switches to a handler-selected sequence on errors of the specified type.</summary>
 /// <typeparam name="T">The value type.</typeparam>
 /// <typeparam name="TException">The handled exception type.</typeparam>
-/// <param name="source">The source observable.</param>
-/// <param name="handler">The handler that selects the fallback sequence for a caught error.</param>
 /// <remarks>Other error types and exceptions thrown by the handler propagate unchanged.</remarks>
 [System.Diagnostics.DebuggerDisplay("RecoverSignal: Source = {_source}")]
-public sealed class RecoverSignal<T, TException>(IObservable<T> source, Func<TException, IObservable<T>> handler) : IRequireCurrentThread<T>
+public sealed class RecoverSignal<T, TException> : IRequireCurrentThread<T>
     where TException : Exception
 {
     /// <summary>The source observable.</summary>
-    private readonly IObservable<T> _source = source;
+    private readonly IObservable<T> _source;
 
     /// <summary>The handler that selects the fallback sequence for a caught error.</summary>
-    private readonly Func<TException, IObservable<T>> _handler = handler;
+    private readonly Func<TException, IObservable<T>> _handler;
+
+    /// <summary>Initializes a new instance of the <see cref="RecoverSignal{T, TException}"/> class.</summary>
+    /// <param name="source">The source observable.</param>
+    /// <param name="handler">The handler that selects the fallback sequence for a caught error.</param>
+    /// <exception cref="ArgumentNullException"><paramref name="source"/> or <paramref name="handler"/> is <see langword="null"/>.</exception>
+    public RecoverSignal(IObservable<T> source, Func<TException, IObservable<T>> handler)
+    {
+        ArgumentExceptionHelper.ThrowIfNull(source);
+        ArgumentExceptionHelper.ThrowIfNull(handler);
+
+        _source = source;
+        _handler = handler;
+    }
+
+    /// <summary>Creates a recovery sequence, eliding the operator when <paramref name="source"/> is known never to error.</summary>
+    /// <param name="source">The source observable.</param>
+    /// <param name="handler">The handler that selects the fallback sequence for a caught error.</param>
+    /// <returns>The recovery sequence.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="source"/> or <paramref name="handler"/> is <see langword="null"/>.</exception>
+    public static IObservable<T> Create(IObservable<T> source, Func<TException, IObservable<T>> handler)
+    {
+        ArgumentExceptionHelper.ThrowIfNull(source);
+        ArgumentExceptionHelper.ThrowIfNull(handler);
+
+        return source is ImmutableEmptySignal<T> or ImmutableNeverSignal<T> or RangeSignal or ImmediateReturnSignal<T>
+            ? source
+            : new RecoverSignal<T, TException>(source, handler);
+    }
 
     /// <inheritdoc/>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -63,13 +89,29 @@ public sealed class RecoverSignal<T, TException>(IObservable<T> source, Func<TEx
         /// <summary>The fallback subscription slot, populated after a caught error.</summary>
         private IDisposable? _fallbackSubscription;
 
+        /// <summary>Non-zero once the source phase has finished.</summary>
+        private int _sourceDone;
+
         /// <inheritdoc/>
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void OnNext(T value) => _observer.OnNext(value);
+        public void OnNext(T value)
+        {
+            if (Volatile.Read(ref _sourceDone) != 0)
+            {
+                return;
+            }
+
+            _observer.OnNext(value);
+        }
 
         /// <inheritdoc/>
         public void OnError(Exception error)
         {
+            if (Interlocked.Exchange(ref _sourceDone, 1) != 0)
+            {
+                return;
+            }
+
+            SubscriptionSlots.Release(ref _sourceSubscription);
             if (error is TException typed)
             {
                 IObservable<T> next;
@@ -77,7 +119,7 @@ public sealed class RecoverSignal<T, TException>(IObservable<T> source, Func<TEx
                 {
                     next = _handler(typed);
                 }
-                catch (Exception handlerError)
+                catch (Exception handlerError) when (!FatalExceptionHelper.IsFatal(handlerError))
                 {
                     try
                     {
@@ -109,6 +151,11 @@ public sealed class RecoverSignal<T, TException>(IObservable<T> source, Func<TEx
         /// <inheritdoc/>
         public void OnCompleted()
         {
+            if (Interlocked.Exchange(ref _sourceDone, 1) != 0)
+            {
+                return;
+            }
+
             try
             {
                 _observer.OnCompleted();
@@ -122,6 +169,7 @@ public sealed class RecoverSignal<T, TException>(IObservable<T> source, Func<TEx
         /// <inheritdoc/>
         public void Dispose()
         {
+            Volatile.Write(ref _sourceDone, 1);
             SubscriptionSlots.Release(ref _sourceSubscription);
             SubscriptionSlots.Release(ref _fallbackSubscription);
         }

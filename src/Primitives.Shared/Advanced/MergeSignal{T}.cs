@@ -52,6 +52,26 @@ public sealed class MergeSignal<T> : IObservable<T>
     /// <summary>Gets the maximum number of active subscriptions, when bounded.</summary>
     private int? MaxConcurrent { get; }
 
+    /// <summary>Merges two sequences with empty identity reductions.</summary>
+    /// <param name="first">The first sequence.</param>
+    /// <param name="second">The second sequence.</param>
+    /// <returns>The merged observable sequence.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="first"/> or <paramref name="second"/> is <see langword="null"/>.</exception>
+    public static IObservable<T> Create(IObservable<T> first, IObservable<T> second)
+    {
+        ArgumentExceptionHelper.ThrowIfNull(first);
+        ArgumentExceptionHelper.ThrowIfNull(second);
+
+        if (first is ImmutableEmptySignal<T>)
+        {
+            return second;
+        }
+
+        return second is ImmutableEmptySignal<T>
+            ? first
+            : new MergeSignal<T>(first, second);
+    }
+
     /// <inheritdoc/>
     public IDisposable Subscribe(IObserver<T> observer)
     {

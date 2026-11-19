@@ -3,6 +3,7 @@
 // See the LICENSE file in the project root for full license information.
 
 using System.Diagnostics.CodeAnalysis;
+using System.Runtime.CompilerServices;
 
 #if REACTIVE_SHIM
 namespace ReactiveUI.Primitives.Reactive;
@@ -20,12 +21,8 @@ public static class ConnectableSignalRxNameExtensions
     {
         /// <summary>Shares a single subscription while observers are present.</summary>
         /// <returns>A reference-counted sequence.</returns>
-        public IObservable<T> RefCount()
-        {
-            ArgumentExceptionHelper.ThrowIfNull(source);
-
-            return new AutoShareSignal<T>(source);
-        }
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public IObservable<T> RefCount() => new AutoShareSignal<T>(source);
     }
 
     /// <summary>Hot-sharing operators for an observable source sequence.</summary>
@@ -35,70 +32,44 @@ public static class ConnectableSignalRxNameExtensions
     {
         /// <summary>Creates a connectable live signal.</summary>
         /// <returns>A connectable live signal.</returns>
-        public ConnectableSignal<T> Publish()
-        {
-            ArgumentExceptionHelper.ThrowIfNull(source);
-
-            return new(source, new Signal<T>());
-        }
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public ConnectableSignal<T> Publish() => AutoShareSignal<T>.CreateConnectable(source);
 
         /// <summary>Shares source values through a live signal hub.</summary>
         /// <returns>A connectable live signal.</returns>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         [SuppressMessage(
             "Design",
             "SST2318:Members should not have identical bodies",
             Justification = "Share and Publish are the same operator under two names callers expect.")]
-        public ConnectableSignal<T> Share()
-        {
-            ArgumentExceptionHelper.ThrowIfNull(source);
-
-            return new(source, new Signal<T>());
-        }
+        public ConnectableSignal<T> Share() => AutoShareSignal<T>.CreateConnectable(source);
 
         /// <summary>Multicasts source values through a live hub and applies a selector.</summary>
         /// <typeparam name="TResult">The selected value type.</typeparam>
         /// <param name="selector">The selector applied to the connectable signal before it is connected.</param>
         /// <returns>A sequence returned by <paramref name="selector"/> while the source is connected.</returns>
         /// <exception cref="ArgumentNullException"><paramref name="source"/> or <paramref name="selector"/> is <see langword="null"/>.</exception>
-        public IObservable<TResult> Publish<TResult>(Func<IObservable<T>, IObservable<TResult>> selector)
-        {
-            ArgumentExceptionHelper.ThrowIfNull(source);
-
-            ArgumentExceptionHelper.ThrowIfNull(selector);
-
-            return new PublishSelectorSignal<T, TResult>(source, selector);
-        }
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public IObservable<TResult> Publish<TResult>(Func<IObservable<T>, IObservable<TResult>> selector) =>
+            new PublishSelectorSignal<T, TResult>(source, selector);
 
         /// <summary>Replays all source values through an unbounded replay hub.</summary>
         /// <returns>A connectable replay signal.</returns>
-        public ConnectableSignal<T> Replay()
-        {
-            ArgumentExceptionHelper.ThrowIfNull(source);
-
-            return new(source, new ReplaySignal<T>());
-        }
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public ConnectableSignal<T> Replay() => ReplaySignal<T>.CreateConnectable(source);
 
         /// <summary>Replays source values through a bounded replay hub.</summary>
         /// <param name="bufferSize">Maximum number of values to replay.</param>
         /// <returns>A connectable replay signal.</returns>
-        public ConnectableSignal<T> Replay(int bufferSize)
-        {
-            ReplaySignal<T> hub = new(bufferSize);
-            ArgumentExceptionHelper.ThrowIfNull(source);
-
-            return new(source, hub);
-        }
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public ConnectableSignal<T> Replay(int bufferSize) => ReplaySignal<T>.CreateConnectable(source, bufferSize);
 
         /// <summary>Replays source values through a replay hub constrained by count and time.</summary>
         /// <param name="bufferSize">Maximum number of values to replay.</param>
         /// <param name="window">Maximum replay window.</param>
         /// <returns>A connectable replay signal.</returns>
-        public ConnectableSignal<T> Replay(int bufferSize, TimeSpan window)
-        {
-            ReplaySignal<T> hub = new(bufferSize, window);
-            ArgumentExceptionHelper.ThrowIfNull(source);
-
-            return new(source, hub);
-        }
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public ConnectableSignal<T> Replay(int bufferSize, TimeSpan window) =>
+            ReplaySignal<T>.CreateConnectable(source, bufferSize, window);
     }
 }

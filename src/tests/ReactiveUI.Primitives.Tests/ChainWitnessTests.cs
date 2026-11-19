@@ -4,12 +4,20 @@
 
 using System.Runtime.CompilerServices;
 using ReactiveUI.Primitives.Advanced;
+using ReactiveUI.Primitives.Disposables;
+using ReactiveUI.Primitives.Signals;
 
 namespace ReactiveUI.Primitives.Tests;
 
 /// <summary>Tests that <see cref="ChainWitness{T}"/> serializes deliveries without holding a lock while user code runs.</summary>
 public sealed class ChainWitnessTests
 {
+    /// <summary>Iteration count for deep synchronous stack-safety verification.</summary>
+    private const int StackSafetyDepth = 10_000;
+
+    /// <summary>Second inner value used by reentrant subscription tests.</summary>
+    private const int SecondValue = 2;
+
     /// <summary>
     /// An observer that marshals synchronously to another thread is not deadlocked when that thread completes the inner
     /// source, pushes the next one and completes the outer source.
@@ -68,6 +76,75 @@ public sealed class ChainWitnessTests
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public Task ChainWitnessNotificationsRaisedAfterDisposeAreDropped() =>
         ChainDeliveryAssertions.NotificationsRaisedAfterDisposeAreDropped(SubscribeChain);
+
+    /// <summary>An inner source completing inside Subscribe while the outer pushes the next source does not leak the second subscription.</summary>
+    /// <returns>A task representing the asynchronous test.</returns>
+    [Test]
+    public async Task OnNext_InnerCompletesDuringSubscribeAndOuterPushesNext_DisposesSecondInnerOnChainDispose()
+    {
+        using Signal<IObservable<int>> outer = new();
+        var secondDisposals = 0;
+        var second = Signal.Create<int>(_ => new ActionDisposable(() => secondDisposals++));
+        var first = Signal.Create<int>(innerObserver =>
+        {
+            innerObserver.OnCompleted();
+            outer.OnNext(second);
+            return EmptyDisposable.Instance;
+        });
+
+        var chainSub = SubscribeChain(outer, new RecordingWitness<int>());
+        outer.OnNext(first);
+        chainSub.Dispose();
+
+        await Assert.That(secondDisposals).IsEqualTo(1);
+    }
+
+    /// <summary>Outer emissions raised while an inner source is subscribing are queued and subscribed sequentially without losing handles.</summary>
+    /// <returns>A task representing the asynchronous test.</returns>
+    [Test]
+    public async Task OnNext_OuterEmitsDuringInnerSubscribe_StreamsInOrderAndDisposesActiveInner()
+    {
+        using Signal<IObservable<int>> outer = new();
+        var secondDisposals = 0;
+        IObserver<int>? secondObserver = null;
+        var second = Signal.Create<int>(obs =>
+        {
+            secondObserver = obs;
+            return new ActionDisposable(() => secondDisposals++);
+        });
+        var first = Signal.Create<int>(obs =>
+        {
+            outer.OnNext(second);
+            obs.OnNext(1);
+            obs.OnCompleted();
+            return EmptyDisposable.Instance;
+        });
+
+        RecordingWitness<int> downstream = new();
+        var chainSub = SubscribeChain(outer, downstream);
+        outer.OnNext(first);
+        secondObserver!.OnNext(SecondValue);
+        chainSub.Dispose();
+
+        await Assert.That(downstream.Values.SequenceEqual([1, SecondValue])).IsTrue();
+        await Assert.That(secondDisposals).IsEqualTo(1);
+    }
+
+    /// <summary>Chaining ten thousand synchronous inner sources completes iteratively without stack overflow.</summary>
+    /// <returns>A task representing the asynchronous test.</returns>
+    [Test]
+    public async Task Subscribe_TenThousandSynchronousInnerSources_CompletesWithoutStackOverflow()
+    {
+        var sources = new IObservable<int>[StackSafetyDepth];
+        for (var i = 0; i < StackSafetyDepth; i++)
+        {
+            sources[i] = Signal.Emit(1);
+        }
+
+        var sum = 0;
+        _ = Signal.Chain(sources).Subscribe(x => sum += x);
+        await Assert.That(sum).IsEqualTo(StackSafetyDepth);
+    }
 
     /// <summary>Subscribes a chain witness over the outer source.</summary>
     /// <param name="sources">The outer source.</param>

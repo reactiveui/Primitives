@@ -2,7 +2,6 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
-using System.Diagnostics;
 using System.Runtime.CompilerServices;
 
 namespace ReactiveUI.Primitives.Async;
@@ -23,69 +22,8 @@ public static partial class SignalAsyncExtensions
         /// instead of throwing exceptions.</returns>
         /// <remarks>The completion result carries the error, so an observer inspects that result to tell success from
         /// failure.</remarks>
-        public IObservableAsync<T> OnErrorResumeAsFailure()
-        {
-            ArgumentExceptionHelper.ThrowIfNull(source);
-
-            return new OnErrorResumeAsFailureSignal<T>(source);
-        }
-    }
-
-    /// <summary>An observable that converts resumable errors from the source into failure completion results.</summary>
-    /// <typeparam name="T">The type of elements in the observable sequence.</typeparam>
-    /// <param name="source">The source observable to monitor for errors.</param>
-    internal sealed class OnErrorResumeAsFailureSignal<T>(IObservableAsync<T> source) : IObservableAsync<T>
-    {
-        /// <inheritdoc/>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        ValueTask<IAsyncDisposable> IObservableAsync<T>.SubscribeAsync(
-            IObserverAsync<T> observer,
-            CancellationToken cancellationToken) =>
-            source.SubscribeAsync(new OnErrorResumeAsFailureWitness(observer), cancellationToken);
-
-        /// <summary>A witness that forwards values and completion, but converts resumable errors into failure completions.</summary>
-        /// <param name="observer">The downstream observer to forward notifications to.</param>
-        [DebuggerDisplay("OnErrorResumeAsFailureWitness: {_witness}")]
-        internal sealed class OnErrorResumeAsFailureWitness(IObserverAsync<T> observer) : IWitnessAsync<T>
-        {
-            /// <summary>The notification gate, cancellation link and disposal state.</summary>
-            private WitnessAsyncState _witness;
-
-            /// <inheritdoc/>
-            ref WitnessAsyncState IWitnessState.Witness => ref _witness;
-
-            /// <inheritdoc/>
-            [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            public ValueTask OnNextAsync(T value, CancellationToken cancellationToken) =>
-                WitnessAsync.OnNextAsync(this, value, cancellationToken);
-
-            /// <inheritdoc/>
-            [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            public ValueTask OnErrorResumeAsync(Exception error, CancellationToken cancellationToken) =>
-                WitnessAsync.OnErrorResumeAsync(this, error, cancellationToken);
-
-            /// <inheritdoc/>
-            [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            public ValueTask OnCompletedAsync(Result result) => WitnessAsync.OnCompletedAsync(this, result);
-
-            /// <inheritdoc/>
-            [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            public ValueTask DisposeAsync() => WitnessAsync.DisposeStateAsync(this);
-
-            /// <inheritdoc/>
-            [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            ValueTask IWitnessAsync<T>.OnNextAsyncCore(T value, CancellationToken cancellationToken) =>
-                observer.OnNextAsync(value, cancellationToken);
-
-            /// <inheritdoc/>
-            [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            ValueTask IWitnessAsync<T>.OnErrorResumeAsyncCore(Exception error, CancellationToken cancellationToken) =>
-                observer.OnCompletedAsync(Result.Failure(error));
-
-            /// <inheritdoc/>
-            [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            ValueTask IWitnessAsync<T>.OnCompletedAsyncCore(Result result) =>
-                observer.OnCompletedAsync(result);
-        }
+        public IObservableAsync<T> OnErrorResumeAsFailure() =>
+            new OnErrorResumeAsFailureSignal<T>(source);
     }
 }

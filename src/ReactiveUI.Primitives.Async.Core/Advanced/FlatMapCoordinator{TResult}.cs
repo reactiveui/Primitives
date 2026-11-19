@@ -39,7 +39,7 @@ public sealed class FlatMapCoordinator<TResult> : IAsyncDisposable
     private CancellationToken DisposeToken { get; }
 
     /// <summary>Gets the observer notification gate.</summary>
-    private AsyncSerialGate ObserverGate { get; } = new();
+    private ReactiveUI.Primitives.Async.Internal.AsyncFlowGate ObserverGate { get; } = new();
 
     /// <summary>Gets or sets the external cancellation registration.</summary>
     private CancellationTokenRegistration ExternalLinkRegistration { get; set; }
@@ -63,23 +63,11 @@ public sealed class FlatMapCoordinator<TResult> : IAsyncDisposable
 
     /// <summary>Links external cancellation to this lifetime, immediately honoring an already cancelled token.</summary>
     /// <param name="external">The subscribe-time cancellation token.</param>
-    public void LinkExternalCancellation(CancellationToken external)
-    {
-        if (!external.CanBeCanceled || external == DisposeToken)
-        {
-            return;
-        }
-
-        if (external.IsCancellationRequested)
-        {
-            Cancellation.Cancel();
-            return;
-        }
-
-        ExternalLinkRegistration = external.UnsafeRegister(
-            static state => ((CancellationTokenSource)state!).Cancel(),
-            Cancellation);
-    }
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public void LinkExternalCancellation(CancellationToken external) =>
+        ExternalLinkRegistration = ReactiveUI.Primitives.Async.Internal.AsyncStopTokenHelper.LinkExternal(
+            Cancellation,
+            external);
 
     /// <inheritdoc/>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -201,7 +189,6 @@ public sealed class FlatMapCoordinator<TResult> : IAsyncDisposable
         ExternalLinkRegistration.Dispose();
 #endif
         Cancellation.Dispose();
-        ObserverGate.Dispose();
     }
 
     /// <summary>Routes post-disposal failures to the unhandled exception handler.</summary>

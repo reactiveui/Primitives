@@ -2,6 +2,7 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Runtime.CompilerServices;
 using ReactiveUI.Primitives.Disposables;
 
 #if REACTIVE_SHIM
@@ -12,7 +13,8 @@ namespace ReactiveUI.Primitives.Extensions.Operators;
 
 /// <summary>Schedules a value without a terminal notification; disposal ends the subscription.</summary>
 /// <typeparam name="T">The value type emitted to the downstream observer.</typeparam>
-internal sealed class ScheduledValueObservable<T> : IObservable<T>
+[System.Diagnostics.DebuggerDisplay("ScheduledValueObservable: Value = {_value}, HasDelay = {_hasDelay}")]
+public sealed class ScheduledValueObservable<T> : IObservable<T>
 {
     /// <summary>The value to emit.</summary>
     private readonly T _value;
@@ -71,6 +73,81 @@ internal sealed class ScheduledValueObservable<T> : IObservable<T>
             _hasDelay = true;
         }
     }
+
+    /// <summary>Creates an observable that emits <paramref name="value"/> after <paramref name="dueTime"/> on <paramref name="scheduler"/>.</summary>
+    /// <param name="value">The value to emit.</param>
+    /// <param name="dueTime">The relative delay.</param>
+    /// <param name="scheduler">The scheduler used to dispatch the emission.</param>
+    /// <returns>A scheduled value observable.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static ScheduledValueObservable<T> CreateDelayed(T value, TimeSpan dueTime, ISequencer scheduler) =>
+        new(value, scheduler, dueTime, null, null, null);
+
+    /// <summary>Creates an observable that invokes <paramref name="action"/> and emits <paramref name="value"/> after <paramref name="dueTime"/> on <paramref name="scheduler"/>.</summary>
+    /// <param name="value">The value to emit.</param>
+    /// <param name="dueTime">The relative delay.</param>
+    /// <param name="scheduler">The scheduler used to dispatch the emission.</param>
+    /// <param name="action">Side-effect invoked before emission.</param>
+    /// <returns>A scheduled value observable.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static ScheduledValueObservable<T> CreateDelayed(
+        T value,
+        TimeSpan dueTime,
+        ISequencer scheduler,
+        Action<T> action) =>
+        new(value, scheduler, dueTime, null, null, action);
+
+    /// <summary>Creates an observable that transforms and emits <paramref name="value"/> after <paramref name="dueTime"/> on <paramref name="scheduler"/>.</summary>
+    /// <param name="value">The value to emit.</param>
+    /// <param name="dueTime">The relative delay.</param>
+    /// <param name="scheduler">The scheduler used to dispatch the emission.</param>
+    /// <param name="function">Transform applied before emission.</param>
+    /// <returns>A scheduled value observable.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static ScheduledValueObservable<T> CreateDelayed(
+        T value,
+        TimeSpan dueTime,
+        ISequencer scheduler,
+        Func<T, T> function) =>
+        new(value, scheduler, dueTime, null, function, null);
+
+    /// <summary>Creates an observable that emits <paramref name="value"/> at <paramref name="dueTime"/> on <paramref name="scheduler"/>.</summary>
+    /// <param name="value">The value to emit.</param>
+    /// <param name="dueTime">The absolute due time.</param>
+    /// <param name="scheduler">The scheduler used to dispatch the emission.</param>
+    /// <returns>A scheduled value observable.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static ScheduledValueObservable<T> CreateAbsolute(
+        T value,
+        DateTimeOffset dueTime,
+        ISequencer scheduler) =>
+        new(value, scheduler, null, dueTime, null, null);
+
+    /// <summary>Creates an observable that invokes <paramref name="action"/> and emits <paramref name="value"/> at <paramref name="dueTime"/> on <paramref name="scheduler"/>.</summary>
+    /// <param name="value">The value to emit.</param>
+    /// <param name="dueTime">The absolute due time.</param>
+    /// <param name="scheduler">The scheduler used to dispatch the emission.</param>
+    /// <param name="action">Side-effect invoked before emission.</param>
+    /// <returns>A scheduled value observable.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static ScheduledValueObservable<T> CreateAbsolute(
+        T value,
+        DateTimeOffset dueTime,
+        ISequencer scheduler,
+        Action<T> action) =>
+        new(value, scheduler, null, dueTime, null, action);
+
+    /// <summary>Creates an observable that transforms and emits <paramref name="value"/> immediately on <paramref name="scheduler"/>.</summary>
+    /// <param name="value">The value to emit.</param>
+    /// <param name="scheduler">The scheduler used to dispatch the emission.</param>
+    /// <param name="function">Transform applied before emission.</param>
+    /// <returns>A scheduled value observable.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static ScheduledValueObservable<T> CreateImmediate(
+        T value,
+        ISequencer scheduler,
+        Func<T, T> function) =>
+        new(value, scheduler, null, null, function, null);
 
     /// <inheritdoc/>
     public IDisposable Subscribe(IObserver<T> observer)

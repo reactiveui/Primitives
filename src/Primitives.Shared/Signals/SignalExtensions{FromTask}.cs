@@ -23,26 +23,15 @@ public static partial class SignalExtensions
         /// <returns>A task carrying the final source value, or the default value on cancellation.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public Task<TResult?> HandleCancellation(CancellationToken token) =>
-            asyncTask.HandleCancellation(null, token);
+            TaskFaultObservation.HandleCancellationAsync(asyncTask, token);
 
         /// <summary>Awaits the source and returns its final value; on cancellation invokes the action and returns the default value.</summary>
         /// <param name="action">Invoked when the wait is cancelled.</param>
         /// <param name="token">The token that cancels the wait.</param>
         /// <returns>A task carrying the final source value, or the default value on cancellation.</returns>
-        public async Task<TResult?> HandleCancellation(Action? action, CancellationToken token)
-        {
-            try
-            {
-                token.ThrowIfCancellationRequested();
-                return await AwaitOnTaskPoolAsync(asyncTask, token).ConfigureAwait(false);
-            }
-            catch (OperationCanceledException)
-            {
-                action?.Invoke();
-            }
-
-            return default;
-        }
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public Task<TResult?> HandleCancellation(Action? action, CancellationToken token) =>
+            TaskFaultObservation.HandleCancellationAsync(asyncTask, action, token);
     }
 
     /// <summary>Cancellation-handling operators for a task.</summary>
@@ -52,22 +41,14 @@ public static partial class SignalExtensions
         /// <summary>Awaits the task and completes normally when it is cancelled.</summary>
         /// <returns>A task that completes once the awaited task finishes or is cancelled.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public Task HandleCancellation() => asyncTask.HandleCancellation(null);
+        public Task HandleCancellation() => TaskFaultObservation.HandleCancellationAsync(asyncTask);
 
         /// <summary>Awaits the task and invokes the action instead of throwing when it is cancelled.</summary>
         /// <param name="action">Invoked when the task is cancelled.</param>
         /// <returns>A task that completes once the awaited task finishes or is cancelled.</returns>
-        public async Task HandleCancellation(Action? action)
-        {
-            try
-            {
-                await asyncTask.ConfigureAwait(false);
-            }
-            catch (OperationCanceledException)
-            {
-                action?.Invoke();
-            }
-        }
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public Task HandleCancellation(Action? action) =>
+            TaskFaultObservation.HandleCancellationAsync(asyncTask, action);
     }
 
     /// <summary>Cancellation-handling operators for a result-producing task.</summary>
@@ -78,66 +59,20 @@ public static partial class SignalExtensions
         /// <summary>Awaits the task and returns its result, or the default value when it is cancelled.</summary>
         /// <returns>A task carrying the result, or the default value on cancellation.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public Task<TResult?> HandleCancellation() => asyncTask.HandleCancellation(null);
+        public Task<TResult?> HandleCancellation() => TaskFaultObservation.HandleCancellationAsync(asyncTask);
 
         /// <summary>Awaits the task and returns its result; on cancellation invokes the action and returns the default value.</summary>
         /// <param name="action">Invoked when the task is cancelled.</param>
         /// <returns>A task carrying the result, or the default value on cancellation.</returns>
-        public async Task<TResult?> HandleCancellation(Action? action)
-        {
-            try
-            {
-                return await asyncTask.ConfigureAwait(false);
-            }
-            catch (OperationCanceledException)
-            {
-                action?.Invoke();
-            }
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public Task<TResult?> HandleCancellation(Action? action) =>
+            TaskFaultObservation.HandleCancellationAsync(asyncTask, action);
 
-            return default;
-        }
-
-        /// <summary>Awaits whichever completes first, the task or the token, and reports which one it was.</summary>
+        /// <summary>Awaits whichever completes first, the task or <paramref name="cancellationToken"/>, and reports which one won.</summary>
         /// <param name="cancellationToken">The token raced against the task.</param>
-        /// <returns>The task result, and whether the wait ended in cancellation.</returns>
-        internal async Task<(TResult Value, bool IsCanceled)> WhenCancelled(CancellationToken cancellationToken)
-        {
-            TaskCompletionSource<TResult> tcs = new(TaskCreationOptions.RunContinuationsAsynchronously);
-            var registration = cancellationToken.UnsafeRegister(
-                static (state, token) => ((TaskCompletionSource<TResult>)state!).TrySetCanceled(token),
-                tcs);
-            var cancellationTask = tcs.Task;
-
-            try
-            {
-                var readyTask = await Task.WhenAny(asyncTask, cancellationTask).ConfigureAwait(false);
-
-                // Faults from work that outlives cancellation are still observed.
-                if (readyTask == cancellationTask)
-                {
-                    TaskFaultObservation.Register(asyncTask);
-                }
-
-                return (await readyTask.ConfigureAwait(false), tcs.Task.IsCanceled || readyTask.IsCanceled);
-            }
-            finally
-            {
-#if NET8_0_OR_GREATER
-                await registration.DisposeAsync().ConfigureAwait(false);
-#else
-                registration.Dispose();
-#endif
-            }
-        }
+        /// <returns>The task result and whether cancellation won.</returns>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        internal Task<(TResult Value, bool IsCanceled)> WhenCancelled(CancellationToken cancellationToken) =>
+            TaskFaultObservation.WhenCancelledAsync(asyncTask, cancellationToken);
     }
-
-    /// <summary>Starts an observable wait on the task pool, cancelling the wait itself when the token fires.</summary>
-    /// <typeparam name="TResult">The source value type.</typeparam>
-    /// <param name="source">The source to await.</param>
-    /// <param name="token">The token that cancels the wait.</param>
-    /// <returns>The source's terminal result.</returns>
-    /// <remarks>The token reaches the wait rather than only the dispatch, so cancelling part-way through ends it.</remarks>
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static Task<TResult> AwaitOnTaskPoolAsync<TResult>(IObservable<TResult> source, CancellationToken token) =>
-        Task.Run(() => source.ToTask(token), token);
 }

@@ -23,27 +23,17 @@ public static partial class LinqExtensions
         /// <param name="selector">Projects each source value to an inner observable.</param>
         /// <returns>An observable that mirrors the latest projected inner observable.</returns>
         /// <remarks>Null switches the active subscription too; use SwitchSelect to ignore nulls and keep the current subscription.</remarks>
-        public IObservable<TOut> SwitchMap<TOut>(Func<TIn, IObservable<TOut>> selector)
-        {
-            ArgumentExceptionHelper.ThrowIfNull(source);
-
-            ArgumentExceptionHelper.ThrowIfNull(selector);
-
-            return new SwitchMapSignal<TIn, TOut>(source, selector);
-        }
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public IObservable<TOut> SwitchMap<TOut>(Func<TIn, IObservable<TOut>> selector) =>
+            SwitchMapSignal<TIn, TOut>.Create(source, selector);
 
         /// <summary>Projects each value to a value-and-flag pair and forwards the value only when the flag is true.</summary>
         /// <typeparam name="TOut">The forwarded element type.</typeparam>
         /// <param name="chooser">Maps a source value to <c>(HasValue, Value)</c>; the value is skipped when <c>HasValue</c> is <see langword="false"/>.</param>
         /// <returns>An observable of the chosen values.</returns>
-        public IObservable<TOut> Choose<TOut>(Func<TIn, (bool HasValue, TOut Value)> chooser)
-        {
-            ArgumentExceptionHelper.ThrowIfNull(source);
-
-            ArgumentExceptionHelper.ThrowIfNull(chooser);
-
-            return new ChooseSignal<TIn, TOut>(source, chooser);
-        }
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public IObservable<TOut> Choose<TOut>(Func<TIn, (bool HasValue, TOut Value)> chooser) =>
+            ChooseSignal<TIn, TOut>.Create(source, chooser);
     }
 
     /// <summary>Fused projection operators for an observable source sequence of nullable values.</summary>
@@ -58,67 +48,8 @@ public static partial class LinqExtensions
         /// <typeparam name="TResult">The element type of the projected inner observables.</typeparam>
         /// <param name="selector">Projects each non-null source value to an inner observable.</param>
         /// <returns>An observable that mirrors the latest projected inner observable.</returns>
-        public IObservable<TResult> SwitchSelect<TResult>(Func<TSource, IObservable<TResult>> selector)
-        {
-            ArgumentExceptionHelper.ThrowIfNull(source);
-
-            ArgumentExceptionHelper.ThrowIfNull(selector);
-
-            return new SwitchMapSignal<TSource, TResult>(source!, selector, skipNullSources: true);
-        }
-    }
-
-    /// <summary>A fused filter + map observable.</summary>
-    /// <typeparam name="TIn">The source element type.</typeparam>
-    /// <typeparam name="TOut">The forwarded element type.</typeparam>
-    /// <param name="source">The source observable whose values are filtered and mapped.</param>
-    /// <param name="chooser">Maps a source value to <c>(HasValue, Value)</c>; the value is skipped when <c>HasValue</c> is <see langword="false"/>.</param>
-    private sealed class ChooseSignal<TIn, TOut>(
-        IObservable<TIn> source,
-        Func<TIn, (bool HasValue, TOut Value)> chooser) : IObservable<TOut>
-    {
-        /// <inheritdoc/>
-        public IDisposable Subscribe(IObserver<TOut> observer)
-        {
-            ArgumentExceptionHelper.ThrowIfNull(observer);
-
-            return source.Subscribe(new Sink(observer, chooser));
-        }
-
-        /// <summary>Applies the chooser to each value and forwards only the chosen ones.</summary>
-        /// <param name="downstream">The downstream observer that receives the chosen values.</param>
-        /// <param name="chooser">Maps a source value to <c>(HasValue, Value)</c>; the value is skipped when <c>HasValue</c> is <see langword="false"/>.</param>
-        private sealed class Sink(IObserver<TOut> downstream, Func<TIn, (bool HasValue, TOut Value)> chooser) : IObserver<TIn>
-        {
-            /// <inheritdoc/>
-            public void OnNext(TIn value)
-            {
-                (bool HasValue, TOut Value) result;
-                try
-                {
-                    result = chooser(value);
-                }
-                catch (Exception ex)
-                {
-                    downstream.OnError(ex);
-                    return;
-                }
-
-                if (!result.HasValue)
-                {
-                    return;
-                }
-
-                downstream.OnNext(result.Value);
-            }
-
-            /// <inheritdoc/>
-            [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            public void OnError(Exception error) => downstream.OnError(error);
-
-            /// <inheritdoc/>
-            [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            public void OnCompleted() => downstream.OnCompleted();
-        }
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public IObservable<TResult> SwitchSelect<TResult>(Func<TSource, IObservable<TResult>> selector) =>
+            SwitchMapSignal<TSource, TResult>.CreateSkipNull(source, selector);
     }
 }

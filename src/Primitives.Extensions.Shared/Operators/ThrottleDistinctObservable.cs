@@ -2,8 +2,6 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
-using ReactiveUI.Primitives.Disposables;
-
 #if REACTIVE_SHIM
 namespace ReactiveUI.Primitives.Extensions.Reactive.Operators;
 #else
@@ -15,11 +13,19 @@ namespace ReactiveUI.Primitives.Extensions.Operators;
 /// <param name="source">The source observable.</param>
 /// <param name="throttle">The throttle duration.</param>
 /// <param name="scheduler">The scheduler to use for timing.</param>
-internal sealed class ThrottleDistinctObservable<T>(
+public sealed class ThrottleDistinctObservable<T>(
     IObservable<T> source,
     TimeSpan throttle,
     ISequencer scheduler) : IObservable<T>
 {
+    /// <summary>Initializes a new instance of the <see cref="ThrottleDistinctObservable{T}"/> class using <see cref="Sequencer.Default"/>.</summary>
+    /// <param name="source">The source observable.</param>
+    /// <param name="throttle">The throttle duration.</param>
+    public ThrottleDistinctObservable(IObservable<T> source, TimeSpan throttle)
+        : this(source, throttle, Sequencer.Default)
+    {
+    }
+
     /// <inheritdoc/>
     public IDisposable Subscribe(IObserver<T> observer)
     {
@@ -28,8 +34,8 @@ internal sealed class ThrottleDistinctObservable<T>(
         ArgumentExceptionHelper.ThrowIfNull(observer);
 
         ThrottleDistinctSink sink = new(observer, throttle, scheduler);
-        var subscription = source.Subscribe(sink);
-        return new DisposableBag(subscription, sink);
+        sink.Attach(source.Subscribe(sink));
+        return sink;
     }
 
     /// <summary>Sink that emits the latest value once the throttle window elapses, skipping it when it equals the last emitted value.</summary>
@@ -47,6 +53,9 @@ internal sealed class ThrottleDistinctObservable<T>(
 
         /// <summary>Shared timer, terminal state and serialized delivery.</summary>
         private readonly TimerSinkState<T> _state = new(downstream);
+
+        /// <summary>Upstream subscription handle.</summary>
+        private IDisposable? _subscription;
 
         /// <summary>The last emitted value.</summary>
         private T? _lastEmitted;
@@ -81,7 +90,7 @@ internal sealed class ThrottleDistinctObservable<T>(
                 _hasLastReceived = true;
             }
 
-            _state.Timer.Disposable = scheduler.Schedule(throttle, Emit);
+            _state.Timer.Disposable = scheduler.Schedule(this, throttle, static s => s.Emit());
         }
 
         /// <inheritdoc/>
@@ -92,6 +101,7 @@ internal sealed class ThrottleDistinctObservable<T>(
                 _ = _state.QueueErrorLocked(error);
             }
 
+            SinkSubscription.Dispose(ref _subscription);
             _state.Flush();
         }
 
@@ -103,6 +113,7 @@ internal sealed class ThrottleDistinctObservable<T>(
                 _ = _state.QueueCompletedLocked();
             }
 
+            SinkSubscription.Dispose(ref _subscription);
             _state.Flush();
         }
 
@@ -112,6 +123,18 @@ internal sealed class ThrottleDistinctObservable<T>(
             lock (_gate)
             {
                 _state.HandleDisposeLocked();
+            }
+
+            SinkSubscription.Dispose(ref _subscription);
+        }
+
+        /// <summary>Attaches the upstream subscription handle.</summary>
+        /// <param name="subscription">The upstream subscription handle.</param>
+        internal void Attach(IDisposable? subscription)
+        {
+            if (subscription is not null)
+            {
+                SinkSubscription.Set(ref _subscription, subscription);
             }
         }
 

@@ -124,6 +124,21 @@ public class ReduceSinkStateTests
         await Assert.That(state.CompletedCount).IsEqualTo(1);
     }
 
+    /// <summary>Verifies <c>AttachSubscriptions</c> disposes the handle immediately when the state is already terminal.</summary>
+    /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
+    [Test]
+    public async Task WhenAttachSubscriptionsAfterTerminal_ThenDisposesImmediately()
+    {
+        CaptureWitness<int> observer = new();
+        ReduceSinkState<int, int> state = new(observer, PairedSourceCount);
+        state.HandleCompleted(0);
+
+        var disposed = false;
+        state.AttachSubscriptions(new ReactiveUI.Primitives.Disposables.ActionDisposable(() => disposed = true));
+
+        await Assert.That(disposed).IsTrue();
+    }
+
     /// <summary>Tiny capture observer used by the helper tests.</summary>
     /// <typeparam name="T">Captured element type.</typeparam>
     private sealed class CaptureWitness<T> : IObserver<T>

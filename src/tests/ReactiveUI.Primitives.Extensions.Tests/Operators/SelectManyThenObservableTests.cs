@@ -204,4 +204,65 @@ public class SelectManyThenObservableTests
                 ex => caughtSecond = ex);
         await Assert.That(caughtSecond).IsSameReferenceAs(expected);
     }
+
+    /// <summary>Verifies an inner-stage error disposes both the outer subscription and active sibling inners.</summary>
+    /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
+    [Test]
+    public async Task WhenInnerStageErrors_ThenDisposesOuterAndActiveSiblingSubscriptions()
+    {
+        SyncDirectSource<int> outer = new();
+        SyncDirectSource<int> firstInner = new();
+        SyncDirectSource<int> secondInner = new();
+        Exception? caught = null;
+        InvalidOperationException expected = new(InnerErrorMessage);
+
+        using var sub = outer.SelectManyThen(
+            x => x == 1 ? firstInner : secondInner,
+            Observable.Return).Subscribe(static _ => { }, ex => caught = ex);
+
+        outer.Observer.OnNext(1);
+        outer.Observer.OnNext(SourceValue);
+        secondInner.Observer.OnError(expected);
+
+        await Assert.That(caught).IsSameReferenceAs(expected);
+        await Assert.That(outer.DisposeCount).IsEqualTo(1);
+        await Assert.That(firstInner.DisposeCount).IsEqualTo(1);
+        await Assert.That(secondInner.DisposeCount).IsEqualTo(1);
+    }
+
+    /// <summary>Verifies duplicate terminal notifications are ignored and throwing downstream callbacks dispose active subscriptions.</summary>
+    /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
+    [Test]
+    public async Task WhenDuplicateTerminalsOrDownstreamCallbacksThrow_ThenHandledAndDisposed()
+    {
+        SyncDirectSource<int> outer1 = new();
+        var completions = 0;
+        using var sub1 = outer1.SelectManyThen(Observables.Return, Observables.Return)
+            .Subscribe(static _ => { }, () => completions++);
+        outer1.Observer.OnCompleted();
+        outer1.Observer.OnCompleted();
+        await Assert.That(completions).IsEqualTo(1);
+
+        SyncDirectSource<int> outer2 = new();
+        var errors = 0;
+        using var sub2 = outer2.SelectManyThen(Observables.Return, Observables.Return)
+            .Subscribe(static _ => { }, _ => errors++);
+        outer2.Observer.OnError(new InvalidOperationException("first"));
+        outer2.Observer.OnError(new InvalidOperationException("second"));
+        await Assert.That(errors).IsEqualTo(1);
+
+        SyncDirectSource<int> outer3 = new();
+        InvalidOperationException nextFailure = new("next");
+        using var sub3 = outer3.SelectManyThen(Observables.Return, Observables.Return)
+            .Subscribe(ReactiveUI.Primitives.Advanced.Witness.Create<int>(_ => throw nextFailure));
+        _ = Assert.Throws<InvalidOperationException>(() => outer3.Observer.OnNext(1));
+        await Assert.That(outer3.DisposeCount).IsEqualTo(1);
+
+        SyncDirectSource<int> outer4 = new();
+        InvalidOperationException completeFailure = new("complete");
+        using var sub4 = outer4.SelectManyThen(Observables.Return, Observables.Return)
+            .Subscribe(ReactiveUI.Primitives.Advanced.Witness.Create<int>(static _ => { }, static _ => { }, () => throw completeFailure));
+        _ = Assert.Throws<InvalidOperationException>(() => outer4.Observer.OnCompleted());
+        await Assert.That(outer4.DisposeCount).IsEqualTo(1);
+    }
 }

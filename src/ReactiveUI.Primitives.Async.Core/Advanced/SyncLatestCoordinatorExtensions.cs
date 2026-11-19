@@ -2,6 +2,8 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Runtime.CompilerServices;
+
 namespace ReactiveUI.Primitives.Async.Advanced;
 
 /// <summary>Attaches sources to a <see cref="ISyncLatestCoordinator{TResult}"/> that combines their latest values.</summary>
@@ -21,18 +23,13 @@ public static class SyncLatestCoordinatorExtensions
         /// <returns>This source's subscription, which the caller stores in the coordinator's lifecycle slot.</returns>
         /// <exception cref="ArgumentNullException"><paramref name="source"/>, <paramref name="coordinator"/> or <paramref name="recordValue"/> is <see langword="null"/>.</exception>
         /// <exception cref="ArgumentOutOfRangeException"><paramref name="sourceIndex"/> is outside the coordinator's sources.</exception>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public ValueTask<IAsyncDisposable> SubscribeToSlotAsync<TResult>(
             ISyncLatestCoordinator<TResult> coordinator,
             int sourceIndex,
             Action<TSource> recordValue,
-            CancellationToken cancellationToken)
-        {
-            ArgumentExceptionHelper.ThrowIfNull(source);
-
-            return source.SubscribeAsync(
-                SyncLatestSlot.CreateWitness(coordinator, sourceIndex, recordValue),
-                cancellationToken);
-        }
+            CancellationToken cancellationToken) =>
+            SyncLatestSlot.SubscribeToSlotAsync(source, coordinator, sourceIndex, recordValue, cancellationToken);
     }
 
     /// <summary>Wiring for a coordinator that combines the latest value of several sources.</summary>
@@ -44,11 +41,8 @@ public static class SyncLatestCoordinatorExtensions
         /// <param name="cancellationToken">A token to cancel the subscriptions.</param>
         /// <returns>A task that completes once every source is subscribed.</returns>
         /// <exception cref="ArgumentNullException"><paramref name="coordinator"/> is <see langword="null"/>.</exception>
-        public ValueTask SubscribeSourcesAsync(CancellationToken cancellationToken)
-        {
-            ArgumentExceptionHelper.ThrowIfNull(coordinator);
-
-            return SyncLatestCoordinator.SubscribeSourcesAsync(coordinator, cancellationToken);
-        }
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public ValueTask SubscribeSourcesAsync(CancellationToken cancellationToken) =>
+            SyncLatestCoordinator.SubscribeSourcesAsync(coordinator, cancellationToken);
     }
 }

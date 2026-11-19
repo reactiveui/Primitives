@@ -54,6 +54,74 @@ public sealed class TaskCountWitness<T> : IObserver<T>, IDisposable
     /// <summary>Gets the task completed by this sink.</summary>
     public Task<int> Task => _completion.Task;
 
+    /// <summary>Subscribes to <paramref name="source"/> and completes with the observed value count.</summary>
+    /// <param name="source">The source sequence.</param>
+    /// <returns>A task that completes with the value count.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static Task<int> CountAsync(IObservable<T> source) =>
+        CountAsync(source, CancellationToken.None);
+
+    /// <summary>Subscribes to <paramref name="source"/> and completes with the observed value count.</summary>
+    /// <param name="source">The source sequence.</param>
+    /// <param name="cancellationToken">The token used to cancel the task and dispose the subscription.</param>
+    /// <returns>A task that completes with the value count.</returns>
+    public static Task<int> CountAsync(IObservable<T> source, CancellationToken cancellationToken)
+    {
+        ArgumentExceptionHelper.ThrowIfNull(source);
+
+        if (cancellationToken.IsCancellationRequested)
+        {
+            return System.Threading.Tasks.Task.FromCanceled<int>(cancellationToken);
+        }
+
+        if (source is RangeSignal range)
+        {
+            return System.Threading.Tasks.Task.FromResult(range.Count);
+        }
+
+        TaskCountWitness<T> sink = new(cancellationToken);
+        sink.RegisterCancellation();
+        sink.SetSubscription(source.Subscribe(sink));
+        return sink.Task;
+    }
+
+    /// <summary>Subscribes to <paramref name="source"/> and completes with the matching value count.</summary>
+    /// <param name="source">The source sequence.</param>
+    /// <param name="predicate">The predicate.</param>
+    /// <returns>A task that completes with the matching value count.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static Task<int> CountAsync(IObservable<T> source, Func<T, bool> predicate) =>
+        CountAsync(source, predicate, CancellationToken.None);
+
+    /// <summary>Subscribes to <paramref name="source"/> and completes with the matching value count.</summary>
+    /// <param name="source">The source sequence.</param>
+    /// <param name="predicate">The predicate.</param>
+    /// <param name="cancellationToken">The token used to cancel the task and dispose the subscription.</param>
+    /// <returns>A task that completes with the matching value count.</returns>
+    public static Task<int> CountAsync(
+        IObservable<T> source,
+        Func<T, bool> predicate,
+        CancellationToken cancellationToken)
+    {
+        ArgumentExceptionHelper.ThrowIfNull(source);
+        ArgumentExceptionHelper.ThrowIfNull(predicate);
+
+        if (cancellationToken.IsCancellationRequested)
+        {
+            return System.Threading.Tasks.Task.FromCanceled<int>(cancellationToken);
+        }
+
+        if (source is RangeSignal range && typeof(T) == typeof(int))
+        {
+            return CountRangeTask(range, predicate);
+        }
+
+        TaskCountWitness<T> sink = new(predicate, cancellationToken);
+        sink.RegisterCancellation();
+        sink.SetSubscription(source.Subscribe(sink));
+        return sink.Task;
+    }
+
     /// <summary>Registers cancellation after construction.</summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void RegisterCancellation() =>
@@ -115,9 +183,35 @@ public sealed class TaskCountWitness<T> : IObserver<T>, IDisposable
                 _count = checked(_count + 1);
             }
         }
-        catch (Exception error)
+        catch (Exception error) when (!FatalExceptionHelper.IsFatal(error))
         {
             OnError(error);
+        }
+    }
+
+    /// <summary>Counts matching values directly over an integer range.</summary>
+    /// <param name="range">The range source.</param>
+    /// <param name="predicate">The predicate.</param>
+    /// <returns>A completed task for the range result.</returns>
+    private static Task<int> CountRangeTask(RangeSignal range, Func<T, bool> predicate)
+    {
+        try
+        {
+            var typedPredicate = (Func<int, bool>)(object)predicate;
+            var count = 0;
+            for (var i = 0; i < range.Count; i++)
+            {
+                if (typedPredicate(range.Start + i))
+                {
+                    count = checked(count + 1);
+                }
+            }
+
+            return System.Threading.Tasks.Task.FromResult(count);
+        }
+        catch (Exception error)
+        {
+            return System.Threading.Tasks.Task.FromException<int>(error);
         }
     }
 

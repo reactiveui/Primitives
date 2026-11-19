@@ -2,6 +2,8 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Runtime.CompilerServices;
+
 namespace ReactiveUI.Primitives.Async;
 
 /// <summary>Provides Rx-compatible catch names for asynchronous observable sequences.</summary>
@@ -18,13 +20,9 @@ public static partial class SignalAsyncExtensions
         /// <returns>An observable sequence that emits items from the source sequence, or from the handler-provided sequence if
         /// an exception is encountered.</returns>
         /// <exception cref="ArgumentNullException">Thrown if the source sequence or <paramref name="handler"/> is null.</exception>
-        public IObservableAsync<T> Catch(Func<Exception, IObservableAsync<T>> handler)
-        {
-            ArgumentExceptionHelper.ThrowIfNull(source);
-            ArgumentExceptionHelper.ThrowIfNull(handler);
-
-            return new CatchSignal<T>(source, handler, null);
-        }
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public IObservableAsync<T> Catch(Func<Exception, IObservableAsync<T>> handler) =>
+            new CatchSignal<T>(source, handler);
 
         /// <summary>Creates a new observable sequence that continues with a handler-provided sequence when an exception occurs in the source sequence.</summary>
         /// <param name="handler">A function that receives the exception thrown by the source sequence and returns an alternative observable
@@ -35,14 +33,10 @@ public static partial class SignalAsyncExtensions
         /// an exception is encountered.</returns>
         /// <exception cref="ArgumentNullException">Thrown if the source sequence or <paramref name="handler"/> is null.</exception>
         /// <remarks>If the handler throws, the resulting sequence completes with that exception.</remarks>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public IObservableAsync<T> Catch(
             Func<Exception, IObservableAsync<T>> handler,
-            Func<Exception, CancellationToken, ValueTask>? onErrorResume)
-        {
-            ArgumentExceptionHelper.ThrowIfNull(source);
-            ArgumentExceptionHelper.ThrowIfNull(handler);
-
-            return new CatchSignal<T>(source, handler, onErrorResume);
-        }
+            Func<Exception, CancellationToken, ValueTask>? onErrorResume) =>
+            new CatchSignal<T>(source, handler, onErrorResume);
     }
 }

@@ -12,16 +12,42 @@ namespace ReactiveUI.Primitives.Advanced;
 
 /// <summary>Replaces a failed source with the fallback sequence without forwarding the source error.</summary>
 /// <typeparam name="T">The value type.</typeparam>
-/// <param name="source">The source observable.</param>
-/// <param name="fallback">The fallback observable subscribed to after the source errors.</param>
 [System.Diagnostics.DebuggerDisplay("ResumeSignal: Source = {_source}, Fallback = {_fallback}")]
-public sealed class ResumeSignal<T>(IObservable<T> source, IObservable<T> fallback) : IRequireCurrentThread<T>
+public sealed class ResumeSignal<T> : IRequireCurrentThread<T>
 {
     /// <summary>The source observable.</summary>
-    private readonly IObservable<T> _source = source;
+    private readonly IObservable<T> _source;
 
     /// <summary>The fallback observable subscribed to after the source errors.</summary>
-    private readonly IObservable<T> _fallback = fallback;
+    private readonly IObservable<T> _fallback;
+
+    /// <summary>Initializes a new instance of the <see cref="ResumeSignal{T}"/> class.</summary>
+    /// <param name="source">The source observable.</param>
+    /// <param name="fallback">The fallback observable subscribed to after the source errors.</param>
+    /// <exception cref="ArgumentNullException"><paramref name="source"/> or <paramref name="fallback"/> is <see langword="null"/>.</exception>
+    public ResumeSignal(IObservable<T> source, IObservable<T> fallback)
+    {
+        ArgumentExceptionHelper.ThrowIfNull(source);
+        ArgumentExceptionHelper.ThrowIfNull(fallback);
+
+        _source = source;
+        _fallback = fallback;
+    }
+
+    /// <summary>Creates a fallback sequence, eliding the operator when <paramref name="source"/> is known never to error.</summary>
+    /// <param name="source">The source observable.</param>
+    /// <param name="fallback">The fallback observable subscribed to after the source errors.</param>
+    /// <returns>The fallback-protected sequence.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="source"/> or <paramref name="fallback"/> is <see langword="null"/>.</exception>
+    public static IObservable<T> Create(IObservable<T> source, IObservable<T> fallback)
+    {
+        ArgumentExceptionHelper.ThrowIfNull(source);
+        ArgumentExceptionHelper.ThrowIfNull(fallback);
+
+        return source is ImmutableEmptySignal<T> or ImmutableNeverSignal<T> or RangeSignal or ImmediateReturnSignal<T>
+            ? source
+            : new ResumeSignal<T>(source, fallback);
+    }
 
     /// <inheritdoc/>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -60,17 +86,40 @@ public sealed class ResumeSignal<T>(IObservable<T> source, IObservable<T> fallba
         /// <summary>The fallback subscription slot, populated after an error.</summary>
         private IDisposable? _fallbackSubscription;
 
-        /// <inheritdoc/>
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void OnNext(T value) => _observer.OnNext(value);
+        /// <summary>Non-zero once the source phase has finished.</summary>
+        private int _sourceDone;
 
         /// <inheritdoc/>
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void OnError(Exception error) => SetFallback(_fallback.Subscribe(_observer));
+        public void OnNext(T value)
+        {
+            if (Volatile.Read(ref _sourceDone) != 0)
+            {
+                return;
+            }
+
+            _observer.OnNext(value);
+        }
+
+        /// <inheritdoc/>
+        public void OnError(Exception error)
+        {
+            if (Interlocked.Exchange(ref _sourceDone, 1) != 0)
+            {
+                return;
+            }
+
+            SubscriptionSlots.Release(ref _sourceSubscription);
+            SetFallback(_fallback.Subscribe(_observer));
+        }
 
         /// <inheritdoc/>
         public void OnCompleted()
         {
+            if (Interlocked.Exchange(ref _sourceDone, 1) != 0)
+            {
+                return;
+            }
+
             try
             {
                 _observer.OnCompleted();
@@ -84,6 +133,7 @@ public sealed class ResumeSignal<T>(IObservable<T> source, IObservable<T> fallba
         /// <inheritdoc/>
         public void Dispose()
         {
+            Volatile.Write(ref _sourceDone, 1);
             SubscriptionSlots.Release(ref _sourceSubscription);
             SubscriptionSlots.Release(ref _fallbackSubscription);
         }

@@ -31,15 +31,34 @@ public sealed class UseSignal<TResource, T>(
         ArgumentExceptionHelper.ThrowIfNull(observer);
 
         TResource resource;
-        IObservable<T> source;
         try
         {
             resource = _resourceFactory();
+        }
+        catch (Exception error) when (!CoreFatalExceptionHelper.IsFatal(error))
+        {
+            observer.OnError(error);
+            return EmptyDisposable.Instance;
+        }
+
+        IObservable<T> source;
+        try
+        {
             source = _signalFactory(resource)
                      ?? throw new InvalidOperationException("The signal factory returned null.");
         }
-        catch (Exception error)
+        catch (Exception error) when (!CoreFatalExceptionHelper.IsFatal(error))
         {
+            try
+            {
+                resource?.Dispose();
+            }
+            catch (Exception disposeError) when (!CoreFatalExceptionHelper.IsFatal(disposeError))
+            {
+                observer.OnError(new AggregateException(error, disposeError));
+                return EmptyDisposable.Instance;
+            }
+
             observer.OnError(error);
             return EmptyDisposable.Instance;
         }
@@ -63,8 +82,8 @@ public sealed class UseSignal<TResource, T>(
     /// <param name="resource">Owned resource.</param>
     private sealed class UseWitness(IObserver<T> observer, TResource resource) : IObserver<T>, IDisposable
     {
-        /// <summary>Owned resource.</summary>
-        private readonly IDisposable? _resource = resource;
+        /// <summary>Owned resource, kept unboxed when <typeparamref name="TResource"/> is a value type.</summary>
+        private TResource _resource = resource;
 
         /// <summary>Wrapped observer.</summary>
         private IObserver<T> _observer = observer;
@@ -77,18 +96,8 @@ public sealed class UseSignal<TResource, T>(
 
         /// <summary>Publishes the single inner subscription, disposing it if the sink has already stopped.</summary>
         /// <param name="subscription">Inner subscription.</param>
-        public void SetSubscription(IDisposable subscription)
-        {
-            ArgumentExceptionHelper.ThrowIfNull(subscription);
-
-            Volatile.Write(ref _subscription, subscription);
-            if (Volatile.Read(ref _stopped) == 0)
-            {
-                return;
-            }
-
-            DisposeSubscription();
-        }
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void SetSubscription(IDisposable subscription) => SinkSubscription.Set(ref _subscription, subscription);
 
         /// <inheritdoc/>
         public void OnNext(T value)
@@ -166,12 +175,10 @@ public sealed class UseSignal<TResource, T>(
         private void Release()
         {
             _observer = EmptyWitness<T>.Instance;
-            DisposeSubscription();
-            _resource?.Dispose();
+            SinkSubscription.Dispose(ref _subscription);
+            var resource = _resource;
+            _resource = default!;
+            resource?.Dispose();
         }
-
-        /// <summary>Disposes the inner subscription at most once.</summary>
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private void DisposeSubscription() => Interlocked.Exchange(ref _subscription, null)?.Dispose();
     }
 }

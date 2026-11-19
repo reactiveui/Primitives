@@ -46,6 +46,16 @@ public sealed class ConcurrencyLimiter<T>(IEnumerable<Task<T>> taskFunctions, in
         set => Interlocked.Exchange(ref _disposed, value ? 1 : 0);
     }
 
+    /// <summary>Creates a <see cref="ConcurrencyLimiter{T}"/> over <paramref name="taskFunctions"/>, validating <paramref name="taskFunctions"/> eagerly.</summary>
+    /// <param name="taskFunctions">The task functions to drain.</param>
+    /// <param name="maxConcurrency">The maximum concurrency.</param>
+    /// <returns>A concurrency-limited observable sequence.</returns>
+    public static ConcurrencyLimiter<T> Create(IEnumerable<Task<T>> taskFunctions, int maxConcurrency)
+    {
+        ArgumentExceptionHelper.ThrowIfNull(taskFunctions);
+        return new(taskFunctions, maxConcurrency);
+    }
+
     /// <inheritdoc/>
     public IDisposable Subscribe(IObserver<T> observer)
     {

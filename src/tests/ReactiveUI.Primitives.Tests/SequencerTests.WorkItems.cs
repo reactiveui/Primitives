@@ -160,8 +160,22 @@ public partial class SequencerTests
             return EmptyDisposable.Instance;
         }).Dispose();
         Sequencer.Immediate.ScheduleAction(Two, AbsoluteDueTime, values.Add).Dispose();
+        ((ISequencer)Sequencer.Immediate).Schedule(One, Sequencer.Immediate.Timestamp, values.Add).Dispose();
 
-        await Assert.That(values.SequenceEqual(ExpectedOneTwo)).IsTrue();
+        await Assert.That(values.SequenceEqual([One, Two, One])).IsTrue();
+    }
+
+    /// <summary>Verifies a work item scheduled with a due timestamp drains nested trampoline work before returning.</summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    [Test]
+    public async Task CurrentThreadWorkItemWithTimestampDrainsNestedQueue()
+    {
+        List<int> steps = [];
+        using NestedCurrentThreadWorkItem outer = new(steps);
+
+        CurrentThreadSequencer.Instance.Schedule(outer, CurrentThreadSequencer.Instance.Timestamp);
+
+        await Assert.That(steps.SequenceEqual(ExpectedOneTwo)).IsTrue();
     }
 
     /// <summary>Timed work item equality and hashing use work item identity and due timestamp.</summary>
@@ -245,6 +259,20 @@ public partial class SequencerTests
         await Assert.That(item.IsDisposed).IsTrue();
     }
 
+    /// <summary>Verifies an immediate stateful schedule returns the action's handle, or the empty handle when the action returns none.</summary>
+    /// <returns>A task representing the asynchronous test.</returns>
+    [Test]
+    public async Task ScheduleWithState_ImmediateActionReturnsNullOrHandle_ReturnsHandleOrEmpty()
+    {
+        using MultipleDisposable handle = [];
+
+        var fromNull = Sequencer.Schedule(ImmediateSequencer.Instance, One, static (_, _) => null!);
+        var fromHandle = Sequencer.Schedule(ImmediateSequencer.Instance, handle, static (_, state) => state);
+
+        await Assert.That(fromNull).IsSameReferenceAs(EmptyDisposable.Instance);
+        await Assert.That(fromHandle).IsSameReferenceAs(handle);
+    }
+
     /// <summary>Work item that counts executions and can be cancelled before a sequencer reaches it.</summary>
     private sealed class CancellableWorkItem : IWorkItem, IsDisposed
     {
@@ -259,5 +287,23 @@ public partial class SequencerTests
 
         /// <inheritdoc/>
         public void Execute() => ExecuteCount++;
+    }
+
+    /// <summary>Work item that enqueues a nested action onto <see cref="CurrentThreadSequencer.Instance"/> during execution.</summary>
+    /// <param name="steps">List recording execution order.</param>
+    private sealed class NestedCurrentThreadWorkItem(List<int> steps) : IWorkItem, IsDisposed
+    {
+        /// <inheritdoc/>
+        public bool IsDisposed { get; private set; }
+
+        /// <inheritdoc/>
+        public void Dispose() => IsDisposed = true;
+
+        /// <inheritdoc/>
+        public void Execute()
+        {
+            steps.Add(One);
+            _ = CurrentThreadSequencer.Instance.Schedule(() => steps.Add(Two));
+        }
     }
 }

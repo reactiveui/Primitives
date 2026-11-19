@@ -19,12 +19,20 @@ namespace ReactiveUI.Primitives.Extensions.Operators;
 /// <param name="resource">The resource to use during the operation and dispose at the end.</param>
 /// <param name="function">The function invoked against the resource to produce the emitted value.</param>
 /// <param name="scheduler">An optional scheduler; <c>null</c> runs the function synchronously inline.</param>
-internal sealed class UsingFuncObservable<T, TResult>(
+public sealed class UsingFuncObservable<T, TResult>(
     T resource,
     Func<T, TResult> function,
     ISequencer? scheduler) : IObservable<TResult>
     where T : IDisposable
 {
+    /// <summary>Initializes a new instance of the <see cref="UsingFuncObservable{T, TResult}"/> class that runs inline.</summary>
+    /// <param name="resource">The resource to use during the operation and dispose at the end.</param>
+    /// <param name="function">The function invoked against the resource to produce the emitted value.</param>
+    public UsingFuncObservable(T resource, Func<T, TResult> function)
+        : this(resource, function, null)
+    {
+    }
+
     /// <inheritdoc/>
     public IDisposable Subscribe(IObserver<TResult> observer)
     {

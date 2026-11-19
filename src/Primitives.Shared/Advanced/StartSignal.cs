@@ -51,7 +51,7 @@ public sealed class StartSignal : IRequireCurrentThread<RxVoid>
             observer.OnNext(RxVoid.Default);
             observer.OnCompleted();
         }
-        catch (Exception error)
+        catch (Exception error) when (!FatalExceptionHelper.IsFatal(error))
         {
             observer.OnError(error);
         }

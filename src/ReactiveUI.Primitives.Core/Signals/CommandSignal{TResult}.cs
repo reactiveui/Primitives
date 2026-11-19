@@ -295,7 +295,7 @@ public sealed class CommandSignal<TResult> : IObservable<TResult>, IDisposable
             PublishResult(result);
             return result;
         }
-        catch (Exception error)
+        catch (Exception error) when (!CoreFatalExceptionHelper.IsFatal(error))
         {
             PublishFault(error);
             throw;
@@ -318,7 +318,7 @@ public sealed class CommandSignal<TResult> : IObservable<TResult>, IDisposable
             PublishResult(result);
             return result;
         }
-        catch (Exception error)
+        catch (Exception error) when (!CoreFatalExceptionHelper.IsFatal(error))
         {
             PublishFault(error);
             throw;

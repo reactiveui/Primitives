@@ -5,6 +5,7 @@
 using System.Runtime.CompilerServices;
 using ReactiveUI.Primitives.Advanced;
 using ReactiveUI.Primitives.Disposables;
+using ReactiveUI.Primitives.Signals;
 
 namespace ReactiveUI.Primitives.Tests;
 
@@ -25,6 +26,12 @@ public sealed class PairWitnessTests
 
     /// <summary>The multiplier the pairing selectors apply to the left value.</summary>
     private const int OneHundred = 100;
+
+    /// <summary>Iteration count for concurrent completion stress loops.</summary>
+    private const int RaceIterations = 150;
+
+    /// <summary>Maximum wait in seconds for concurrent completion.</summary>
+    private const int StressTimeoutSeconds = 5;
 
     /// <summary>A completed left source with unmatched values completes only once the right source completes.</summary>
     /// <returns>A task representing the asynchronous test.</returns>
@@ -257,6 +264,81 @@ public sealed class PairWitnessTests
         await Assert.That(downstream.Errors.Count).IsEqualTo(One);
         await Assert.That(downstream.Errors[0]).IsSameReferenceAs(expected);
         await Assert.That(downstream.Values.Count).IsEqualTo(0);
+    }
+
+    /// <summary>Concurrent emission and completion across both Pair arms never drops completion.</summary>
+    /// <returns>A task representing the asynchronous test.</returns>
+    [Test]
+    public async Task Run_ConcurrentArmEmissionAndCompletion_AlwaysDeliversCompletion()
+    {
+        for (var i = 0; i < RaceIterations; i++)
+        {
+            using Signal<int> left = new();
+            using Signal<int> right = new();
+            TaskCompletionSource<int> done = new(TaskCreationOptions.RunContinuationsAsynchronously);
+            var sum = 0;
+            using var sub = Pair(
+                left,
+                right,
+                new DelegateWitness<int>(x => sum = x, static _ => { }, () => done.TrySetResult(sum)));
+
+            var t1 = Task.Run(() =>
+            {
+                left.OnNext(One);
+                left.OnCompleted();
+            });
+            var t2 = Task.Run(() =>
+            {
+                right.OnNext(Two);
+                right.OnCompleted();
+            });
+
+            await Task.WhenAll(t1, t2);
+            using CancellationTokenSource timeout = new(TimeSpan.FromSeconds(StressTimeoutSeconds));
+            await Assert.That(await done.Task.WaitAsync(timeout.Token)).IsEqualTo(Three);
+        }
+    }
+
+    /// <summary>Verifies pair delivers completion and errors both during subscribe and after its subscriptions are stored.</summary>
+    /// <returns>A task representing the asynchronous test.</returns>
+    [Test]
+    public async Task Terminal_DuringSubscribeAndAfterSubscribe_DeliversOnceAndReleases()
+    {
+        InvalidOperationException boom = new("pair");
+
+        RecordingWitness<int> syncCompleted = new();
+        using (Pair(Signal.Return(One), Signal.Return(Two), syncCompleted))
+        {
+            await Assert.That(syncCompleted.Completed).IsEqualTo(One);
+        }
+
+        RecordingWitness<int> syncFailed = new();
+        using (Pair(Signal.Throw<int>(boom), Signal.Return(Two), syncFailed))
+        {
+            await Assert.That(syncFailed.Errors.SequenceEqual([boom])).IsTrue();
+        }
+
+        using Signal<int> left = new();
+        using Signal<int> right = new();
+        RecordingWitness<int> liveCompleted = new();
+        using (Pair(left, right, liveCompleted))
+        {
+            left.OnNext(One);
+            right.OnNext(Two);
+            left.OnCompleted();
+        }
+
+        using Signal<int> failingLeft = new();
+        using Signal<int> failingRight = new();
+        RecordingWitness<int> liveFailed = new();
+        using (Pair(failingLeft, failingRight, liveFailed))
+        {
+            failingLeft.OnError(boom);
+        }
+
+        await Assert.That(liveCompleted.Values.SequenceEqual([Three])).IsTrue();
+        await Assert.That(liveCompleted.Completed).IsEqualTo(One);
+        await Assert.That(liveFailed.Errors.SequenceEqual([boom])).IsTrue();
     }
 
     /// <summary>Subscribes a pair witness that adds the paired values.</summary>

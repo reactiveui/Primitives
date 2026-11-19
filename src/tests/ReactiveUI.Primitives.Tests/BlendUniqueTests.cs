@@ -141,4 +141,28 @@ public class BlendUniqueTests
         _ = Assert.Throws<ArgumentNullException>(static () =>
             LinqExtensions.BlendUnique(Signal.FromEnumerable(_single)).Subscribe(null!));
     }
+
+    /// <summary>Faulting one merged branch immediately disposes all sibling source subscriptions.</summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    [Test]
+    public async Task Subscribe_WhenOneBranchFaults_DisposesAllSiblingSubscriptions()
+    {
+        var firstDisposals = 0;
+        var secondDisposals = 0;
+        IObserver<int>? secondObserver = null;
+        var first = Signal.Create<int>(_ => new ReactiveUI.Primitives.Disposables.ActionDisposable(() => firstDisposals++));
+        var second = Signal.Create<int>(obs =>
+        {
+            secondObserver = obs;
+            return new ReactiveUI.Primitives.Disposables.ActionDisposable(() => secondDisposals++);
+        });
+
+        RecordingWitness<int> observer = new();
+        _ = LinqExtensions.BlendUnique(first, second).Subscribe(observer);
+        secondObserver!.OnError(new InvalidOperationException("branch-fault"));
+
+        await Assert.That(firstDisposals).IsEqualTo(One);
+        await Assert.That(secondDisposals).IsEqualTo(One);
+        await Assert.That(observer.Errors.Count).IsEqualTo(One);
+    }
 }

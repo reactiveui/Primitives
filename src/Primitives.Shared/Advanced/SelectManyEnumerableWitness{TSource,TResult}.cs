@@ -25,22 +25,26 @@ public sealed class SelectManyEnumerableWitness<TSource, TResult>(IObserver<TRes
     private readonly Func<TSource, IEnumerable<TResult>> _selector = selector;
 
     /// <summary>The upstream subscription.</summary>
-    private readonly SingleReplaceableDisposable _subscription = new();
+    [System.Diagnostics.CodeAnalysis.SuppressMessage(
+        "Usage",
+        "CA2213:Disposable fields should be disposed",
+        Justification = "Disposed atomically via WitnessLifetime.Dispose.")]
+    private IDisposable? _subscription;
 
     /// <summary>Non-zero after terminal notification or disposal.</summary>
     private int _stopped;
 
     /// <inheritdoc/>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public void Dispose() => WitnessLifetime.Dispose(ref _stopped, _subscription);
+    public void Dispose() => WitnessLifetime.Dispose(ref _stopped, ref _subscription);
 
     /// <inheritdoc/>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public void OnCompleted() => WitnessLifetime.Complete(ref _stopped, _subscription, _observer);
+    public void OnCompleted() => WitnessLifetime.Complete(ref _stopped, ref _subscription, _observer);
 
     /// <inheritdoc/>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public void OnError(Exception error) => WitnessLifetime.Error(ref _stopped, _subscription, _observer, error);
+    public void OnError(Exception error) => WitnessLifetime.Error(ref _stopped, ref _subscription, _observer, error);
 
     /// <inheritdoc/>
     public void OnNext(TSource value)
@@ -57,7 +61,7 @@ public sealed class SelectManyEnumerableWitness<TSource, TResult>(IObserver<TRes
             {
                 WitnessLifetime.Error(
                     ref _stopped,
-                    _subscription,
+                    ref _subscription,
                     _observer,
                     new InvalidOperationException("SelectMany selector returned null."));
                 return;
@@ -75,7 +79,7 @@ public sealed class SelectManyEnumerableWitness<TSource, TResult>(IObserver<TRes
         }
         catch (Exception error) when (!FatalExceptionHelper.IsFatal(error))
         {
-            WitnessLifetime.Error(ref _stopped, _subscription, _observer, error);
+            WitnessLifetime.Error(ref _stopped, ref _subscription, _observer, error);
         }
     }
 
@@ -83,5 +87,5 @@ public sealed class SelectManyEnumerableWitness<TSource, TResult>(IObserver<TRes
     /// <param name="subscription">The upstream subscription.</param>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void SetSubscription(IDisposable subscription) =>
-        WitnessLifetime.SetSubscription(ref _stopped, _subscription, subscription);
+        WitnessLifetime.SetSubscription(ref _stopped, ref _subscription, subscription);
 }

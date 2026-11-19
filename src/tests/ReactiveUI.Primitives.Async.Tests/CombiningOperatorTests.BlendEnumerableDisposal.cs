@@ -366,7 +366,7 @@ public partial class CombiningOperatorTests
             errors.Add(exception);
             return default;
         });
-        SignalAsyncExtensions.BlendEnumerableSignal<int>.BlendSequenceCoordinator coordinator = new(observer, []);
+        BlendSequenceCoordinator<int> coordinator = new(observer, []);
         coordinator.BeginSubscribing();
         await coordinator.DisposeAsync();
         await coordinator.RelayNextIfActiveAsync(SecondValue);
@@ -395,7 +395,7 @@ public partial class CombiningOperatorTests
             errors.Add(exception);
             return default;
         });
-        SignalAsyncExtensions.BlendEnumerableSignal<int>.BlendSequenceCoordinator coordinator = new(observer, []);
+        BlendSequenceCoordinator<int> coordinator = new(observer, []);
         coordinator.BeginSubscribing();
         await coordinator.DisposeAsync();
         await coordinator.RelayErrorIfActiveAsync(new InvalidOperationException("late"));
@@ -461,7 +461,7 @@ public partial class CombiningOperatorTests
         Exception? unhandled = null;
         UnhandledExceptionHandler.Register(ex => unhandled = ex);
 
-        SignalAsyncExtensions.BlendEnumerableSignal<int>.BlendSequenceCoordinator.RoutePostDisposalException(
+        BlendSequenceCoordinator<int>.RoutePostDisposalException(
             Result.Failure(new InvalidOperationException("post-dispose error")));
 
         await Assert.That(unhandled).IsNotNull();

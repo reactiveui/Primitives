@@ -23,6 +23,7 @@ public static class MauiDispatcherSequencerExtensions
 {
     extension(Microsoft.Maui.Dispatching.IDispatcher dispatcher)
     {
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
         public ReactiveUI.Primitives.Concurrency.MauiDispatcherSequencer ToSequencer() { }
     }
 }

@@ -2,6 +2,7 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Runtime.CompilerServices;
 using Microsoft.UI.Dispatching;
 
 namespace ReactiveUI.Primitives.Concurrency;
@@ -16,11 +17,7 @@ public static class DispatcherQueueSequencerExtensions
         /// <summary>Adapts a WinUI dispatcher queue to an <see cref="ISequencer"/>.</summary>
         /// <returns>A sequencer that schedules through <paramref name="dispatcherQueue"/>.</returns>
         /// <exception cref="ArgumentNullException"><paramref name="dispatcherQueue"/> is <see langword="null"/>.</exception>
-        public DispatcherQueueSequencer ToSequencer()
-        {
-            ArgumentExceptionHelper.ThrowIfNull(dispatcherQueue);
-
-            return new(dispatcherQueue);
-        }
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public DispatcherQueueSequencer ToSequencer() => new(dispatcherQueue);
     }
 }

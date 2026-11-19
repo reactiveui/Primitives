@@ -26,9 +26,55 @@ public sealed class ReattemptSignal<T> : IObservable<T>
     public ReattemptSignal(IObservable<T> source, int retryCount)
     {
         ArgumentExceptionHelper.ThrowIfNull(source);
+        ArgumentOutOfRangeExceptionHelper.ThrowIfNegative(retryCount);
 
         _source = source;
         _retryCount = retryCount;
+    }
+
+    /// <summary>Creates a sequence that retries <paramref name="source"/> up to <paramref name="retryCount"/> extra times after an error.</summary>
+    /// <param name="source">The source observable.</param>
+    /// <param name="retryCount">The maximum number of extra attempts after the initial subscription.</param>
+    /// <returns>The retrying observable sequence.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="source"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentOutOfRangeException"><paramref name="retryCount"/> is negative.</exception>
+    public static IObservable<T> Create(IObservable<T> source, int retryCount)
+    {
+        ArgumentExceptionHelper.ThrowIfNull(source);
+        ArgumentOutOfRangeExceptionHelper.ThrowIfNegative(retryCount);
+
+        return retryCount == 0
+               || source is ImmutableEmptySignal<T>
+                   or ImmutableNeverSignal<T>
+                   or RangeSignal
+                   or ImmediateReturnSignal<T>
+            ? source
+            : new ReattemptSignal<T>(source, retryCount);
+    }
+
+    /// <summary>Creates a sequence that runs <paramref name="source"/> up to <paramref name="retryCount"/> total times.</summary>
+    /// <param name="source">The source observable.</param>
+    /// <param name="retryCount">The total number of runs; zero completes immediately without subscribing.</param>
+    /// <returns>The retrying observable sequence.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="source"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentOutOfRangeException"><paramref name="retryCount"/> is negative.</exception>
+    public static IObservable<T> CreateTotalRuns(IObservable<T> source, int retryCount)
+    {
+        ArgumentExceptionHelper.ThrowIfNull(source);
+        ArgumentOutOfRangeExceptionHelper.ThrowIfNegative(retryCount);
+
+        if (retryCount == 0)
+        {
+            return ImmutableEmptySignal<T>.Instance;
+        }
+
+        return retryCount == 1
+               || source is ImmutableEmptySignal<T>
+                   or ImmutableNeverSignal<T>
+                   or RangeSignal
+                   or ImmediateReturnSignal<T>
+            ? source
+            : new ReattemptSignal<T>(source, retryCount - 1);
     }
 
     /// <inheritdoc/>
@@ -36,6 +82,9 @@ public sealed class ReattemptSignal<T> : IObservable<T>
     {
         ArgumentExceptionHelper.ThrowIfNull(observer);
 
-        return new ReattemptCoordinator<T>(_source, _retryCount, observer).Run();
+        return _retryCount == 0
+            || _source is RangeSignal or ImmediateReturnSignal<T> or ImmutableEmptySignal<T> or RepeatSignal<T>
+            ? _source.Subscribe(observer)
+            : new ReattemptCoordinator<T>(_source, _retryCount, observer).Run();
     }
 }

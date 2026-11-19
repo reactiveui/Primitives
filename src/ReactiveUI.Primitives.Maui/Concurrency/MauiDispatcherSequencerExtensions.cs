@@ -2,6 +2,7 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Runtime.CompilerServices;
 using Microsoft.Maui.Dispatching;
 
 namespace ReactiveUI.Primitives.Concurrency;
@@ -16,11 +17,7 @@ public static class MauiDispatcherSequencerExtensions
         /// <summary>Adapts a MAUI dispatcher to an <see cref="ISequencer"/>.</summary>
         /// <returns>A sequencer that schedules through <paramref name="dispatcher"/>.</returns>
         /// <exception cref="ArgumentNullException"><paramref name="dispatcher"/> is <see langword="null"/>.</exception>
-        public MauiDispatcherSequencer ToSequencer()
-        {
-            ArgumentExceptionHelper.ThrowIfNull(dispatcher);
-
-            return new(dispatcher);
-        }
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public MauiDispatcherSequencer ToSequencer() => new(dispatcher);
     }
 }

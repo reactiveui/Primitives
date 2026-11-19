@@ -20,11 +20,7 @@ public static class OptionalExtensions
         /// default value for type <typeparamref name="T"/>. This parameter is passed uninitialized.</param>
         /// <returns><see langword="true"/> if the <see cref="Optional{T}"/> has a value; otherwise, <see langword="false"/>.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public bool TryGetValue([NotNullWhen(true)] out T? value)
-        {
-            var hasValue = optional.HasValue;
-            value = hasValue ? optional.Value : default;
-            return hasValue;
-        }
+        public bool TryGetValue([NotNullWhen(true)] out T? value) =>
+            Optional.TryGetValue(optional, out value);
     }
 }

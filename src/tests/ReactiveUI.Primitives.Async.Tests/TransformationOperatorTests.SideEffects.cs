@@ -22,8 +22,8 @@ public partial class TransformationOperatorTests
         Func<Exception, CancellationToken, ValueTask>? noErrorResume = null;
         Func<Result, ValueTask>? noCompleted = null;
 
-        await Assert.That(source.Do(noNext, onErrorResume, noCompleted)).IsTypeOf<SignalAsyncExtensions.TapAsyncSignal<int>>();
-        await Assert.That(source.Do(noNext, noErrorResume, onCompleted)).IsTypeOf<SignalAsyncExtensions.TapAsyncSignal<int>>();
+        await Assert.That(source.Do(noNext, onErrorResume, noCompleted)).IsTypeOf<TapAsyncSignal<int>>();
+        await Assert.That(source.Do(noNext, noErrorResume, onCompleted)).IsTypeOf<TapAsyncSignal<int>>();
         await Assert.That(source.Do(noNext, noErrorResume, noCompleted)).IsSameReferenceAs(source);
         await Assert.That(source.Do((Func<int, CancellationToken, ValueTask>?)null)).IsSameReferenceAs(source);
     }

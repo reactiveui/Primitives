@@ -2,9 +2,9 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Runtime.CompilerServices;
 #if REACTIVE_SHIM
 using StartSignal = ReactiveUI.Primitives.Async.Reactive.Advanced.StartSignal;
-
 #else
 using StartSignal = ReactiveUI.Primitives.Async.Advanced.StartSignal;
 #endif
@@ -24,21 +24,14 @@ public static partial class SignalAsyncReactiveExtensions
     {
         /// <summary>Creates an observable sequence that executes the supplied action and emits <see cref="RxVoid.Default"/>.</summary>
         /// <returns>An observable sequence that completes after the action has run.</returns>
-        public IObservableAsync<RxVoid> Start()
-        {
-            ArgumentExceptionHelper.ThrowIfNull(action);
-
-            return new StartSignal(action, null);
-        }
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public IObservableAsync<RxVoid> Start() => new StartSignal(action);
 
         /// <summary>Creates an observable sequence that executes the supplied action and emits <see cref="RxVoid.Default"/>.</summary>
         /// <param name="taskScheduler">An optional scheduler used to start the action.</param>
         /// <returns>An observable sequence that completes after the action has run.</returns>
-        public IObservableAsync<RxVoid> Start(TaskScheduler? taskScheduler)
-        {
-            ArgumentExceptionHelper.ThrowIfNull(action);
-
-            return new StartSignal(action, taskScheduler);
-        }
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public IObservableAsync<RxVoid> Start(TaskScheduler? taskScheduler) =>
+            new StartSignal(action, taskScheduler);
     }
 }

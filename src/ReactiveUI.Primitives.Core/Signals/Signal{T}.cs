@@ -56,12 +56,12 @@ public class Signal<T> : ISignal<T>
         {
             var observers = Volatile.Read(ref _observers);
             return observers is SignalSubscription
-                || (observers is SignalSubscription?[] && _subscriptionCount != 0);
+                || (observers is SignalSubscription?[] && Volatile.Read(ref _subscriptionCount) != 0);
         }
     }
 
     /// <summary>Gets a value indicating whether the signal has been disposed.</summary>
-    public virtual bool IsDisposed => _isDisposed;
+    public virtual bool IsDisposed => Volatile.Read(ref _isDisposed);
 
     /// <summary>Gets the debugger display text.</summary>
     [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
@@ -222,31 +222,36 @@ public class Signal<T> : ISignal<T>
         return ex is null ? EmptyDisposable.Instance : CapturedFailure.Rethrow<IDisposable>(ex, EmptyDisposable.Instance);
     }
 
-    /// <summary>Publishes the disposed marker and detaches the subscriptions it replaced.</summary>
-    /// <param name="disposing"><c>true</c> to release both managed and unmanaged resources; <c>false</c> to release only unmanaged resources.</param>
-    protected virtual void Dispose(bool disposing)
+    /// <summary>Marks the signal disposed under <see cref="_observerLock"/> and detaches active subscriptions.</summary>
+    internal void DisposeCore()
     {
-        if (IsDisposed)
-        {
-            return;
-        }
-
-        if (!disposing)
-        {
-            return;
-        }
-
         object? observers;
 
         lock (_observerLock)
         {
-            _exception = null;
+            if (_isDisposed)
+            {
+                return;
+            }
 
-            _isDisposed = true;
+            _exception = null;
+            Volatile.Write(ref _isDisposed, true);
             observers = ClearObserversLocked(DisposedMarker);
         }
 
         DisposeSubscriptions(observers);
+    }
+
+    /// <summary>Publishes the disposed marker and detaches the subscriptions it replaced.</summary>
+    /// <param name="disposing"><c>true</c> to release both managed and unmanaged resources; <c>false</c> to release only unmanaged resources.</param>
+    protected virtual void Dispose(bool disposing)
+    {
+        if (!disposing || Volatile.Read(ref _isDisposed))
+        {
+            return;
+        }
+
+        DisposeCore();
     }
 
     /// <summary>Creates the exception every use-after-disposal path throws.</summary>

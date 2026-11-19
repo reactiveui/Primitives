@@ -4,8 +4,9 @@
 
 using System.Runtime.CompilerServices;
 using ReactiveUI.Primitives.Extensions.Operators;
-
 #if REACTIVE_SHIM
+using ReactiveUI.Primitives.Extensions.Reactive.Operators;
+
 namespace ReactiveUI.Primitives.Extensions.Reactive;
 #else
 namespace ReactiveUI.Primitives.Extensions;
@@ -14,9 +15,6 @@ namespace ReactiveUI.Primitives.Extensions;
 /// <summary>Extension methods for Reactive objects.</summary>
 public static partial class ReactiveExtensions
 {
-    /// <summary>Default backoff factor for <see cref="RetryWithBackoff{T}(IObservable{T}, int, TimeSpan)"/>: each retry doubles the previous delay.</summary>
-    private const double DefaultBackoffFactor = 2.0;
-
     /// <summary>Retry operators that re-subscribe to a failed source, optionally after a growing delay.</summary>
     /// <typeparam name="T">The type of elements in the source sequence.</typeparam>
     /// <param name="source">The source observable sequence.</param>
@@ -24,11 +22,9 @@ public static partial class ReactiveExtensions
     {
         /// <summary>Repeats the source until it terminates successfully (alias of Retry).</summary>
         /// <returns>Retried sequence.</returns>
-        public IObservable<T> OnErrorRetry()
-        {
-            ArgumentExceptionHelper.ThrowIfNull(source);
-            return new RetryForeverObservable<T>(source);
-        }
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public IObservable<T> OnErrorRetry() =>
+            RetryForeverObservable<T>.Create(source);
 
         /// <summary>When caught exception, do onError action and repeat observable sequence.</summary>
         /// <typeparam name="TException">The type of the exception.</typeparam>
@@ -37,9 +33,7 @@ public static partial class ReactiveExtensions
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public IObservable<T> OnErrorRetry<TException>(Action<TException> onError)
             where TException : Exception =>
-            new RetryWithBackoffObservable<T>(
-                source,
-                RetryPolicyFor(onError, int.MaxValue, TimeSpan.Zero, Sequencer.Default));
+            RetryWithBackoffObservable<T>.CreateOnErrorRetry(source, onError);
 
         /// <summary>When caught exception, do onError action and repeat observable sequence after delay time.</summary>
         /// <typeparam name="TException">The type of the exception.</typeparam>
@@ -49,9 +43,7 @@ public static partial class ReactiveExtensions
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public IObservable<T> OnErrorRetry<TException>(Action<TException> onError, TimeSpan delay)
             where TException : Exception =>
-            new RetryWithBackoffObservable<T>(
-                source,
-                RetryPolicyFor(onError, int.MaxValue, delay, Sequencer.Default));
+            RetryWithBackoffObservable<T>.CreateOnErrorRetry(source, onError, delay);
 
         /// <summary>When caught exception, do onError action and repeat observable sequence during within retryCount.</summary>
         /// <typeparam name="TException">The type of the exception.</typeparam>
@@ -61,9 +53,7 @@ public static partial class ReactiveExtensions
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public IObservable<T> OnErrorRetry<TException>(Action<TException> onError, int retryCount)
             where TException : Exception =>
-            new RetryWithBackoffObservable<T>(
-                source,
-                RetryPolicyFor(onError, retryCount, TimeSpan.Zero, Sequencer.Default));
+            RetryWithBackoffObservable<T>.CreateOnErrorRetry(source, onError, retryCount);
 
         /// <summary>When caught exception, do onError action and repeat observable sequence after delay time during within retryCount.</summary>
         /// <typeparam name="TException">The type of the exception.</typeparam>
@@ -74,9 +64,7 @@ public static partial class ReactiveExtensions
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public IObservable<T> OnErrorRetry<TException>(Action<TException> onError, int retryCount, TimeSpan delay)
             where TException : Exception =>
-            new RetryWithBackoffObservable<T>(
-                source,
-                RetryPolicyFor(onError, retryCount, delay, Sequencer.Default));
+            RetryWithBackoffObservable<T>.CreateOnErrorRetry(source, onError, retryCount, delay);
 
         /// <summary>When caught exception, do onError action and repeat observable sequence after delay time(work on delayScheduler) during within retryCount.</summary>
         /// <typeparam name="TException">The type of the exception.</typeparam>
@@ -85,19 +73,14 @@ public static partial class ReactiveExtensions
         /// <param name="delay">The delay.</param>
         /// <param name="delayScheduler">The delay scheduler.</param>
         /// <returns>A sequence that retries on error with optional delay.</returns>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public IObservable<T> OnErrorRetry<TException>(
             Action<TException> onError,
             int retryCount,
             TimeSpan delay,
             ISequencer delayScheduler)
-            where TException : Exception
-        {
-            ArgumentExceptionHelper.ThrowIfNull(source);
-
-            return new RetryWithBackoffObservable<T>(
-                source,
-                RetryPolicyFor(onError, retryCount, delay, delayScheduler));
-        }
+            where TException : Exception =>
+            RetryWithBackoffObservable<T>.CreateOnErrorRetry(source, onError, retryCount, delay, delayScheduler);
 
         /// <summary>Retries with exponential backoff.</summary>
         /// <param name="maxRetries">Maximum number of retries.</param>
@@ -105,15 +88,7 @@ public static partial class ReactiveExtensions
         /// <returns>Retried sequence with backoff.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public IObservable<T> RetryWithBackoff(int maxRetries, TimeSpan initialDelay) =>
-            new RetryWithBackoffObservable<T>(
-                source,
-                new(
-                    maxRetries,
-                    initialDelay,
-                    DefaultBackoffFactor,
-                    null,
-                    Sequencer.Default,
-                    null));
+            RetryWithBackoffObservable<T>.CreateBackoff(source, maxRetries, initialDelay);
 
         /// <summary>Retries with exponential backoff.</summary>
         /// <param name="maxRetries">Maximum number of retries.</param>
@@ -129,15 +104,7 @@ public static partial class ReactiveExtensions
             double backoffFactor,
             TimeSpan? maxDelay,
             ISequencer? scheduler) =>
-            new RetryWithBackoffObservable<T>(
-                source,
-                new(
-                    maxRetries,
-                    initialDelay,
-                    backoffFactor,
-                    maxDelay,
-                    scheduler ?? Sequencer.Default,
-                    null));
+            RetryWithBackoffObservable<T>.CreateBackoff(source, maxRetries, initialDelay, backoffFactor, maxDelay, scheduler);
 
         /// <summary>Retry with exponential.</summary>
         /// <param name="retryCount">The retry count.</param>
@@ -152,7 +119,7 @@ public static partial class ReactiveExtensions
         /// <returns>An IObservable of T.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public IObservable<T> RetryForeverWithDelay(TimeSpan delay) =>
-            new RetryWithDelayObservable<T>(source, int.MaxValue, _ => delay);
+            RetryWithDelayObservable<T>.CreateForever(source, delay);
 
         /// <summary>Retry with fixed backoff.</summary>
         /// <param name="retryCount">The retry count.</param>
@@ -160,40 +127,6 @@ public static partial class ReactiveExtensions
         /// <returns>An IObservable of T.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public IObservable<T> RetryWithFixedDelay(int retryCount, TimeSpan delay) =>
-            new RetryWithBackoffObservable<T>(
-                source,
-                new(
-                    retryCount,
-                    delay,
-                    1.0,
-                    null,
-                    Sequencer.Default,
-                    null));
-    }
-
-    /// <summary>Builds a policy that retries one exception type and passes every other error straight downstream.</summary>
-    /// <typeparam name="TException">The exception type to retry.</typeparam>
-    /// <param name="onError">Callback invoked with each retried exception.</param>
-    /// <param name="retryCount">The maximum number of retries.</param>
-    /// <param name="delay">The delay before each retry.</param>
-    /// <param name="scheduler">The sequencer that times each delay.</param>
-    /// <returns>The retry policy.</returns>
-    private static RetryBackoffPolicy RetryPolicyFor<TException>(
-        Action<TException> onError,
-        int retryCount,
-        TimeSpan delay,
-        ISequencer scheduler)
-        where TException : Exception
-    {
-        ArgumentExceptionHelper.ThrowIfNull(onError);
-
-        return new(
-            retryCount,
-            delay,
-            1.0,
-            null,
-            scheduler,
-            error => onError((TException)error),
-            static error => error is TException);
+            RetryWithBackoffObservable<T>.CreateFixedDelay(source, retryCount, delay);
     }
 }

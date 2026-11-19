@@ -3,6 +3,7 @@
 // See the LICENSE file in the project root for full license information.
 
 using System.Diagnostics.CodeAnalysis;
+using System.Runtime.CompilerServices;
 
 #if REACTIVE_SHIM
 namespace ReactiveUI.Primitives.Reactive;
@@ -18,7 +19,7 @@ public static partial class LinqExtensions
     /// <param name="source">Source observable 1 whose latest value is combined.</param>
     extension<T>(IObservable<T> source)
     {
-        /// <summary>Combines the latest values from 3 observable sources into a single sequence, projecting them through <paramref name="selector"/> whenever any source emits.</summary>
+        /// <summary>Combines the latest values from 3 observable sources, projecting them through <paramref name="selector"/> whenever any source emits.</summary>
         /// <typeparam name="T2">The element type of source 2.</typeparam>
         /// <typeparam name="T3">The element type of source 3.</typeparam>
         /// <typeparam name="TResult">The projected element type.</typeparam>
@@ -27,24 +28,18 @@ public static partial class LinqExtensions
         /// <param name="selector">Projects the latest value of every source into a result.</param>
         /// <returns>An observable sequence of projected results.</returns>
         /// <exception cref="ArgumentNullException">A source or selector is <see langword="null"/>.</exception>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public IObservable<TResult> SyncLatest<T2, T3, TResult>(
             IObservable<T2> source2,
             IObservable<T3> source3,
-            Func<T, T2, T3, TResult> selector)
-        {
-            ArgumentExceptionHelper.ThrowIfNull(source);
-            ArgumentExceptionHelper.ThrowIfNull(source2);
-            ArgumentExceptionHelper.ThrowIfNull(source3);
-            ArgumentExceptionHelper.ThrowIfNull(selector);
-
-            return CombineLatestSignal<TResult>.Create(
+            Func<T, T2, T3, TResult> selector) =>
+            CombineLatestSignal.Create(
                 source,
                 source2,
                 source3,
                 selector);
-        }
 
-        /// <summary>Combines the latest values from 4 observable sources into a single sequence, projecting them through <paramref name="selector"/> whenever any source emits.</summary>
+        /// <summary>Combines the latest values from 4 observable sources, projecting them through <paramref name="selector"/> whenever any source emits.</summary>
         /// <typeparam name="T2">The element type of source 2.</typeparam>
         /// <typeparam name="T3">The element type of source 3.</typeparam>
         /// <typeparam name="T4">The element type of source 4.</typeparam>
@@ -55,27 +50,20 @@ public static partial class LinqExtensions
         /// <param name="selector">Projects the latest value of every source into a result.</param>
         /// <returns>An observable sequence of projected results.</returns>
         /// <exception cref="ArgumentNullException">A source or selector is <see langword="null"/>.</exception>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public IObservable<TResult> SyncLatest<T2, T3, T4, TResult>(
             IObservable<T2> source2,
             IObservable<T3> source3,
             IObservable<T4> source4,
-            Func<T, T2, T3, T4, TResult> selector)
-        {
-            ArgumentExceptionHelper.ThrowIfNull(source);
-            ArgumentExceptionHelper.ThrowIfNull(source2);
-            ArgumentExceptionHelper.ThrowIfNull(source3);
-            ArgumentExceptionHelper.ThrowIfNull(source4);
-            ArgumentExceptionHelper.ThrowIfNull(selector);
-
-            return CombineLatestSignal<TResult>.Create(
+            Func<T, T2, T3, T4, TResult> selector) =>
+            CombineLatestSignal.Create(
                 source,
                 source2,
                 source3,
                 source4,
                 selector);
-        }
 
-        /// <summary>Combines the latest values from 5 observable sources into a single sequence, projecting them through <paramref name="selector"/> whenever any source emits.</summary>
+        /// <summary>Combines the latest values from 5 observable sources, projecting them through <paramref name="selector"/> whenever any source emits.</summary>
         /// <typeparam name="T2">The element type of source 2.</typeparam>
         /// <typeparam name="T3">The element type of source 3.</typeparam>
         /// <typeparam name="T4">The element type of source 4.</typeparam>
@@ -88,30 +76,22 @@ public static partial class LinqExtensions
         /// <param name="selector">Projects the latest value of every source into a result.</param>
         /// <returns>An observable sequence of projected results.</returns>
         /// <exception cref="ArgumentNullException">A source or selector is <see langword="null"/>.</exception>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public IObservable<TResult> SyncLatest<T2, T3, T4, T5, TResult>(
             IObservable<T2> source2,
             IObservable<T3> source3,
             IObservable<T4> source4,
             IObservable<T5> source5,
-            Func<T, T2, T3, T4, T5, TResult> selector)
-        {
-            ArgumentExceptionHelper.ThrowIfNull(source);
-            ArgumentExceptionHelper.ThrowIfNull(source2);
-            ArgumentExceptionHelper.ThrowIfNull(source3);
-            ArgumentExceptionHelper.ThrowIfNull(source4);
-            ArgumentExceptionHelper.ThrowIfNull(source5);
-            ArgumentExceptionHelper.ThrowIfNull(selector);
-
-            return CombineLatestSignal<TResult>.Create(
+            Func<T, T2, T3, T4, T5, TResult> selector) =>
+            CombineLatestSignal.Create(
                 source,
                 source2,
                 source3,
                 source4,
                 source5,
                 selector);
-        }
 
-        /// <summary>Combines the latest values from 6 observable sources into a single sequence, projecting them through <paramref name="selector"/> whenever any source emits.</summary>
+        /// <summary>Combines the latest values from 6 observable sources, projecting them through <paramref name="selector"/> whenever any source emits.</summary>
         /// <typeparam name="T2">The element type of source 2.</typeparam>
         /// <typeparam name="T3">The element type of source 3.</typeparam>
         /// <typeparam name="T4">The element type of source 4.</typeparam>
@@ -126,23 +106,15 @@ public static partial class LinqExtensions
         /// <param name="selector">Projects the latest value of every source into a result.</param>
         /// <returns>An observable sequence of projected results.</returns>
         /// <exception cref="ArgumentNullException">A source or selector is <see langword="null"/>.</exception>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public IObservable<TResult> SyncLatest<T2, T3, T4, T5, T6, TResult>(
             IObservable<T2> source2,
             IObservable<T3> source3,
             IObservable<T4> source4,
             IObservable<T5> source5,
             IObservable<T6> source6,
-            Func<T, T2, T3, T4, T5, T6, TResult> selector)
-        {
-            ArgumentExceptionHelper.ThrowIfNull(source);
-            ArgumentExceptionHelper.ThrowIfNull(source2);
-            ArgumentExceptionHelper.ThrowIfNull(source3);
-            ArgumentExceptionHelper.ThrowIfNull(source4);
-            ArgumentExceptionHelper.ThrowIfNull(source5);
-            ArgumentExceptionHelper.ThrowIfNull(source6);
-            ArgumentExceptionHelper.ThrowIfNull(selector);
-
-            return CombineLatestSignal<TResult>.Create(
+            Func<T, T2, T3, T4, T5, T6, TResult> selector) =>
+            CombineLatestSignal.Create(
                 source,
                 source2,
                 source3,
@@ -150,9 +122,8 @@ public static partial class LinqExtensions
                 source5,
                 source6,
                 selector);
-        }
 
-        /// <summary>Combines the latest values from 7 observable sources into a single sequence, projecting them through <paramref name="selector"/> whenever any source emits.</summary>
+        /// <summary>Combines the latest values from 7 observable sources, projecting them through <paramref name="selector"/> whenever any source emits.</summary>
         /// <typeparam name="T2">The element type of source 2.</typeparam>
         /// <typeparam name="T3">The element type of source 3.</typeparam>
         /// <typeparam name="T4">The element type of source 4.</typeparam>
@@ -169,6 +140,7 @@ public static partial class LinqExtensions
         /// <param name="selector">Projects the latest value of every source into a result.</param>
         /// <returns>An observable sequence of projected results.</returns>
         /// <exception cref="ArgumentNullException">A source or selector is <see langword="null"/>.</exception>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public IObservable<TResult> SyncLatest<T2, T3, T4, T5, T6, T7, TResult>(
             IObservable<T2> source2,
             IObservable<T3> source3,
@@ -176,18 +148,8 @@ public static partial class LinqExtensions
             IObservable<T5> source5,
             IObservable<T6> source6,
             IObservable<T7> source7,
-            Func<T, T2, T3, T4, T5, T6, T7, TResult> selector)
-        {
-            ArgumentExceptionHelper.ThrowIfNull(source);
-            ArgumentExceptionHelper.ThrowIfNull(source2);
-            ArgumentExceptionHelper.ThrowIfNull(source3);
-            ArgumentExceptionHelper.ThrowIfNull(source4);
-            ArgumentExceptionHelper.ThrowIfNull(source5);
-            ArgumentExceptionHelper.ThrowIfNull(source6);
-            ArgumentExceptionHelper.ThrowIfNull(source7);
-            ArgumentExceptionHelper.ThrowIfNull(selector);
-
-            return CombineLatestSignal<TResult>.Create(
+            Func<T, T2, T3, T4, T5, T6, T7, TResult> selector) =>
+            CombineLatestSignal.Create(
                 source,
                 source2,
                 source3,
@@ -196,9 +158,8 @@ public static partial class LinqExtensions
                 source6,
                 source7,
                 selector);
-        }
 
-        /// <summary>Combines the latest values from 8 observable sources into a single sequence, projecting them through <paramref name="selector"/> whenever any source emits.</summary>
+        /// <summary>Combines the latest values from 8 observable sources, projecting them through <paramref name="selector"/> whenever any source emits.</summary>
         /// <typeparam name="T2">The element type of source 2.</typeparam>
         /// <typeparam name="T3">The element type of source 3.</typeparam>
         /// <typeparam name="T4">The element type of source 4.</typeparam>
@@ -217,6 +178,7 @@ public static partial class LinqExtensions
         /// <param name="selector">Projects the latest value of every source into a result.</param>
         /// <returns>An observable sequence of projected results.</returns>
         /// <exception cref="ArgumentNullException">A source or selector is <see langword="null"/>.</exception>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         [SuppressMessage(
             "Maintainability",
             "SST1472:Signatures should not declare too many parameters",
@@ -229,19 +191,8 @@ public static partial class LinqExtensions
             IObservable<T6> source6,
             IObservable<T7> source7,
             IObservable<T8> source8,
-            Func<T, T2, T3, T4, T5, T6, T7, T8, TResult> selector)
-        {
-            ArgumentExceptionHelper.ThrowIfNull(source);
-            ArgumentExceptionHelper.ThrowIfNull(source2);
-            ArgumentExceptionHelper.ThrowIfNull(source3);
-            ArgumentExceptionHelper.ThrowIfNull(source4);
-            ArgumentExceptionHelper.ThrowIfNull(source5);
-            ArgumentExceptionHelper.ThrowIfNull(source6);
-            ArgumentExceptionHelper.ThrowIfNull(source7);
-            ArgumentExceptionHelper.ThrowIfNull(source8);
-            ArgumentExceptionHelper.ThrowIfNull(selector);
-
-            return CombineLatestSignal<TResult>.Create(
+            Func<T, T2, T3, T4, T5, T6, T7, T8, TResult> selector) =>
+            CombineLatestSignal.Create(
                 source,
                 source2,
                 source3,
@@ -251,9 +202,8 @@ public static partial class LinqExtensions
                 source7,
                 source8,
                 selector);
-        }
 
-        /// <summary>Combines the latest values from 9 observable sources into a single sequence, projecting them through <paramref name="selector"/> whenever any source emits.</summary>
+        /// <summary>Combines the latest values from 9 observable sources, projecting them through <paramref name="selector"/> whenever any source emits.</summary>
         /// <typeparam name="T2">The element type of source 2.</typeparam>
         /// <typeparam name="T3">The element type of source 3.</typeparam>
         /// <typeparam name="T4">The element type of source 4.</typeparam>
@@ -274,6 +224,7 @@ public static partial class LinqExtensions
         /// <param name="selector">Projects the latest value of every source into a result.</param>
         /// <returns>An observable sequence of projected results.</returns>
         /// <exception cref="ArgumentNullException">A source or selector is <see langword="null"/>.</exception>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         [SuppressMessage(
             "Maintainability",
             "SST1472:Signatures should not declare too many parameters",
@@ -287,20 +238,8 @@ public static partial class LinqExtensions
             IObservable<T7> source7,
             IObservable<T8> source8,
             IObservable<T9> source9,
-            Func<T, T2, T3, T4, T5, T6, T7, T8, T9, TResult> selector)
-        {
-            ArgumentExceptionHelper.ThrowIfNull(source);
-            ArgumentExceptionHelper.ThrowIfNull(source2);
-            ArgumentExceptionHelper.ThrowIfNull(source3);
-            ArgumentExceptionHelper.ThrowIfNull(source4);
-            ArgumentExceptionHelper.ThrowIfNull(source5);
-            ArgumentExceptionHelper.ThrowIfNull(source6);
-            ArgumentExceptionHelper.ThrowIfNull(source7);
-            ArgumentExceptionHelper.ThrowIfNull(source8);
-            ArgumentExceptionHelper.ThrowIfNull(source9);
-            ArgumentExceptionHelper.ThrowIfNull(selector);
-
-            return CombineLatestSignal<TResult>.Create(
+            Func<T, T2, T3, T4, T5, T6, T7, T8, T9, TResult> selector) =>
+            CombineLatestSignal.Create(
                 source,
                 source2,
                 source3,
@@ -311,6 +250,5 @@ public static partial class LinqExtensions
                 source8,
                 source9,
                 selector);
-        }
     }
 }

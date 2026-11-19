@@ -36,8 +36,8 @@ public sealed class MaxConcurrentBlendCoordinator<T> : IDisposable
     /// <summary>The number of source requests not yet served; the thread that raises it from zero serves them.</summary>
     private long _requests;
 
-    /// <summary>The number of active inner sources.</summary>
-    private int _active;
+    /// <summary>Remaining active participants (1 for enumeration plus 1 per active inner).</summary>
+    private int _active = 1;
 
     /// <summary>Whether all enumerable sources have been consumed, as 0 or 1.</summary>
     private int _enumerationCompleted;
@@ -52,6 +52,7 @@ public sealed class MaxConcurrentBlendCoordinator<T> : IDisposable
     /// <inheritdoc/>
     public void Dispose()
     {
+        Volatile.Write(ref _done, 1);
         var enumerator = Interlocked.Exchange(ref _enumerator, null);
         enumerator?.Dispose();
         _subscriptions.Dispose();
@@ -112,9 +113,14 @@ public sealed class MaxConcurrentBlendCoordinator<T> : IDisposable
         {
             if (enumerator?.MoveNext() != true)
             {
-                Volatile.Write(ref _enumerationCompleted, 1);
                 DisposeEnumerator();
-                TryComplete();
+                if (Interlocked.Exchange(ref _enumerationCompleted, 1) == 0
+                    && Interlocked.Decrement(ref _active) == 0)
+                {
+                    Volatile.Write(ref _done, 1);
+                    _delivery.OnCompleted(new PendingDrain(this));
+                }
+
                 return false;
             }
 
@@ -133,9 +139,9 @@ public sealed class MaxConcurrentBlendCoordinator<T> : IDisposable
         }
 
         _ = Interlocked.Increment(ref _active);
-        OnceDisposable inner = new();
+        Arm inner = new(this);
         _subscriptions.Add(inner);
-        inner.Disposable = next.Subscribe(OnInnerNext, OnAnyError, () => OnInnerCompleted(inner));
+        inner.Attach(next.Subscribe(inner));
         return true;
     }
 
@@ -153,30 +159,24 @@ public sealed class MaxConcurrentBlendCoordinator<T> : IDisposable
     }
 
     /// <summary>Completes one inner source and starts another if possible.</summary>
-    /// <param name="inner">The completed inner subscription.</param>
-    private void OnInnerCompleted(OnceDisposable inner)
+    /// <param name="inner">The completed inner arm.</param>
+    private void OnInnerCompleted(Arm inner)
     {
         _ = _subscriptions.Remove(inner);
+        inner.Dispose();
         if (Volatile.Read(ref _done) != 0)
         {
             return;
         }
 
-        _ = Interlocked.Decrement(ref _active);
-        TryComplete();
-        RequestSources(1);
-    }
-
-    /// <summary>Delivers completion after enumeration and all active sources finish.</summary>
-    private void TryComplete()
-    {
-        if (Volatile.Read(ref _enumerationCompleted) == 0 || Volatile.Read(ref _active) != 0)
+        if (Interlocked.Decrement(ref _active) == 0)
         {
+            Volatile.Write(ref _done, 1);
+            _delivery.OnCompleted(new PendingDrain(this));
             return;
         }
 
-        Volatile.Write(ref _done, 1);
-        _delivery.OnCompleted(new PendingDrain(this));
+        RequestSources(1);
     }
 
     /// <summary>Releases the subscriptions after the terminal notification, and the enumerator on the thread serving requests.</summary>
@@ -204,5 +204,44 @@ public sealed class MaxConcurrentBlendCoordinator<T> : IDisposable
 
             Owner.ReleaseAfterTerminal();
         }
+    }
+
+    /// <summary>Observes one inner source and detaches itself once completed.</summary>
+    /// <param name="parent">The coordinator.</param>
+    private sealed class Arm(MaxConcurrentBlendCoordinator<T> parent) : IObserver<T>, IDisposable
+    {
+        /// <summary>The inner subscription.</summary>
+        private IDisposable? _subscription;
+
+        /// <summary>Set to 1 once this inner source has completed.</summary>
+        private int _completed;
+
+        /// <inheritdoc/>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void OnNext(T value) => parent.OnInnerNext(value);
+
+        /// <inheritdoc/>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void OnError(Exception error) => parent.OnAnyError(error);
+
+        /// <inheritdoc/>
+        public void OnCompleted()
+        {
+            if (Interlocked.Exchange(ref _completed, 1) != 0)
+            {
+                return;
+            }
+
+            parent.OnInnerCompleted(this);
+        }
+
+        /// <inheritdoc/>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void Dispose() => SinkSubscription.Dispose(ref _subscription);
+
+        /// <summary>Assigns the inner subscription.</summary>
+        /// <param name="subscription">The inner subscription.</param>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        internal void Attach(IDisposable subscription) => SinkSubscription.Set(ref _subscription, subscription);
     }
 }

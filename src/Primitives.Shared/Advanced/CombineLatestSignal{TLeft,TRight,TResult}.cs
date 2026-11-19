@@ -3,6 +3,12 @@
 // See the LICENSE file in the project root for full license information.
 
 #if REACTIVE_SHIM
+using ReactiveUI.Primitives.Reactive.Internal;
+#else
+using ReactiveUI.Primitives.Internal;
+#endif
+
+#if REACTIVE_SHIM
 namespace ReactiveUI.Primitives.Reactive.Advanced;
 #else
 namespace ReactiveUI.Primitives.Advanced;
@@ -39,6 +45,49 @@ public sealed class CombineLatestSignal<TLeft, TRight, TResult> : IObservable<TR
         _right = right;
         _selector = selector;
     }
+
+    /// <summary>Creates a latest-value combination sequence for <c>SyncLatest</c> and <c>PairLatest</c>, using the range fast path when applicable.</summary>
+    /// <param name="left">The left source.</param>
+    /// <param name="right">The right source.</param>
+    /// <param name="selector">The projection function.</param>
+    /// <returns>The combined observable sequence.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="left"/>, <paramref name="right"/>, or <paramref name="selector"/> is <see langword="null"/>.</exception>
+    public static IObservable<TResult> CreateSyncLatest(
+        IObservable<TLeft> left,
+        IObservable<TRight> right,
+        Func<TLeft, TRight, TResult> selector) =>
+        BinaryCoordinatorHelper.ValidateAndTryMatchRanges(left, right, selector, out var ranges)
+            ? new RangeSyncLatestSignal<TResult>(ranges.Left, ranges.Right, ranges.Selector)
+            : new CombineLatestSignal<TLeft, TRight, TResult>(left, right, selector);
+
+    /// <summary>Creates a latest-value combination sequence for <c>FuseLatest</c>, using the range fast path when applicable.</summary>
+    /// <param name="left">The left source.</param>
+    /// <param name="right">The right source.</param>
+    /// <param name="selector">The projection function.</param>
+    /// <returns>The combined observable sequence.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="selector"/>, <paramref name="right"/>, or <paramref name="left"/> is <see langword="null"/>.</exception>
+    public static IObservable<TResult> CreateFuseLatest(
+        IObservable<TLeft> left,
+        IObservable<TRight> right,
+        Func<TLeft, TRight, TResult> selector)
+    {
+        ArgumentExceptionHelper.ThrowIfNull(selector);
+        return CreateSyncLatest(left, right, selector);
+    }
+
+    /// <summary>Creates a latest-value combination sequence for <c>CombineLatest</c>, using the range fast path when applicable.</summary>
+    /// <param name="left">The left source.</param>
+    /// <param name="right">The right source.</param>
+    /// <param name="selector">The projection function.</param>
+    /// <returns>The combined observable sequence.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="left"/>, <paramref name="right"/>, or <paramref name="selector"/> is <see langword="null"/>.</exception>
+    public static IObservable<TResult> CreateCombineLatest(
+        IObservable<TLeft> left,
+        IObservable<TRight> right,
+        Func<TLeft, TRight, TResult> selector) =>
+        BinaryCoordinatorHelper.ValidateAndTryMatchRanges(left, right, selector, out var ranges)
+            ? new RangeCombineLatestSignal<TResult>(ranges.Left, ranges.Right, ranges.Selector)
+            : new CombineLatestSignal<TLeft, TRight, TResult>(left, right, selector);
 
     /// <inheritdoc/>
     public IDisposable Subscribe(IObserver<TResult> observer)

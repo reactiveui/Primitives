@@ -13,16 +13,45 @@ namespace ReactiveUI.Primitives.Advanced;
 /// <summary>Projects each source value together with its zero-based position in the sequence.</summary>
 /// <typeparam name="TSource">The source value type.</typeparam>
 /// <typeparam name="TResult">The projected value type.</typeparam>
-/// <param name="source">The source observable.</param>
-/// <param name="selector">The indexed selector.</param>
 [System.Diagnostics.DebuggerDisplay("MapIndexedSignal: Source = {_source}")]
-public sealed class MapIndexedSignal<TSource, TResult>(IObservable<TSource> source, Func<TSource, int, TResult> selector) : IRequireCurrentThread<TResult>
+public sealed class MapIndexedSignal<TSource, TResult> : IRequireCurrentThread<TResult>
 {
     /// <summary>The source observable.</summary>
-    private readonly IObservable<TSource> _source = source;
+    private readonly IObservable<TSource> _source;
 
     /// <summary>The indexed selector.</summary>
-    private readonly Func<TSource, int, TResult> _selector = selector;
+    private readonly Func<TSource, int, TResult> _selector;
+
+    /// <summary>Initializes a new instance of the <see cref="MapIndexedSignal{TSource, TResult}"/> class.</summary>
+    /// <param name="source">The source observable.</param>
+    /// <param name="selector">The indexed selector.</param>
+    /// <exception cref="ArgumentNullException"><paramref name="source"/> or <paramref name="selector"/> is <see langword="null"/>.</exception>
+    public MapIndexedSignal(IObservable<TSource> source, Func<TSource, int, TResult> selector)
+    {
+        ArgumentExceptionHelper.ThrowIfNull(source);
+        ArgumentExceptionHelper.ThrowIfNull(selector);
+
+        _source = source;
+        _selector = selector;
+    }
+
+    /// <summary>Creates an indexed projection sequence with empty/never short-circuiting.</summary>
+    /// <param name="source">The source observable.</param>
+    /// <param name="selector">The indexed selector.</param>
+    /// <returns>The projected observable sequence.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="source"/> or <paramref name="selector"/> is <see langword="null"/>.</exception>
+    public static IObservable<TResult> Create(IObservable<TSource> source, Func<TSource, int, TResult> selector)
+    {
+        ArgumentExceptionHelper.ThrowIfNull(source);
+        ArgumentExceptionHelper.ThrowIfNull(selector);
+
+        return source switch
+        {
+            ImmutableEmptySignal<TSource> => ImmutableEmptySignal<TResult>.Instance,
+            ImmutableNeverSignal<TSource> => ImmutableNeverSignal<TResult>.Instance,
+            _ => new MapIndexedSignal<TSource, TResult>(source, selector),
+        };
+    }
 
     /// <inheritdoc/>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]

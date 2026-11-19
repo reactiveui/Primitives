@@ -2,6 +2,8 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Runtime.CompilerServices;
+
 namespace ReactiveUI.Primitives.Async;
 
 /// <summary>Provides Rx-compatible distinct-until-changed names for asynchronous observable sequences.</summary>
@@ -15,13 +17,9 @@ public static partial class SignalAsyncExtensions
         /// <summary>Returns an observable sequence that emits only distinct consecutive elements, suppressing duplicates that are equal to the previous element.</summary>
         /// <returns>An observable sequence that contains only the elements from the source sequence that are not equal to their
         /// immediate predecessor.</returns>
-        public IObservableAsync<T> DistinctUntilChanged()
-        {
-            ArgumentExceptionHelper.ThrowIfNull(source);
-
-            var equalityComparer = EqualityComparer<T>.Default;
-            return new UniqueSignal<T>(source, equalityComparer);
-        }
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public IObservableAsync<T> DistinctUntilChanged() =>
+            new UniqueSignal<T>(source);
 
         /// <summary>
         /// Returns an observable sequence that emits elements from the source sequence only when the current element is
@@ -31,13 +29,9 @@ public static partial class SignalAsyncExtensions
         /// <returns>An observable sequence that contains only distinct consecutive elements from the source sequence, as
         /// determined by the specified equality comparer.</returns>
         /// <exception cref="ArgumentNullException">Thrown if <paramref name="equalityComparer"/> is <see langword="null"/>.</exception>
-        public IObservableAsync<T> DistinctUntilChanged(IEqualityComparer<T> equalityComparer)
-        {
-            ArgumentExceptionHelper.ThrowIfNull(source);
-            ArgumentExceptionHelper.ThrowIfNull(equalityComparer);
-
-            return new UniqueSignal<T>(source, equalityComparer);
-        }
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public IObservableAsync<T> DistinctUntilChanged(IEqualityComparer<T> equalityComparer) =>
+            new UniqueSignal<T>(source, equalityComparer);
 
         /// <summary>Returns an observable sequence that emits elements from the source sequence, suppressing consecutive duplicates as determined by a key selector function.</summary>
         /// <typeparam name="TKey">The type of the key that decides whether consecutive elements are duplicates.</typeparam>
@@ -45,14 +39,9 @@ public static partial class SignalAsyncExtensions
         /// <returns>An observable sequence that contains only the elements from the source sequence that are not consecutive
         /// duplicates according to the specified key.</returns>
         /// <exception cref="ArgumentNullException"><paramref name="keySelector"/> is <see langword="null"/>.</exception>
-        public IObservableAsync<T> DistinctUntilChangedBy<TKey>(Func<T, TKey> keySelector)
-        {
-            ArgumentExceptionHelper.ThrowIfNull(source);
-            ArgumentExceptionHelper.ThrowIfNull(keySelector);
-
-            var equalityComparer = EqualityComparer<TKey>.Default;
-            return new UniqueBySignal<T, TKey>(source, keySelector, equalityComparer);
-        }
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public IObservableAsync<T> DistinctUntilChangedBy<TKey>(Func<T, TKey> keySelector) =>
+            new UniqueBySignal<T, TKey>(source, keySelector);
 
         /// <summary>Returns an observable sequence that emits elements from the source sequence, suppressing consecutive duplicates as determined by a key selector and equality comparer.</summary>
         /// <typeparam name="TKey">The type of the key that decides whether consecutive elements are duplicates.</typeparam>
@@ -61,15 +50,10 @@ public static partial class SignalAsyncExtensions
         /// <returns>An observable sequence that contains only the elements from the source sequence that are not consecutive
         /// duplicates according to the specified key and comparer.</returns>
         /// <exception cref="ArgumentNullException">Thrown if <paramref name="keySelector"/> or <paramref name="equalityComparer"/> is null.</exception>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public IObservableAsync<T> DistinctUntilChangedBy<TKey>(
             Func<T, TKey> keySelector,
-            IEqualityComparer<TKey> equalityComparer)
-        {
-            ArgumentExceptionHelper.ThrowIfNull(source);
-            ArgumentExceptionHelper.ThrowIfNull(keySelector);
-            ArgumentExceptionHelper.ThrowIfNull(equalityComparer);
-
-            return new UniqueBySignal<T, TKey>(source, keySelector, equalityComparer);
-        }
+            IEqualityComparer<TKey> equalityComparer) =>
+            new UniqueBySignal<T, TKey>(source, keySelector, equalityComparer);
     }
 }

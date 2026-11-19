@@ -87,6 +87,33 @@ public sealed record AsyncContext
         return currentSc is not null ? From(currentSc) : From(TaskScheduler.Current);
     }
 
+    /// <summary>Determines whether <paramref name="context"/> represents the current asynchronous context.</summary>
+    /// <param name="context">The <see cref="AsyncContext"/> instance to compare with the current context.</param>
+    /// <returns>
+    /// <see langword="true"/> if <paramref name="context"/> matches the current
+    /// <see cref="SynchronizationContext"/>, sequencer, or <see cref="TaskScheduler"/>; otherwise, <see langword="false"/>.
+    /// </returns>
+    /// <exception cref="ArgumentNullException"><paramref name="context"/> is <see langword="null"/>.</exception>
+    public static bool IsSameAsCurrent(AsyncContext context)
+    {
+        ArgumentExceptionHelper.ThrowIfNull(context);
+
+        if (context.SynchronizationContext is not null)
+        {
+            return context.SynchronizationContext == SynchronizationContext.Current;
+        }
+
+        if (context.Sequencer is not null)
+        {
+            return TaskScheduler.Current is SequencerTaskScheduler adapter
+                   && ReferenceEquals(adapter.Sequencer, context.Sequencer);
+        }
+
+        return context.TaskScheduler is not null
+            ? context.TaskScheduler == TaskScheduler.Current
+            : TaskScheduler.Current == TaskScheduler.Default;
+    }
+
     /// <summary>Creates an awaitable that switches execution to the associated asynchronous context.</summary>
     /// <param name="forceYielding">true to always yield execution to the context, even when the calling thread is on it;
     /// otherwise, false to continue inline when the context matches.</param>

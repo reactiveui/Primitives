@@ -16,7 +16,7 @@ internal sealed class ReplayLatestSignalAsyncState<T> : IDisposable
         "Style",
         "SST1401:Field should be private",
         Justification = "The state helpers enter this gate directly.")]
-    internal readonly AsyncSerialGate Gate = new();
+    internal readonly ReactiveUI.Primitives.Async.Internal.AsyncFlowGate Gate = new();
 
     /// <summary>Initializes a new instance of the <see cref="ReplayLatestSignalAsyncState{T}"/> class.</summary>
     /// <param name="initialValue">The initial value to replay, if any.</param>
@@ -45,9 +45,6 @@ internal sealed class ReplayLatestSignalAsyncState<T> : IDisposable
     internal bool IsDisposed { get; set; }
 
     /// <inheritdoc/>
-    public void Dispose()
-    {
-        Gate.Dispose();
-        DisposedCts.Dispose();
-    }
+    [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+    public void Dispose() => DisposedCts.Dispose();
 }

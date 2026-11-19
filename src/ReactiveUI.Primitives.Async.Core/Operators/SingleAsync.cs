@@ -22,7 +22,7 @@ public static partial class SignalAsyncExtensions
         /// <exception cref="InvalidOperationException">No element satisfies <paramref name="predicate"/>, or more than one does.</exception>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public ValueTask<T> SingleAsync(Func<T, bool> predicate) =>
-            source.SingleAsync(predicate, CancellationToken.None);
+            SingleElementWitness<T>.SingleAsync(source, predicate);
 
         /// <summary>Asynchronously returns the one element of the sequence that satisfies the specified condition.</summary>
         /// <param name="predicate">A function to test each element for a condition. The method returns the element for which this predicate
@@ -33,7 +33,7 @@ public static partial class SignalAsyncExtensions
         /// <exception cref="InvalidOperationException">No element satisfies <paramref name="predicate"/>, or more than one does.</exception>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public ValueTask<T> SingleAsync(Func<T, bool> predicate, CancellationToken cancellationToken) =>
-            SingleCoreAsync(source, predicate, cancellationToken);
+            SingleElementWitness<T>.SingleAsync(source, predicate, cancellationToken);
 
         /// <summary>Asynchronously returns the one element of a sequence that contains exactly one element.</summary>
         /// <returns>A task that represents the asynchronous operation. The task result contains the single element of the
@@ -41,7 +41,7 @@ public static partial class SignalAsyncExtensions
         /// <exception cref="InvalidOperationException">The source sequence is empty or contains more than one element.</exception>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public ValueTask<T> SingleAsync() =>
-            source.SingleAsync(CancellationToken.None);
+            SingleElementWitness<T>.SingleAsync(source);
 
         /// <summary>Asynchronously returns the one element of a sequence that contains exactly one element.</summary>
         /// <param name="cancellationToken">The token that cancels the operation.</param>
@@ -50,24 +50,6 @@ public static partial class SignalAsyncExtensions
         /// <exception cref="InvalidOperationException">The source sequence is empty or contains more than one element.</exception>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public ValueTask<T> SingleAsync(CancellationToken cancellationToken) =>
-            SingleCoreAsync(source, null, cancellationToken);
-    }
-
-    /// <summary>Shared body for the <c>SingleAsync</c> overloads; subscribes the shared observer and unwraps the result.</summary>
-    /// <typeparam name="T">The type of elements in the source sequence.</typeparam>
-    /// <param name="source">The source observable sequence.</param>
-    /// <param name="predicate">An optional predicate to filter elements.</param>
-    /// <param name="cancellationToken">A cancellation token for the operation.</param>
-    /// <returns>The single matching element.</returns>
-    private static async ValueTask<T> SingleCoreAsync<T>(
-        IObservableAsync<T> source,
-        Func<T, bool>? predicate,
-        CancellationToken cancellationToken)
-    {
-        cancellationToken.ThrowIfCancellationRequested();
-        SingleElementWitness<T> observer = new(predicate, true, default, cancellationToken);
-        await using var subscription = await source.SubscribeAsync(observer, cancellationToken).ConfigureAwait(false);
-        var result = await observer.AwaitResultAsync().ConfigureAwait(false);
-        return result!;
+            SingleElementWitness<T>.SingleAsync(source, cancellationToken);
     }
 }

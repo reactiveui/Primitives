@@ -14,7 +14,7 @@ namespace ReactiveUI.Primitives.Extensions.Operators;
 /// <typeparam name="TResult">Result type.</typeparam>
 /// <param name="function">Function to run.</param>
 /// <param name="scheduler">Optional scheduler; null runs inline.</param>
-internal sealed class StartFuncObservable<TResult>(
+public sealed class StartFuncObservable<TResult>(
     Func<TResult> function,
     ISequencer? scheduler) : IObservable<TResult>
 {

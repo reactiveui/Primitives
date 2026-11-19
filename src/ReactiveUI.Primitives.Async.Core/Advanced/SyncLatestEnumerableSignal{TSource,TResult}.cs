@@ -33,6 +33,14 @@ public sealed class SyncLatestEnumerableSignal<TSource, TResult> : IObservableAs
     /// <summary>Gets the result selector.</summary>
     private Func<IReadOnlyList<TSource>, TResult> ResultSelector { get; }
 
+    /// <summary>Creates a <see cref="SyncLatestEnumerableSignal{TSource, TResult}"/> that emits snapshots directly.</summary>
+    /// <param name="sources">The source sequences to combine.</param>
+    /// <returns>A configured snapshot signal.</returns>
+    [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+    public static SyncLatestEnumerableSignal<TSource, IReadOnlyList<TSource>> CreateSnapshot(
+        IEnumerable<IObservableAsync<TSource>> sources) =>
+        new(sources, static values => values);
+
     /// <inheritdoc/>
     async ValueTask<IAsyncDisposable> IObservableAsync<TResult>.SubscribeAsync(
         IObserverAsync<TResult> observer,

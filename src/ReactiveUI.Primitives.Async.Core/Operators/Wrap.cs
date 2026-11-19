@@ -2,6 +2,8 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Runtime.CompilerServices;
+
 namespace ReactiveUI.Primitives.Async;
 
 /// <summary>Provides extension methods for working with asynchronous observers.</summary>
@@ -15,8 +17,7 @@ public static partial class SignalAsyncExtensions
         /// <summary>Wraps the specified asynchronous observer in a decorator that ensures consistent behavior and interface compliance.</summary>
         /// <returns>A wrapped asynchronous observer that delegates calls to the specified observer.</returns>
         /// <exception cref="ArgumentNullException">Thrown if <paramref name="observer"/> is null.</exception>
-        public IObserverAsync<T> Wrap() => observer is null
-            ? throw new ArgumentNullException(nameof(observer))
-            : new RelayWitnessAsync<T>(observer);
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public IObserverAsync<T> Wrap() => new RelayWitnessAsync<T>(observer);
     }
 }

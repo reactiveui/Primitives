@@ -18,6 +18,9 @@ public sealed class CastWitness<TResult> : IObserver<object?>, IDisposable
     /// <summary>Non-zero after terminal notification or disposal.</summary>
     private int _stopped;
 
+    /// <summary>The upstream subscription slot.</summary>
+    private IDisposable? _subscription;
+
     /// <summary>Initializes a new instance of the <see cref="CastWitness{TResult}"/> class.</summary>
     /// <param name="observer">The downstream observer.</param>
     public CastWitness(IObserver<TResult> observer)
@@ -29,9 +32,6 @@ public sealed class CastWitness<TResult> : IObserver<object?>, IDisposable
 
     /// <summary>Gets the downstream observer.</summary>
     private IObserver<TResult> Observer { get; }
-
-    /// <summary>Gets the upstream subscription slot.</summary>
-    private SingleReplaceableDisposable Subscription { get; } = new();
 
     /// <inheritdoc/>
     public void OnNext(object? value)
@@ -46,32 +46,50 @@ public sealed class CastWitness<TResult> : IObserver<object?>, IDisposable
         {
             result = (TResult)value!;
         }
-        catch (Exception error)
+        catch (Exception error) when (!FatalExceptionHelper.IsFatal(error))
         {
             OnError(error);
             return;
         }
 
-        Observer.OnNext(result);
+        SinkDelivery.Next(Observer, result, this);
     }
 
     /// <inheritdoc/>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public void OnError(Exception error) =>
-        WitnessLifetime.Error(ref _stopped, Subscription, Observer, error);
+    public void OnError(Exception error)
+    {
+        if (Interlocked.Exchange(ref _stopped, 1) != 0)
+        {
+            return;
+        }
+
+        SinkTerminal.Fault(Observer, error, this);
+    }
 
     /// <inheritdoc/>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public void OnCompleted() =>
-        WitnessLifetime.Complete(ref _stopped, Subscription, Observer);
+    public void OnCompleted()
+    {
+        if (Interlocked.Exchange(ref _stopped, 1) != 0)
+        {
+            return;
+        }
+
+        SinkTerminal.Complete(Observer, this);
+    }
 
     /// <inheritdoc/>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public void Dispose() => WitnessLifetime.Dispose(ref _stopped, Subscription);
+    public void Dispose()
+    {
+        Volatile.Write(ref _stopped, 1);
+        SinkSubscription.Dispose(ref _subscription);
+    }
 
     /// <summary>Assigns the upstream subscription.</summary>
     /// <param name="subscription">The upstream subscription.</param>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void SetSubscription(IDisposable subscription) =>
-        WitnessLifetime.SetSubscription(ref _stopped, Subscription, subscription);
+        SinkSubscription.Set(ref _subscription, subscription);
 }

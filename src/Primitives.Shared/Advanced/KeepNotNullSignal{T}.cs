@@ -32,8 +32,31 @@ public sealed class KeepNotNullSignal<T> : IObservable<T>
     {
         ArgumentExceptionHelper.ThrowIfNull(observer);
 
+        if (_source is FromEnumerableSignal<T?> enumerable && enumerable.TryGetReadOnlyValues(out var values))
+        {
+            EmitReadOnlyList(values, observer);
+            return EmptyDisposable.Instance;
+        }
+
         KeepNotNullWitness<T> sink = new(observer);
         sink.SetSubscription(_source.Subscribe(sink));
         return sink;
+    }
+
+    /// <summary>Filters non-null values from an indexable synchronous list straight into <paramref name="observer"/>.</summary>
+    /// <param name="values">The indexable values.</param>
+    /// <param name="observer">The downstream observer.</param>
+    private static void EmitReadOnlyList(IReadOnlyList<T?> values, IObserver<T> observer)
+    {
+        for (var i = 0; i < values.Count; i++)
+        {
+            var value = values[i];
+            if (value is not null)
+            {
+                observer.OnNext(value);
+            }
+        }
+
+        observer.OnCompleted();
     }
 }

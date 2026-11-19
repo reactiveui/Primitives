@@ -16,8 +16,24 @@ public sealed class SynchronizeGateSignal<T> : IObservable<T>
     /// <summary>Initializes a new instance of the <see cref="SynchronizeGateSignal{T}"/> class.</summary>
     /// <param name="source">The source observable.</param>
     /// <param name="gate">The gate shared across subscriptions and other synchronized sequences.</param>
+    /// <exception cref="ArgumentNullException"><paramref name="gate"/> or <paramref name="source"/> is <see langword="null"/>.</exception>
+    [System.Diagnostics.CodeAnalysis.SuppressMessage(
+        "ApiSelection",
+        "PSH1409",
+        Justification = "Lock argument via ThrowIfNull(object) triggers CS9216 (unintended monitor-based locking).")]
+    [System.Diagnostics.CodeAnalysis.SuppressMessage(
+        "Modernization",
+        "SST2000:Use ArgumentNullException.ThrowIfNull",
+        Justification = "ThrowIfNull takes object, so passing the Lock gate is a CS9216 error.")]
     public SynchronizeGateSignal(IObservable<T> source, Lock gate)
     {
+        if (gate is null)
+        {
+            throw new ArgumentNullException(nameof(gate));
+        }
+
+        ArgumentExceptionHelper.ThrowIfNull(source);
+
         Source = source;
         Gate = gate;
     }

@@ -31,6 +31,7 @@ public sealed class DispatcherQueueSequencerTests
         await Assert.That(static () => new DispatcherQueueSequencer(null!)).ThrowsExactly<ArgumentNullException>();
         await Assert.That(static () => new DispatcherQueueSequencer(null!, DispatcherQueuePriority.High))
             .ThrowsExactly<ArgumentNullException>();
+        await Assert.That(static () => ((DispatcherQueue)null!).ToSequencer()).ThrowsExactly<ArgumentNullException>();
     }
 
     /// <summary>Public constructors retain a live queue and the selected priority.</summary>
@@ -44,6 +45,7 @@ public sealed class DispatcherQueueSequencerTests
             var queue = controller.DispatcherQueue;
             DispatcherQueueSequencer defaults = new(queue);
             DispatcherQueueSequencer selected = new(queue, DispatcherQueuePriority.High);
+            var adapted = queue.ToSequencer();
             var before = System.Diagnostics.Stopwatch.GetTimestamp();
             var timestamp = selected.Timestamp;
             var after = System.Diagnostics.Stopwatch.GetTimestamp();
@@ -52,6 +54,8 @@ public sealed class DispatcherQueueSequencerTests
             await Assert.That(defaults.Priority).IsEqualTo(DispatcherQueuePriority.Normal);
             await Assert.That(selected.DispatcherQueue).IsSameReferenceAs(queue);
             await Assert.That(selected.Priority).IsEqualTo(DispatcherQueuePriority.High);
+            await Assert.That(adapted.DispatcherQueue).IsSameReferenceAs(queue);
+            await Assert.That(adapted.Priority).IsEqualTo(DispatcherQueuePriority.Normal);
             await Assert.That(timestamp).IsGreaterThanOrEqualTo(before);
             await Assert.That(timestamp).IsLessThanOrEqualTo(after);
         }

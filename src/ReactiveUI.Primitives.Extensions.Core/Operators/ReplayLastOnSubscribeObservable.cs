@@ -10,6 +10,16 @@ namespace ReactiveUI.Primitives.Extensions.Operators;
 /// <param name="initialValue">The initial value emitted to every new subscriber.</param>
 public sealed class ReplayLastOnSubscribeObservable<T>(IObservable<T> source, T initialValue) : IObservable<T>
 {
+    /// <summary>Creates a replay-initial-on-subscribe sequence, validating <paramref name="source"/> eagerly.</summary>
+    /// <param name="source">The source observable.</param>
+    /// <param name="initialValue">The initial value emitted to every new subscriber.</param>
+    /// <returns>An observable sequence that emits <paramref name="initialValue"/> before subscribing to <paramref name="source"/>.</returns>
+    public static ReplayLastOnSubscribeObservable<T> Create(IObservable<T> source, T initialValue)
+    {
+        ArgumentExceptionHelper.ThrowIfNull(source);
+        return new(source, initialValue);
+    }
+
     /// <inheritdoc/>
     public IDisposable Subscribe(IObserver<T> observer)
     {

@@ -228,7 +228,7 @@ public sealed class RepeatSourceCoordinator<T> : IDisposable
         {
             subscription = _source.Subscribe(observer);
         }
-        catch (Exception error)
+        catch (Exception error) when (!FatalExceptionHelper.IsFatal(error))
         {
             observer.OnError(error);
             return;

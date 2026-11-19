@@ -60,6 +60,21 @@ public sealed class ContainerDisposable : IsDisposed, ICollection<IDisposable>
         return container.ToCompositeDisposable();
     }
 
+    /// <summary>Adds <paramref name="disposable"/> to <paramref name="disposables"/> and returns <paramref name="disposable"/>.</summary>
+    /// <typeparam name="T">The disposable type.</typeparam>
+    /// <param name="disposable">The disposable to add.</param>
+    /// <param name="disposables">The container taking ownership of the disposable.</param>
+    /// <returns>The supplied <paramref name="disposable"/>.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="disposables"/> or <paramref name="disposable"/> is <see langword="null"/>.</exception>
+    public static T AddTo<T>(T disposable, ContainerDisposable disposables)
+        where T : IDisposable
+    {
+        ArgumentExceptionHelper.ThrowIfNull(disposables);
+
+        disposables.Add(disposable);
+        return disposable;
+    }
+
     /// <summary>Gets the <see cref="CompositeDisposable"/> this container owns, creating it on first call.</summary>
     /// <returns>The composite whose contents are disposed along with this container.</returns>
     public CompositeDisposable ToCompositeDisposable()

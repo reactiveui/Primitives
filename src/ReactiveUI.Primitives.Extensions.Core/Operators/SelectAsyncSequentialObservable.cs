@@ -4,7 +4,6 @@
 
 using System.Runtime.CompilerServices;
 using ReactiveUI.Primitives.Advanced;
-using ReactiveUI.Primitives.Disposables;
 
 namespace ReactiveUI.Primitives.Extensions.Operators;
 
@@ -46,8 +45,8 @@ public sealed class SelectAsyncSequentialObservable<TSource, TResult> : IObserva
         InvalidOperationExceptionHelper.ThrowIfNull(_selector);
         ArgumentExceptionHelper.ThrowIfNull(observer);
         SelectAsyncSequentialSink sink = new(observer, _selector);
-        var sub = _source.Subscribe(sink);
-        return new DisposableBag(sub, sink);
+        sink.Attach(_source.Subscribe(sink));
+        return sink;
     }
 
     /// <summary>Processes source values and owns the subscription state.</summary>
@@ -67,6 +66,9 @@ public sealed class SelectAsyncSequentialObservable<TSource, TResult> : IObserva
 
         /// <summary>Serializes downstream deliveries.</summary>
         private SerializedDelivery<TResult> _delivery = new();
+
+        /// <summary>Upstream subscription handle.</summary>
+        private IDisposable? _subscription;
 
         /// <summary>Whether an async operation is currently in progress.</summary>
         private bool _isProcessing;
@@ -123,11 +125,28 @@ public sealed class SelectAsyncSequentialObservable<TSource, TResult> : IObserva
         {
             lock (_gate)
             {
+                if (_disposed)
+                {
+                    return;
+                }
+
                 _disposed = true;
+                _queue.Clear();
             }
 
             _cancellation.Cancel();
             _cancellation.Dispose();
+            SinkSubscription.Dispose(ref _subscription);
+        }
+
+        /// <summary>Attaches the upstream subscription handle.</summary>
+        /// <param name="subscription">The upstream subscription handle.</param>
+        internal void Attach(IDisposable? subscription)
+        {
+            if (subscription is not null)
+            {
+                SinkSubscription.Set(ref _subscription, subscription);
+            }
         }
 
         /// <summary>Queues the value and starts the drain loop when no operation is running.</summary>
@@ -158,11 +177,11 @@ public sealed class SelectAsyncSequentialObservable<TSource, TResult> : IObserva
         /// <returns>A task representing the operation.</returns>
         private async Task ProcessNextAsync()
         {
-            while (TryTakeNext(out var value))
+            while (TryTakeNext(out var value, out var token))
             {
                 try
                 {
-                    var result = await selector(value, _cancellation.Token).ConfigureAwait(false);
+                    var result = await selector(value, token).ConfigureAwait(false);
                     lock (_gate)
                     {
                         if (!_disposed)
@@ -180,6 +199,7 @@ public sealed class SelectAsyncSequentialObservable<TSource, TResult> : IObserva
                         if (!_disposed)
                         {
                             _done = true;
+                            _queue.Clear();
                             _ = _delivery.PostError(ex);
                         }
 
@@ -196,8 +216,9 @@ public sealed class SelectAsyncSequentialObservable<TSource, TResult> : IObserva
 
         /// <summary>Takes the next queued value, or ends the drain and queues completion once the source has finished.</summary>
         /// <param name="value">The taken value.</param>
+        /// <param name="token">The cancellation token captured before disposal can tear down the source.</param>
         /// <returns><see langword="true"/> when a value was taken.</returns>
-        private bool TryTakeNext(out TSource value)
+        private bool TryTakeNext(out TSource value, out CancellationToken token)
         {
             lock (_gate)
             {
@@ -210,10 +231,12 @@ public sealed class SelectAsyncSequentialObservable<TSource, TResult> : IObserva
                     }
 
                     value = default!;
+                    token = default;
                     return false;
                 }
 
                 value = _queue.Dequeue();
+                token = _cancellation.Token;
                 return true;
             }
         }
@@ -223,8 +246,21 @@ public sealed class SelectAsyncSequentialObservable<TSource, TResult> : IObserva
         private void Flush() => _delivery.Flush(new PendingDrain(this));
 
         /// <summary>Delivers the queued notifications to the downstream observer.</summary>
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private void DrainPending() => _ = _delivery.DrainTo(downstream);
+        private void DrainPending()
+        {
+            try
+            {
+                if (_delivery.DrainTo(downstream))
+                {
+                    SinkSubscription.Dispose(ref _subscription);
+                }
+            }
+            catch
+            {
+                Dispose();
+                throw;
+            }
+        }
 
         /// <summary>Drains this sink's queued notifications for the delivery gate.</summary>
         /// <param name="Owner">The sink.</param>

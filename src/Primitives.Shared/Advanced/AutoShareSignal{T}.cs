@@ -37,6 +37,28 @@ public sealed class AutoShareSignal<T> : IObservable<T>
     /// <summary>Gets the connectable signal being reference-counted.</summary>
     private ConnectableSignal<T> Source { get; }
 
+    /// <summary>Creates a connectable live signal backed by a <see cref="Signal{T}"/> hub.</summary>
+    /// <param name="source">The source sequence to multicast.</param>
+    /// <returns>A connectable live signal.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="source"/> is <see langword="null"/>.</exception>
+    public static ConnectableSignal<T> CreateConnectable(IObservable<T> source)
+    {
+        ArgumentExceptionHelper.ThrowIfNull(source);
+
+        return new(source, new Signal<T>());
+    }
+
+    /// <summary>Creates a reference-counted live sequence over <paramref name="source"/>.</summary>
+    /// <param name="source">The source sequence to share.</param>
+    /// <returns>A reference-counted live sequence.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="source"/> is <see langword="null"/>.</exception>
+    public static AutoShareSignal<T> CreateShareLatest(IObservable<T> source)
+    {
+        ArgumentExceptionHelper.ThrowIfNull(source);
+
+        return new(new(source, new Signal<T>()));
+    }
+
     /// <summary>Subscribes an observer and manages the shared connection lifetime.</summary>
     /// <param name="observer">Observer to subscribe.</param>
     /// <returns>A disposable that removes the observer and may disconnect the source.</returns>

@@ -2,32 +2,65 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Runtime.CompilerServices;
 using ReactiveUI.Primitives.Advanced;
+using ReactiveUI.Primitives.Core.Internal;
+using ReactiveUI.Primitives.Disposables;
+using ReactiveUI.Primitives.Internal;
 
 namespace ReactiveUI.Primitives.Signals;
 
 /// <summary>Invokes the supplied action with each source value and state, then forwards the value unchanged.</summary>
 /// <typeparam name="T">The value type.</typeparam>
 /// <typeparam name="TState">The state type passed to the action.</typeparam>
-/// <param name="source">The source sequence.</param>
-/// <param name="state">The state passed to the action.</param>
-/// <param name="onNext">The action invoked for each value and the state.</param>
 [System.Diagnostics.DebuggerDisplay("TapWithSignal: Source = {_source}, State = {_state}")]
-public sealed class TapWithSignal<T, TState>(IObservable<T> source, TState state, Action<TState, T> onNext) : IRequireCurrentThread<T>
+public sealed class TapWithSignal<T, TState> : IRequireCurrentThread<T>
 {
     /// <summary>The source sequence.</summary>
-    private readonly IObservable<T> _source = source;
+    private readonly IObservable<T> _source;
 
     /// <summary>The state passed to the action.</summary>
-    private readonly TState _state = state;
+    private readonly TState _state;
 
     /// <summary>The action invoked for each value and the state.</summary>
-    private readonly Action<TState, T> _onNext = onNext;
+    private readonly Action<TState, T> _onNext;
+
+    /// <summary>Initializes a new instance of the <see cref="TapWithSignal{T, TState}"/> class.</summary>
+    /// <param name="source">The source sequence.</param>
+    /// <param name="state">The state passed to the action.</param>
+    /// <param name="onNext">The action invoked for each value and the state.</param>
+    /// <exception cref="ArgumentNullException"><paramref name="source"/> or <paramref name="onNext"/> is <see langword="null"/>.</exception>
+    public TapWithSignal(IObservable<T> source, TState state, Action<TState, T> onNext)
+    {
+        ArgumentExceptionHelper.ThrowIfNull(source);
+        ArgumentExceptionHelper.ThrowIfNull(onNext);
+
+        _source = source;
+        _state = state;
+        _onNext = onNext;
+    }
+
+    /// <summary>Creates a stateful side-effect sequence with empty/never short-circuiting.</summary>
+    /// <param name="source">The source sequence.</param>
+    /// <param name="state">The state passed to the action.</param>
+    /// <param name="onNext">The action invoked for each value and the state.</param>
+    /// <returns>The tapped observable sequence.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="source"/> or <paramref name="onNext"/> is <see langword="null"/>.</exception>
+    public static IObservable<T> Create(IObservable<T> source, TState state, Action<TState, T> onNext)
+    {
+        ArgumentExceptionHelper.ThrowIfNull(source);
+        ArgumentExceptionHelper.ThrowIfNull(onNext);
+
+        return source is ImmutableEmptySignal<T> or ImmutableNeverSignal<T>
+            ? source
+            : new TapWithSignal<T, TState>(source, state, onNext);
+    }
 
     /// <summary>Determines whether the sink must subscribe on the current thread.</summary>
     /// <returns><see langword="true"/> when the source requires current-thread subscription.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public bool IsRequiredSubscribeOnCurrentThread() =>
-        _source is IRequireCurrentThread<T> currentThread && currentThread.IsRequiredSubscribeOnCurrentThread();
+        DirectSequenceEmission.RequiresCurrentThread(_source);
 
     /// <summary>Subscribes the observer to the tapped sequence.</summary>
     /// <param name="observer">The downstream observer.</param>
@@ -36,61 +69,21 @@ public sealed class TapWithSignal<T, TState>(IObservable<T> source, TState state
     {
         ArgumentExceptionHelper.ThrowIfNull(observer);
 
-        return _source.Subscribe(new TapWithWitness(observer, _state, _onNext));
-    }
-
-    /// <summary>Invokes the stateful side-effect action and forwards each value.</summary>
-    /// <param name="observer">The downstream observer.</param>
-    /// <param name="state">The state passed to the action.</param>
-    /// <param name="onNext">The action invoked for each value and the state.</param>
-    private sealed class TapWithWitness(IObserver<T> observer, TState state, Action<TState, T> onNext) : IObserver<T>
-    {
-        /// <summary>The downstream observer.</summary>
-        private readonly IObserver<T> _observer = observer;
-
-        /// <summary>The state passed to the action.</summary>
-        private readonly TState _state = state;
-
-        /// <summary>The action invoked for each value and the state.</summary>
-        private readonly Action<TState, T> _onNext = onNext;
-
-        /// <summary>Non-zero once a terminal notification has been forwarded.</summary>
-        private int _stopped;
-
-        /// <summary>Forwards completion downstream.</summary>
-        public void OnCompleted()
+        StateCallbackPair<TState, Action<TState, T>> pair = new(_state, _onNext);
+        if (DirectSequenceEmission.TrySubscribeTapped(_source, pair, observer))
         {
-            if (Interlocked.Exchange(ref _stopped, 1) != 0)
-            {
-                return;
-            }
-
-            _observer.OnCompleted();
+            return EmptyDisposable.Instance;
         }
 
-        /// <summary>Forwards an error downstream.</summary>
-        /// <param name="error">The terminal error.</param>
-        public void OnError(Exception error)
-        {
-            if (Interlocked.Exchange(ref _stopped, 1) != 0)
+        CoreProjectedObserverWitness<T, StateCallbackPair<TState, Action<TState, T>>, T> sink = new(
+            observer,
+            pair,
+            static (item, ctx) =>
             {
-                return;
-            }
-
-            _observer.OnError(error);
-        }
-
-        /// <summary>Runs the stateful side effect and forwards a source value.</summary>
-        /// <param name="value">The source value.</param>
-        public void OnNext(T value)
-        {
-            if (Volatile.Read(ref _stopped) != 0)
-            {
-                return;
-            }
-
-            _onNext(_state, value);
-            _observer.OnNext(value);
-        }
+                ctx.Callback(ctx.State, item);
+                return item;
+            });
+        sink.SetSubscription(_source.Subscribe(sink));
+        return sink;
     }
 }

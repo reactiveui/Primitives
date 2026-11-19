@@ -22,12 +22,7 @@ public static class SequencerImmediacyExtensions
         public bool IsImmediate
         {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            get =>
-#if REACTIVE_SHIM
-                sequencer is global::System.Reactive.Concurrency.ImmediateScheduler;
-#else
-                sequencer is ImmediateSequencer;
-#endif
+            get => Sequencer.IsImmediate(sequencer);
         }
     }
 }

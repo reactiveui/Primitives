@@ -15,10 +15,32 @@ public sealed class BlendSignal<T> : IObservable<T>
 {
     /// <summary>Initializes a new instance of the <see cref="BlendSignal{T}"/> class.</summary>
     /// <param name="sources">The outer source of inner observables.</param>
-    public BlendSignal(IObservable<IObservable<T>> sources) => Sources = sources;
+    /// <exception cref="ArgumentNullException"><paramref name="sources"/> is <see langword="null"/>.</exception>
+    public BlendSignal(IObservable<IObservable<T>> sources)
+    {
+        ArgumentExceptionHelper.ThrowIfNull(sources);
+
+        Sources = sources;
+    }
 
     /// <summary>Gets the outer source of inner observables.</summary>
     private IObservable<IObservable<T>> Sources { get; }
+
+    /// <summary>Creates a concurrent inner-sequence merge signal with empty/never short-circuiting.</summary>
+    /// <param name="sources">The outer source of inner observables.</param>
+    /// <returns>The merged observable sequence.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="sources"/> is <see langword="null"/>.</exception>
+    public static IObservable<T> Create(IObservable<IObservable<T>> sources)
+    {
+        ArgumentExceptionHelper.ThrowIfNull(sources);
+
+        return sources switch
+        {
+            ImmutableEmptySignal<IObservable<T>> => ImmutableEmptySignal<T>.Instance,
+            ImmutableNeverSignal<IObservable<T>> => ImmutableNeverSignal<T>.Instance,
+            _ => new BlendSignal<T>(sources),
+        };
+    }
 
     /// <inheritdoc/>
     public IDisposable Subscribe(IObserver<T> observer)

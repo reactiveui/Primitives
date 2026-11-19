@@ -51,6 +51,74 @@ public sealed class TaskAnyWitness<T> : IObserver<T>, IDisposable
     /// <summary>Gets the task completed by this sink.</summary>
     public Task<bool> Task => _completion.Task;
 
+    /// <summary>Subscribes to <paramref name="source"/> and completes with whether any value was observed.</summary>
+    /// <param name="source">The source sequence.</param>
+    /// <returns>A task that completes with whether any value was observed.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static Task<bool> AnyAsync(IObservable<T> source) =>
+        AnyAsync(source, CancellationToken.None);
+
+    /// <summary>Subscribes to <paramref name="source"/> and completes with whether any value was observed.</summary>
+    /// <param name="source">The source sequence.</param>
+    /// <param name="cancellationToken">The token used to cancel the task and dispose the subscription.</param>
+    /// <returns>A task that completes with whether any value was observed.</returns>
+    public static Task<bool> AnyAsync(IObservable<T> source, CancellationToken cancellationToken)
+    {
+        ArgumentExceptionHelper.ThrowIfNull(source);
+
+        if (cancellationToken.IsCancellationRequested)
+        {
+            return System.Threading.Tasks.Task.FromCanceled<bool>(cancellationToken);
+        }
+
+        if (source is RangeSignal range)
+        {
+            return System.Threading.Tasks.Task.FromResult(range.Count > 0);
+        }
+
+        TaskAnyWitness<T> sink = new(cancellationToken);
+        sink.RegisterCancellation();
+        sink.SetSubscription(source.Subscribe(sink));
+        return sink.Task;
+    }
+
+    /// <summary>Subscribes to <paramref name="source"/> and completes with whether any value matched <paramref name="predicate"/>.</summary>
+    /// <param name="source">The source sequence.</param>
+    /// <param name="predicate">The predicate.</param>
+    /// <returns>A task that completes with whether any value matched the predicate.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static Task<bool> AnyAsync(IObservable<T> source, Func<T, bool> predicate) =>
+        AnyAsync(source, predicate, CancellationToken.None);
+
+    /// <summary>Subscribes to <paramref name="source"/> and completes with whether any value matched <paramref name="predicate"/>.</summary>
+    /// <param name="source">The source sequence.</param>
+    /// <param name="predicate">The predicate.</param>
+    /// <param name="cancellationToken">The token used to cancel the task and dispose the subscription.</param>
+    /// <returns>A task that completes with whether any value matched the predicate.</returns>
+    public static Task<bool> AnyAsync(
+        IObservable<T> source,
+        Func<T, bool> predicate,
+        CancellationToken cancellationToken)
+    {
+        ArgumentExceptionHelper.ThrowIfNull(source);
+        ArgumentExceptionHelper.ThrowIfNull(predicate);
+
+        if (cancellationToken.IsCancellationRequested)
+        {
+            return System.Threading.Tasks.Task.FromCanceled<bool>(cancellationToken);
+        }
+
+        if (source is RangeSignal range && typeof(T) == typeof(int))
+        {
+            return AnyRangeTask(range, predicate);
+        }
+
+        TaskAnyWitness<T> sink = new(predicate, cancellationToken);
+        sink.RegisterCancellation();
+        sink.SetSubscription(source.Subscribe(sink));
+        return sink.Task;
+    }
+
     /// <summary>Registers cancellation after construction.</summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void RegisterCancellation() =>
@@ -112,9 +180,34 @@ public sealed class TaskAnyWitness<T> : IObserver<T>, IDisposable
                 Complete(true);
             }
         }
-        catch (Exception error)
+        catch (Exception error) when (!FatalExceptionHelper.IsFatal(error))
         {
             OnError(error);
+        }
+    }
+
+    /// <summary>Evaluates any directly over an integer range.</summary>
+    /// <param name="range">The range source.</param>
+    /// <param name="predicate">The predicate.</param>
+    /// <returns>A completed task for the range result.</returns>
+    private static Task<bool> AnyRangeTask(RangeSignal range, Func<T, bool> predicate)
+    {
+        try
+        {
+            var typedPredicate = (Func<int, bool>)(object)predicate;
+            for (var i = 0; i < range.Count; i++)
+            {
+                if (typedPredicate(range.Start + i))
+                {
+                    return System.Threading.Tasks.Task.FromResult(true);
+                }
+            }
+
+            return System.Threading.Tasks.Task.FromResult(false);
+        }
+        catch (Exception error)
+        {
+            return System.Threading.Tasks.Task.FromException<bool>(error);
         }
     }
 

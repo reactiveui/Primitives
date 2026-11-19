@@ -15,6 +15,16 @@ public sealed class TakeUntilInclusiveObservable<T>(
     IObservable<T> source,
     Func<T, bool> predicate) : IObservable<T>
 {
+    /// <summary>Creates an inclusive take-until sequence, validating <paramref name="predicate"/> eagerly.</summary>
+    /// <param name="source">The source observable.</param>
+    /// <param name="predicate">The predicate to determine when to stop taking elements.</param>
+    /// <returns>A sequence that completes after emitting the first element matching <paramref name="predicate"/>.</returns>
+    public static TakeUntilInclusiveObservable<T> Create(IObservable<T> source, Func<T, bool> predicate)
+    {
+        ArgumentExceptionHelper.ThrowIfNull(predicate);
+        return new(source, predicate);
+    }
+
     /// <inheritdoc/>
     public IDisposable Subscribe(IObserver<T> observer)
     {

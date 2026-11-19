@@ -17,7 +17,7 @@ public partial class CombiningOperatorTests
     {
         InvalidOperationException expected = new("dispose action failed");
         CallbackWitnessAsync<int> observer = new(static (_, _) => default);
-        SignalAsyncExtensions.OnDisposeWitness<int> witness = new(observer, () => throw expected, null);
+        OnDisposeWitness<int> witness = new(observer, () => throw expected, null);
 
         var error = await Assert.That(async () => await witness.DisposeAsync()).ThrowsExactly<InvalidOperationException>();
 
@@ -32,7 +32,7 @@ public partial class CombiningOperatorTests
     {
         InvalidOperationException expected = new("dispose callback failed");
         CallbackWitnessAsync<int> observer = new(static (_, _) => default);
-        SignalAsyncExtensions.OnDisposeWitness<int> witness = new(observer, null, () => ValueTask.FromException(expected));
+        OnDisposeWitness<int> witness = new(observer, null, () => ValueTask.FromException(expected));
 
         var error = await Assert.That(async () => await witness.DisposeAsync()).ThrowsExactly<InvalidOperationException>();
 
@@ -268,7 +268,7 @@ public partial class CombiningOperatorTests
     public async Task WhenBlendCoordinatorDisposed_ThenRelayNextAsyncReturnsDirectly()
     {
         CallbackWitnessAsync<int> observer = new(static (_, _) => default);
-        SignalAsyncExtensions.BlendCoordinator<int> subscription = new(observer);
+        BlendCoordinator<int> subscription = new(observer);
         await subscription.DisposeAsync();
 
         await subscription.RelayNextAsync(Sentinel99, CancellationToken.None);
@@ -280,7 +280,7 @@ public partial class CombiningOperatorTests
     public async Task WhenBlendCoordinatorDisposed_ThenRelayErrorAsyncReturnsDirectly()
     {
         CallbackWitnessAsync<int> observer = new(static (_, _) => default);
-        SignalAsyncExtensions.BlendCoordinator<int> subscription = new(observer);
+        BlendCoordinator<int> subscription = new(observer);
         await subscription.DisposeAsync();
 
         await subscription.RelayErrorAsync(new InvalidOperationException("test"), CancellationToken.None);
@@ -311,7 +311,7 @@ public partial class CombiningOperatorTests
                 await allowCompletion.Task;
             });
 
-        SignalAsyncExtensions.BlendCoordinator<int> subscription = new(observer);
+        BlendCoordinator<int> subscription = new(observer);
 
         // Trigger FinishAsync with failure - blocks on observer.OnCompletedAsync
         var failTask = subscription.FinishAsync(Result.Failure(new InvalidOperationException("fail")));
@@ -348,7 +348,7 @@ public partial class CombiningOperatorTests
                 await allowCompletion.Task;
             });
 
-        SignalAsyncExtensions.BlendCoordinator<int> subscription = new(observer);
+        BlendCoordinator<int> subscription = new(observer);
 
         var failTask = subscription.FinishAsync(Result.Failure(new InvalidOperationException("fail")));
         await completionBlocked.Task;
@@ -368,7 +368,7 @@ public partial class CombiningOperatorTests
     {
         CallbackWitnessAsync<int> observer = new(static (_, _) => default);
         IObservableAsync<int>[] sources = [];
-        SignalAsyncExtensions.BlendEnumerableSignal<int>.BlendSequenceCoordinator subscription = new(observer, sources);
+        BlendSequenceCoordinator<int> subscription = new(observer, sources);
         subscription.BeginSubscribing();
         await subscription.DisposeAsync();
 
@@ -382,10 +382,35 @@ public partial class CombiningOperatorTests
     {
         CallbackWitnessAsync<int> observer = new(static (_, _) => default);
         IObservableAsync<int>[] sources = [];
-        SignalAsyncExtensions.BlendEnumerableSignal<int>.BlendSequenceCoordinator subscription = new(observer, sources);
+        BlendSequenceCoordinator<int> subscription = new(observer, sources);
         subscription.BeginSubscribing();
         await subscription.DisposeAsync();
 
         await subscription.RelayErrorAsync(new InvalidOperationException("test"), CancellationToken.None);
+    }
+
+    /// <summary>Verifies explicit disposal invokes the OnDispose callback once and disposes upstream.</summary>
+    /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
+    [Test]
+    public async Task WhenOnDisposeExplicitlyDisposedBeforeCompletion_ThenCallbackAndUpstreamDisposeRunOnce()
+    {
+        int[] counts = [0, 0];
+
+        var source = SignalAsync.Create<int>((_, _) =>
+            new ValueTask<IAsyncDisposable>(DisposableAsync.Create(counts, static state =>
+            {
+                _ = Interlocked.Increment(ref state[1]);
+                return default;
+            })));
+
+        var sub = await source
+            .OnDispose(() => _ = Interlocked.Increment(ref counts[0]))
+            .SubscribeAsync(static (_, _) => default);
+
+        await sub.DisposeAsync();
+        await sub.DisposeAsync();
+
+        await Assert.That(Volatile.Read(ref counts[0])).IsEqualTo(1);
+        await Assert.That(Volatile.Read(ref counts[1])).IsEqualTo(1);
     }
 }

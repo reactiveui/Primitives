@@ -2,7 +2,6 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
-using System.Diagnostics;
 using System.Runtime.CompilerServices;
 
 namespace ReactiveUI.Primitives.Async;
@@ -21,28 +20,23 @@ public static partial class SignalAsyncExtensions
         /// that match the predicate.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public ValueTask<int> CountAsync(Func<T, bool>? predicate) =>
-            source.CountAsync(predicate, CancellationToken.None);
+            CountTaskWitness<T>.RunAsync(source, predicate);
 
         /// <summary>Asynchronously counts the number of elements that satisfy a specified condition.</summary>
         /// <param name="predicate">A function to test each element for a condition. If null, all elements are counted.</param>
         /// <param name="cancellationToken">A cancellation token that can be used to cancel the asynchronous operation.</param>
         /// <returns>A task that represents the asynchronous count operation. The task result contains the number of elements
         /// that match the predicate.</returns>
-        public async ValueTask<int> CountAsync(Func<T, bool>? predicate, CancellationToken cancellationToken)
-        {
-            cancellationToken.ThrowIfCancellationRequested();
-            CountTaskWitness<T> observer = new(predicate, cancellationToken);
-            await using var subscription =
-                await source.SubscribeAsync(observer, cancellationToken).ConfigureAwait(false);
-            return await observer.AwaitResultAsync().ConfigureAwait(false);
-        }
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public ValueTask<int> CountAsync(Func<T, bool>? predicate, CancellationToken cancellationToken) =>
+            CountTaskWitness<T>.RunAsync(source, predicate, cancellationToken);
 
         /// <summary>Asynchronously returns the total number of elements in the data source.</summary>
         /// <returns>A task that represents the asynchronous operation. The task result contains the number of elements in the
         /// data source.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public ValueTask<int> CountAsync() =>
-            source.CountAsync(null, CancellationToken.None);
+            CountTaskWitness<T>.RunAsync(source);
 
         /// <summary>Asynchronously returns the total number of elements in the data source.</summary>
         /// <param name="cancellationToken">A cancellation token that can be used to cancel the asynchronous count operation.</param>
@@ -50,72 +44,6 @@ public static partial class SignalAsyncExtensions
         /// data source.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public ValueTask<int> CountAsync(CancellationToken cancellationToken) =>
-            source.CountAsync(null, cancellationToken);
-    }
-
-    /// <summary>A witness that counts elements in a sequence, optionally filtered by a predicate.</summary>
-    /// <typeparam name="T">The type of elements in the source sequence.</typeparam>
-    /// <param name="predicate">An optional predicate to filter elements. If null, all elements are counted.</param>
-    /// <param name="cancellationToken">A cancellation token for the operation.</param>
-    [DebuggerDisplay("CountTaskWitness: {_witness}")]
-    internal sealed class CountTaskWitness<T>(Func<T, bool>? predicate, CancellationToken cancellationToken) : IWitnessAsync<T>
-    {
-        /// <summary>Produces and cancels the witness's single result value.</summary>
-        private readonly TaskResultCompletionSource<int> _completion = new(cancellationToken);
-
-        /// <summary>The running count of elements that satisfy the predicate.</summary>
-        private int _count;
-
-        /// <summary>The notification gate, cancellation link and disposal state.</summary>
-        private WitnessAsyncState _witness;
-
-        /// <inheritdoc/>
-        ref WitnessAsyncState IWitnessState.Witness => ref _witness;
-
-        /// <inheritdoc/>
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public ValueTask OnNextAsync(T value, CancellationToken cancellationToken) =>
-            WitnessAsync.OnNextAsync(this, value, cancellationToken);
-
-        /// <inheritdoc/>
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public ValueTask OnErrorResumeAsync(Exception error, CancellationToken cancellationToken) =>
-            WitnessAsync.OnErrorResumeAsync(this, error, cancellationToken);
-
-        /// <inheritdoc/>
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public ValueTask OnCompletedAsync(Result result) => WitnessAsync.OnCompletedAsync(this, result);
-
-        /// <inheritdoc/>
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public ValueTask DisposeAsync() => WitnessAsync.DisposeStateAsync(this);
-
-        /// <summary>Asynchronously waits for the witness to produce its result value.</summary>
-        /// <returns>A task representing the asynchronous operation, containing the result value.</returns>
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        internal ValueTask<int> AwaitResultAsync() => _completion.AwaitResultAsync(this);
-
-        /// <inheritdoc/>
-        ValueTask IWitnessAsync<T>.OnNextAsyncCore(T value, CancellationToken cancellationToken)
-        {
-            if (predicate is not null && !predicate(value))
-            {
-                return default;
-            }
-
-            _count = checked(_count + 1);
-
-            return default;
-        }
-
-        /// <inheritdoc/>
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        ValueTask IWitnessAsync<T>.OnErrorResumeAsyncCore(Exception error, CancellationToken cancellationToken) =>
-            _completion.SetExceptionAndDisposeAsync(error, this);
-
-        /// <inheritdoc/>
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        ValueTask IWitnessAsync<T>.OnCompletedAsyncCore(Result result) =>
-            _completion.CompleteAndDisposeAsync(result, _count, this);
+            CountTaskWitness<T>.RunAsync(source, cancellationToken);
     }
 }

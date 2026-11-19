@@ -2,6 +2,8 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Runtime.CompilerServices;
+
 #if REACTIVE_SHIM
 namespace ReactiveUI.Primitives.Reactive.Advanced;
 #else
@@ -13,13 +15,48 @@ namespace ReactiveUI.Primitives.Advanced;
 [System.Diagnostics.DebuggerDisplay("TapSignal: Source = {Source}")]
 public sealed class TapSignal<T> : IObservable<T>
 {
+    /// <summary>Initializes a new instance of the <see cref="TapSignal{T}"/> class for value side effects.</summary>
+    /// <param name="source">The source observable.</param>
+    /// <param name="onNext">The value side effect.</param>
+    /// <exception cref="ArgumentNullException"><paramref name="source"/> or <paramref name="onNext"/> is <see langword="null"/>.</exception>
+    public TapSignal(IObservable<T> source, Action<T> onNext)
+        : this(source, onNext, static _ => { }, static () => { })
+    {
+    }
+
+    /// <summary>Initializes a new instance of the <see cref="TapSignal{T}"/> class for value and error side effects.</summary>
+    /// <param name="source">The source observable.</param>
+    /// <param name="onNext">The value side effect.</param>
+    /// <param name="onError">The error side effect.</param>
+    /// <exception cref="ArgumentNullException"><paramref name="source"/>, <paramref name="onNext"/>, or <paramref name="onError"/> is <see langword="null"/>.</exception>
+    public TapSignal(IObservable<T> source, Action<T> onNext, Action<Exception> onError)
+        : this(source, onNext, onError, static () => { })
+    {
+    }
+
+    /// <summary>Initializes a new instance of the <see cref="TapSignal{T}"/> class for value and completion side effects.</summary>
+    /// <param name="source">The source observable.</param>
+    /// <param name="onNext">The value side effect.</param>
+    /// <param name="onCompleted">The completion side effect.</param>
+    /// <exception cref="ArgumentNullException"><paramref name="source"/>, <paramref name="onNext"/>, or <paramref name="onCompleted"/> is <see langword="null"/>.</exception>
+    public TapSignal(IObservable<T> source, Action<T> onNext, Action onCompleted)
+        : this(source, onNext, static _ => { }, onCompleted)
+    {
+    }
+
     /// <summary>Initializes a new instance of the <see cref="TapSignal{T}"/> class.</summary>
     /// <param name="source">The source observable.</param>
     /// <param name="onNext">The value side effect.</param>
     /// <param name="onError">The error side effect.</param>
     /// <param name="onCompleted">The completion side effect.</param>
+    /// <exception cref="ArgumentNullException">Any argument is <see langword="null"/>.</exception>
     public TapSignal(IObservable<T> source, Action<T> onNext, Action<Exception> onError, Action onCompleted)
     {
+        ArgumentExceptionHelper.ThrowIfNull(source);
+        ArgumentExceptionHelper.ThrowIfNull(onNext);
+        ArgumentExceptionHelper.ThrowIfNull(onError);
+        ArgumentExceptionHelper.ThrowIfNull(onCompleted);
+
         Source = source;
         OnNextAction = onNext;
         OnErrorAction = onError;
@@ -38,13 +75,80 @@ public sealed class TapSignal<T> : IObservable<T>
     /// <summary>Gets the completion side effect.</summary>
     private Action OnCompletedAction { get; }
 
+    /// <summary>Creates a value-tapping sequence with empty/never short-circuiting.</summary>
+    /// <param name="source">The source observable.</param>
+    /// <param name="onNext">The value side effect.</param>
+    /// <returns>The tapped observable sequence.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="source"/> or <paramref name="onNext"/> is <see langword="null"/>.</exception>
+    public static IObservable<T> Create(IObservable<T> source, Action<T> onNext)
+    {
+        ArgumentExceptionHelper.ThrowIfNull(source);
+        ArgumentExceptionHelper.ThrowIfNull(onNext);
+
+        return source is ImmutableEmptySignal<T> or ImmutableNeverSignal<T>
+            ? source
+            : new TapSignal<T>(source, onNext);
+    }
+
     /// <inheritdoc/>
     public IDisposable Subscribe(IObserver<T> observer)
     {
         ArgumentExceptionHelper.ThrowIfNull(observer);
 
+        if (typeof(T) == typeof(int) && Source is RangeSignal range)
+        {
+            EmitRange(range, OnNextAction, OnCompletedAction, observer);
+            return EmptyDisposable.Instance;
+        }
+
+        if (Source is FromEnumerableSignal<T> enumerable && enumerable.TryGetReadOnlyValues(out var values))
+        {
+            EmitReadOnlyList(values, OnNextAction, OnCompletedAction, observer);
+            return EmptyDisposable.Instance;
+        }
+
         TapWitness<T> sink = new(observer, OnNextAction, OnErrorAction, OnCompletedAction);
         sink.SetSubscription(Source.Subscribe(sink));
         return sink;
+    }
+
+    /// <summary>Runs side effects and forwards a synchronous integer range straight into <paramref name="observer"/>.</summary>
+    /// <param name="range">The range source.</param>
+    /// <param name="onNext">The value side effect.</param>
+    /// <param name="onCompleted">The completion side effect.</param>
+    /// <param name="observer">The downstream observer.</param>
+    private static void EmitRange(RangeSignal range, Action<T> onNext, Action onCompleted, IObserver<T> observer)
+    {
+        var intOnNext = Unsafe.As<Action<int>>(onNext);
+        var intObserver = Unsafe.As<IObserver<int>>(observer);
+        var start = range.Start;
+        var count = range.Count;
+        for (var i = 0; i < count; i++)
+        {
+            var value = start + i;
+            intOnNext(value);
+            intObserver.OnNext(value);
+        }
+
+        onCompleted();
+        observer.OnCompleted();
+    }
+
+    /// <summary>Runs side effects and forwards an indexable synchronous list straight into <paramref name="observer"/>.</summary>
+    /// <param name="values">The indexable values.</param>
+    /// <param name="onNext">The value side effect.</param>
+    /// <param name="onCompleted">The completion side effect.</param>
+    /// <param name="observer">The downstream observer.</param>
+    private static void EmitReadOnlyList(IReadOnlyList<T> values, Action<T> onNext, Action onCompleted, IObserver<T> observer)
+    {
+        for (var i = 0; i < values.Count; i++)
+        {
+            var value = values[i];
+            onNext(value);
+            observer.OnNext(value);
+        }
+
+        onCompleted();
+        observer.OnCompleted();
     }
 }

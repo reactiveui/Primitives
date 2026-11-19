@@ -91,4 +91,25 @@ public class DropIfBusyObservableTests
         var caught = await error.Task;
         await Assert.That(caught).IsSameReferenceAs(expected);
     }
+
+    /// <summary>Verifies duplicate <c>OnCompleted</c> is ignored and a throwing downstream <c>OnNext</c> disposes the sink.</summary>
+    /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
+    [Test]
+    public async Task WhenDuplicateCompletedOrDownstreamOnNextThrows_ThenHandledAndDisposed()
+    {
+        var completedCount = 0;
+        using DropIfBusyObservable<int>.DropIfBusySink sink = new(
+            ReactiveUI.Primitives.Advanced.Witness.Create<int>(static _ => { }, () => completedCount++),
+            static _ => default);
+        sink.OnCompleted();
+        sink.OnCompleted();
+        await Assert.That(completedCount).IsEqualTo(1);
+
+        SyncDirectSource<int> source = new();
+        InvalidOperationException expected = new("downstream");
+        using var sub = source.DropIfBusy(static _ => default).Subscribe(
+            ReactiveUI.Primitives.Advanced.Witness.Create<int>(_ => throw expected));
+        source.Observer.OnNext(1);
+        await Assert.That(source.DisposeCount).IsEqualTo(1);
+    }
 }

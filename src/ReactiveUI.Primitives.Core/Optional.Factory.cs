@@ -16,4 +16,17 @@ public static class Optional
     /// <returns>The optional value.</returns>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static Optional<T> Some<T>([AllowNull] T value) => Optional<T>.Some(value);
+
+    /// <summary>Attempts to retrieve the value contained in <paramref name="optional"/>.</summary>
+    /// <typeparam name="T">The type of the value contained in the <see cref="Optional{T}"/>.</typeparam>
+    /// <param name="optional">The <see cref="Optional{T}"/> instance from which to retrieve the value.</param>
+    /// <param name="value">When this method returns, contains the value if <paramref name="optional"/> has a value; otherwise, the default value for <typeparamref name="T"/>.</param>
+    /// <returns><see langword="true"/> if <paramref name="optional"/> has a value; otherwise, <see langword="false"/>.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static bool TryGetValue<T>(Optional<T> optional, [NotNullWhen(true)] out T? value)
+    {
+        var hasValue = optional.HasValue;
+        value = hasValue ? optional.Value : default;
+        return hasValue;
+    }
 }

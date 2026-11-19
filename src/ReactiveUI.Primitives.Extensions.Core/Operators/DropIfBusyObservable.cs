@@ -2,7 +2,7 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 using System.Runtime.CompilerServices;
-using ReactiveUI.Primitives.Disposables;
+using ReactiveUI.Primitives.Advanced;
 
 namespace ReactiveUI.Primitives.Extensions.Operators;
 
@@ -20,8 +20,8 @@ public sealed class DropIfBusyObservable<T>(IObservable<T> source, Func<T, Value
         InvalidOperationExceptionHelper.ThrowIfNull(asyncAction);
         ArgumentExceptionHelper.ThrowIfNull(observer);
         DropIfBusySink sink = new(observer, asyncAction);
-        var sub = source.Subscribe(sink);
-        return new DisposableBag(sub, sink);
+        sink.Attach(source.Subscribe(sink));
+        return sink;
     }
 
     /// <summary>Processes source values and owns the subscription state.</summary>
@@ -29,6 +29,9 @@ public sealed class DropIfBusyObservable<T>(IObservable<T> source, Func<T, Value
     /// <param name = "asyncAction">The asynchronous operation.</param>
     internal sealed class DropIfBusySink(IObserver<T> downstream, Func<T, ValueTask> asyncAction) : IObserver<T>, IDisposable
     {
+        /// <summary>Upstream subscription handle.</summary>
+        private IDisposable? _subscription;
+
         /// <summary>0 = idle, 1 = busy.</summary>
         private int _isBusy;
 
@@ -36,7 +39,7 @@ public sealed class DropIfBusyObservable<T>(IObservable<T> source, Func<T, Value
         private int _done;
 
         /// <inheritdoc/>
-        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void OnNext(T value) => _ = OnNextAsync(value);
 
         /// <inheritdoc/>
@@ -47,19 +50,38 @@ public sealed class DropIfBusyObservable<T>(IObservable<T> source, Func<T, Value
                 return;
             }
 
+            SinkSubscription.Dispose(ref _subscription);
             downstream.OnError(error);
         }
 
         /// <inheritdoc/>
         public void OnCompleted()
         {
-            Volatile.Write(ref _done, 1);
+            if (Interlocked.Exchange(ref _done, 1) != 0)
+            {
+                return;
+            }
+
+            SinkSubscription.Dispose(ref _subscription);
             downstream.OnCompleted();
         }
 
         /// <inheritdoc/>
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Dispose() => Volatile.Write(ref _done, 1);
+        public void Dispose()
+        {
+            Volatile.Write(ref _done, 1);
+            SinkSubscription.Dispose(ref _subscription);
+        }
+
+        /// <summary>Attaches the upstream subscription handle.</summary>
+        /// <param name="subscription">The upstream subscription handle.</param>
+        internal void Attach(IDisposable? subscription)
+        {
+            if (subscription is not null)
+            {
+                SinkSubscription.Set(ref _subscription, subscription);
+            }
+        }
 
         /// <summary>Starts the action for the value when the sink is idle, and drops the value otherwise.</summary>
         /// <param name = "value">The source value.</param>
@@ -89,21 +111,38 @@ public sealed class DropIfBusyObservable<T>(IObservable<T> source, Func<T, Value
                     return;
                 }
 
-                downstream.OnNext(value);
-            }
-            catch (Exception ex)
-            {
-                if (Volatile.Read(ref _done) != 0)
+                try
                 {
-                    return;
+                    downstream.OnNext(value);
                 }
-
-                downstream.OnError(ex);
+                catch
+                {
+                    Dispose();
+                    throw;
+                }
+            }
+            catch (Exception ex) when (Volatile.Read(ref _done) != 0 || ForwardFault(ex))
+            {
+                // Fault handled or suppressed after disposal/completion.
             }
             finally
             {
                 Volatile.Write(ref _isBusy, 0);
             }
+        }
+
+        /// <summary>Latches termination, disposes upstream, and forwards a handler fault downstream.</summary>
+        /// <param name="error">The handler exception.</param>
+        /// <returns>Always <see langword="true"/> once handled.</returns>
+        private bool ForwardFault(Exception error)
+        {
+            if (Interlocked.Exchange(ref _done, 1) == 0)
+            {
+                SinkSubscription.Dispose(ref _subscription);
+                downstream.OnError(error);
+            }
+
+            return true;
         }
     }
 }

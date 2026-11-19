@@ -3,6 +3,12 @@
 // See the LICENSE file in the project root for full license information.
 
 #if REACTIVE_SHIM
+using ReactiveUI.Primitives.Reactive.Internal;
+#else
+using ReactiveUI.Primitives.Internal;
+#endif
+
+#if REACTIVE_SHIM
 namespace ReactiveUI.Primitives.Reactive.Advanced;
 #else
 namespace ReactiveUI.Primitives.Advanced;
@@ -41,10 +47,37 @@ public sealed class ReduceSignal<TSource, TAccumulate> : IObservable<TAccumulate
         _accumulator = accumulator;
     }
 
+    /// <summary>Creates a final accumulation sequence with empty/never short-circuiting.</summary>
+    /// <param name="source">The source observable.</param>
+    /// <param name="seed">The initial accumulated value.</param>
+    /// <param name="accumulator">The accumulator function.</param>
+    /// <returns>The reduced observable sequence.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="source"/> or <paramref name="accumulator"/> is <see langword="null"/>.</exception>
+    public static IObservable<TAccumulate> Create(
+        IObservable<TSource> source,
+        TAccumulate seed,
+        Func<TAccumulate, TSource, TAccumulate> accumulator)
+    {
+        ArgumentExceptionHelper.ThrowIfNull(source);
+        ArgumentExceptionHelper.ThrowIfNull(accumulator);
+
+        return source switch
+        {
+            ImmutableEmptySignal<TSource> => new ImmediateReturnSignal<TAccumulate>(seed),
+            ImmutableNeverSignal<TSource> => ImmutableNeverSignal<TAccumulate>.Instance,
+            _ => new ReduceSignal<TSource, TAccumulate>(source, seed, accumulator),
+        };
+    }
+
     /// <inheritdoc/>
     public IDisposable Subscribe(IObserver<TAccumulate> observer)
     {
         ArgumentExceptionHelper.ThrowIfNull(observer);
+
+        if (DirectSequenceEmission.TrySubscribeAccumulated(_source, _seed, _accumulator, emitEachStep: false, observer))
+        {
+            return EmptyDisposable.Instance;
+        }
 
         ReduceWitness<TSource, TAccumulate> sink = new(observer, _seed, _accumulator);
         sink.SetSubscription(_source.Subscribe(sink));

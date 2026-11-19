@@ -48,4 +48,38 @@ public class NotObservableTests
         NotObservable observable = new(new Subject<bool>());
         _ = Assert.Throws<ArgumentNullException>(() => observable.Subscribe(null!));
     }
+
+    /// <summary>Verifies nested <see cref = "NotObservable"/> unwraps its inner source and indexable signals emit inline.</summary>
+    /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
+    [Test]
+    public async Task WhenNestedNotOrEnumerableSignal_ThenUnwrapsAndEmitsExpected()
+    {
+        using ReactiveUI.Primitives.Signals.Signal<bool> subject = new();
+        List<bool> nestedValues = [];
+        using var nestedSub = new NotObservable(new NotObservable(subject)).Subscribe(nestedValues.Add);
+        subject.OnNext(true);
+        subject.OnNext(false);
+        await Assert.That(nestedValues).IsCollectionEqualTo([true, false]);
+
+        List<bool> listValues = [];
+        var listCompleted = false;
+        using var listSub = new NotObservable(ReactiveUI.Primitives.Signals.Signal.FromEnumerable([true, false]))
+            .Subscribe(listValues.Add, () => listCompleted = true);
+        await Assert.That(listValues).IsCollectionEqualTo([false, true]);
+        await Assert.That(listCompleted).IsTrue();
+    }
+
+    /// <summary>Verifies empty and never sources pass through unchanged and any other source gets a negation stage.</summary>
+    /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
+    [Test]
+    public async Task WhenCreatedOverConstantOrLiveSource_ThenOnlyLiveSourceIsWrapped()
+    {
+        using Subject<bool> live = new();
+
+        await Assert.That(NotObservable.Create(ReactiveUI.Primitives.Advanced.ImmutableEmptySignal<bool>.Instance))
+            .IsSameReferenceAs(ReactiveUI.Primitives.Advanced.ImmutableEmptySignal<bool>.Instance);
+        await Assert.That(NotObservable.Create(ReactiveUI.Primitives.Advanced.ImmutableNeverSignal<bool>.Instance))
+            .IsSameReferenceAs(ReactiveUI.Primitives.Advanced.ImmutableNeverSignal<bool>.Instance);
+        await Assert.That(NotObservable.Create(live)).IsTypeOf<NotObservable>();
+    }
 }

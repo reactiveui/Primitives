@@ -3,6 +3,7 @@
 // See the LICENSE file in the project root for full license information.
 
 using System.Runtime.CompilerServices;
+using ReactiveUI.Primitives.Async.Disposables;
 using ReactiveUI.Primitives.Async.Signals;
 
 namespace ReactiveUI.Primitives.Async.Tests;
@@ -84,7 +85,7 @@ public partial class CombiningOperatorTests
     public async Task WhenZipStateDisposedTwice_ThenSecondDisposeIsNoop()
     {
         var observer = Signal.Create<int>();
-        SignalAsyncExtensions.ZipSignal<int, int, int>.ZipState state = new(observer, static (a, b) => a + b);
+        ZipState<int, int, int> state = new(observer, static (a, b) => a + b);
         await state.DisposeAsync();
         await state.DisposeAsync();
         await Assert.That(state).IsNotNull();
@@ -571,5 +572,122 @@ public partial class CombiningOperatorTests
         await sub.DisposeAsync();
         await sub.DisposeAsync();
         await Assert.That(sub).IsNotNull();
+    }
+
+    /// <summary>Verifies Pair disposes the remaining infinite sibling when the finite arm completes.</summary>
+    /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
+    [Test]
+    public async Task WhenPairFiniteArmCompletes_ThenInfiniteSiblingIsDisposed()
+    {
+        int[] counters = [0, 0];
+        var infinite = SignalAsync.Create<int>((_, _) =>
+        {
+            _ = Interlocked.Increment(ref counters[0]);
+            return new ValueTask<IAsyncDisposable>(DisposableAsync.Create(counters, static state =>
+            {
+                _ = Interlocked.Increment(ref state[1]);
+                return default;
+            }));
+        });
+
+        var emptyFirst = await SignalAsync.Empty<int>().Pair(infinite, static (a, b) => a + b).ToListAsync();
+        await Assert.That(emptyFirst).IsEmpty();
+        await Assert.That(Volatile.Read(ref counters[0])).IsZero();
+
+        var emptySecond = await infinite.Pair(SignalAsync.Empty<int>(), static (a, b) => a + b).ToListAsync();
+        await Assert.That(emptySecond).IsEmpty();
+        await Assert.That(Volatile.Read(ref counters[0])).IsEqualTo(1);
+        await Assert.That(Volatile.Read(ref counters[1])).IsEqualTo(1);
+    }
+
+    /// <summary>Verifies Pair serializes concurrent emissions from both arms without concurrent downstream entry.</summary>
+    /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
+    [Test]
+    public async Task WhenPairReceivesConcurrentLeftAndRightEmissions_ThenSerializesDownstreamDelivery()
+    {
+        const int EmissionCount = 64;
+
+        var left = Signal.Create<int>();
+        var right = Signal.Create<int>();
+        var active = 0;
+        var overlapDetected = 0;
+        var receivedCount = 0;
+
+        await using var sub = await left.Values.Pair(right.Values, static (a, b) => a + b).SubscribeAsync(
+            async (_, _) =>
+            {
+                if (Interlocked.Increment(ref active) != 1)
+                {
+                    _ = Interlocked.Exchange(ref overlapDetected, 1);
+                }
+
+                await Task.Yield();
+                _ = Interlocked.Increment(ref receivedCount);
+                _ = Interlocked.Decrement(ref active);
+            });
+
+        var pushLeft = Task.Run(async () =>
+        {
+            for (var i = 0; i < EmissionCount; i++)
+            {
+                await left.OnNextAsync(i, CancellationToken.None);
+            }
+        });
+
+        var pushRight = Task.Run(async () =>
+        {
+            for (var i = 0; i < EmissionCount; i++)
+            {
+                await right.OnNextAsync(i, CancellationToken.None);
+            }
+        });
+
+        await Task.WhenAll(pushLeft, pushRight);
+
+        await Assert.That(Volatile.Read(ref overlapDetected)).IsZero();
+        await Assert.That(Volatile.Read(ref receivedCount)).IsEqualTo(EmissionCount);
+    }
+
+    /// <summary>
+    /// Verifies <see cref="ZipSignal{T1, T2, TResult}"/> disposes state and rethrows when subscribing throws,
+    /// and <see cref="ZipState{T1, T2, TResult}"/> guards post-disposal deliveries.
+    /// </summary>
+    /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
+    [Test]
+    public async Task WhenZipSubscribeThrowsOrStateDisposed_ThenCleansUpAndSkipsDisposedDeliveries()
+    {
+        InvalidOperationException subscribeFailure = new("subscribe-failed");
+        ZipSignal<int, int, int> throwingZip = new(
+            new ThrowingSubscribeSource<int>(subscribeFailure),
+            SignalAsync.Return(1),
+            static (a, b) => a + b);
+
+        var thrown = await Assert.That(async () =>
+            await throwingZip.SubscribeAsync(static (_, _) => default)).ThrowsExactly<InvalidOperationException>();
+        await Assert.That(thrown).IsSameReferenceAs(subscribeFailure);
+
+        var delivered = 0;
+        CallbackWitnessAsync<int> observer = new(
+            (_, _) =>
+            {
+                delivered++;
+                return default;
+            },
+            (_, _) =>
+            {
+                delivered++;
+                return default;
+            },
+            _ =>
+            {
+                delivered++;
+                return default;
+            });
+        ZipState<int, int, int> state = new(observer, static (a, b) => a + b);
+        await state.DisposeAsync();
+        await state.DeliverPairAsync(1, false);
+        await state.DeliverCompletionAsync(Result.Success);
+        await state.OnErrorResumeAsync(subscribeFailure, CancellationToken.None);
+        await Assert.That(delivered).IsZero();
     }
 }

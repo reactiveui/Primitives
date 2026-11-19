@@ -2,6 +2,8 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Runtime.CompilerServices;
+
 namespace ReactiveUI.Primitives.Async;
 
 /// <summary>Provides extension methods for converting synchronous disposable objects to asynchronous disposables.</summary>
@@ -15,23 +17,8 @@ public static class DisposableAsyncExtensions
         /// <returns>An <see cref="IAsyncDisposable"/> that disposes the underlying <see cref="IDisposable"/> when disposed
         /// asynchronously.</returns>
         /// <remarks>Disposal runs synchronously on the caller's thread; the returned handle only adapts the shape.</remarks>
-        public IAsyncDisposable ToDisposableAsync()
-        {
-            ArgumentExceptionHelper.ThrowIfNull(disposable);
-
-            return new DisposableToDisposableAsync(disposable);
-        }
-    }
-
-    /// <summary>Presents a synchronous <see cref="IDisposable"/> as an <see cref="IAsyncDisposable"/>, calling <see cref="IDisposable.Dispose"/> inline and completing synchronously.</summary>
-    /// <param name="disposable">The <see cref="IDisposable"/> instance to be wrapped for asynchronous disposal. Cannot be null.</param>
-    internal sealed class DisposableToDisposableAsync(IDisposable disposable) : IAsyncDisposable
-    {
-        /// <inheritdoc/>
-        public ValueTask DisposeAsync()
-        {
-            disposable.Dispose();
-            return default;
-        }
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public IAsyncDisposable ToDisposableAsync() =>
+            new DisposableToDisposableAsync(disposable);
     }
 }

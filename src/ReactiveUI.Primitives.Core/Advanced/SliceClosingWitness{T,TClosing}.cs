@@ -101,6 +101,27 @@ public sealed class SliceClosingWitness<T, TClosing> : IObserver<T>, IDisposable
         _upstream.Dispose();
     }
 
+    /// <summary>Ends the current window, opens the next and watches its closing signal.</summary>
+    /// <param name="witness">The closing subscription that fired.</param>
+    internal void Advance(IDisposable witness)
+    {
+        _ = _upstream.Remove(witness);
+        lock (_gate)
+        {
+            if (_done != 0)
+            {
+                return;
+            }
+
+            _router.Complete(_current);
+            _current = new(Subscription);
+            _router.Open(_current);
+        }
+
+        Deliver();
+        WatchClosing();
+    }
+
     /// <summary>Asks for the closing signal of the current window and subscribes to it.</summary>
     private void WatchClosing()
     {
@@ -118,27 +139,6 @@ public sealed class SliceClosingWitness<T, TClosing> : IObserver<T>, IDisposable
         ClosingWitness witness = new(this);
         _upstream.Add(witness);
         witness.SetSubscription(closing.Subscribe(witness));
-    }
-
-    /// <summary>Ends the current window, opens the next and watches its closing signal.</summary>
-    /// <param name="witness">The closing subscription that fired.</param>
-    private void Advance(ClosingWitness witness)
-    {
-        _ = _upstream.Remove(witness);
-        lock (_gate)
-        {
-            if (_done != 0)
-            {
-                return;
-            }
-
-            _router.Complete(_current);
-            _current = new(Subscription);
-            _router.Open(_current);
-        }
-
-        Deliver();
-        WatchClosing();
     }
 
     /// <summary>Delivers the posted notifications, tearing the sink down when a downstream observer throws.</summary>

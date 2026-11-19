@@ -144,6 +144,23 @@ public class UseSignalTests
         await Assert.That(observer.Completed).IsEqualTo(1);
     }
 
+    /// <summary>When both the observable factory and resource disposal throw non-fatal exceptions, an <see cref="AggregateException"/> is forwarded.</summary>
+    /// <returns>A task representing the asynchronous test.</returns>
+    [Test]
+    public async Task Subscribe_FactoryAndResourceDisposeBothThrow_ForwardsAggregateException()
+    {
+        InvalidOperationException factoryError = new("factory");
+        InvalidOperationException disposeError = new("dispose");
+        Recorder<int> observer = new();
+
+        using var sub = Signal.Use<IDisposable, int>(
+            () => new ActionDisposable(() => throw disposeError),
+            _ => throw factoryError).Subscribe(observer);
+
+        var aggregate = await Assert.That(observer.Errors.Single()).IsTypeOf<AggregateException>();
+        await Assert.That(aggregate!.InnerExceptions.SequenceEqual([factoryError, disposeError])).IsTrue();
+    }
+
     /// <summary>Observable that hands back the observer it was subscribed with and counts its own disposals.</summary>
     /// <typeparam name="T">The observed value type.</typeparam>
     private sealed class CapturingObservable<T> : IObservable<T>

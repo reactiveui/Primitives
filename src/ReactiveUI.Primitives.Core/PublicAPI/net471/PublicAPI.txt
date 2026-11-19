@@ -48,6 +48,8 @@ namespace ReactiveUI.Primitives
     {
         [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
         public static ReactiveUI.Primitives.Optional<T> Some<T>(T value) { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public static bool TryGetValue<T>(ReactiveUI.Primitives.Optional<T> optional, out T? value) { }
     }
     [System.Diagnostics.DebuggerDisplay("Optional: HasValue = {HasValue}, Value = {_value}")]
     public readonly record struct Optional<T> : System.IEquatable<ReactiveUI.Primitives.Optional<T>>
@@ -85,14 +87,20 @@ namespace ReactiveUI.Primitives
     {
         extension(System.Exception? exception)
         {
+            [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
             public void Rethrow() { }
         }
         extension<T>(System.IObservable<T> source)
         {
+            [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
             public System.IDisposable Subscribe() { }
+            [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
             public System.IDisposable Subscribe(System.Action<T> onNext) { }
+            [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
             public System.IDisposable Subscribe(System.Action<T> onNext, System.Action onCompleted) { }
+            [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
             public System.IDisposable Subscribe(System.Action<T> onNext, System.Action<System.Exception> onError) { }
+            [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
             public System.IDisposable Subscribe(System.Action<T> onNext, System.Action<System.Exception> onError, System.Action onCompleted) { }
             [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
             public System.IDisposable SubscribePrimitives() { }
@@ -192,6 +200,28 @@ namespace ReactiveUI.Primitives.Advanced
         public void OnNext(T value) { }
         [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
         public void SetSubscription(System.IDisposable subscription) { }
+    }
+    [System.Diagnostics.DebuggerDisplay("BlockingTerminalWitness: Error = {Error}")]
+    public sealed class BlockingTerminalWitness<T> : System.IObserver<T>
+    {
+        public BlockingTerminalWitness(System.Threading.ManualResetEventSlim done) { }
+        public System.Exception? Error { get; }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public void OnCompleted() { }
+        public void OnError(System.Exception error) { }
+        public void OnNext(T value) { }
+    }
+    [System.Diagnostics.DebuggerDisplay("BlockingValueWitness: Result = {Result}")]
+    public sealed class BlockingValueWitness<T> : System.IObserver<T>
+    {
+        public BlockingValueWitness(System.Threading.ManualResetEventSlim done) { }
+        public T? Result { get; }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public void OnCompleted() { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public void OnError(System.Exception error) { }
+        public void OnNext(T value) { }
+        public static System.Collections.Generic.IEnumerable<T> ToEnumerable(System.IObservable<T> source) { }
     }
     [System.Diagnostics.DebuggerDisplay("BufferWitness: Count = {_count}, Skip = {_skip}, Index = {_index}, Done = {_done}")]
     public sealed class BufferWitness<T> : System.IDisposable, System.IObserver<T>
@@ -415,6 +445,16 @@ namespace ReactiveUI.Primitives.Advanced
         [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
         public void OnNext(T value) { }
     }
+    [System.Diagnostics.DebuggerDisplay("ErrorCaptureWitness: Error = {Error}")]
+    public sealed class ErrorCaptureWitness<T> : System.IObserver<T>
+    {
+        public ErrorCaptureWitness() { }
+        public System.Exception? Error { get; }
+        public void OnCompleted() { }
+        public void OnError(System.Exception error) { }
+        public void OnNext(T value) { }
+        public static System.Exception? SubscribeGetError(System.IObservable<T> source) { }
+    }
     [System.Diagnostics.DebuggerDisplay("FoldWitness: Current = {_current}, Observer = {_observer}")]
     public sealed class FoldWitness<TSource, TAccumulate> : System.IDisposable, System.IObserver<TSource>
     {
@@ -450,16 +490,45 @@ namespace ReactiveUI.Primitives.Advanced
         public System.IDisposable Subscribe(System.IObserver<T> observer) { }
         public System.IDisposable Subscribe(System.Action<T> onNext, System.Action<System.Exception> onError, System.Action onCompleted) { }
         public bool TryGetReadOnlyValues(out System.Collections.Generic.IReadOnlyList<T> values) { }
+        public static ReactiveUI.Primitives.Advanced.FromEnumerableSignal<T> Create(System.Collections.Generic.IEnumerable<T> values, System.Threading.CancellationToken cancellationToken) { }
+    }
+    public static class GroupBySignal
+    {
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public static ReactiveUI.Primitives.Advanced.GroupBySignal<TSource, TKey, TSource> Create<TSource, TKey>(System.IObservable<TSource> source, System.Func<TSource, TKey> keySelector) where TKey : notnull { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public static ReactiveUI.Primitives.Advanced.GroupBySignal<TSource, TKey, TSource> Create<TSource, TKey>(System.IObservable<TSource> source, System.Func<TSource, TKey> keySelector, System.Collections.Generic.IEqualityComparer<TKey>? comparer) where TKey : notnull { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public static ReactiveUI.Primitives.Advanced.GroupBySignal<TSource, TKey, TSource> Create<TSource, TKey>(System.IObservable<TSource> source, System.Func<TSource, TKey> keySelector, int capacity) where TKey : notnull { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public static ReactiveUI.Primitives.Advanced.GroupBySignal<TSource, TKey, TSource> Create<TSource, TKey>(System.IObservable<TSource> source, System.Func<TSource, TKey> keySelector, int capacity, System.Collections.Generic.IEqualityComparer<TKey>? comparer) where TKey : notnull { }
     }
     [System.Diagnostics.DebuggerDisplay("GroupBySignal: Source = {_source}")]
     public sealed class GroupBySignal<TSource, TKey, TElement> : System.IObservable<ReactiveUI.Primitives.Signals.GroupedSignal<TKey, TElement>> where TKey : notnull
     {
+        public GroupBySignal(System.IObservable<TSource> source, System.Func<TSource, TKey> keySelector, System.Func<TSource, TElement> elementSelector) { }
+        public GroupBySignal(System.IObservable<TSource> source, System.Func<TSource, TKey> keySelector, System.Func<TSource, TElement> elementSelector, System.Collections.Generic.IEqualityComparer<TKey>? comparer) { }
+        public GroupBySignal(System.IObservable<TSource> source, System.Func<TSource, TKey> keySelector, System.Func<TSource, TElement> elementSelector, int capacity) { }
         public GroupBySignal(System.IObservable<TSource> source, System.Func<TSource, TKey> keySelector, System.Func<TSource, TElement> elementSelector, System.Collections.Generic.IEqualityComparer<TKey>? comparer, int capacity) { }
         public System.IDisposable Subscribe(System.IObserver<ReactiveUI.Primitives.Signals.GroupedSignal<TKey, TElement>> observer) { }
+    }
+    public static class GroupByUntilSignal
+    {
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public static ReactiveUI.Primitives.Advanced.GroupByUntilSignal<TSource, TKey, TSource, TDuration> Create<TSource, TKey, TDuration>(System.IObservable<TSource> source, System.Func<TSource, TKey> keySelector, System.Func<ReactiveUI.Primitives.Signals.GroupedSignal<TKey, TSource>, System.IObservable<TDuration>> durationSelector) where TKey : notnull { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public static ReactiveUI.Primitives.Advanced.GroupByUntilSignal<TSource, TKey, TSource, TDuration> Create<TSource, TKey, TDuration>(System.IObservable<TSource> source, System.Func<TSource, TKey> keySelector, System.Func<ReactiveUI.Primitives.Signals.GroupedSignal<TKey, TSource>, System.IObservable<TDuration>> durationSelector, System.Collections.Generic.IEqualityComparer<TKey>? comparer) where TKey : notnull { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public static ReactiveUI.Primitives.Advanced.GroupByUntilSignal<TSource, TKey, TSource, TDuration> Create<TSource, TKey, TDuration>(System.IObservable<TSource> source, System.Func<TSource, TKey> keySelector, System.Func<ReactiveUI.Primitives.Signals.GroupedSignal<TKey, TSource>, System.IObservable<TDuration>> durationSelector, int capacity) where TKey : notnull { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public static ReactiveUI.Primitives.Advanced.GroupByUntilSignal<TSource, TKey, TSource, TDuration> Create<TSource, TKey, TDuration>(System.IObservable<TSource> source, System.Func<TSource, TKey> keySelector, System.Func<ReactiveUI.Primitives.Signals.GroupedSignal<TKey, TSource>, System.IObservable<TDuration>> durationSelector, int capacity, System.Collections.Generic.IEqualityComparer<TKey>? comparer) where TKey : notnull { }
     }
     [System.Diagnostics.DebuggerDisplay("GroupByUntilSignal: Source = {_source}")]
     public sealed class GroupByUntilSignal<TSource, TKey, TElement, TDuration> : System.IObservable<ReactiveUI.Primitives.Signals.GroupedSignal<TKey, TElement>> where TKey : notnull
     {
+        public GroupByUntilSignal(System.IObservable<TSource> source, System.Func<TSource, TKey> keySelector, System.Func<TSource, TElement> elementSelector, System.Func<ReactiveUI.Primitives.Signals.GroupedSignal<TKey, TElement>, System.IObservable<TDuration>> durationSelector) { }
+        public GroupByUntilSignal(System.IObservable<TSource> source, System.Func<TSource, TKey> keySelector, System.Func<TSource, TElement> elementSelector, System.Func<ReactiveUI.Primitives.Signals.GroupedSignal<TKey, TElement>, System.IObservable<TDuration>> durationSelector, System.Collections.Generic.IEqualityComparer<TKey>? comparer) { }
+        public GroupByUntilSignal(System.IObservable<TSource> source, System.Func<TSource, TKey> keySelector, System.Func<TSource, TElement> elementSelector, System.Func<ReactiveUI.Primitives.Signals.GroupedSignal<TKey, TElement>, System.IObservable<TDuration>> durationSelector, int capacity) { }
         public GroupByUntilSignal(System.IObservable<TSource> source, System.Func<TSource, TKey> keySelector, System.Func<TSource, TElement> elementSelector, System.Func<ReactiveUI.Primitives.Signals.GroupedSignal<TKey, TElement>, System.IObservable<TDuration>> durationSelector, System.Collections.Generic.IEqualityComparer<TKey>? comparer, int capacity) { }
         public System.IDisposable Subscribe(System.IObserver<ReactiveUI.Primitives.Signals.GroupedSignal<TKey, TElement>> observer) { }
     }
@@ -632,6 +701,15 @@ namespace ReactiveUI.Primitives.Advanced
         public LongCountPredicateAggregator(System.Func<T, bool> predicate) { }
         public long Result { get; }
         public readonly ReactiveUI.Primitives.Advanced.LongCountPredicateAggregator<T> Add(T value) { }
+    }
+    [System.Diagnostics.DebuggerDisplay("NoopWitness<{typeof(T).Name,nq}>")]
+    public sealed class NoopWitness<T> : System.IObserver<T>
+    {
+        public static readonly ReactiveUI.Primitives.Advanced.NoopWitness<T> Instance;
+        public void OnCompleted() { }
+        public void OnError(System.Exception error) { }
+        public void OnNext(T value) { }
+        public static void SubscribeAndComplete(System.IObservable<T> source) { }
     }
     [System.Diagnostics.DebuggerDisplay("RangeConcatSignal: Ranges = {_ranges.Length}")]
     public sealed class RangeConcatSignal : ReactiveUI.Primitives.Advanced.IInlineSignal<int>, ReactiveUI.Primitives.Advanced.IRequireCurrentThread<int>
@@ -1059,6 +1137,16 @@ namespace ReactiveUI.Primitives.Advanced
         public UseSignal(System.Func<TResource> resourceFactory, System.Func<TResource, System.IObservable<T>> signalFactory) { }
         public System.IDisposable Subscribe(System.IObserver<T> observer) { }
     }
+    [System.Diagnostics.DebuggerDisplay("ValueCaptureWitness: Value = {Value}")]
+    public sealed class ValueCaptureWitness<T> : System.IObserver<T>
+    {
+        public ValueCaptureWitness() { }
+        public T? Value { get; }
+        public void OnCompleted() { }
+        public void OnError(System.Exception error) { }
+        public void OnNext(T value) { }
+        public static T? SubscribeGetValue(System.IObservable<T> source) { }
+    }
     public static class Witness
     {
         [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
@@ -1068,9 +1156,15 @@ namespace ReactiveUI.Primitives.Advanced
         [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
         public static System.IObserver<T> Create<T>(System.Action<T> onNext, System.Action<System.Exception> onError) { }
         public static System.IObserver<T> Create<T>(System.Action<T> onNext, System.Action<System.Exception> onError, System.Action onCompleted) { }
+        public static void RethrowIfNotNull(System.Exception? exception) { }
         [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
         public static System.IObserver<T> Safe<T>(System.IObserver<T> observer) { }
         public static System.IObserver<T> Safe<T>(System.IObserver<T> observer, System.IDisposable cancel) { }
+        public static System.IDisposable Subscribe<T>(System.IObservable<T> source) { }
+        public static System.IDisposable Subscribe<T>(System.IObservable<T> source, System.Action<T> onNext) { }
+        public static System.IDisposable Subscribe<T>(System.IObservable<T> source, System.Action<T> onNext, System.Action onCompleted) { }
+        public static System.IDisposable Subscribe<T>(System.IObservable<T> source, System.Action<T> onNext, System.Action<System.Exception> onError) { }
+        public static System.IDisposable Subscribe<T>(System.IObservable<T> source, System.Action<T> onNext, System.Action<System.Exception> onError, System.Action onCompleted) { }
     }
     public static class WitnessTeardown
     {
@@ -1237,6 +1331,7 @@ namespace ReactiveUI.Primitives.Extensions
         public ConcurrencyLimiter(System.Collections.Generic.IEnumerable<System.Threading.Tasks.Task<T>> taskFunctions, int maxConcurrency) { }
         public System.IObservable<T> Observable { get; }
         public System.IDisposable Subscribe(System.IObserver<T> observer) { }
+        public static ReactiveUI.Primitives.Extensions.ConcurrencyLimiter<T> Create(System.Collections.Generic.IEnumerable<System.Threading.Tasks.Task<T>> taskFunctions, int maxConcurrency) { }
     }
     [System.Diagnostics.DebuggerDisplay("Continuation: Locked = {_locked}, CompletedPhases = {CompletedPhases}")]
     public class Continuation : System.IDisposable
@@ -1260,6 +1355,7 @@ namespace ReactiveUI.Primitives.Extensions
         public void OnError(System.Exception error) { }
         public void OnNext(T value) { }
         public System.IDisposable Subscribe(System.IObserver<T> observer) { }
+        public static (System.IObservable<T> Observable, System.IObserver<T> Observer) CreateReadOnlyBehavior(T initialValue) { }
     }
     public enum DrainNotificationKind
     {
@@ -1305,12 +1401,15 @@ namespace ReactiveUI.Primitives.Extensions
     public static class ObserverArrayHelpers
     {
         public static void Broadcast<T>(System.IObserver<T>[] observers, T value) { }
+        public static void FastForEach<T>(System.IObserver<T> observer, System.Collections.Generic.IEnumerable<T> source) { }
+        public static void OnNext<T>(System.IObserver<T> observer, params T[] events) { }
         public static System.IObserver<T>[]? RemoveOrNull<T>(System.IObserver<T>[] current, System.IObserver<T> observer, System.IObserver<T>[] empty) { }
     }
     public static class ObserverExtensions
     {
         extension<T>(System.IObserver<T> observer)
         {
+            [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
             public void FastForEach(System.Collections.Generic.IEnumerable<T> source) { }
         }
     }
@@ -1369,6 +1468,7 @@ namespace ReactiveUI.Primitives.Extensions.Operators
     {
         public CatchAndReturnWithFactoryObservable(System.IObservable<T> source, System.Func<TException, T> fallbackFactory) { }
         public System.IDisposable Subscribe(System.IObserver<T> observer) { }
+        public static ReactiveUI.Primitives.Extensions.Operators.CatchAndReturnWithFactoryObservable<T, TException> Create(System.IObservable<T> source, System.Func<TException, T> fallbackFactory) { }
     }
     public sealed class CatchIgnoreEmptyObservable<T> : System.IObservable<T>
     {
@@ -1404,6 +1504,7 @@ namespace ReactiveUI.Primitives.Extensions.Operators
     public sealed class FilterRegexObservable : System.IObservable<string>
     {
         public FilterRegexObservable(System.IObservable<string> source, System.Text.RegularExpressions.Regex regex) { }
+        public FilterRegexObservable(System.IObservable<string> source, string regexPattern) { }
         public System.IDisposable Subscribe(System.IObserver<string> observer) { }
     }
     public sealed class FirstMatchFromCandidatesObservable<TKey, TRaw, TResult> : System.IObservable<TResult>
@@ -1430,17 +1531,24 @@ namespace ReactiveUI.Primitives.Extensions.Operators
     {
         public LogErrorsObservable(System.IObservable<T> source, System.Action<System.Exception> logger) { }
         public System.IDisposable Subscribe(System.IObserver<T> observer) { }
+        public static ReactiveUI.Primitives.Extensions.Operators.LogErrorsObservable<T> Create(System.IObservable<T> source, System.Action<System.Exception> logger) { }
     }
     [System.Diagnostics.DebuggerDisplay("MinMaxObservable: Sources = {_sourceList.Count}")]
     public sealed class MinMaxObservable<T> : System.IObservable<T> where T : struct, System.IComparable<T>
     {
         public MinMaxObservable(System.Collections.Generic.IReadOnlyList<System.IObservable<T>> sources, bool emitMaximum) { }
         public System.IDisposable Subscribe(System.IObserver<T> observer) { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public static System.IObservable<T> CreateMax(System.IObservable<T> source, params System.IObservable<T>[] sources) { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public static System.IObservable<T> CreateMin(System.IObservable<T> source, params System.IObservable<T>[] sources) { }
     }
     public sealed class NotObservable : System.IObservable<bool>
     {
         public NotObservable(System.IObservable<bool> source) { }
         public System.IDisposable Subscribe(System.IObserver<bool> observer) { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public static System.IObservable<bool> Create(System.IObservable<bool> source) { }
     }
     public sealed class PairwiseObservable<T> : System.IObservable<(T Previous, T Current)>
     {
@@ -1453,21 +1561,25 @@ namespace ReactiveUI.Primitives.Extensions.Operators
         public PartitionObservable(System.IObservable<T> source, System.Func<T, bool> predicate) { }
         public System.IObservable<T> False { get; }
         public System.IObservable<T> True { get; }
+        public static (System.IObservable<T> True, System.IObservable<T> False) Create(System.IObservable<T> source, System.Func<T, bool> predicate) { }
     }
     public sealed class PropertyChangedObservable<T, TProperty> : System.IObservable<TProperty> where T : System.ComponentModel.INotifyPropertyChanged
     {
         public PropertyChangedObservable(T source, string propertyName, System.Func<T, TProperty> getter) { }
         public System.IDisposable Subscribe(System.IObserver<TProperty> observer) { }
+        public static ReactiveUI.Primitives.Extensions.Operators.PropertyChangedObservable<T, TProperty> Create(T source, System.Linq.Expressions.Expression<System.Func<T, TProperty>> propertyExpression) { }
     }
     public sealed class ReplayLastOnSubscribeObservable<T> : System.IObservable<T>
     {
         public ReplayLastOnSubscribeObservable(System.IObservable<T> source, T initialValue) { }
         public System.IDisposable Subscribe(System.IObserver<T> observer) { }
+        public static ReactiveUI.Primitives.Extensions.Operators.ReplayLastOnSubscribeObservable<T> Create(System.IObservable<T> source, T initialValue) { }
     }
     public sealed class RetryForeverObservable<T> : System.IObservable<T>
     {
         public RetryForeverObservable(System.IObservable<T> source) { }
         public System.IDisposable Subscribe(System.IObserver<T> observer) { }
+        public static ReactiveUI.Primitives.Extensions.Operators.RetryForeverObservable<T> Create(System.IObservable<T> source) { }
     }
     public sealed class SampleLatestObservable<T> : System.IObservable<T>
     {
@@ -1506,6 +1618,7 @@ namespace ReactiveUI.Primitives.Extensions.Operators
         public void OnCompleted() { }
         [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
         public void OnError(System.Exception error) { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
         public void OnNext(TSource value) { }
         public ReactiveUI.Primitives.Extensions.Operators.SelectManyThenCoordinator<TSource, TMid, TResult> Run(System.IObservable<TSource> source) { }
     }
@@ -1523,10 +1636,14 @@ namespace ReactiveUI.Primitives.Extensions.Operators
     {
         public SkipWhileNullObservable(System.IObservable<T> source) { }
         public System.IDisposable Subscribe(System.IObserver<T> observer) { }
+        public static ReactiveUI.Primitives.Extensions.Operators.SkipWhileNullObservable<T> Create(System.IObservable<T> source) { }
     }
     [System.Diagnostics.DebuggerDisplay("SubscribeAsyncObservable: Queued = {_queue.Count}, Processing = {_isProcessing}, Done = {_done}")]
     public sealed class SubscribeAsyncObservable<T> : System.IDisposable
     {
+        public SubscribeAsyncObservable(System.IObservable<T> source, System.Func<T, System.Threading.Tasks.ValueTask> onNext) { }
+        public SubscribeAsyncObservable(System.IObservable<T> source, System.Func<T, System.Threading.Tasks.ValueTask> onNext, System.Action onCompleted) { }
+        public SubscribeAsyncObservable(System.IObservable<T> source, System.Func<T, System.Threading.Tasks.ValueTask> onNext, System.Action<System.Exception> onError) { }
         public SubscribeAsyncObservable(System.IObservable<T> source, System.Func<T, System.Threading.Tasks.ValueTask> onNext, System.Action<System.Exception>? onError, System.Action? onCompleted) { }
         public void Dispose() { }
     }
@@ -1544,6 +1661,7 @@ namespace ReactiveUI.Primitives.Extensions.Operators
     {
         public TakeUntilInclusiveObservable(System.IObservable<T> source, System.Func<T, bool> predicate) { }
         public System.IDisposable Subscribe(System.IObserver<T> observer) { }
+        public static ReactiveUI.Primitives.Extensions.Operators.TakeUntilInclusiveObservable<T> Create(System.IObservable<T> source, System.Func<T, bool> predicate) { }
     }
     public sealed class TrySelectObservable<TIn, TOut> : System.IObservable<TOut>
     {
@@ -1559,11 +1677,15 @@ namespace ReactiveUI.Primitives.Extensions.Operators
     {
         public WhereFalseObservable(System.IObservable<bool> source) { }
         public System.IDisposable Subscribe(System.IObserver<bool> observer) { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public static System.IObservable<bool> Create(System.IObservable<bool> source) { }
     }
     public sealed class WhereIsNotNullObservable<T> : System.IObservable<T>
     {
         public WhereIsNotNullObservable(System.IObservable<T> source) { }
         public System.IDisposable Subscribe(System.IObserver<T> observer) { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public static System.IObservable<T> Create(System.IObservable<T> source) { }
     }
     public sealed class WhereSelectObservable<TIn, TOut> : System.IObservable<TOut>
     {
@@ -1574,6 +1696,8 @@ namespace ReactiveUI.Primitives.Extensions.Operators
     {
         public WhereTrueObservable(System.IObservable<bool> source) { }
         public System.IDisposable Subscribe(System.IObserver<bool> observer) { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public static System.IObservable<bool> Create(System.IObservable<bool> source) { }
     }
 }
 namespace ReactiveUI.Primitives.Signals
@@ -1747,6 +1871,7 @@ namespace ReactiveUI.Primitives.Signals
     public sealed class KeepSignal<T> : ReactiveUI.Primitives.Advanced.IRequireCurrentThread<T>
     {
         public KeepSignal(System.IObservable<T> source, System.Func<T, bool> predicate) { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
         public bool IsRequiredSubscribeOnCurrentThread() { }
         public System.IDisposable Subscribe(System.IObserver<T> observer) { }
     }
@@ -1754,13 +1879,16 @@ namespace ReactiveUI.Primitives.Signals
     public sealed class KeepWithSignal<T, TState> : ReactiveUI.Primitives.Advanced.IRequireCurrentThread<T>
     {
         public KeepWithSignal(System.IObservable<T> source, TState state, System.Func<TState, T, bool> predicate) { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
         public bool IsRequiredSubscribeOnCurrentThread() { }
         public System.IDisposable Subscribe(System.IObserver<T> observer) { }
+        public static System.IObservable<T> Create(System.IObservable<T> source, TState state, System.Func<TState, T, bool> predicate) { }
     }
     [System.Diagnostics.DebuggerDisplay("MapSignal: Source = {_source}, Selector = {_selector}")]
     public sealed class MapSignal<TSource, TResult> : ReactiveUI.Primitives.Advanced.IRequireCurrentThread<TResult>
     {
         public MapSignal(System.IObservable<TSource> source, System.Func<TSource, TResult> selector) { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
         public bool IsRequiredSubscribeOnCurrentThread() { }
         public System.IDisposable Subscribe(System.IObserver<TResult> observer) { }
     }
@@ -1768,8 +1896,10 @@ namespace ReactiveUI.Primitives.Signals
     public sealed class MapWithSignal<TSource, TState, TResult> : ReactiveUI.Primitives.Advanced.IRequireCurrentThread<TResult>
     {
         public MapWithSignal(System.IObservable<TSource> source, TState state, System.Func<TState, TSource, TResult> selector) { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
         public bool IsRequiredSubscribeOnCurrentThread() { }
         public System.IDisposable Subscribe(System.IObserver<TResult> observer) { }
+        public static System.IObservable<TResult> Create(System.IObservable<TSource> source, TState state, System.Func<TState, TSource, TResult> selector) { }
     }
     [System.Diagnostics.DebuggerDisplay("ObserverHandler: Subject = {_subject}, Observer = {_observer}")]
     public sealed class ObserverHandler<T> : System.IDisposable
@@ -1861,7 +1991,9 @@ namespace ReactiveUI.Primitives.Signals
     public sealed class TapWithSignal<T, TState> : ReactiveUI.Primitives.Advanced.IRequireCurrentThread<T>
     {
         public TapWithSignal(System.IObservable<T> source, TState state, System.Action<TState, T> onNext) { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
         public bool IsRequiredSubscribeOnCurrentThread() { }
         public System.IDisposable Subscribe(System.IObserver<T> observer) { }
+        public static System.IObservable<T> Create(System.IObservable<T> source, TState state, System.Action<TState, T> onNext) { }
     }
 }

@@ -4,6 +4,11 @@
 
 using System.Runtime.CompilerServices;
 using ReactiveUI.Primitives.Extensions;
+#if REACTIVE_SHIM
+using ReactiveUI.Primitives.Reactive.Internal;
+#else
+using ReactiveUI.Primitives.Internal;
+#endif
 
 #if REACTIVE_SHIM
 namespace ReactiveUI.Primitives.Reactive.Advanced;
@@ -25,8 +30,8 @@ public sealed class SelectManyCoordinator<TSource, TResult> : IObserver<TSource>
     /// <summary>Serializes downstream deliveries.</summary>
     private SerializedDelivery<TResult> _delivery = new();
 
-    /// <summary>The number of active inner subscriptions.</summary>
-    private int _active;
+    /// <summary>Remaining active participants (1 for the outer source plus 1 per active inner).</summary>
+    private int _active = 1;
 
     /// <summary>Whether the outer source has completed, as 0 or 1.</summary>
     private int _outerCompleted;
@@ -66,24 +71,33 @@ public sealed class SelectManyCoordinator<TSource, TResult> : IObserver<TSource>
     /// <summary>Gets the constant inner observable, when constant-inner based.</summary>
     private IObservable<TResult>? Inner { get; }
 
+    /// <summary>Gets the remaining active participant count.</summary>
+    private int Active => Volatile.Read(ref _active);
+
     /// <summary>Gets a value indicating whether the outer source has completed.</summary>
     private bool OuterCompleted => Volatile.Read(ref _outerCompleted) != 0;
-
-    /// <summary>Gets the number of active inner subscriptions.</summary>
-    private int Active => Volatile.Read(ref _active);
 
     /// <summary>Gets a value indicating whether a terminal notification has been requested.</summary>
     private bool Done => Volatile.Read(ref _done) != 0;
 
     /// <inheritdoc/>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public void Dispose() => Subscriptions.Dispose();
+    public void Dispose()
+    {
+        Volatile.Write(ref _done, 1);
+        Subscriptions.Dispose();
+    }
 
     /// <inheritdoc/>
     public void OnCompleted()
     {
-        Volatile.Write(ref _outerCompleted, 1);
-        TryComplete();
+        if (Interlocked.Exchange(ref _outerCompleted, 1) != 0 || Interlocked.Decrement(ref _active) != 0)
+        {
+            return;
+        }
+
+        Volatile.Write(ref _done, 1);
+        _delivery.OnCompleted(new PendingDrain(this));
     }
 
     /// <inheritdoc/>
@@ -93,6 +107,11 @@ public sealed class SelectManyCoordinator<TSource, TResult> : IObserver<TSource>
     /// <inheritdoc/>
     public void OnNext(TSource value)
     {
+        if (Done || OuterCompleted || Active <= 0)
+        {
+            return;
+        }
+
         IObservable<TResult> inner;
         try
         {
@@ -116,7 +135,14 @@ public sealed class SelectManyCoordinator<TSource, TResult> : IObserver<TSource>
         }
 
         _ = Interlocked.Increment(ref _active);
-        Subscriptions.Add(inner.Subscribe(OnInnerNext, OnAnyError, OnInnerCompleted));
+        SelectManyInnerArm<SelectManyCoordinator<TSource, TResult>, byte, TResult> arm = new(
+            this,
+            0,
+            static (self, _, item) => self.OnInnerNext(item),
+            static (self, err) => self.OnAnyError(err),
+            static (self, sub) => self.OnInnerCompleted(sub));
+        Subscriptions.Add(arm);
+        arm.Attach(inner.Subscribe(arm));
     }
 
     /// <summary>Subscribes to the outer source.</summary>
@@ -141,17 +167,13 @@ public sealed class SelectManyCoordinator<TSource, TResult> : IObserver<TSource>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private void OnInnerNext(TResult value) => _delivery.OnNext(Observer, value, new PendingDrain(this));
 
-    /// <summary>Marks one inner source complete.</summary>
-    private void OnInnerCompleted()
+    /// <summary>Marks one inner source complete and detaches its handle.</summary>
+    /// <param name="arm">The completed inner arm.</param>
+    private void OnInnerCompleted(IDisposable arm)
     {
-        _ = Interlocked.Decrement(ref _active);
-        TryComplete();
-    }
-
-    /// <summary>Delivers completion once the outer and all inners are done.</summary>
-    private void TryComplete()
-    {
-        if (!OuterCompleted || Active != 0)
+        _ = Subscriptions.Remove(arm);
+        arm.Dispose();
+        if (Interlocked.Decrement(ref _active) != 0)
         {
             return;
         }
@@ -165,7 +187,12 @@ public sealed class SelectManyCoordinator<TSource, TResult> : IObserver<TSource>
     private readonly record struct PendingDrain(SelectManyCoordinator<TSource, TResult> Owner) : IDrainTarget
     {
         /// <inheritdoc/>
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Drain() => _ = Owner._delivery.DrainTo(Owner.Observer);
+        public void Drain()
+        {
+            if (Owner._delivery.DrainTo(Owner.Observer))
+            {
+                Owner.Dispose();
+            }
+        }
     }
 }

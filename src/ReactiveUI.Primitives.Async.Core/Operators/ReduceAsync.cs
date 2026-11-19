@@ -2,7 +2,6 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
-using System.Diagnostics;
 using System.Runtime.CompilerServices;
 
 namespace ReactiveUI.Primitives.Async;
@@ -26,7 +25,7 @@ public static partial class SignalAsyncExtensions
         public ValueTask<TAcc> AggregateAsync<TAcc>(
             TAcc seed,
             Func<TAcc, T, CancellationToken, ValueTask<TAcc>> accumulator) =>
-            source.ReduceAsync(seed, accumulator);
+            ReduceAsyncTaskWitness<T, TAcc>.RunAsync(source, seed, accumulator);
 
         /// <summary>Applies an asynchronous accumulator function over the observable sequence, returning the final accumulated value when the sequence completes.</summary>
         /// <typeparam name="TAcc">The type of the accumulated value.</typeparam>
@@ -41,7 +40,7 @@ public static partial class SignalAsyncExtensions
             TAcc seed,
             Func<TAcc, T, CancellationToken, ValueTask<TAcc>> accumulator,
             CancellationToken cancellationToken) =>
-            source.ReduceAsync(seed, accumulator, cancellationToken);
+            ReduceAsyncTaskWitness<T, TAcc>.RunAsync(source, seed, accumulator, cancellationToken);
 
         /// <summary>Applies an accumulator function over the observable sequence, returning the final accumulated value when the sequence completes.</summary>
         /// <typeparam name="TAcc">The type of the accumulated value.</typeparam>
@@ -54,7 +53,7 @@ public static partial class SignalAsyncExtensions
         public ValueTask<TAcc> AggregateAsync<TAcc>(
             TAcc seed,
             Func<TAcc, T, TAcc> accumulator) =>
-            source.ReduceAsync(seed, accumulator);
+            ReduceSyncTaskWitness<T, TAcc>.RunAsync(source, seed, accumulator);
 
         /// <summary>Applies an accumulator function over the observable sequence, returning the final accumulated value when the sequence completes.</summary>
         /// <typeparam name="TAcc">The type of the accumulated value.</typeparam>
@@ -69,7 +68,7 @@ public static partial class SignalAsyncExtensions
             TAcc seed,
             Func<TAcc, T, TAcc> accumulator,
             CancellationToken cancellationToken) =>
-            source.ReduceAsync(seed, accumulator, cancellationToken);
+            ReduceSyncTaskWitness<T, TAcc>.RunAsync(source, seed, accumulator, cancellationToken);
 
         /// <summary>Applies an accumulator function over the observable sequence with a seed value, then applies a result selector to the final accumulated value.</summary>
         /// <typeparam name="TAcc">The type of the intermediate accumulated value.</typeparam>
@@ -84,7 +83,7 @@ public static partial class SignalAsyncExtensions
             TAcc seed,
             Func<TAcc, T, TAcc> accumulator,
             Func<TAcc, TResult> resultSelector) =>
-            source.ReduceAsync(seed, accumulator, resultSelector);
+            ReduceSyncTaskWitness<T, TAcc>.RunAsync(source, seed, accumulator, resultSelector);
 
         /// <summary>Applies an accumulator function over the observable sequence with a seed value, then applies a result selector to the final accumulated value.</summary>
         /// <typeparam name="TAcc">The type of the intermediate accumulated value.</typeparam>
@@ -101,7 +100,7 @@ public static partial class SignalAsyncExtensions
             Func<TAcc, T, TAcc> accumulator,
             Func<TAcc, TResult> resultSelector,
             CancellationToken cancellationToken) =>
-            source.ReduceAsync(seed, accumulator, resultSelector, cancellationToken);
+            ReduceSyncTaskWitness<T, TAcc>.RunAsync(source, seed, accumulator, resultSelector, cancellationToken);
 
         /// <summary>Applies an asynchronous accumulator function over the observable sequence, returning the final accumulated value when the sequence completes.</summary>
         /// <typeparam name="TAcc">The type of the accumulated value.</typeparam>
@@ -114,7 +113,7 @@ public static partial class SignalAsyncExtensions
         public ValueTask<TAcc> ReduceAsync<TAcc>(
             TAcc seed,
             Func<TAcc, T, CancellationToken, ValueTask<TAcc>> accumulator) =>
-            source.ReduceAsync(seed, accumulator, CancellationToken.None);
+            ReduceAsyncTaskWitness<T, TAcc>.RunAsync(source, seed, accumulator);
 
         /// <summary>Applies an asynchronous accumulator function over the observable sequence, returning the final accumulated value when the sequence completes.</summary>
         /// <typeparam name="TAcc">The type of the accumulated value.</typeparam>
@@ -124,19 +123,12 @@ public static partial class SignalAsyncExtensions
         /// <param name="cancellationToken">The token that cancels the operation.</param>
         /// <returns>A task representing the asynchronous operation, containing the final accumulated value.</returns>
         /// <exception cref="ArgumentNullException"><paramref name="accumulator"/> is <see langword="null"/>.</exception>
-        public async ValueTask<TAcc> ReduceAsync<TAcc>(
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public ValueTask<TAcc> ReduceAsync<TAcc>(
             TAcc seed,
             Func<TAcc, T, CancellationToken, ValueTask<TAcc>> accumulator,
-            CancellationToken cancellationToken)
-        {
-            ArgumentExceptionHelper.ThrowIfNull(accumulator);
-            cancellationToken.ThrowIfCancellationRequested();
-
-            ReduceAsyncTaskWitness<T, TAcc> observer = new(seed, accumulator, cancellationToken);
-            await using var subscription =
-                await source.SubscribeAsync(observer, cancellationToken).ConfigureAwait(false);
-            return await observer.AwaitResultAsync().ConfigureAwait(false);
-        }
+            CancellationToken cancellationToken) =>
+            ReduceAsyncTaskWitness<T, TAcc>.RunAsync(source, seed, accumulator, cancellationToken);
 
         /// <summary>Applies an accumulator function over the observable sequence, returning the final accumulated value when the sequence completes.</summary>
         /// <typeparam name="TAccumulate">The type of the accumulated value.</typeparam>
@@ -149,7 +141,7 @@ public static partial class SignalAsyncExtensions
         public ValueTask<TAccumulate> ReduceAsync<TAccumulate>(
             TAccumulate seed,
             Func<TAccumulate, T, TAccumulate> accumulator) =>
-            source.ReduceAsync(seed, accumulator, CancellationToken.None);
+            ReduceSyncTaskWitness<T, TAccumulate>.RunAsync(source, seed, accumulator);
 
         /// <summary>Applies an accumulator function over the observable sequence, returning the final accumulated value when the sequence completes.</summary>
         /// <typeparam name="TAcc">The type of the accumulated value.</typeparam>
@@ -159,19 +151,12 @@ public static partial class SignalAsyncExtensions
         /// <param name="cancellationToken">The token that cancels the operation.</param>
         /// <returns>A task representing the asynchronous operation, containing the final accumulated value.</returns>
         /// <exception cref="ArgumentNullException"><paramref name="accumulator"/> is <see langword="null"/>.</exception>
-        public async ValueTask<TAcc> ReduceAsync<TAcc>(
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public ValueTask<TAcc> ReduceAsync<TAcc>(
             TAcc seed,
             Func<TAcc, T, TAcc> accumulator,
-            CancellationToken cancellationToken)
-        {
-            ArgumentExceptionHelper.ThrowIfNull(accumulator);
-            cancellationToken.ThrowIfCancellationRequested();
-
-            ReduceSyncTaskWitness<T, TAcc> observer = new(seed, accumulator, cancellationToken);
-            await using var subscription =
-                await source.SubscribeAsync(observer, cancellationToken).ConfigureAwait(false);
-            return await observer.AwaitResultAsync().ConfigureAwait(false);
-        }
+            CancellationToken cancellationToken) =>
+            ReduceSyncTaskWitness<T, TAcc>.RunAsync(source, seed, accumulator, cancellationToken);
 
         /// <summary>Applies an accumulator function over the observable sequence with a seed value, then applies a result selector to the final accumulated value.</summary>
         /// <typeparam name="TAcc">The type of the intermediate accumulated value.</typeparam>
@@ -186,7 +171,7 @@ public static partial class SignalAsyncExtensions
             TAcc seed,
             Func<TAcc, T, TAcc> accumulator,
             Func<TAcc, TResult> resultSelector) =>
-            source.ReduceAsync(seed, accumulator, resultSelector, CancellationToken.None);
+            ReduceSyncTaskWitness<T, TAcc>.RunAsync(source, seed, accumulator, resultSelector);
 
         /// <summary>Applies an accumulator function over the observable sequence with a seed value, then applies a result selector to the final accumulated value.</summary>
         /// <typeparam name="TAcc">The type of the intermediate accumulated value.</typeparam>
@@ -197,144 +182,12 @@ public static partial class SignalAsyncExtensions
         /// <param name="cancellationToken">The token that cancels the operation.</param>
         /// <returns>A task representing the asynchronous operation, containing the transformed result.</returns>
         /// <exception cref="ArgumentNullException"><paramref name="accumulator"/> or <paramref name="resultSelector"/> is <see langword="null"/>.</exception>
-        public async ValueTask<TResult> ReduceAsync<TAcc, TResult>(
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public ValueTask<TResult> ReduceAsync<TAcc, TResult>(
             TAcc seed,
             Func<TAcc, T, TAcc> accumulator,
             Func<TAcc, TResult> resultSelector,
-            CancellationToken cancellationToken)
-        {
-            ArgumentExceptionHelper.ThrowIfNull(resultSelector);
-
-            var acc = await source.ReduceAsync(seed, accumulator, cancellationToken).ConfigureAwait(false);
-            return resultSelector(acc);
-        }
-    }
-
-    /// <summary>Observer that accumulates values using an asynchronous accumulator function and produces the final result.</summary>
-    /// <typeparam name="T">The type of elements in the source sequence.</typeparam>
-    /// <typeparam name="TAcc">The type of the accumulated value.</typeparam>
-    /// <param name="seed">The initial accumulator value.</param>
-    /// <param name="accumulator">The asynchronous accumulator function.</param>
-    /// <param name="cancellationToken">A cancellation token for the operation.</param>
-    [DebuggerDisplay("ReduceAsyncTaskWitness: {_witness}")]
-    internal sealed class ReduceAsyncTaskWitness<T, TAcc>(
-        TAcc seed,
-        Func<TAcc, T, CancellationToken, ValueTask<TAcc>> accumulator,
-        CancellationToken cancellationToken) : IWitnessAsync<T>
-    {
-        /// <summary>Produces and cancels the witness's single result value.</summary>
-        private readonly TaskResultCompletionSource<TAcc> _completion = new(cancellationToken);
-
-        /// <summary>The current accumulated value.</summary>
-        private TAcc _acc = seed;
-
-        /// <summary>The notification gate, cancellation link and disposal state.</summary>
-        private WitnessAsyncState _witness;
-
-        /// <inheritdoc/>
-        ref WitnessAsyncState IWitnessState.Witness => ref _witness;
-
-        /// <inheritdoc/>
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public ValueTask OnNextAsync(T value, CancellationToken cancellationToken) =>
-            WitnessAsync.OnNextAsync(this, value, cancellationToken);
-
-        /// <inheritdoc/>
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public ValueTask OnErrorResumeAsync(Exception error, CancellationToken cancellationToken) =>
-            WitnessAsync.OnErrorResumeAsync(this, error, cancellationToken);
-
-        /// <inheritdoc/>
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public ValueTask OnCompletedAsync(Result result) => WitnessAsync.OnCompletedAsync(this, result);
-
-        /// <inheritdoc/>
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public ValueTask DisposeAsync() => WitnessAsync.DisposeStateAsync(this);
-
-        /// <summary>Asynchronously waits for the witness to produce its result value.</summary>
-        /// <returns>A task representing the asynchronous operation, containing the result value.</returns>
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        internal ValueTask<TAcc> AwaitResultAsync() => _completion.AwaitResultAsync(this);
-
-        /// <inheritdoc/>
-        async ValueTask IWitnessAsync<T>.OnNextAsyncCore(T value, CancellationToken cancellationToken) =>
-            _acc = await accumulator(_acc, value, cancellationToken).ConfigureAwait(false);
-
-        /// <inheritdoc/>
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        ValueTask IWitnessAsync<T>.OnErrorResumeAsyncCore(Exception error, CancellationToken cancellationToken) =>
-            _completion.SetExceptionAndDisposeAsync(error, this);
-
-        /// <inheritdoc/>
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        ValueTask IWitnessAsync<T>.OnCompletedAsyncCore(Result result) =>
-            _completion.CompleteAndDisposeAsync(result, _acc, this);
-    }
-
-    /// <summary>Observer that accumulates values using a synchronous accumulator function and produces the final result.</summary>
-    /// <typeparam name="T">The type of elements in the source sequence.</typeparam>
-    /// <typeparam name="TAcc">The type of the accumulated value.</typeparam>
-    /// <param name="seed">The initial accumulator value.</param>
-    /// <param name="accumulator">The synchronous accumulator function.</param>
-    /// <param name="cancellationToken">A cancellation token for the operation.</param>
-    [DebuggerDisplay("ReduceSyncTaskWitness: {_witness}")]
-    internal sealed class ReduceSyncTaskWitness<T, TAcc>(
-        TAcc seed,
-        Func<TAcc, T, TAcc> accumulator,
-        CancellationToken cancellationToken) : IWitnessAsync<T>
-    {
-        /// <summary>Produces and cancels the witness's single result value.</summary>
-        private readonly TaskResultCompletionSource<TAcc> _completion = new(cancellationToken);
-
-        /// <summary>The current accumulated value.</summary>
-        private TAcc _acc = seed;
-
-        /// <summary>The notification gate, cancellation link and disposal state.</summary>
-        private WitnessAsyncState _witness;
-
-        /// <inheritdoc/>
-        ref WitnessAsyncState IWitnessState.Witness => ref _witness;
-
-        /// <inheritdoc/>
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public ValueTask OnNextAsync(T value, CancellationToken cancellationToken) =>
-            WitnessAsync.OnNextAsync(this, value, cancellationToken);
-
-        /// <inheritdoc/>
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public ValueTask OnErrorResumeAsync(Exception error, CancellationToken cancellationToken) =>
-            WitnessAsync.OnErrorResumeAsync(this, error, cancellationToken);
-
-        /// <inheritdoc/>
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public ValueTask OnCompletedAsync(Result result) => WitnessAsync.OnCompletedAsync(this, result);
-
-        /// <inheritdoc/>
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public ValueTask DisposeAsync() => WitnessAsync.DisposeStateAsync(this);
-
-        /// <summary>Asynchronously waits for the witness to produce its result value.</summary>
-        /// <returns>A task representing the asynchronous operation, containing the result value.</returns>
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        internal ValueTask<TAcc> AwaitResultAsync() => _completion.AwaitResultAsync(this);
-
-        /// <inheritdoc/>
-        ValueTask IWitnessAsync<T>.OnNextAsyncCore(T value, CancellationToken cancellationToken)
-        {
-            _ = cancellationToken;
-            _acc = accumulator(_acc, value);
-            return default;
-        }
-
-        /// <inheritdoc/>
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        ValueTask IWitnessAsync<T>.OnErrorResumeAsyncCore(Exception error, CancellationToken cancellationToken) =>
-            _completion.SetExceptionAndDisposeAsync(error, this);
-
-        /// <inheritdoc/>
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        ValueTask IWitnessAsync<T>.OnCompletedAsyncCore(Result result) =>
-            _completion.CompleteAndDisposeAsync(result, _acc, this);
+            CancellationToken cancellationToken) =>
+            ReduceSyncTaskWitness<T, TAcc>.RunAsync(source, seed, accumulator, resultSelector, cancellationToken);
     }
 }

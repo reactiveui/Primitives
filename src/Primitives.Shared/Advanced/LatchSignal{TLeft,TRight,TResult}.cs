@@ -3,6 +3,12 @@
 // See the LICENSE file in the project root for full license information.
 
 #if REACTIVE_SHIM
+using ReactiveUI.Primitives.Reactive.Internal;
+#else
+using ReactiveUI.Primitives.Internal;
+#endif
+
+#if REACTIVE_SHIM
 namespace ReactiveUI.Primitives.Reactive.Advanced;
 #else
 namespace ReactiveUI.Primitives.Advanced;
@@ -39,6 +45,20 @@ public sealed class LatchSignal<TLeft, TRight, TResult> : IObservable<TResult>
         _right = right;
         _selector = selector;
     }
+
+    /// <summary>Creates a latched sequence, using the range fast path when both sources are <see cref="RangeSignal"/>.</summary>
+    /// <param name="left">The left (driving) source.</param>
+    /// <param name="right">The right (latched) source.</param>
+    /// <param name="selector">The projection function.</param>
+    /// <returns>The latched observable sequence.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="left"/>, <paramref name="right"/>, or <paramref name="selector"/> is <see langword="null"/>.</exception>
+    public static IObservable<TResult> Create(
+        IObservable<TLeft> left,
+        IObservable<TRight> right,
+        Func<TLeft, TRight, TResult> selector) =>
+        BinaryCoordinatorHelper.ValidateAndTryMatchRanges(left, right, selector, out var ranges)
+            ? new RangeWithLatestSignal<TResult>(ranges.Left, ranges.Right, ranges.Selector)
+            : new LatchSignal<TLeft, TRight, TResult>(left, right, selector);
 
     /// <inheritdoc/>
     public IDisposable Subscribe(IObserver<TResult> observer)

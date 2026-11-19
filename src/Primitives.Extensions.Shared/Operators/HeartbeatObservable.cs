@@ -19,7 +19,7 @@ namespace ReactiveUI.Primitives.Extensions.Operators;
 /// <param name="source">The source observable.</param>
 /// <param name="heartbeatPeriod">The period between heartbeats.</param>
 /// <param name="scheduler">The scheduler to run the heartbeat timer on.</param>
-internal sealed class HeartbeatObservable<T>(
+public sealed class HeartbeatObservable<T>(
     IObservable<T> source,
     TimeSpan heartbeatPeriod,
     ISequencer scheduler) : IObservable<Heartbeat<T>>

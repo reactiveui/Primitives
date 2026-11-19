@@ -18,14 +18,14 @@ namespace ReactiveUI.Primitives.Advanced;
 /// runs. Values that arrive while another thread is delivering are queued and delivered in arrival order; a value raised
 /// by the delivering thread itself is delivered after the observer returns.
 /// </remarks>
-[System.Diagnostics.DebuggerDisplay("BlendWitness: ActiveCount = {ActiveCount}, IsOuterCompleted = {IsOuterCompleted}, IsDone = {IsDone}")]
+[System.Diagnostics.DebuggerDisplay("BlendWitness: Participants = {_participants}, OuterCompleted = {_outerCompleted}")]
 public sealed class BlendWitness<T> : IDisposable
 {
     /// <summary>Serializes downstream deliveries.</summary>
     private SerializedDelivery<T> _delivery = new();
 
-    /// <summary>The number of active inner sources.</summary>
-    private int _active;
+    /// <summary>Remaining active participants (1 for the outer source plus 1 per active inner source).</summary>
+    private int _participants = 1;
 
     /// <summary>Whether the outer source completed, as 0 or 1.</summary>
     private int _outerCompleted;
@@ -40,15 +40,6 @@ public sealed class BlendWitness<T> : IDisposable
     /// <summary>Gets the downstream observer.</summary>
     private IObserver<T> Observer { get; }
 
-    /// <summary>Gets a value indicating whether the outer source completed.</summary>
-    private bool IsOuterCompleted => Volatile.Read(ref _outerCompleted) != 0;
-
-    /// <summary>Gets the number of active inner sources.</summary>
-    private int ActiveCount => Volatile.Read(ref _active);
-
-    /// <summary>Gets a value indicating whether the terminal notification has been taken for delivery.</summary>
-    private bool IsDone => _delivery.IsTerminated;
-
     /// <inheritdoc/>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void Dispose() => Subscriptions.Dispose();
@@ -58,7 +49,9 @@ public sealed class BlendWitness<T> : IDisposable
     /// <returns>The observer that owns the subscriptions.</returns>
     public BlendWitness<T> Run(IObservable<IObservable<T>> sources)
     {
-        Subscriptions.Add(sources.Subscribe(OnSource, OnAnyError, OnOuterCompleted));
+        OuterArm outer = new(this);
+        Subscriptions.Add(outer);
+        outer.Attach(sources.Subscribe(outer));
         return this;
     }
 
@@ -86,8 +79,15 @@ public sealed class BlendWitness<T> : IDisposable
             return;
         }
 
-        _ = Interlocked.Increment(ref _active);
-        Subscriptions.Add(source.Subscribe(new Arm(this)));
+        if (_delivery.IsTerminated)
+        {
+            return;
+        }
+
+        _ = Interlocked.Increment(ref _participants);
+        InnerArm arm = new(this);
+        Subscriptions.Add(arm);
+        arm.Attach(source.Subscribe(arm));
     }
 
     /// <summary>Forwards an inner value, directly when nothing else is delivering.</summary>
@@ -100,29 +100,30 @@ public sealed class BlendWitness<T> : IDisposable
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private void OnAnyError(Exception error) => _delivery.OnError(error, new PendingDrain(this));
 
-    /// <summary>Marks one inner source complete.</summary>
-    private void OnInnerCompleted()
+    /// <summary>Marks one inner source complete and detaches its subscription handle.</summary>
+    /// <param name="arm">The completed inner arm.</param>
+    private void OnInnerCompleted(InnerArm arm)
     {
-        _ = Interlocked.Decrement(ref _active);
-        TryComplete();
+        _ = Subscriptions.Remove(arm);
+        arm.Dispose();
+        if (Interlocked.Decrement(ref _participants) == 0)
+        {
+            _delivery.OnCompleted(new PendingDrain(this));
+        }
     }
 
     /// <summary>Marks the outer source complete.</summary>
     private void OnOuterCompleted()
     {
-        Volatile.Write(ref _outerCompleted, 1);
-        TryComplete();
-    }
-
-    /// <summary>Delivers completion once the outer and all active inner sources are done.</summary>
-    private void TryComplete()
-    {
-        if (IsDone || !IsOuterCompleted || ActiveCount != 0)
+        if (Interlocked.Exchange(ref _outerCompleted, 1) != 0)
         {
             return;
         }
 
-        _delivery.OnCompleted(new PendingDrain(this));
+        if (Interlocked.Decrement(ref _participants) == 0)
+        {
+            _delivery.OnCompleted(new PendingDrain(this));
+        }
     }
 
     /// <summary>Drains this witness's queued notifications for the delivery gate.</summary>
@@ -130,14 +131,54 @@ public sealed class BlendWitness<T> : IDisposable
     private readonly record struct PendingDrain(BlendWitness<T> Owner) : IDrainTarget
     {
         /// <inheritdoc/>
+        public void Drain()
+        {
+            if (Owner._delivery.DrainTo(Owner.Observer))
+            {
+                Owner.Dispose();
+            }
+        }
+    }
+
+    /// <summary>Observes the outer sequence of inner sources.</summary>
+    /// <param name="parent">The owning witness.</param>
+    private sealed class OuterArm(BlendWitness<T> parent) : IObserver<IObservable<T>>, IDisposable
+    {
+        /// <summary>The outer subscription.</summary>
+        private IDisposable? _subscription;
+
+        /// <inheritdoc/>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Drain() => _ = Owner._delivery.DrainTo(Owner.Observer);
+        public void OnNext(IObservable<T> value) => parent.OnSource(value);
+
+        /// <inheritdoc/>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void OnError(Exception error) => parent.OnAnyError(error);
+
+        /// <inheritdoc/>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void OnCompleted() => parent.OnOuterCompleted();
+
+        /// <inheritdoc/>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void Dispose() => SinkSubscription.Dispose(ref _subscription);
+
+        /// <summary>Assigns the outer subscription.</summary>
+        /// <param name="subscription">The outer subscription.</param>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        internal void Attach(IDisposable subscription) => SinkSubscription.Set(ref _subscription, subscription);
     }
 
     /// <summary>Receives the notifications of one source and passes them to the witness.</summary>
     /// <param name="parent">The witness.</param>
-    private sealed class Arm(BlendWitness<T> parent) : IObserver<T>
+    private sealed class InnerArm(BlendWitness<T> parent) : IObserver<T>, IDisposable
     {
+        /// <summary>The inner subscription.</summary>
+        private IDisposable? _subscription;
+
+        /// <summary>Set to 1 once this inner source has completed.</summary>
+        private int _completed;
+
         /// <inheritdoc/>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void OnNext(T value) => parent.OnInnerNext(value);
@@ -147,7 +188,23 @@ public sealed class BlendWitness<T> : IDisposable
         public void OnError(Exception error) => parent.OnAnyError(error);
 
         /// <inheritdoc/>
+        public void OnCompleted()
+        {
+            if (Interlocked.Exchange(ref _completed, 1) != 0)
+            {
+                return;
+            }
+
+            parent.OnInnerCompleted(this);
+        }
+
+        /// <inheritdoc/>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void OnCompleted() => parent.OnInnerCompleted();
+        public void Dispose() => SinkSubscription.Dispose(ref _subscription);
+
+        /// <summary>Assigns the inner subscription.</summary>
+        /// <param name="subscription">The inner subscription.</param>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        internal void Attach(IDisposable subscription) => SinkSubscription.Set(ref _subscription, subscription);
     }
 }

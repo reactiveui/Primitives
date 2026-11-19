@@ -39,6 +39,29 @@ public sealed class SelectManyResultSignal<TSource, TCollection, TResult> : IObs
     /// <summary>Gets the selector that combines outer and inner values.</summary>
     private Func<TSource, TCollection, TResult> ResultSelector { get; }
 
+    /// <summary>Creates a concurrent <c>SelectMany</c> result sequence with empty/never short-circuiting.</summary>
+    /// <param name="source">The source observable.</param>
+    /// <param name="collectionSelector">The selector that creates inner observables.</param>
+    /// <param name="resultSelector">The selector that combines outer and inner values.</param>
+    /// <returns>The merged observable sequence.</returns>
+    /// <exception cref="ArgumentNullException">Any argument is <see langword="null"/>.</exception>
+    public static IObservable<TResult> Create(
+        IObservable<TSource> source,
+        Func<TSource, IObservable<TCollection>> collectionSelector,
+        Func<TSource, TCollection, TResult> resultSelector)
+    {
+        ArgumentExceptionHelper.ThrowIfNull(source);
+        ArgumentExceptionHelper.ThrowIfNull(collectionSelector);
+        ArgumentExceptionHelper.ThrowIfNull(resultSelector);
+
+        return source switch
+        {
+            ImmutableEmptySignal<TSource> => ImmutableEmptySignal<TResult>.Instance,
+            ImmutableNeverSignal<TSource> => ImmutableNeverSignal<TResult>.Instance,
+            _ => new SelectManyResultSignal<TSource, TCollection, TResult>(source, collectionSelector, resultSelector),
+        };
+    }
+
     /// <inheritdoc/>
     public IDisposable Subscribe(IObserver<TResult> observer)
     {

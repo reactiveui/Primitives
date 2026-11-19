@@ -23,14 +23,14 @@ public partial class RxNamesTests
         foreach (var source in sources)
         {
             var delayed = explicitNull ? source.Delay(dueTime, null) : source.Delay(dueTime);
-            var delay = await Assert.That(delayed).IsTypeOf<LinqExtensions.AbsoluteShiftSignal<int>>().And.IsNotNull();
+            var delay = await Assert.That(delayed).IsTypeOf<Advanced.AbsoluteShiftSignal<int>>().And.IsNotNull();
             await Assert.That(delay.Scheduler).IsSameReferenceAs(ThreadPoolSequencer.Instance);
 
             var delayedSubscription = explicitNull
                 ? source.DelaySubscription(dueTime, null)
                 : source.DelaySubscription(dueTime);
             var subscription = await Assert.That(delayedSubscription)
-                .IsTypeOf<LinqExtensions.AbsoluteDelayStartSignal<int>>().And.IsNotNull();
+                .IsTypeOf<Advanced.AbsoluteDelayStartSignal<int>>().And.IsNotNull();
             await Assert.That(subscription.Scheduler).IsSameReferenceAs(ThreadPoolSequencer.Instance);
         }
 

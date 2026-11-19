@@ -34,5 +34,5 @@ public sealed class LogErrorsSignal<T> : IObservableAsync<T>
     ValueTask<IAsyncDisposable> IObservableAsync<T>.SubscribeAsync(
         IObserverAsync<T> observer,
         CancellationToken cancellationToken) =>
-        Source.SubscribeAsync(new LogErrorsWitness<T>(observer, Logger), cancellationToken);
+        WitnessSubscription.SubscribeAsync(Source, new LogErrorsWitness<T>(observer, Logger), observer, cancellationToken);
 }

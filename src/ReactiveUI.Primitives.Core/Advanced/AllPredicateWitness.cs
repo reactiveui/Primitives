@@ -38,7 +38,7 @@ public sealed class AllPredicateWitness<T>(IObserver<bool> observer, Func<T, boo
         {
             matches = _predicate(value);
         }
-        catch (Exception error)
+        catch (Exception error) when (!CoreFatalExceptionHelper.IsFatal(error))
         {
             OnError(error);
             return;

@@ -201,6 +201,38 @@ public sealed class CurrentThreadSequencer : ISequencer
         queue.Enqueue(si);
     }
 
+    /// <summary>Runs <paramref name="action"/> on the current-thread trampoline without allocating a work item when the thread is idle.</summary>
+    /// <typeparam name="TState">The state type passed to <paramref name="action"/>.</typeparam>
+    /// <param name="state">The state forwarded to <paramref name="action"/>.</param>
+    /// <param name="action">The callback that performs the work and returns its subscription.</param>
+    /// <returns>The disposable returned by <paramref name="action"/>.</returns>
+    internal static IDisposable RunTrampoline<TState>(TState state, Func<TState, IDisposable> action)
+    {
+        if (_running)
+        {
+            return action(state);
+        }
+
+        var instance = Instance;
+        instance.StartRunning();
+        try
+        {
+            var result = action(state);
+            var queue = GetQueue();
+            if (queue is not null)
+            {
+                Trampoline.Run(queue, instance._timestamp, instance._wait);
+            }
+
+            return result;
+        }
+        finally
+        {
+            SetQueue(null);
+            SetRunning(false);
+        }
+    }
+
     /// <summary>Waits only when work remains in the future.</summary>
     /// <param name="dueTime">The remaining delay.</param>
     /// <param name="wait">The wait operation.</param>

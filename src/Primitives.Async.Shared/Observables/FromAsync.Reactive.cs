@@ -2,8 +2,7 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
-using System.Diagnostics.CodeAnalysis;
-
+using System.Runtime.CompilerServices;
 #if REACTIVE_SHIM
 using FromAsyncSignal = ReactiveUI.Primitives.Async.Reactive.Advanced.FromAsyncSignal;
 #else
@@ -29,11 +28,7 @@ public static partial class SignalAsyncReactiveExtensions
         /// followed by a completion notification.</returns>
         /// <exception cref="ArgumentExceptionHelper">Thrown if <paramref name="factory"/> is <see langword="null"/>.</exception>
         /// <remarks>The factory is invoked once per subscription.</remarks>
-        public IObservableAsync<RxVoid> FromAsync()
-        {
-            ArgumentExceptionHelper.ThrowIfNull(factory);
-
-            return new FromAsyncSignal(factory);
-        }
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public IObservableAsync<RxVoid> FromAsync() => new FromAsyncSignal(factory);
     }
 }

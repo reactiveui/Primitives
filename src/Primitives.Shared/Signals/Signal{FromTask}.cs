@@ -120,7 +120,7 @@ public static partial class Signal
                 observer.OnError(new OperationCanceledException());
             }
         }
-        catch (Exception error)
+        catch (Exception error) when (!FatalExceptionHelper.IsFatal(error))
         {
             if (gate.TryStop())
             {
@@ -166,7 +166,7 @@ public static partial class Signal
         {
             task = execution(source) ?? throw new InvalidOperationException("The task factory returned null.");
         }
-        catch (Exception error)
+        catch (Exception error) when (!FatalExceptionHelper.IsFatal(error))
         {
             observer.OnError(error);
             return EmptyDisposable.Instance;
@@ -178,7 +178,7 @@ public static partial class Signal
         }
 
         TaskStopGate gate = new();
-        _ = ObserveTask(task.WhenCancelled(token), observer, gate, token);
+        _ = ObserveTask(TaskFaultObservation.WhenCancelledAsync(task, token), observer, gate, token);
 
         return CancelOnDispose(gate, source);
     }
@@ -307,7 +307,7 @@ public static partial class Signal
             {
                 task = _execution(SourceCore) ?? throw new InvalidOperationException("The task factory returned null.");
             }
-            catch (Exception error)
+            catch (Exception error) when (!FatalExceptionHelper.IsFatal(error))
             {
                 observer.OnError(error);
                 return EmptyDisposable.Instance;
@@ -319,7 +319,7 @@ public static partial class Signal
             }
 
             TaskStopGate gate = new();
-            _ = ObserveTask(task.WhenCancelled(token), observer, gate, token);
+            _ = ObserveTask(TaskFaultObservation.WhenCancelledAsync(task, token), observer, gate, token);
 
             return CancelOnDispose(gate, SourceCore);
         }

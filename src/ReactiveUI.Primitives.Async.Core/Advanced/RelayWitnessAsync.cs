@@ -9,12 +9,22 @@ namespace ReactiveUI.Primitives.Async.Advanced;
 
 /// <summary>Relays notifications through the witness pipeline to another asynchronous observer.</summary>
 /// <typeparam name="T">The type of elements received by the witness.</typeparam>
-/// <param name="observer">The observer that receives the relayed notifications.</param>
 [DebuggerDisplay("RelayWitnessAsync: {_witness}")]
-public sealed class RelayWitnessAsync<T>(IObserverAsync<T> observer) : IWitnessAsync<T>
+public sealed class RelayWitnessAsync<T> : IWitnessAsync<T>
 {
+    /// <summary>The observer that receives relayed notifications.</summary>
+    private readonly IObserverAsync<T> _observer;
+
     /// <summary>The notification gate, cancellation link and disposal state.</summary>
     private WitnessAsyncState _witness;
+
+    /// <summary>Initializes a new instance of the <see cref="RelayWitnessAsync{T}"/> class.</summary>
+    /// <param name="observer">The observer that receives the relayed notifications.</param>
+    public RelayWitnessAsync(IObserverAsync<T> observer)
+    {
+        ArgumentExceptionHelper.ThrowIfNull(observer);
+        _observer = observer;
+    }
 
     /// <inheritdoc/>
     ref WitnessAsyncState IWitnessState.Witness => ref _witness;
@@ -40,14 +50,14 @@ public sealed class RelayWitnessAsync<T>(IObserverAsync<T> observer) : IWitnessA
     /// <inheritdoc/>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     ValueTask IWitnessAsync<T>.OnNextAsyncCore(T value, CancellationToken cancellationToken) =>
-        observer.OnNextAsync(value, cancellationToken);
+        _observer.OnNextAsync(value, cancellationToken);
 
     /// <inheritdoc/>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     ValueTask IWitnessAsync<T>.OnErrorResumeAsyncCore(Exception error, CancellationToken cancellationToken) =>
-        observer.OnErrorResumeAsync(error, cancellationToken);
+        _observer.OnErrorResumeAsync(error, cancellationToken);
 
     /// <inheritdoc/>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    ValueTask IWitnessAsync<T>.OnCompletedAsyncCore(Result result) => observer.OnCompletedAsync(result);
+    ValueTask IWitnessAsync<T>.OnCompletedAsyncCore(Result result) => _observer.OnCompletedAsync(result);
 }

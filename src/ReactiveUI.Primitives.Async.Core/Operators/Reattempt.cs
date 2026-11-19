@@ -2,6 +2,8 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Runtime.CompilerServices;
+
 namespace ReactiveUI.Primitives.Async;
 
 /// <summary>Provides Retry extension methods for asynchronous observable sequences.</summary>
@@ -18,11 +20,8 @@ public static partial class SignalAsyncExtensions
         /// <returns>An observable sequence that mirrors the source, re-subscribing on error up to the
         /// specified number of times. If all retries are exhausted, the last error is propagated.</returns>
         /// <exception cref="ArgumentOutOfRangeException">Thrown if <paramref name="retryCount"/> is negative.</exception>
-        public IObservableAsync<T> Reattempt(int retryCount)
-        {
-            ArgumentOutOfRangeExceptionHelper.ThrowIfNegative(retryCount);
-
-            return new ReattemptSignal<T>(source, retryCount);
-        }
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public IObservableAsync<T> Reattempt(int retryCount) =>
+            ReattemptSignal<T>.Create(source, retryCount);
     }
 }

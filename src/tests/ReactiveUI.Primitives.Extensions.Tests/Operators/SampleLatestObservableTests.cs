@@ -139,4 +139,64 @@ public class SampleLatestObservableTests
         await Assert.That(values).IsEmpty();
         await Assert.That(completedCount).IsEqualTo(0);
     }
+
+    /// <summary>Verifies source completion disposes both the source and trigger subscriptions.</summary>
+    /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
+    [Test]
+    public async Task WhenSourceCompletes_ThenDisposesSourceAndTriggerSubscriptions()
+    {
+        SyncDirectSource<int> source = new();
+        SyncDirectSource<object> trigger = new();
+        var completed = false;
+        using var sub = source.SampleLatest(trigger).Subscribe(static _ => { }, () => completed = true);
+
+        source.Observer.OnCompleted();
+
+        await Assert.That(completed).IsTrue();
+        await Assert.That(source.DisposeCount).IsEqualTo(1);
+        await Assert.That(trigger.DisposeCount).IsEqualTo(1);
+    }
+
+    /// <summary>Verifies a trigger that still fires after the source completed samples nothing.</summary>
+    /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
+    [Test]
+    public async Task WhenTriggerFiresAfterSourceCompleted_ThenNoEmission()
+    {
+        SyncDirectSource<int> source = new();
+        SyncDirectSource<object> trigger = new();
+        List<int> values = [];
+        using var sub = source.SampleLatest(trigger).Subscribe(values.Add);
+
+        source.Observer.OnNext(1);
+        trigger.Observer.OnNext(TriggerToken);
+        source.Observer.OnCompleted();
+        trigger.Observer.OnNext(TriggerToken);
+
+        await Assert.That(values).IsCollectionEqualTo([1]);
+    }
+
+    /// <summary>Verifies throwing downstream <c>OnNext</c> and <c>OnCompleted</c> callbacks dispose both upstream subscriptions and rethrow.</summary>
+    /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
+    [Test]
+    public async Task WhenDownstreamOnNextOrOnCompletedThrows_ThenDisposesBothAndRethrows()
+    {
+        SyncDirectSource<int> source1 = new();
+        SyncDirectSource<object> trigger1 = new();
+        InvalidOperationException nextFailure = new("next");
+        using var sub1 = source1.SampleLatest(trigger1).Subscribe(
+            ReactiveUI.Primitives.Advanced.Witness.Create<int>(_ => throw nextFailure));
+        source1.Observer.OnNext(1);
+        _ = Assert.Throws<InvalidOperationException>(() => trigger1.Observer.OnNext(TriggerToken));
+        await Assert.That(source1.DisposeCount).IsEqualTo(1);
+        await Assert.That(trigger1.DisposeCount).IsEqualTo(1);
+
+        SyncDirectSource<int> source2 = new();
+        SyncDirectSource<object> trigger2 = new();
+        InvalidOperationException completeFailure = new("complete");
+        using var sub2 = source2.SampleLatest(trigger2).Subscribe(
+            ReactiveUI.Primitives.Advanced.Witness.Create<int>(static _ => { }, static _ => { }, () => throw completeFailure));
+        _ = Assert.Throws<InvalidOperationException>(() => source2.Observer.OnCompleted());
+        await Assert.That(source2.DisposeCount).IsEqualTo(1);
+        await Assert.That(trigger2.DisposeCount).IsEqualTo(1);
+    }
 }

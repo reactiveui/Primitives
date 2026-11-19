@@ -19,7 +19,7 @@ namespace ReactiveUI.Primitives.Extensions.Operators;
 /// <remarks>Each window emits its newest value at the end of that window, not at the start. The clock starts at
 /// subscription, so the first value is held for a full period; a value arriving after a quiet gap longer than the period
 /// goes out at once.</remarks>
-internal sealed class ConflateObservable<T>(
+public sealed class ConflateObservable<T>(
     IObservable<T> source,
     TimeSpan minimumUpdatePeriod,
     ISequencer scheduler) : IObservable<T>
@@ -112,6 +112,7 @@ internal sealed class ConflateObservable<T>(
             }
 
             subscription?.Dispose();
+            _state.Dispose();
         }
 
         /// <inheritdoc/>
@@ -271,8 +272,15 @@ internal sealed class ConflateObservable<T>(
         private readonly record struct PendingDrain(ConflateSink Owner) : IDrainTarget
         {
             /// <inheritdoc/>
-            [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            public void Drain() => _ = Owner._delivery.DrainTo(Owner._downstream);
+            public void Drain()
+            {
+                if (!Owner._delivery.DrainTo(Owner._downstream))
+                {
+                    return;
+                }
+
+                Owner.Dispose();
+            }
         }
     }
 }

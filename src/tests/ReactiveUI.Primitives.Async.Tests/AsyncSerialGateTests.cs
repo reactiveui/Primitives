@@ -79,4 +79,36 @@ public class AsyncSerialGateTests
 
         await Assert.That(gate).IsNotNull();
     }
+
+    /// <summary>Verifies <see cref="AsyncSerialGate.AdvanceRetainAttempt"/> updates the observed count when the compare-exchange loses a race.</summary>
+    /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
+    [Test]
+    public async Task WhenAdvanceRetainAttemptSeesStaleCount_ThenUpdatesCurrentAndReturnsFalse()
+    {
+        const int ActualRefs = 2;
+        const int ExpectedAfterRetain = 3;
+        var refs = ActualRefs;
+        var stale = 1;
+
+        var lost = AsyncSerialGate.AdvanceRetainAttempt(ref refs, ref stale);
+        await Assert.That(lost).IsFalse();
+        await Assert.That(stale).IsEqualTo(ActualRefs);
+
+        var won = AsyncSerialGate.AdvanceRetainAttempt(ref refs, ref stale);
+        await Assert.That(won).IsTrue();
+        await Assert.That(refs).IsEqualTo(ExpectedAfterRetain);
+    }
+
+    /// <summary>Verifies that a waiter arriving after the gate was disposed, while another thread still holds it, gets <see cref="ObjectDisposedException"/>.</summary>
+    /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
+    [Test]
+    public async Task WhenWaitingAfterDisposeWhileHeld_ThenThrowsObjectDisposed()
+    {
+        const int OtherThreadId = -1;
+        AsyncSerialGate gate = new();
+        using var held = await gate.EnterForThreadAsync(OtherThreadId, CancellationToken.None);
+        gate.Dispose();
+
+        await Assert.That(async () => await gate.EnterAsync(CancellationToken.None)).ThrowsExactly<ObjectDisposedException>();
+    }
 }

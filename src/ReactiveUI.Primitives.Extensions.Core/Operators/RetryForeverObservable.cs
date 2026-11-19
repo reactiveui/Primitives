@@ -11,6 +11,15 @@ namespace ReactiveUI.Primitives.Extensions.Operators;
 /// <param name="source">Upstream source.</param>
 public sealed class RetryForeverObservable<T>(IObservable<T> source) : IObservable<T>
 {
+    /// <summary>Creates an infinite retry sequence over <paramref name="source"/>, validating <paramref name="source"/> eagerly.</summary>
+    /// <param name="source">Upstream source.</param>
+    /// <returns>A retried observable sequence.</returns>
+    public static RetryForeverObservable<T> Create(IObservable<T> source)
+    {
+        ArgumentExceptionHelper.ThrowIfNull(source);
+        return new(source);
+    }
+
     /// <inheritdoc/>
     public IDisposable Subscribe(IObserver<T> observer)
     {

@@ -11,6 +11,13 @@ public sealed class StartSignal<TResult> : IObservableAsync<TResult>
 {
     /// <summary>Initializes a new instance of the <see cref="StartSignal{TResult}"/> class.</summary>
     /// <param name="function">The function to invoke.</param>
+    public StartSignal(Func<TResult> function)
+        : this(function, null)
+    {
+    }
+
+    /// <summary>Initializes a new instance of the <see cref="StartSignal{TResult}"/> class.</summary>
+    /// <param name="function">The function to invoke.</param>
     /// <param name="taskScheduler">The optional scheduler that invokes the function; <see langword="null"/> invokes it inline.</param>
     public StartSignal(Func<TResult> function, TaskScheduler? taskScheduler)
     {

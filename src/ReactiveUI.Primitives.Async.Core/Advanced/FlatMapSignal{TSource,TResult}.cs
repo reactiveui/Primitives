@@ -15,6 +15,7 @@ public sealed class FlatMapSignal<TSource, TResult> : IObservableAsync<TResult>
     /// <param name="selector">The synchronous projection.</param>
     public FlatMapSignal(IObservableAsync<TSource> source, Func<TSource, IObservableAsync<TResult>> selector)
     {
+        ArgumentExceptionHelper.ThrowIfNull(selector);
         Source = source;
         SyncSelector = selector;
     }
@@ -26,6 +27,7 @@ public sealed class FlatMapSignal<TSource, TResult> : IObservableAsync<TResult>
         IObservableAsync<TSource> source,
         Func<TSource, CancellationToken, ValueTask<IObservableAsync<TResult>>> selector)
     {
+        ArgumentExceptionHelper.ThrowIfNull(selector);
         Source = source;
         AsyncSelector = selector;
     }
@@ -38,6 +40,27 @@ public sealed class FlatMapSignal<TSource, TResult> : IObservableAsync<TResult>
 
     /// <summary>Gets the asynchronous projection.</summary>
     private Func<TSource, CancellationToken, ValueTask<IObservableAsync<TResult>>>? AsyncSelector { get; }
+
+    /// <summary>Creates a flat-mapped sequence that combines each outer element with each inner element using <paramref name="resultSelector"/>.</summary>
+    /// <typeparam name="TCollection">The inner sequence element type.</typeparam>
+    /// <param name="source">The source sequence.</param>
+    /// <param name="collectionSelector">Projects each outer element to an inner sequence.</param>
+    /// <param name="resultSelector">Combines each outer and inner element.</param>
+    /// <returns>An observable sequence of projected results.</returns>
+    public static FlatMapSignal<TSource, TResult> Create<TCollection>(
+        IObservableAsync<TSource> source,
+        Func<TSource, IObservableAsync<TCollection>> collectionSelector,
+        Func<TSource, TCollection, TResult> resultSelector)
+    {
+        ArgumentExceptionHelper.ThrowIfNull(collectionSelector);
+        ArgumentExceptionHelper.ThrowIfNull(resultSelector);
+
+        return new(
+            source,
+            item => new MapSyncSignal<TCollection, TResult>(
+                collectionSelector(item),
+                collection => resultSelector(item, collection)));
+    }
 
     /// <inheritdoc/>
     ValueTask<IAsyncDisposable> IObservableAsync<TResult>.SubscribeAsync(

@@ -17,11 +17,12 @@ namespace ReactiveUI.Primitives.Extensions.Operators;
 /// <param name="throttle">The throttle duration.</param>
 /// <param name="predicate">The predicate to determine if an element should be emitted immediately or throttled.</param>
 /// <param name="sequencer">The sequencer timing throttled emissions; <c>null</c> uses the default sequencer.</param>
-internal sealed class ThrottleUntilTrueObservable<T>(
+[System.Diagnostics.DebuggerDisplay("ThrottleUntilTrueObservable: Source = {_source}, Throttle = {_throttle}")]
+public sealed class ThrottleUntilTrueObservable<T>(
     IObservable<T> source,
     TimeSpan throttle,
     Func<T, bool> predicate,
-    ISequencer? sequencer = null) : IObservable<T>
+    ISequencer? sequencer) : IObservable<T>
 {
     /// <summary>The source observable.</summary>
     private readonly IObservable<T> _source = InvalidOperationExceptionHelper.Check(source);
@@ -35,14 +36,26 @@ internal sealed class ThrottleUntilTrueObservable<T>(
     /// <summary>The sequencer timing throttled emissions.</summary>
     private readonly ISequencer _sequencer = sequencer ?? Sequencer.Default;
 
+    /// <summary>Initializes a new instance of the <see cref="ThrottleUntilTrueObservable{T}"/> class using <see cref="Sequencer.Default"/>.</summary>
+    /// <param name="source">The source observable.</param>
+    /// <param name="throttle">The throttle duration.</param>
+    /// <param name="predicate">The predicate to determine if an element should be emitted immediately or throttled.</param>
+    public ThrottleUntilTrueObservable(
+        IObservable<T> source,
+        TimeSpan throttle,
+        Func<T, bool> predicate)
+        : this(source, throttle, predicate, null)
+    {
+    }
+
     /// <inheritdoc/>
     public IDisposable Subscribe(IObserver<T> observer)
     {
         ArgumentExceptionHelper.ThrowIfNull(observer);
 
         ThrottleUntilTrueSink sink = new(observer, _throttle, _predicate, _sequencer);
-        var subscription = _source.Subscribe(sink);
-        return new DisposableBag(subscription, sink);
+        sink.Attach(_source.Subscribe(sink));
+        return sink;
     }
 
     /// <summary>Sink that forwards a value inline when the predicate holds and otherwise after the throttle window.</summary>
@@ -77,6 +90,9 @@ internal sealed class ThrottleUntilTrueObservable<T>(
 
         /// <summary>Serializes downstream deliveries.</summary>
         private SerializedDelivery<T> _delivery = new();
+
+        /// <summary>Upstream subscription handle.</summary>
+        private IDisposable? _subscription;
 
         /// <summary>Whether the sequence is done.</summary>
         private bool _done;
@@ -126,6 +142,7 @@ internal sealed class ThrottleUntilTrueObservable<T>(
                 _ = _delivery.PostError(error);
             }
 
+            SinkSubscription.Dispose(ref _subscription);
             Flush();
         }
 
@@ -144,6 +161,7 @@ internal sealed class ThrottleUntilTrueObservable<T>(
                 _ = _delivery.PostCompleted();
             }
 
+            SinkSubscription.Dispose(ref _subscription);
             Flush();
         }
 
@@ -154,6 +172,18 @@ internal sealed class ThrottleUntilTrueObservable<T>(
             {
                 _done = true;
                 _timer.Dispose();
+            }
+
+            SinkSubscription.Dispose(ref _subscription);
+        }
+
+        /// <summary>Attaches the upstream subscription handle.</summary>
+        /// <param name="subscription">The upstream subscription handle.</param>
+        internal void Attach(IDisposable? subscription)
+        {
+            if (subscription is not null)
+            {
+                SinkSubscription.Set(ref _subscription, subscription);
             }
         }
 
@@ -169,13 +199,30 @@ internal sealed class ThrottleUntilTrueObservable<T>(
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private void Flush() => _delivery.Flush(new PendingDrain(this));
 
+        /// <summary>Delivers the queued notifications to the downstream observer.</summary>
+        private void DrainPending()
+        {
+            try
+            {
+                if (_delivery.DrainTo(_downstream))
+                {
+                    SinkSubscription.Dispose(ref _subscription);
+                }
+            }
+            catch
+            {
+                Dispose();
+                throw;
+            }
+        }
+
         /// <summary>Drains this sink's queued notifications for the delivery gate.</summary>
         /// <param name="Owner">The sink.</param>
         private readonly record struct PendingDrain(ThrottleUntilTrueSink Owner) : IDrainTarget
         {
             /// <inheritdoc/>
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            public void Drain() => _ = Owner._delivery.DrainTo(Owner._downstream);
+            public void Drain() => Owner.DrainPending();
         }
     }
 }

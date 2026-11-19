@@ -42,8 +42,8 @@ public static partial class SignalAsyncExtensions
         /// <summary>Null-checks and returns the source unchanged, so generic code can convert without testing the source's type.</summary>
         /// <returns>The same sequence.</returns>
         /// <exception cref="ArgumentNullException"><paramref name="source"/> is <see langword="null"/>.</exception>
-        public IObservableAsync<T> ToAsyncSignal() =>
-            source ?? throw new ArgumentNullException(nameof(source));
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public IObservableAsync<T> ToAsyncSignal() => SignalAsync.AsAsyncSignal(source);
     }
 
     /// <summary>Observable-conversion operators for a task that produces a single value.</summary>

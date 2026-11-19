@@ -4,7 +4,6 @@
 
 using System.Runtime.CompilerServices;
 using ReactiveUI.Primitives.Advanced;
-using ReactiveUI.Primitives.Disposables;
 
 namespace ReactiveUI.Primitives.Extensions.Operators;
 
@@ -23,8 +22,8 @@ public sealed class SynchronizeAsyncObservable<T>(IObservable<T> source) : IObse
         ArgumentExceptionHelper.ThrowIfNull(observer);
 
         SynchronizeAsyncSink sink = new(observer);
-        var sub = source.Subscribe(sink);
-        return new DisposableBag(sub, sink);
+        sink.Attach(source.Subscribe(sink));
+        return sink;
     }
 
     /// <summary>Observer that pairs each value with a new acknowledgement handle and forwards the pair downstream.</summary>
@@ -37,6 +36,9 @@ public sealed class SynchronizeAsyncObservable<T>(IObservable<T> source) : IObse
 
         /// <summary>Serializes downstream deliveries.</summary>
         private SerializedDelivery<(T Value, IDisposable Sync)> _delivery = new();
+
+        /// <summary>Upstream subscription handle.</summary>
+        private IDisposable? _subscription;
 
         /// <summary>Whether the sink has completed.</summary>
         private bool _done;
@@ -56,7 +58,15 @@ public sealed class SynchronizeAsyncObservable<T>(IObservable<T> source) : IObse
                 }
             }
 
-            _ = ProcessAsync(value);
+            try
+            {
+                _delivery.OnNext(downstream, (value, new SyncSignal()), new PendingDrain(this));
+            }
+            catch
+            {
+                Dispose();
+                throw;
+            }
         }
 
         /// <inheritdoc/>
@@ -72,6 +82,7 @@ public sealed class SynchronizeAsyncObservable<T>(IObservable<T> source) : IObse
                 _done = true;
             }
 
+            SinkSubscription.Dispose(ref _subscription);
             _delivery.OnError(error, new PendingDrain(this));
         }
 
@@ -88,6 +99,7 @@ public sealed class SynchronizeAsyncObservable<T>(IObservable<T> source) : IObse
                 _done = true;
             }
 
+            SinkSubscription.Dispose(ref _subscription);
             _delivery.OnCompleted(new PendingDrain(this));
         }
 
@@ -98,21 +110,36 @@ public sealed class SynchronizeAsyncObservable<T>(IObservable<T> source) : IObse
             {
                 _disposed = true;
             }
+
+            SinkSubscription.Dispose(ref _subscription);
         }
 
-        /// <summary>Delivers the value with a fresh acknowledgement signal and returns the task that the signal's disposal completes.</summary>
-        /// <param name="value">The value to process.</param>
-        /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
-        private Task ProcessAsync(T value)
+        /// <summary>Attaches the upstream subscription handle.</summary>
+        /// <param name="subscription">The upstream subscription handle.</param>
+        internal void Attach(IDisposable? subscription)
         {
-            SyncSignal signal = new();
-            _delivery.OnNext(downstream, (value, signal), new PendingDrain(this));
-            return signal.WaitForDisposeAsync();
+            if (subscription is not null)
+            {
+                SinkSubscription.Set(ref _subscription, subscription);
+            }
         }
 
         /// <summary>Delivers the queued notifications to the downstream observer.</summary>
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private void DrainPending() => _ = _delivery.DrainTo(downstream);
+        private void DrainPending()
+        {
+            try
+            {
+                if (_delivery.DrainTo(downstream))
+                {
+                    SinkSubscription.Dispose(ref _subscription);
+                }
+            }
+            catch
+            {
+                Dispose();
+                throw;
+            }
+        }
 
         /// <summary>Drains this sink's queued notifications for the delivery gate.</summary>
         /// <param name="Owner">The sink.</param>

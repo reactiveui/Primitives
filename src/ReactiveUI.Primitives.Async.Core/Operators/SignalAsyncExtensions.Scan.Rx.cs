@@ -2,6 +2,8 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Runtime.CompilerServices;
+
 namespace ReactiveUI.Primitives.Async;
 
 /// <summary>Provides Rx-compatible scan names for asynchronous observable sequences.</summary>
@@ -18,14 +20,11 @@ public static partial class SignalAsyncExtensions
         /// <param name="accumulator">An asynchronous accumulator function to be invoked on each element.</param>
         /// <returns>An observable sequence containing the accumulated values produced after each element is processed.</returns>
         /// <exception cref="ArgumentNullException"><paramref name="accumulator"/> is <see langword="null"/>.</exception>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public IObservableAsync<TAcc> Scan<TAcc>(
             TAcc seed,
-            Func<TAcc, T, CancellationToken, ValueTask<TAcc>> accumulator)
-        {
-            ArgumentExceptionHelper.ThrowIfNull(accumulator);
-
-            return new FoldAsyncSignal<T, TAcc>(source, seed, accumulator);
-        }
+            Func<TAcc, T, CancellationToken, ValueTask<TAcc>> accumulator) =>
+            new FoldAsyncSignal<T, TAcc>(source, seed, accumulator);
 
         /// <summary>Applies an accumulator function over the observable sequence and returns each intermediate result.</summary>
         /// <typeparam name="TAcc">The type of the accumulated value.</typeparam>
@@ -33,11 +32,8 @@ public static partial class SignalAsyncExtensions
         /// <param name="accumulator">An accumulator function to be invoked on each element.</param>
         /// <returns>An observable sequence containing the accumulated values produced after each element is processed.</returns>
         /// <exception cref="ArgumentNullException"><paramref name="accumulator"/> is <see langword="null"/>.</exception>
-        public IObservableAsync<TAcc> Scan<TAcc>(TAcc seed, Func<TAcc, T, TAcc> accumulator)
-        {
-            ArgumentExceptionHelper.ThrowIfNull(accumulator);
-
-            return new FoldSyncSignal<T, TAcc>(source, seed, accumulator);
-        }
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public IObservableAsync<TAcc> Scan<TAcc>(TAcc seed, Func<TAcc, T, TAcc> accumulator) =>
+            new FoldSyncSignal<T, TAcc>(source, seed, accumulator);
     }
 }

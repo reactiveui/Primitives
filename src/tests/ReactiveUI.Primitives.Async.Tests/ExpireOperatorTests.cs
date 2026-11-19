@@ -33,7 +33,7 @@ public class ExpireOperatorTests
             completions.Add(result);
             return default;
         });
-        SignalAsyncExtensions.TimeoutSignal<int>.TimeoutWitness witness = new(observer, DueTime, time);
+        TimeoutWitness<int> witness = new(observer, DueTime, time);
         witness.StartTimer(CancellationToken.None);
         var timer = await time.NextTimerAsync();
         witness.StopTimer();
@@ -47,10 +47,10 @@ public class ExpireOperatorTests
         await Assert.That(completions).IsEmpty();
     }
 
-    /// <summary>Verifies that rearming an expired deadline cannot produce a second completion.</summary>
+    /// <summary>Verifies that a late value and a second deadline tick after expiry cannot produce a second completion.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
-    public async Task WhenTheRearmedDeadlineTicksAfterExpiry_ThenNoSecondCompletionIsSent()
+    public async Task WhenTheDeadlineTicksAgainAfterExpiry_ThenNoSecondCompletionIsSent()
     {
         ManualTimeProvider time = new();
         List<Result> completions = [];
@@ -59,13 +59,12 @@ public class ExpireOperatorTests
             completions.Add(result);
             return default;
         });
-        await using SignalAsyncExtensions.TimeoutSignal<int>.TimeoutWitness witness = new(observer, DueTime, time);
+        await using TimeoutWitness<int> witness = new(observer, DueTime, time);
         witness.StartTimer(CancellationToken.None);
         var timer = await time.NextTimerAsync();
         timer.Fire();
         await Assert.That(completions).Count().IsEqualTo(1);
         await witness.OnNextAsync(1, CancellationToken.None);
-        await Assert.That(timer.DueTime).IsEqualTo(DueTime);
         timer.Fire();
         await Assert.That(completions).Count().IsEqualTo(1);
         await Assert.That(completions[0].Exception).IsTypeOf<TimeoutException>();

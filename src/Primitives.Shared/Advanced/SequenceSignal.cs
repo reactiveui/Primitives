@@ -40,22 +40,13 @@ public sealed class SequenceSignal : IRequireCurrentThread<int>
     {
         ArgumentExceptionHelper.ThrowIfNull(observer);
 
-        if (!IsRequiredSubscribeOnCurrentThread() || !CurrentThreadSequencer.IsScheduleRequired)
-        {
-            return Scheduler.Schedule((this, observer), static (_, state) => state.Item1.Emit(state.observer));
-        }
-
-        SingleDisposable subscription = new();
-        _ = Sequencer.CurrentThread.Schedule(
-            (Self: this, subscription, observer),
-            static (_, s) =>
-            {
-                s.subscription.Create(s.Self.Scheduler.Schedule(
+        return !IsRequiredSubscribeOnCurrentThread() || !CurrentThreadSequencer.IsScheduleRequired
+            ? Scheduler.Schedule((this, observer), static (_, state) => state.Item1.Emit(state.observer))
+            : CurrentThreadSequencer.RunTrampoline(
+                (Self: this, observer),
+                static s => s.Self.Scheduler.Schedule(
                     (s.Self, s.observer),
                     static (_, state) => state.Self.Emit(state.observer)));
-                return EmptyDisposable.Instance;
-            });
-        return subscription;
     }
 
     /// <summary>Emits the sequence on the scheduled callback.</summary>

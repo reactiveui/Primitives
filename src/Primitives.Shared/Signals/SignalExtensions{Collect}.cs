@@ -2,6 +2,8 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Runtime.CompilerServices;
+
 #if REACTIVE_SHIM
 namespace ReactiveUI.Primitives.Reactive.Signals;
 #else
@@ -20,27 +22,19 @@ public static partial class SignalExtensions
         /// <param name="timeSpan">The duration of each buffer window.</param>
         /// <returns>A signal that emits batches of source values.</returns>
         /// <exception cref="ArgumentExceptionHelper"><paramref name="source"/> is <see langword="null"/>.</exception>
-        public IObservable<IList<TSource>> Collect(TimeSpan timeSpan)
-        {
-            ArgumentExceptionHelper.ThrowIfNull(source);
-
-            return new CollectSignal<TSource>(source, timeSpan, Sequencer.Default);
-        }
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public IObservable<IList<TSource>> Collect(TimeSpan timeSpan) =>
+            new CollectSignal<TSource>(source, timeSpan);
 
         /// <summary>Collects values into time-windowed batches.</summary>
         /// <param name="timeSpan">The duration of each buffer window.</param>
         /// <param name="sequencer">The sequencer used to schedule buffer flushes.</param>
         /// <returns>A signal that emits batches of source values.</returns>
         /// <exception cref="ArgumentExceptionHelper"><paramref name="source"/> or <paramref name="sequencer"/> is <see langword="null"/>.</exception>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public IObservable<IList<TSource>> Collect(
             TimeSpan timeSpan,
-            ISequencer sequencer)
-        {
-            ArgumentExceptionHelper.ThrowIfNull(source);
-
-            ArgumentExceptionHelper.ThrowIfNull(sequencer);
-
-            return new CollectSignal<TSource>(source, timeSpan, sequencer);
-        }
+            ISequencer sequencer) =>
+            new CollectSignal<TSource>(source, timeSpan, sequencer);
     }
 }

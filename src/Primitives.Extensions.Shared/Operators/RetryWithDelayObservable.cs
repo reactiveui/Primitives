@@ -17,12 +17,32 @@ namespace ReactiveUI.Primitives.Extensions.Operators;
 /// <param name="retryCount">The maximum number of retries.</param>
 /// <param name="delaySelector">A function to select the delay for each retry attempt.</param>
 /// <param name="sequencer">The sequencer timing retry delays; <c>null</c> uses the default sequencer.</param>
-internal sealed class RetryWithDelayObservable<T>(
+public sealed class RetryWithDelayObservable<T>(
     IObservable<T> source,
     int retryCount,
     Func<int, TimeSpan> delaySelector,
-    ISequencer? sequencer = null) : IObservable<T>
+    ISequencer? sequencer) : IObservable<T>
 {
+    /// <summary>Initializes a new instance of the <see cref="RetryWithDelayObservable{T}"/> class using <see cref="Sequencer.Default"/>.</summary>
+    /// <param name="source">The source observable.</param>
+    /// <param name="retryCount">The maximum number of retries.</param>
+    /// <param name="delaySelector">A function to select the delay for each retry attempt.</param>
+    public RetryWithDelayObservable(
+        IObservable<T> source,
+        int retryCount,
+        Func<int, TimeSpan> delaySelector)
+        : this(source, retryCount, delaySelector, null)
+    {
+    }
+
+    /// <summary>Creates a sequence that retries indefinitely after a fixed <paramref name="delay"/>.</summary>
+    /// <param name="source">The source observable.</param>
+    /// <param name="delay">The delay before each retry.</param>
+    /// <returns>A retried observable sequence.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static RetryWithDelayObservable<T> CreateForever(IObservable<T> source, TimeSpan delay) =>
+        new(source, int.MaxValue, _ => delay, null);
+
     /// <inheritdoc/>
     public IDisposable Subscribe(IObserver<T> observer)
     {
@@ -45,7 +65,7 @@ internal sealed class RetryWithDelayObservable<T>(
     /// The retry count is advanced only by the source's serialized notifications, so no lock is needed; the observer, the
     /// delay selector and the source subscription all run without one.
     /// </remarks>
-    private sealed class RetryWithDelaySink(
+    internal sealed class RetryWithDelaySink(
         IObserver<T> downstream,
         IObservable<T> source,
         int maxRetries,
@@ -63,10 +83,6 @@ internal sealed class RetryWithDelayObservable<T>(
 
         /// <summary>Whether the sink has been disposed.</summary>
         private bool _disposed;
-
-        /// <summary>Starts the retry process.</summary>
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Run() => SubscribeToSource();
 
         /// <inheritdoc/>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -116,8 +132,12 @@ internal sealed class RetryWithDelayObservable<T>(
             _subscription.Dispose();
         }
 
+        /// <summary>Starts the retry process.</summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        internal void Run() => SubscribeToSource();
+
         /// <summary>Subscribes to the source sequence unless the sink has been disposed.</summary>
-        private void SubscribeToSource()
+        internal void SubscribeToSource()
         {
             if (Volatile.Read(ref _disposed))
             {

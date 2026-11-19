@@ -34,6 +34,10 @@ public sealed class PairWitness<TLeft, TRight, TResult>
     /// <summary>Updates and the terminal notification queued while another thread delivers.</summary>
     private PendingNotifications<Update> _pending = new();
 
+    /// <summary>Subscriptions to both arms, released on terminal delivery.</summary>
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("Usage", "CA2213:Disposable fields should be disposed", Justification = "Owned by the caller via Run and released early on terminal delivery.")]
+    private MultipleDisposable? _subscriptions;
+
     /// <summary>Initializes a new instance of the <see cref="PairWitness{TLeft, TRight, TResult}"/> class.</summary>
     /// <param name="observer">The downstream observer.</param>
     /// <param name="selector">The result projection.</param>
@@ -68,10 +72,16 @@ public sealed class PairWitness<TLeft, TRight, TResult>
     /// <param name="left">The left source.</param>
     /// <param name="right">The right source.</param>
     /// <returns>The subscriptions.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public MultipleDisposable Run(IObservable<TLeft> left, IObservable<TRight> right) =>
-        new(
-            left.Subscribe(OnLeftNext, OnError, OnLeftCompleted),
-            right.Subscribe(OnRightNext, OnError, OnRightCompleted));
+        BinaryCoordinatorHelper.SubscribeArms(
+            this,
+            out _subscriptions,
+            left,
+            new(static (self, v) => self.OnLeftNext(v), static (self, e) => self.OnError(e), static self => self.OnLeftCompleted()),
+            right,
+            new(static (self, v) => self.OnRightNext(v), static (self, e) => self.OnError(e), static self => self.OnRightCompleted()),
+            static self => self._pending.IsTerminated);
 
     /// <summary>Applies a left value.</summary>
     /// <param name="value">The left value.</param>
@@ -148,13 +158,37 @@ public sealed class PairWitness<TLeft, TRight, TResult>
 
                 case PendingDelivery.Terminal when error is null:
                 {
-                    Observer.OnCompleted();
+                    try
+                    {
+                        Observer.OnCompleted();
+                    }
+                    finally
+                    {
+                        LeftQueue.Clear();
+                        RightQueue.Clear();
+
+                        // Run stores the slot before subscribing either arm, and terminals only arrive through an arm.
+                        _subscriptions!.Dispose();
+                    }
+
                     return;
                 }
 
                 case PendingDelivery.Terminal:
                 {
-                    Observer.OnError(error);
+                    try
+                    {
+                        Observer.OnError(error);
+                    }
+                    finally
+                    {
+                        LeftQueue.Clear();
+                        RightQueue.Clear();
+
+                        // Run stores the slot before subscribing either arm, and terminals only arrive through an arm.
+                        _subscriptions!.Dispose();
+                    }
+
                     return;
                 }
 
@@ -178,7 +212,21 @@ public sealed class PairWitness<TLeft, TRight, TResult>
         Record(update);
         if (LeftQueue.Count != 0 && RightQueue.Count != 0)
         {
-            Observer.OnNext(Selector(LeftQueue.Dequeue(), RightQueue.Dequeue()));
+            var leftVal = LeftQueue.Dequeue();
+            var rightVal = RightQueue.Dequeue();
+            TResult projected;
+            try
+            {
+                projected = Selector(leftVal, rightVal);
+            }
+            catch (Exception selectorError)
+            {
+                IsCompleted = true;
+                OnError(selectorError);
+                return;
+            }
+
+            Observer.OnNext(projected);
         }
 
         TryComplete();

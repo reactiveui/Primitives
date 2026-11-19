@@ -26,18 +26,18 @@ public static partial class SignalAsyncExtensions
         /// that can be disposed to unsubscribe from the data source.</returns>
         /// <exception cref="ArgumentNullException">The source sequence or <paramref name="onNextAsync"/> is <see langword="null"/>.</exception>
         /// <remarks>Callbacks are serialized per subscription; overlapping notifications from another thread are rejected.</remarks>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public ValueTask<IAsyncDisposable> SubscribeAsync(
             Func<T, CancellationToken, ValueTask> onNextAsync,
             Func<Exception, CancellationToken, ValueTask>? onErrorResumeAsync,
             Func<Result, ValueTask>? onCompletedAsync,
-            CancellationToken cancellationToken)
-        {
-            ArgumentExceptionHelper.ThrowIfNull(source);
-            ArgumentExceptionHelper.ThrowIfNull(onNextAsync);
-
-            CallbackWitnessAsync<T> observer = new(onNextAsync, onErrorResumeAsync, onCompletedAsync);
-            return source.SubscribeAsync(observer, cancellationToken);
-        }
+            CancellationToken cancellationToken) =>
+            CallbackWitnessAsync<T>.SubscribeAsync(
+                source,
+                onNextAsync,
+                onErrorResumeAsync,
+                onCompletedAsync,
+                cancellationToken);
 
         /// <summary>Subscribes to the asynchronous data source and invokes the specified callbacks for each item or error notification.</summary>
         /// <param name="onNextAsync">A delegate that is invoked asynchronously for each item received from the data source.</param>
@@ -49,7 +49,7 @@ public static partial class SignalAsyncExtensions
         public ValueTask<IAsyncDisposable> SubscribeAsync(
             Func<T, CancellationToken, ValueTask> onNextAsync,
             Func<Exception, CancellationToken, ValueTask>? onErrorResumeAsync) =>
-            source.SubscribeAsync(onNextAsync, onErrorResumeAsync, null, CancellationToken.None);
+            CallbackWitnessAsync<T>.SubscribeAsync(source, onNextAsync, onErrorResumeAsync);
 
         /// <summary>Subscribes to the asynchronous data source and invokes the specified callbacks for each item, error, or completion notification.</summary>
         /// <param name="onNextAsync">A delegate that is invoked asynchronously for each item received from the data source.</param>
@@ -63,7 +63,7 @@ public static partial class SignalAsyncExtensions
             Func<T, CancellationToken, ValueTask> onNextAsync,
             Func<Exception, CancellationToken, ValueTask>? onErrorResumeAsync,
             Func<Result, ValueTask>? onCompletedAsync) =>
-            source.SubscribeAsync(onNextAsync, onErrorResumeAsync, onCompletedAsync, CancellationToken.None);
+            CallbackWitnessAsync<T>.SubscribeAsync(source, onNextAsync, onErrorResumeAsync, onCompletedAsync);
 
         /// <summary>Subscribes to the observable sequence and invokes the specified action for each element received.</summary>
         /// <param name="onNext">An action to invoke for each element in the sequence. Cannot be null.</param>
@@ -71,20 +71,11 @@ public static partial class SignalAsyncExtensions
         /// <returns>A value task that represents the asynchronous subscription operation. The result contains an <see
         /// cref="IAsyncDisposable"/> that can be disposed to unsubscribe from the sequence.</returns>
         /// <exception cref="ArgumentNullException"><paramref name="onNext"/> is <see langword="null"/>.</exception>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public ValueTask<IAsyncDisposable> SubscribeAsync(
             Action<T> onNext,
-            CancellationToken cancellationToken)
-        {
-            ArgumentExceptionHelper.ThrowIfNull(onNext);
-
-            CallbackWitnessAsync<T> observer = new((x, _) =>
-            {
-                onNext(x);
-                return default;
-            });
-
-            return source.SubscribeAsync(observer, cancellationToken);
-        }
+            CancellationToken cancellationToken) =>
+            CallbackWitnessAsync<T>.SubscribeAsync(source, onNext, cancellationToken);
 
         /// <summary>Subscribes to the observable sequence and invokes the specified action for each element received.</summary>
         /// <param name="onNext">An action to invoke for each element in the sequence. Cannot be null.</param>
@@ -93,7 +84,7 @@ public static partial class SignalAsyncExtensions
         /// <exception cref="ArgumentNullException"><paramref name="onNext"/> is <see langword="null"/>.</exception>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public ValueTask<IAsyncDisposable> SubscribeAsync(Action<T> onNext) =>
-            source.SubscribeAsync(onNext, CancellationToken.None);
+            CallbackWitnessAsync<T>.SubscribeAsync(source, onNext);
 
         /// <summary>Subscribes to the observable sequence asynchronously, invoking the specified callbacks for each element, error, or completion notification.</summary>
         /// <param name="onNext">An action to invoke for each element in the sequence. Cannot be null.</param>
@@ -105,45 +96,20 @@ public static partial class SignalAsyncExtensions
         /// <returns>A value task that represents the asynchronous subscription operation. The result is an <see
         /// cref="IAsyncDisposable"/> that can be disposed to unsubscribe from the sequence.</returns>
         /// <exception cref="ArgumentNullException"><paramref name="onNext"/> or the source sequence is <see langword="null"/>.</exception>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public ValueTask<IAsyncDisposable> SubscribeAsync(
             Action<T> onNext,
             Action<Exception>? onErrorResume,
             Action<Result>? onCompleted,
-            CancellationToken cancellationToken)
-        {
-            ArgumentExceptionHelper.ThrowIfNull(onNext);
-            ArgumentExceptionHelper.ThrowIfNull(source);
-
-            static ValueTask OnErrorResumeAsync(Exception e, Action<Exception> onErrorResume)
-            {
-                onErrorResume(e);
-                return default;
-            }
-
-            static ValueTask OnCompletedAsync(Result x, Action<Result> onCompleted)
-            {
-                onCompleted(x);
-                return default;
-            }
-
-            CallbackWitnessAsync<T> observer = new(
-                (x, _) =>
-                {
-                    onNext(x);
-                    return default;
-                },
-                onErrorResume is null ? null : (e, _) => OnErrorResumeAsync(e, onErrorResume),
-                onCompleted is null ? null : x => OnCompletedAsync(x, onCompleted));
-
-            return source.SubscribeAsync(observer, cancellationToken);
-        }
+            CancellationToken cancellationToken) =>
+            CallbackWitnessAsync<T>.SubscribeAsync(source, onNext, onErrorResume, onCompleted, cancellationToken);
 
         /// <summary>Subscribes to the source without handling any items asynchronously.</summary>
         /// <returns>A value task that represents the asynchronous subscription operation. The result is an <see
         /// cref="IAsyncDisposable"/> that can be disposed to unsubscribe.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public ValueTask<IAsyncDisposable> SubscribeAsync() =>
-            source.SubscribeAsync(static (_, _) => default, CancellationToken.None);
+            CallbackWitnessAsync<T>.SubscribeAsync(source);
 
         /// <summary>Subscribes asynchronously to receive notifications for each item published by the source.</summary>
         /// <param name="onNextAsync">A delegate that is invoked asynchronously for each item published. The delegate receives the item and a
@@ -152,7 +118,7 @@ public static partial class SignalAsyncExtensions
         /// that can be disposed to unsubscribe from the source.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public ValueTask<IAsyncDisposable> SubscribeAsync(Func<T, CancellationToken, ValueTask> onNextAsync) =>
-            source.SubscribeAsync(onNextAsync, CancellationToken.None);
+            CallbackWitnessAsync<T>.SubscribeAsync(source, onNextAsync);
 
         /// <summary>Subscribes asynchronously to receive notifications for each item in the sequence using the specified asynchronous callback.</summary>
         /// <param name="onNextAsync">A function to invoke asynchronously for each item in the sequence. The function receives the item and a
@@ -161,15 +127,10 @@ public static partial class SignalAsyncExtensions
         /// <returns>A ValueTask that represents the asynchronous subscription operation. The result is an IAsyncDisposable that
         /// can be disposed to unsubscribe from the sequence.</returns>
         /// <exception cref="ArgumentNullException">The source sequence or <paramref name="onNextAsync"/> is <see langword="null"/>.</exception>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public ValueTask<IAsyncDisposable> SubscribeAsync(
             Func<T, CancellationToken, ValueTask> onNextAsync,
-            CancellationToken cancellationToken)
-        {
-            ArgumentExceptionHelper.ThrowIfNull(source);
-            ArgumentExceptionHelper.ThrowIfNull(onNextAsync);
-
-            CallbackWitnessAsync<T> observer = new(onNextAsync);
-            return source.SubscribeAsync(observer, cancellationToken);
-        }
+            CancellationToken cancellationToken) =>
+            CallbackWitnessAsync<T>.SubscribeAsync(source, onNextAsync, cancellationToken);
     }
 }

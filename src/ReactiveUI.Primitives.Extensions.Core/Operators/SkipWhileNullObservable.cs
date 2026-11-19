@@ -13,6 +13,15 @@ namespace ReactiveUI.Primitives.Extensions.Operators;
 public sealed class SkipWhileNullObservable<T>(IObservable<T> source) : IObservable<T>
     where T : class?
 {
+    /// <summary>Creates a leading-null-skipping sequence, validating <paramref name="source"/> eagerly.</summary>
+    /// <param name="source">The source observable.</param>
+    /// <returns>An observable sequence that skips leading null values.</returns>
+    public static SkipWhileNullObservable<T> Create(IObservable<T> source)
+    {
+        ArgumentExceptionHelper.ThrowIfNull(source);
+        return new(source);
+    }
+
     /// <inheritdoc/>
     public IDisposable Subscribe(IObserver<T> observer)
     {

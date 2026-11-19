@@ -2,6 +2,8 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Runtime.CompilerServices;
+
 #if REACTIVE_SHIM
 namespace ReactiveUI.Primitives.Reactive.Signals;
 #else
@@ -20,31 +22,19 @@ public static partial class SignalExtensions
         /// <param name="dueTime">The quiet period before the latest value is emitted.</param>
         /// <returns>A throttled signal.</returns>
         /// <exception cref="ArgumentExceptionHelper"><paramref name="source"/> is <see langword="null"/>.</exception>
-        public IObservable<TSource> EmitIfQuiet(TimeSpan dueTime)
-        {
-            ArgumentExceptionHelper.ThrowIfNull(source);
-
-            return dueTime <= TimeSpan.Zero
-                ? source
-                : new EmitIfQuietSignal<TSource>(source, dueTime, Sequencer.Default);
-        }
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public IObservable<TSource> EmitIfQuiet(TimeSpan dueTime) =>
+            EmitIfQuietSignal<TSource>.Create(source, dueTime);
 
         /// <summary>Emits only the latest value after a quiet period.</summary>
         /// <param name="dueTime">The quiet period before the latest value is emitted.</param>
         /// <param name="sequencer">The sequencer used to schedule delayed emissions.</param>
         /// <returns>A throttled signal.</returns>
         /// <exception cref="ArgumentExceptionHelper"><paramref name="source"/> or <paramref name="sequencer"/> is <see langword="null"/>.</exception>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public IObservable<TSource> EmitIfQuiet(
             TimeSpan dueTime,
-            ISequencer sequencer)
-        {
-            ArgumentExceptionHelper.ThrowIfNull(source);
-
-            ArgumentExceptionHelper.ThrowIfNull(sequencer);
-
-            return dueTime <= TimeSpan.Zero
-                ? source
-                : new EmitIfQuietSignal<TSource>(source, dueTime, sequencer);
-        }
+            ISequencer sequencer) =>
+            EmitIfQuietSignal<TSource>.Create(source, dueTime, sequencer);
     }
 }

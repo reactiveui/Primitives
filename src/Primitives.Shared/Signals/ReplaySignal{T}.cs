@@ -59,6 +59,9 @@ public sealed class ReplaySignal<T> : ISignal<T>
     /// <summary>The ring index the next value is written to.</summary>
     private int _ringNext;
 
+    /// <summary>Whether this signal has been disposed.</summary>
+    private bool _isDisposed;
+
     /// <summary>Initializes a new instance of the <see cref="ReplaySignal{T}"/> class.</summary>
     /// <param name="bufferSize">The maximum number of values to replay.</param>
     /// <param name="window">The maximum age of a replayed value.</param>
@@ -137,10 +140,10 @@ public sealed class ReplaySignal<T> : ISignal<T>
     }
 
     /// <summary>Gets a value indicating whether the signal has observers and has not terminated.</summary>
-    public bool HasObservers => _broadcaster.HasObservers && !_isStopped;
+    public bool HasObservers => _broadcaster.HasObservers && !Volatile.Read(ref _isStopped) && !Volatile.Read(ref _isDisposed);
 
     /// <summary>Gets a value indicating whether this instance is disposed.</summary>
-    public bool IsDisposed { get; private set; }
+    public bool IsDisposed => Volatile.Read(ref _isDisposed);
 
     /// <summary>Gets the gate that orders replay and live posting.</summary>
     internal Lock Gate => _observerLock;
@@ -150,25 +153,55 @@ public sealed class ReplaySignal<T> : ISignal<T>
     [System.Diagnostics.DebuggerBrowsable(System.Diagnostics.DebuggerBrowsableState.Never)]
     private string DebuggerDisplay => ToString() ?? string.Empty;
 
+    /// <summary>Creates a connectable replay signal backed by an unbounded <see cref="ReplaySignal{T}"/> hub.</summary>
+    /// <param name="source">The source sequence to replay.</param>
+    /// <returns>A connectable replay signal.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="source"/> is <see langword="null"/>.</exception>
+    public static ConnectableSignal<T> CreateConnectable(IObservable<T> source)
+    {
+        ArgumentExceptionHelper.ThrowIfNull(source);
+
+        return new(source, new ReplaySignal<T>());
+    }
+
+    /// <summary>Creates a connectable replay signal backed by a bounded <see cref="ReplaySignal{T}"/> hub.</summary>
+    /// <param name="source">The source sequence to replay.</param>
+    /// <param name="bufferSize">Maximum number of values to replay.</param>
+    /// <returns>A connectable replay signal.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="source"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentOutOfRangeException"><paramref name="bufferSize"/> is negative.</exception>
+    public static ConnectableSignal<T> CreateConnectable(IObservable<T> source, int bufferSize)
+    {
+        ReplaySignal<T> hub = new(bufferSize);
+        ArgumentExceptionHelper.ThrowIfNull(source);
+
+        return new(source, hub);
+    }
+
+    /// <summary>Creates a connectable replay signal backed by a count- and time-bounded <see cref="ReplaySignal{T}"/> hub.</summary>
+    /// <param name="source">The source sequence to replay.</param>
+    /// <param name="bufferSize">Maximum number of values to replay.</param>
+    /// <param name="window">Maximum replay window.</param>
+    /// <returns>A connectable replay signal.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="source"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentOutOfRangeException"><paramref name="bufferSize"/> or <paramref name="window"/> is negative.</exception>
+    public static ConnectableSignal<T> CreateConnectable(IObservable<T> source, int bufferSize, TimeSpan window)
+    {
+        ReplaySignal<T> hub = new(bufferSize, window);
+        ArgumentExceptionHelper.ThrowIfNull(source);
+
+        return new(source, hub);
+    }
+
     /// <summary>Drops the buffered values and observers and marks the signal disposed.</summary>
     public void Dispose()
     {
-        if (IsDisposed)
+        if (Volatile.Read(ref _isDisposed))
         {
             return;
         }
 
-        lock (_observerLock)
-        {
-            _broadcaster.Clear();
-            _lastError = null;
-            _queue = null;
-            _ring = null;
-            _ringCount = 0;
-            _ringNext = 0;
-        }
-
-        IsDisposed = true;
+        DisposeCore();
     }
 
     /// <summary>Terminates the signal and completes every observer; later calls are ignored.</summary>
@@ -301,6 +334,26 @@ public sealed class ReplaySignal<T> : ISignal<T>
         return EmptyDisposable.Instance;
     }
 
+    /// <summary>Marks the replay signal disposed and clears its buffers under <see cref="_observerLock"/>.</summary>
+    internal void DisposeCore()
+    {
+        lock (_observerLock)
+        {
+            if (_isDisposed)
+            {
+                return;
+            }
+
+            Volatile.Write(ref _isDisposed, true);
+            _broadcaster.Clear();
+            _lastError = null;
+            _queue = null;
+            _ring = null;
+            _ringCount = 0;
+            _ringNext = 0;
+        }
+    }
+
     /// <summary>Throws when the signal has been disposed.</summary>
     /// <exception cref="ObjectDisposedException">The signal has been disposed.</exception>
     private void ThrowIfDisposed()
@@ -413,9 +466,6 @@ public sealed class ReplaySignal<T> : ISignal<T>
         Justification = "The field references the owning signal, not a resource this subscription owns.")]
     private sealed class ObserverHandler(ReplaySignal<T> subject, SerializedWitness<T> witness) : IDisposable
     {
-        /// <summary>Serializes concurrent disposal.</summary>
-        private readonly Lock _lock = new();
-
         /// <summary>The signal the observer is attached to; null once disposed.</summary>
         private ReplaySignal<T>? _subject = subject;
 
@@ -425,17 +475,17 @@ public sealed class ReplaySignal<T> : ISignal<T>
         /// <summary>Removes the subscriber from the signal and clears both references.</summary>
         public void Dispose()
         {
-            lock (_lock)
+            var owner = Interlocked.Exchange(ref _subject, null);
+            if (owner is null)
             {
-                if (_subject is not null)
-                {
-                    lock (_subject._observerLock)
-                    {
-                        _subject._broadcaster.Remove(_witness!);
-                        _witness = null;
-                        _subject = null;
-                    }
-                }
+                return;
+            }
+
+            var target = _witness!;
+            _witness = null;
+            lock (owner._observerLock)
+            {
+                owner._broadcaster.Remove(target);
             }
         }
     }

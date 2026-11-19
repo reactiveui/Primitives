@@ -305,6 +305,61 @@ public class GroupByUntilWitnessTests
             .ThrowsExactly<ArgumentNullException>();
     }
 
+    /// <summary>Disposing inside key, duration, or element selectors, or expiring after disposal, stops cleanly under the gate.</summary>
+    /// <returns>A task representing the asynchronous test.</returns>
+    [Test]
+    public async Task SelectorsAndExpire_WhenDisposedMidFlight_ReturnCleanly()
+    {
+        RecordingWitness<GroupedSignal<char, string>> obs1 = new();
+        GroupByUntilWitness<string, char, string, int>? w1 = null;
+        w1 = new(
+            obs1,
+            v =>
+            {
+                w1!.Dispose();
+                return v[0];
+            },
+            static v => v,
+            static _ => Signal.Silent<int>(),
+            null,
+            0);
+        w1.OnNext("a1");
+        await Assert.That(obs1.Values).IsEmpty();
+
+        RecordingWitness<GroupedSignal<char, string>> obs2 = new();
+        GroupByUntilWitness<string, char, string, int>? w2 = null;
+        w2 = new(
+            obs2,
+            static v => v[0],
+            static v => v,
+            _ =>
+            {
+                w2!.Dispose();
+                return Signal.Silent<int>();
+            },
+            null,
+            0);
+        w2.OnNext("a1");
+        await Assert.That(obs2.Values).IsEmpty();
+
+        RecordingWitness<GroupedSignal<char, string>> obs3 = new();
+        GroupByUntilWitness<string, char, string, int>? w3 = null;
+        w3 = new(
+            obs3,
+            static v => v[0],
+            v =>
+            {
+                w3!.Dispose();
+                return v;
+            },
+            static _ => Signal.Silent<int>(),
+            null,
+            0);
+        w3.OnNext("a1");
+        w3.Expire('a', null!, ReactiveUI.Primitives.Disposables.EmptyDisposable.Instance);
+        await Assert.That(obs3.Values).Count().IsEqualTo(1);
+    }
+
     /// <summary>Creates a duration signal and records it.</summary>
     /// <param name="durations">The recorded duration signals.</param>
     /// <returns>The duration signal.</returns>

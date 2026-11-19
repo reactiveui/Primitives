@@ -3,6 +3,7 @@
 // See the LICENSE file in the project root for full license information.
 
 using System.ComponentModel;
+using System.Linq.Expressions;
 
 namespace ReactiveUI.Primitives.Extensions.Operators;
 
@@ -18,6 +19,23 @@ public sealed class PropertyChangedObservable<T, TProperty>(
     Func<T, TProperty> getter) : IObservable<TProperty>
     where T : INotifyPropertyChanged
 {
+    /// <summary>Creates a <see cref="PropertyChangedObservable{T, TProperty}"/> from a property access expression.</summary>
+    /// <param name="source">The owning instance.</param>
+    /// <param name="propertyExpression">The property access expression.</param>
+    /// <returns>An observable sequence emitting the current and updated property values.</returns>
+    /// <exception cref="ArgumentException">Thrown when <paramref name="propertyExpression"/> does not reference a property.</exception>
+    public static PropertyChangedObservable<T, TProperty> Create(
+        T source,
+        Expression<Func<T, TProperty>> propertyExpression)
+    {
+        ArgumentExceptionHelper.ThrowIfNull(propertyExpression);
+
+        var member = propertyExpression.Body as MemberExpression
+                     ?? throw new ArgumentException("Expression must be a property");
+
+        return new(source, member.Member.Name, propertyExpression.Compile());
+    }
+
     /// <inheritdoc/>
     public IDisposable Subscribe(IObserver<TProperty> observer)
     {

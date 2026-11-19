@@ -45,6 +45,38 @@ public sealed class SubscribeAsyncObservable<T> : IDisposable
     /// <summary>Initializes a new instance of the <see cref="SubscribeAsyncObservable{T}"/> class.</summary>
     /// <param name="source">The source observable.</param>
     /// <param name="onNext">The asynchronous element handler.</param>
+    public SubscribeAsyncObservable(IObservable<T> source, Func<T, ValueTask> onNext)
+        : this(source, onNext, null, null)
+    {
+    }
+
+    /// <summary>Initializes a new instance of the <see cref="SubscribeAsyncObservable{T}"/> class.</summary>
+    /// <param name="source">The source observable.</param>
+    /// <param name="onNext">The asynchronous element handler.</param>
+    /// <param name="onError">The error handler.</param>
+    public SubscribeAsyncObservable(
+        IObservable<T> source,
+        Func<T, ValueTask> onNext,
+        Action<Exception> onError)
+        : this(source, onNext, onError, null)
+    {
+    }
+
+    /// <summary>Initializes a new instance of the <see cref="SubscribeAsyncObservable{T}"/> class.</summary>
+    /// <param name="source">The source observable.</param>
+    /// <param name="onNext">The asynchronous element handler.</param>
+    /// <param name="onCompleted">The completion handler.</param>
+    public SubscribeAsyncObservable(
+        IObservable<T> source,
+        Func<T, ValueTask> onNext,
+        Action onCompleted)
+        : this(source, onNext, null, onCompleted)
+    {
+    }
+
+    /// <summary>Initializes a new instance of the <see cref="SubscribeAsyncObservable{T}"/> class.</summary>
+    /// <param name="source">The source observable.</param>
+    /// <param name="onNext">The asynchronous element handler.</param>
     /// <param name="onError">The error handler.</param>
     /// <param name="onCompleted">The completion handler.</param>
     public SubscribeAsyncObservable(

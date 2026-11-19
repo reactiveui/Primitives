@@ -57,6 +57,18 @@ public sealed class PartitionObservable<T>
     /// <summary>Gets the observable emitting elements that do not satisfy the predicate.</summary>
     public IObservable<T> False { get; }
 
+    /// <summary>Creates a shared partition over <paramref name="source"/> and returns its true and false sides.</summary>
+    /// <param name="source">The source observable.</param>
+    /// <param name="predicate">The predicate to partition elements.</param>
+    /// <returns>A tuple of the true and false partition sequences.</returns>
+    public static (IObservable<T> True, IObservable<T> False) Create(
+        IObservable<T> source,
+        Func<T, bool> predicate)
+    {
+        PartitionObservable<T> partition = new(source, predicate);
+        return (partition.True, partition.False);
+    }
+
     /// <summary>Subscribes an observer to the specified side of the partition.</summary>
     /// <param name="observer">The observer receiving that side's elements.</param>
     /// <param name="side">The side (true or false).</param>
@@ -116,7 +128,8 @@ public sealed class PartitionObservable<T>
             IDisposable? connection = null;
             lock (_parent._gate)
             {
-                _parent._sink?.Remove(_observer, _side);
+                // This subscription still counts toward _subscriptionCount, so the sink created for the first subscriber is live.
+                _parent._sink!.Remove(_observer, _side);
                 _parent._subscriptionCount--;
                 if (_parent._subscriptionCount == 0)
                 {

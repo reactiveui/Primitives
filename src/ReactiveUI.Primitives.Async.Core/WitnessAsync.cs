@@ -169,6 +169,48 @@ public static class WitnessAsync
         }
     }
 
+    /// <summary>Gets the lazily created token cancelled when <paramref name="witness"/> is disposed.</summary>
+    /// <param name="witness">The witness whose disposal token is requested.</param>
+    /// <returns>The disposal token for <paramref name="witness"/>.</returns>
+    public static CancellationToken GetInternalDisposedToken(IWitnessState witness)
+    {
+        ArgumentExceptionHelper.ThrowIfNull(witness);
+
+        witness.Witness.EnsureLinked(witness);
+        return witness.Witness.GetOrCreateDisposeCts().Token;
+    }
+
+    /// <summary>Links an upstream witness disposal token so upstream teardown disposes <paramref name="witness"/>.</summary>
+    /// <param name="witness">The downstream witness.</param>
+    /// <param name="upstream">The upstream disposal token.</param>
+    public static void LinkUpstreamCancellation(IWitnessState witness, CancellationToken upstream)
+    {
+        ArgumentExceptionHelper.ThrowIfNull(witness);
+
+        witness.Witness.EnsureLinked(witness);
+        witness.Witness.LinkExternalCancellation(witness, upstream);
+    }
+
+    /// <summary>Disposes <paramref name="witness"/> when the exiting call owns disposal, or signals an existing waiter.</summary>
+    /// <typeparam name="T">The observed element type.</typeparam>
+    /// <param name="witness">The witness exiting a notification.</param>
+    /// <returns>The disposal operation, or a completed task when a waiter owns disposal.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    internal static ValueTask CompleteOrChainDispose<T>(IWitnessAsync<T> witness) =>
+        witness.Witness.ExitOnSomethingCall() ? witness.DisposeAsync() : default;
+
+    /// <summary>Attempts to enter a notification for the supplied caller thread.</summary>
+    /// <param name="witness">The witness entering a notification.</param>
+    /// <param name="currentThreadId">The calling thread identifier.</param>
+    /// <param name="cancellationToken">Cancellation for the notification.</param>
+    /// <param name="scope">The notification's effective cancellation scope.</param>
+    /// <returns>Whether the caller acquired the notification gate.</returns>
+    internal static bool TryEnterOnSomethingCall(IWitnessState witness, int currentThreadId, CancellationToken cancellationToken, out LinkedTokenScope scope)
+    {
+        witness.Witness.EnsureLinked(witness);
+        return witness.Witness.TryEnterObservedCallState(currentThreadId, witness.Witness.ReadCallState(), cancellationToken, out scope);
+    }
+
     /// <summary>Creates a disposal source for a witness.</summary>
     /// <returns>A new cancellation token source.</returns>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]

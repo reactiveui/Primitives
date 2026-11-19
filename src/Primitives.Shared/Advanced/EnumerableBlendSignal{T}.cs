@@ -15,7 +15,13 @@ public sealed class EnumerableBlendSignal<T> : IObservable<T>
 {
     /// <summary>Initializes a new instance of the <see cref="EnumerableBlendSignal{T}"/> class.</summary>
     /// <param name="sources">The sources to merge.</param>
-    public EnumerableBlendSignal(IEnumerable<IObservable<T>> sources) => Sources = sources;
+    /// <exception cref="ArgumentNullException"><paramref name="sources"/> is <see langword="null"/>.</exception>
+    public EnumerableBlendSignal(IEnumerable<IObservable<T>> sources)
+    {
+        ArgumentExceptionHelper.ThrowIfNull(sources);
+
+        Sources = sources;
+    }
 
     /// <summary>Gets the sources to merge.</summary>
     private IEnumerable<IObservable<T>> Sources { get; }

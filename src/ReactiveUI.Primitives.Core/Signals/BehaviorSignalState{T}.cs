@@ -52,19 +52,22 @@ internal record struct BehaviorSignalState<T>
     }
 
     /// <summary>Gets a value indicating whether the signal has been disposed.</summary>
-    internal readonly bool IsDisposed => _isDisposed != 0;
+    internal bool IsDisposed => Volatile.Read(ref _isDisposed) != 0;
 
     /// <summary>Gets a value indicating whether the signal currently has observers.</summary>
-    internal bool HasObservers => _broadcaster.HasObservers && !_isStopped && Volatile.Read(ref _isDisposed) == 0;
+    internal bool HasObservers => _broadcaster.HasObservers && !Volatile.Read(ref _isStopped) && Volatile.Read(ref _isDisposed) == 0;
 
     /// <summary>Gets the current value, throwing if disposed or faulted.</summary>
     /// <returns>The current value.</returns>
     internal readonly T GetValue()
     {
-        ThrowIfDisposed();
-        _lastError.Rethrow();
+        lock (_gate)
+        {
+            ThrowIfDisposed();
+            _lastError.Rethrow();
 
-        return _lastValue!;
+            return _lastValue!;
+        }
     }
 
     /// <summary>Tries to read the current value without throwing when disposed.</summary>

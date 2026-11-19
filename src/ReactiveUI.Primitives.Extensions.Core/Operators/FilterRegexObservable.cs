@@ -14,6 +14,17 @@ public sealed class FilterRegexObservable(
     IObservable<string> source,
     Regex regex) : IObservable<string>
 {
+    /// <summary>Default match timeout for regex filters constructed from string patterns.</summary>
+    private static readonly TimeSpan DefaultRegexMatchTimeout = TimeSpan.FromSeconds(30);
+
+    /// <summary>Initializes a new instance of the <see cref="FilterRegexObservable"/> class from a pattern string with a 30-second match timeout.</summary>
+    /// <param name="source">The source observable emitting strings.</param>
+    /// <param name="regexPattern">The regular expression pattern.</param>
+    public FilterRegexObservable(IObservable<string> source, string regexPattern)
+        : this(source, CreateRegex(regexPattern))
+    {
+    }
+
     /// <inheritdoc/>
     public IDisposable Subscribe(IObserver<string> observer)
     {
@@ -22,6 +33,12 @@ public sealed class FilterRegexObservable(
         ArgumentExceptionHelper.ThrowIfNull(observer);
         return source.Subscribe(new FilterRegexWitness(observer, regex));
     }
+
+    /// <summary>Compiles <paramref name="regexPattern"/> with <see cref="DefaultRegexMatchTimeout"/>.</summary>
+    /// <param name="regexPattern">The regular expression pattern.</param>
+    /// <returns>The bounded regular expression.</returns>
+    private static Regex CreateRegex(string regexPattern) =>
+        new(regexPattern, RegexOptions.None, DefaultRegexMatchTimeout);
 
     /// <summary>Observer that forwards matching strings and turns a failure raised by the match into an error.</summary>
     /// <param name="downstream">The downstream observer receiving strings that match the regex.</param>

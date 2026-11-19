@@ -107,6 +107,7 @@ public sealed class MultipleDisposable : ReactiveUI.Primitives.Disposables.IsDis
     public bool Remove(System.IDisposable? item) { }
     [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
     System.Collections.IEnumerator System.Collections.IEnumerable.GetEnumerator() { }
+    public static T AddTo<T>(T disposable, ReactiveUI.Primitives.Disposables.MultipleDisposable disposables) where T : System.IDisposable { }
     [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
     public static System.IDisposable Create(params System.IDisposable[] disposables) { }
 }

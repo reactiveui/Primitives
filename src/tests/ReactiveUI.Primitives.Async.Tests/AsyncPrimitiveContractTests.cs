@@ -371,8 +371,8 @@ public sealed class AsyncPrimitiveContractTests
         const int ThirdValue = 3;
         var shifted = AsyncObs.Emit(ThirdValue).Shift(TimeSpan.FromSeconds(1));
         var expired = AsyncObs.Never<int>().Expire(TimeSpan.FromSeconds(1));
-        await Assert.That(shifted).IsTypeOf<SignalAsyncExtensions.DelaySignal<int>>();
-        await Assert.That(expired).IsTypeOf<SignalAsyncExtensions.TimeoutSignal<int>>();
+        await Assert.That(shifted).IsTypeOf<DelaySignal<int>>();
+        await Assert.That(expired).IsTypeOf<TimeoutSignal<int>>();
     }
 
     /// <summary>Drains queued sequencer work until the supplied task completes.</summary>

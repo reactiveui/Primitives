@@ -39,8 +39,9 @@ public sealed class BooleanReduceObservable(IEnumerable<IObservable<bool>> sourc
             return EmptyDisposable.Instance;
         }
 
-        Sink sink = new(observer, _sourceList.Count, target);
-        return IndexedSubscribeHelper.SubscribeIndexed(_sourceList, sink.OnNext, sink.OnError, sink.OnCompleted);
+        DisposableBag subscriptions = new();
+        Sink sink = new(observer, _sourceList.Count, target, subscriptions);
+        return IndexedSubscribeHelper.SubscribeIndexed(subscriptions, _sourceList, sink.OnNext, sink.OnError, sink.OnCompleted);
     }
 
     /// <summary>Copies the sources into an indexable list, enumerating the sequence at most once.</summary>
@@ -91,10 +92,11 @@ public sealed class BooleanReduceObservable(IEnumerable<IObservable<bool>> sourc
     /// <param name="downstream">The downstream observer.</param>
     /// <param name="count">The number of sources.</param>
     /// <param name="target">The value every source must hold for emit to be <c>true</c>.</param>
-    private sealed class Sink(IObserver<bool> downstream, int count, bool target)
+    /// <param name="subscriptions">Composite handle disposed when the sink terminates.</param>
+    private sealed class Sink(IObserver<bool> downstream, int count, bool target, IDisposable subscriptions)
     {
         /// <summary>The shared gate, per-source value cache and terminal-state bookkeeping.</summary>
-        private readonly ReduceSinkState<bool, bool> _state = new(downstream, count);
+        private readonly ReduceSinkState<bool, bool> _state = CreateState(downstream, count, subscriptions);
 
         /// <summary>Reduces the per-source latest values to whether every source holds the target value.</summary>
         private readonly Func<bool?[], bool> _reduce = values =>
@@ -125,5 +127,17 @@ public sealed class BooleanReduceObservable(IEnumerable<IObservable<bool>> sourc
         /// <param name="index">Source index.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void OnCompleted(int index) => _state.HandleCompleted(index);
+
+        /// <summary>Creates and attaches the shared reduction state.</summary>
+        /// <param name="downstream">The downstream observer.</param>
+        /// <param name="count">The source count.</param>
+        /// <param name="subscriptions">The composite subscription handle.</param>
+        /// <returns>The initialized reduction state.</returns>
+        private static ReduceSinkState<bool, bool> CreateState(IObserver<bool> downstream, int count, IDisposable subscriptions)
+        {
+            ReduceSinkState<bool, bool> state = new(downstream, count);
+            state.AttachSubscriptions(subscriptions);
+            return state;
+        }
     }
 }

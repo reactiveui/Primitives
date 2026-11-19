@@ -2,7 +2,7 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
-using ReactiveUI.Primitives.Disposables;
+using System.Runtime.CompilerServices;
 
 namespace ReactiveUI.Primitives.Concurrency;
 
@@ -18,28 +18,18 @@ public static class VirtualTimeSequencerExtensions
         /// <param name="action">Action to be executed.</param>
         /// <returns>The disposable object used to cancel the scheduled action (best effort).</returns>
         /// <exception cref="ArgumentNullException"><paramref name="scheduler"/> or <paramref name="action"/> is <c>null</c>.</exception>
-        public IDisposable ScheduleRelative(TimeSpan dueTime, Action action)
-        {
-            ArgumentExceptionHelper.ThrowIfNull(scheduler);
-
-            ArgumentExceptionHelper.ThrowIfNull(action);
-
-            return scheduler.ScheduleRelative(action, dueTime, static (_, a) => Invoke(a));
-        }
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public IDisposable ScheduleRelative(TimeSpan dueTime, Action action) =>
+            VirtualClock.ScheduleRelative(scheduler, dueTime, action);
 
         /// <summary>Schedules an action to be executed at <paramref name="dueTime"/>.</summary>
         /// <param name="dueTime">Absolute time at which to execute the action.</param>
         /// <param name="action">Action to be executed.</param>
         /// <returns>The disposable object used to cancel the scheduled action (best effort).</returns>
         /// <exception cref="ArgumentNullException"><paramref name="scheduler"/> or <paramref name="action"/> is <c>null</c>.</exception>
-        public IDisposable ScheduleAbsolute(DateTimeOffset dueTime, Action action)
-        {
-            ArgumentExceptionHelper.ThrowIfNull(scheduler);
-
-            ArgumentExceptionHelper.ThrowIfNull(action);
-
-            return scheduler.ScheduleAbsolute(action, dueTime, static (_, a) => Invoke(a));
-        }
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public IDisposable ScheduleAbsolute(DateTimeOffset dueTime, Action action) =>
+            VirtualClock.ScheduleAbsolute(scheduler, dueTime, action);
     }
 
     /// <summary>Provides virtual-time scheduling extensions for <see cref="VirtualTimeSequencer{TAbsolute, TRelative}"/>.</summary>
@@ -54,36 +44,17 @@ public static class VirtualTimeSequencerExtensions
         /// <param name="action">Action to be executed.</param>
         /// <returns>The disposable object used to cancel the scheduled action (best effort).</returns>
         /// <exception cref="ArgumentExceptionHelper"><paramref name="scheduler"/> or <paramref name="action"/> is <c>null</c>.</exception>
-        public IDisposable ScheduleRelative(TRelative dueTime, Action action)
-        {
-            ArgumentExceptionHelper.ThrowIfNull(scheduler);
-
-            ArgumentExceptionHelper.ThrowIfNull(action);
-
-            return scheduler.ScheduleRelative(action, dueTime, static (_, a) => Invoke(a));
-        }
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public IDisposable ScheduleRelative(TRelative dueTime, Action action) =>
+            VirtualTimeSequencer<TAbsolute, TRelative>.ScheduleRelative(scheduler, dueTime, action);
 
         /// <summary>Schedules an action to be executed at <paramref name="dueTime"/>.</summary>
         /// <param name="dueTime">Absolute time at which to execute the action.</param>
         /// <param name="action">Action to be executed.</param>
         /// <returns>The disposable object used to cancel the scheduled action (best effort).</returns>
         /// <exception cref="ArgumentExceptionHelper"><paramref name="scheduler"/> or <paramref name="action"/> is <c>null</c>.</exception>
-        public IDisposable ScheduleAbsolute(TAbsolute dueTime, Action action)
-        {
-            ArgumentExceptionHelper.ThrowIfNull(scheduler);
-
-            ArgumentExceptionHelper.ThrowIfNull(action);
-
-            return scheduler.ScheduleAbsolute(action, dueTime, static (_, a) => Invoke(a));
-        }
-    }
-
-    /// <summary>Invokes an action and returns an empty disposable.</summary>
-    /// <param name="action">Action to invoke.</param>
-    /// <returns>An empty disposable.</returns>
-    private static EmptyDisposable Invoke(Action action)
-    {
-        action();
-        return EmptyDisposable.Instance;
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public IDisposable ScheduleAbsolute(TAbsolute dueTime, Action action) =>
+            VirtualTimeSequencer<TAbsolute, TRelative>.ScheduleAbsolute(scheduler, dueTime, action);
     }
 }

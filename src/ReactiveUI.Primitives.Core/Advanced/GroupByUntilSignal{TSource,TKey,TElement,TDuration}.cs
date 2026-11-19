@@ -38,6 +38,56 @@ public sealed class GroupByUntilSignal<TSource, TKey, TElement, TDuration> : IOb
     /// <param name="keySelector">The selector that extracts the key of a value.</param>
     /// <param name="elementSelector">The selector that extracts the value stored in a group.</param>
     /// <param name="durationSelector">The selector that supplies the signal that ends a group.</param>
+    /// <exception cref="ArgumentNullException">A reference argument is <see langword="null"/>.</exception>
+    public GroupByUntilSignal(
+        IObservable<TSource> source,
+        Func<TSource, TKey> keySelector,
+        Func<TSource, TElement> elementSelector,
+        Func<GroupedSignal<TKey, TElement>, IObservable<TDuration>> durationSelector)
+        : this(source, keySelector, elementSelector, durationSelector, null, 0)
+    {
+    }
+
+    /// <summary>Initializes a new instance of the <see cref="GroupByUntilSignal{TSource, TKey, TElement, TDuration}"/> class.</summary>
+    /// <param name="source">The source observable.</param>
+    /// <param name="keySelector">The selector that extracts the key of a value.</param>
+    /// <param name="elementSelector">The selector that extracts the value stored in a group.</param>
+    /// <param name="durationSelector">The selector that supplies the signal that ends a group.</param>
+    /// <param name="comparer">The key comparer, or <see langword="null"/> for the default comparer.</param>
+    /// <exception cref="ArgumentNullException">A reference argument other than <paramref name="comparer"/> is <see langword="null"/>.</exception>
+    public GroupByUntilSignal(
+        IObservable<TSource> source,
+        Func<TSource, TKey> keySelector,
+        Func<TSource, TElement> elementSelector,
+        Func<GroupedSignal<TKey, TElement>, IObservable<TDuration>> durationSelector,
+        IEqualityComparer<TKey>? comparer)
+        : this(source, keySelector, elementSelector, durationSelector, comparer, 0)
+    {
+    }
+
+    /// <summary>Initializes a new instance of the <see cref="GroupByUntilSignal{TSource, TKey, TElement, TDuration}"/> class.</summary>
+    /// <param name="source">The source observable.</param>
+    /// <param name="keySelector">The selector that extracts the key of a value.</param>
+    /// <param name="elementSelector">The selector that extracts the value stored in a group.</param>
+    /// <param name="durationSelector">The selector that supplies the signal that ends a group.</param>
+    /// <param name="capacity">The initial capacity of the group table; zero uses the default.</param>
+    /// <exception cref="ArgumentNullException">A reference argument is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentOutOfRangeException"><paramref name="capacity"/> is negative.</exception>
+    public GroupByUntilSignal(
+        IObservable<TSource> source,
+        Func<TSource, TKey> keySelector,
+        Func<TSource, TElement> elementSelector,
+        Func<GroupedSignal<TKey, TElement>, IObservable<TDuration>> durationSelector,
+        int capacity)
+        : this(source, keySelector, elementSelector, durationSelector, null, capacity)
+    {
+    }
+
+    /// <summary>Initializes a new instance of the <see cref="GroupByUntilSignal{TSource, TKey, TElement, TDuration}"/> class.</summary>
+    /// <param name="source">The source observable.</param>
+    /// <param name="keySelector">The selector that extracts the key of a value.</param>
+    /// <param name="elementSelector">The selector that extracts the value stored in a group.</param>
+    /// <param name="durationSelector">The selector that supplies the signal that ends a group.</param>
     /// <param name="comparer">The key comparer, or <see langword="null"/> for the default comparer.</param>
     /// <param name="capacity">The initial capacity of the group table; zero uses the default.</param>
     /// <exception cref="ArgumentNullException">A reference argument other than <paramref name="comparer"/> is <see langword="null"/>.</exception>

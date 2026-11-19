@@ -60,6 +60,36 @@ public sealed class VirtualClock : TimeProvider, ISequencer, IServiceProvider, I
     [DebuggerBrowsable(DebuggerBrowsableState.Never)]
     private string DebuggerDisplay => ToString() ?? string.Empty;
 
+    /// <summary>Schedules an action on <paramref name="scheduler"/> after <paramref name="dueTime"/>.</summary>
+    /// <param name="scheduler">Sequencer to execute the action on.</param>
+    /// <param name="dueTime">Relative time after which to execute the action.</param>
+    /// <param name="action">Action to execute.</param>
+    /// <returns>The disposable object used to cancel the scheduled action (best effort).</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="scheduler"/> or <paramref name="action"/> is <see langword="null"/>.</exception>
+    public static IDisposable ScheduleRelative(VirtualClock scheduler, TimeSpan dueTime, Action action)
+    {
+        ArgumentExceptionHelper.ThrowIfNull(scheduler);
+
+        ArgumentExceptionHelper.ThrowIfNull(action);
+
+        return scheduler.ScheduleRelative(action, dueTime, static (_, a) => Sequencer.Invoke(a));
+    }
+
+    /// <summary>Schedules an action on <paramref name="scheduler"/> at <paramref name="dueTime"/>.</summary>
+    /// <param name="scheduler">Sequencer to execute the action on.</param>
+    /// <param name="dueTime">Absolute time at which to execute the action.</param>
+    /// <param name="action">Action to execute.</param>
+    /// <returns>The disposable object used to cancel the scheduled action (best effort).</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="scheduler"/> or <paramref name="action"/> is <see langword="null"/>.</exception>
+    public static IDisposable ScheduleAbsolute(VirtualClock scheduler, DateTimeOffset dueTime, Action action)
+    {
+        ArgumentExceptionHelper.ThrowIfNull(scheduler);
+
+        ArgumentExceptionHelper.ThrowIfNull(action);
+
+        return scheduler.ScheduleAbsolute(action, dueTime, static (_, a) => Sequencer.Invoke(a));
+    }
+
     /// <summary>Advances the scheduler's clock by the specified relative time, running all work scheduled for that timespan.</summary>
     /// <param name="time">Relative time to advance the scheduler's clock by.</param>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]

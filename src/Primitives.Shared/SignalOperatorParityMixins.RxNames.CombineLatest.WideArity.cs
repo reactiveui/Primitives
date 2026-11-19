@@ -11,7 +11,7 @@ namespace ReactiveUI.Primitives.Reactive;
 namespace ReactiveUI.Primitives;
 #endif
 
-/// <summary>System.Reactive-named CombineLatest over ten through sixteen sources, forwarding to <c>SyncLatest</c>.</summary>
+/// <summary>System.Reactive-named CombineLatest over ten through sixteen sources.</summary>
 public static partial class LinqExtensions
 {
     /// <summary>System.Reactive-named latest-value combination operators for ten through sixteen observable sources.</summary>
@@ -19,7 +19,7 @@ public static partial class LinqExtensions
     /// <param name="source">Source observable 1 whose latest value is combined.</param>
     extension<T>(IObservable<T> source)
     {
-        /// <summary>Combines the latest values from 10 observable sources into a single sequence, projecting them through <paramref name="selector"/> whenever any source emits.</summary>
+        /// <summary>Combines the latest values from 10 observable sources, projecting them through <paramref name="selector"/> whenever any source emits.</summary>
         /// <typeparam name="T2">The element type of source 2.</typeparam>
         /// <typeparam name="T3">The element type of source 3.</typeparam>
         /// <typeparam name="T4">The element type of source 4.</typeparam>
@@ -58,7 +58,8 @@ public static partial class LinqExtensions
             IObservable<T9> source9,
             IObservable<T10> source10,
             Func<T, T2, T3, T4, T5, T6, T7, T8, T9, T10, TResult> selector) =>
-            source.SyncLatest(
+            CombineLatestSignal.Create(
+                source,
                 source2,
                 source3,
                 source4,
@@ -70,7 +71,7 @@ public static partial class LinqExtensions
                 source10,
                 selector);
 
-        /// <summary>Combines the latest values from 11 observable sources into a single sequence, projecting them through <paramref name="selector"/> whenever any source emits.</summary>
+        /// <summary>Combines the latest values from 11 observable sources, projecting them through <paramref name="selector"/> whenever any source emits.</summary>
         /// <typeparam name="T2">The element type of source 2.</typeparam>
         /// <typeparam name="T3">The element type of source 3.</typeparam>
         /// <typeparam name="T4">The element type of source 4.</typeparam>
@@ -112,7 +113,8 @@ public static partial class LinqExtensions
             IObservable<T10> source10,
             IObservable<T11> source11,
             Func<T, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TResult> selector) =>
-            source.SyncLatest(
+            CombineLatestSignal.Create(
+                source,
                 source2,
                 source3,
                 source4,
@@ -125,7 +127,7 @@ public static partial class LinqExtensions
                 source11,
                 selector);
 
-        /// <summary>Combines the latest values from 12 observable sources into a single sequence, projecting them through <paramref name="selector"/> whenever any source emits.</summary>
+        /// <summary>Combines the latest values from 12 observable sources, projecting them through <paramref name="selector"/> whenever any source emits.</summary>
         /// <typeparam name="T2">The element type of source 2.</typeparam>
         /// <typeparam name="T3">The element type of source 3.</typeparam>
         /// <typeparam name="T4">The element type of source 4.</typeparam>
@@ -170,7 +172,8 @@ public static partial class LinqExtensions
             IObservable<T11> source11,
             IObservable<T12> source12,
             Func<T, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TResult> selector) =>
-            source.SyncLatest(
+            CombineLatestSignal.Create(
+                source,
                 source2,
                 source3,
                 source4,
@@ -184,7 +187,7 @@ public static partial class LinqExtensions
                 source12,
                 selector);
 
-        /// <summary>Combines the latest values from 13 observable sources into a single sequence, projecting them through <paramref name="selector"/> whenever any source emits.</summary>
+        /// <summary>Combines the latest values from 13 observable sources, projecting them through <paramref name="selector"/> whenever any source emits.</summary>
         /// <typeparam name="T2">The element type of source 2.</typeparam>
         /// <typeparam name="T3">The element type of source 3.</typeparam>
         /// <typeparam name="T4">The element type of source 4.</typeparam>
@@ -232,7 +235,8 @@ public static partial class LinqExtensions
             IObservable<T12> source12,
             IObservable<T13> source13,
             Func<T, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TResult> selector) =>
-            source.SyncLatest(
+            CombineLatestSignal.Create(
+                source,
                 source2,
                 source3,
                 source4,
@@ -247,7 +251,7 @@ public static partial class LinqExtensions
                 source13,
                 selector);
 
-        /// <summary>Combines the latest values from 14 observable sources into a single sequence, projecting them through <paramref name="selector"/> whenever any source emits.</summary>
+        /// <summary>Combines the latest values from 14 observable sources, projecting them through <paramref name="selector"/> whenever any source emits.</summary>
         /// <typeparam name="T2">The element type of source 2.</typeparam>
         /// <typeparam name="T3">The element type of source 3.</typeparam>
         /// <typeparam name="T4">The element type of source 4.</typeparam>
@@ -298,7 +302,8 @@ public static partial class LinqExtensions
             IObservable<T13> source13,
             IObservable<T14> source14,
             Func<T, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TResult> selector) =>
-            source.SyncLatest(
+            CombineLatestSignal.Create(
+                source,
                 source2,
                 source3,
                 source4,
@@ -314,7 +319,7 @@ public static partial class LinqExtensions
                 source14,
                 selector);
 
-        /// <summary>Combines the latest values from 15 observable sources into a single sequence, projecting them through <paramref name="selector"/> whenever any source emits.</summary>
+        /// <summary>Combines the latest values from 15 observable sources, projecting them through <paramref name="selector"/> whenever any source emits.</summary>
         /// <typeparam name="T2">The element type of source 2.</typeparam>
         /// <typeparam name="T3">The element type of source 3.</typeparam>
         /// <typeparam name="T4">The element type of source 4.</typeparam>
@@ -368,7 +373,8 @@ public static partial class LinqExtensions
             IObservable<T14> source14,
             IObservable<T15> source15,
             Func<T, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TResult> selector) =>
-            source.SyncLatest(
+            CombineLatestSignal.Create(
+                source,
                 source2,
                 source3,
                 source4,
@@ -385,7 +391,7 @@ public static partial class LinqExtensions
                 source15,
                 selector);
 
-        /// <summary>Combines the latest values from 16 observable sources into a single sequence, projecting them through <paramref name="selector"/> whenever any source emits.</summary>
+        /// <summary>Combines the latest values from 16 observable sources, projecting them through <paramref name="selector"/> whenever any source emits.</summary>
         /// <typeparam name="T2">The element type of source 2.</typeparam>
         /// <typeparam name="T3">The element type of source 3.</typeparam>
         /// <typeparam name="T4">The element type of source 4.</typeparam>
@@ -442,7 +448,8 @@ public static partial class LinqExtensions
             IObservable<T15> source15,
             IObservable<T16> source16,
             Func<T, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, TResult> selector) =>
-            source.SyncLatest(
+            CombineLatestSignal.Create(
+                source,
                 source2,
                 source3,
                 source4,

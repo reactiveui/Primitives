@@ -34,11 +34,18 @@ public sealed class SyncLatestWitness<TLeft, TRight, TResult>
     /// <summary>Values and the terminal notification queued while another thread delivers.</summary>
     private PendingNotifications<Update> _pending = new();
 
+    /// <summary>Subscriptions to both arms, released on terminal delivery.</summary>
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("Usage", "CA2213:Disposable fields should be disposed", Justification = "Owned by the caller via Run and released early on terminal delivery.")]
+    private MultipleDisposable? _subscriptions;
+
     /// <summary>Whether the left source completed, as 0 or 1.</summary>
     private int _leftDone;
 
     /// <summary>Whether the right source completed, as 0 or 1.</summary>
     private int _rightDone;
+
+    /// <summary>Number of sides that have completed (0, 1, or 2).</summary>
+    private int _completedSides;
 
     /// <summary>Initializes a new instance of the <see cref="SyncLatestWitness{TLeft, TRight, TResult}"/> class.</summary>
     /// <param name="observer">The downstream observer.</param>
@@ -74,10 +81,16 @@ public sealed class SyncLatestWitness<TLeft, TRight, TResult>
     /// <param name="left">The left source.</param>
     /// <param name="right">The right source.</param>
     /// <returns>The subscriptions.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public MultipleDisposable Run(IObservable<TLeft> left, IObservable<TRight> right) =>
-        new(
-            left.Subscribe(OnLeftNext, OnError, OnLeftCompleted),
-            right.Subscribe(OnRightNext, OnError, OnRightCompleted));
+        BinaryCoordinatorHelper.SubscribeArms(
+            this,
+            out _subscriptions,
+            left,
+            new(static (self, v) => self.OnLeftNext(v), static (self, e) => self.OnError(e), static self => self.OnLeftCompleted()),
+            right,
+            new(static (self, v) => self.OnRightNext(v), static (self, e) => self.OnError(e), static self => self.OnRightCompleted()),
+            static self => self.IsCompleted);
 
     /// <summary>Records a left value.</summary>
     /// <param name="value">The left value.</param>
@@ -134,60 +147,32 @@ public sealed class SyncLatestWitness<TLeft, TRight, TResult>
     /// <summary>Marks the left source complete.</summary>
     private void OnLeftCompleted()
     {
-        Volatile.Write(ref _leftDone, 1);
-        TryComplete();
+        if (BinaryCoordinatorHelper.TryCompleteBothSides(ref _leftDone, ref _completedSides)
+            && _pending.TryRequestTerminal(null))
+        {
+            DeliveryGate.Signal(ref _delivery, new PendingDrain(this));
+        }
     }
 
     /// <summary>Marks the right source complete.</summary>
     private void OnRightCompleted()
     {
-        Volatile.Write(ref _rightDone, 1);
-        TryComplete();
-    }
-
-    /// <summary>Requests completion once both sources have completed.</summary>
-    private void TryComplete()
-    {
-        if (Volatile.Read(ref _leftDone) == 0 || Volatile.Read(ref _rightDone) == 0 || !_pending.TryRequestTerminal(null))
+        if (BinaryCoordinatorHelper.TryCompleteBothSides(ref _rightDone, ref _completedSides)
+            && _pending.TryRequestTerminal(null))
         {
-            return;
+            DeliveryGate.Signal(ref _delivery, new PendingDrain(this));
         }
-
-        DeliveryGate.Signal(ref _delivery, new PendingDrain(this));
     }
 
     /// <summary>Combines queued values in order, then delivers the terminal notification.</summary>
-    private void DrainPending()
-    {
-        while (true)
-        {
-            switch (_pending.TakeNext(out var update, out var error))
-            {
-                case PendingDelivery.Value:
-                {
-                    Apply(update);
-                    break;
-                }
-
-                case PendingDelivery.Terminal when error is null:
-                {
-                    Observer.OnCompleted();
-                    return;
-                }
-
-                case PendingDelivery.Terminal:
-                {
-                    Observer.OnError(error);
-                    return;
-                }
-
-                default:
-                {
-                    return;
-                }
-            }
-        }
-    }
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private void DrainPending() =>
+        BinaryCoordinatorHelper.DrainPending(
+            ref _pending,
+            this,
+            static (self, update) => self.Apply(in update),
+            Observer,
+            _subscriptions);
 
     /// <summary>Records a value and emits the projection once both sources have produced one.</summary>
     /// <param name="update">The value and its side.</param>
@@ -209,7 +194,18 @@ public sealed class SyncLatestWitness<TLeft, TRight, TResult>
             return;
         }
 
-        Observer.OnNext(Selector(LatestLeft!, LatestRight!));
+        TResult projected;
+        try
+        {
+            projected = Selector(LatestLeft!, LatestRight!);
+        }
+        catch (Exception selectorError)
+        {
+            OnError(selectorError);
+            return;
+        }
+
+        Observer.OnNext(projected);
     }
 
     /// <summary>A value from one side.</summary>

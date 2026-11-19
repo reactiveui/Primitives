@@ -134,16 +134,8 @@ public sealed class SliceTimeWitness<T> : IObserver<T>, IDisposable
         _upstream.Dispose();
     }
 
-    /// <summary>Opens a window and posts it to the outer observer; the caller holds the lock.</summary>
-    private void OpenWindow()
-    {
-        SliceWindow<T> window = new(Subscription);
-        _windows.Add(window);
-        _router.Open(window);
-    }
-
     /// <summary>Schedules the next window end, window start or both.</summary>
-    private void ScheduleTick()
+    internal void ScheduleTick()
     {
         bool isSpan;
         bool isShift;
@@ -177,7 +169,7 @@ public sealed class SliceTimeWitness<T> : IObserver<T>, IDisposable
     /// <summary>Ends the oldest window, starts a new one, or both, then schedules the next tick.</summary>
     /// <param name="isSpan">Whether the oldest window ends.</param>
     /// <param name="isShift">Whether a new window starts.</param>
-    private void Tick(bool isSpan, bool isShift)
+    internal void Tick(bool isSpan, bool isShift)
     {
         lock (_gate)
         {
@@ -201,6 +193,14 @@ public sealed class SliceTimeWitness<T> : IObserver<T>, IDisposable
 
         Deliver();
         ScheduleTick();
+    }
+
+    /// <summary>Opens a window and posts it to the outer observer; the caller holds the lock.</summary>
+    private void OpenWindow()
+    {
+        SliceWindow<T> window = new(Subscription);
+        _windows.Add(window);
+        _router.Open(window);
     }
 
     /// <summary>Delivers the posted notifications, tearing the sink down when a downstream observer throws.</summary>

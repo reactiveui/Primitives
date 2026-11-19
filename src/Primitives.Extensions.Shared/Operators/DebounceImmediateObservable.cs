@@ -16,11 +16,31 @@ namespace ReactiveUI.Primitives.Extensions.Operators;
 /// <param name="source">The source observable.</param>
 /// <param name="dueTime">The debounce duration.</param>
 /// <param name="scheduler">The scheduler to use for timing.</param>
-internal sealed class DebounceImmediateObservable<T>(
+public sealed class DebounceImmediateObservable<T>(
     IObservable<T> source,
     TimeSpan dueTime,
     ISequencer scheduler) : IObservable<T>
 {
+    /// <summary>Initializes a new instance of the <see cref="DebounceImmediateObservable{T}"/> class using <see cref="Sequencer.Default"/>.</summary>
+    /// <param name="source">The source observable.</param>
+    /// <param name="dueTime">The debounce duration.</param>
+    public DebounceImmediateObservable(IObservable<T> source, TimeSpan dueTime)
+        : this(source, dueTime, Sequencer.Default)
+    {
+    }
+
+    /// <summary>Creates a debounce-immediate sequence, defaulting a <see langword="null"/> <paramref name="scheduler"/> to <see cref="Sequencer.Default"/>.</summary>
+    /// <param name="source">The source observable.</param>
+    /// <param name="dueTime">The debounce duration.</param>
+    /// <param name="scheduler">Optional scheduler to use for timing.</param>
+    /// <returns>A debounced sequence whose first emission is immediate.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static DebounceImmediateObservable<T> Create(
+        IObservable<T> source,
+        TimeSpan dueTime,
+        ISequencer? scheduler) =>
+        new(source, dueTime, scheduler ?? Sequencer.Default);
+
     /// <inheritdoc/>
     public IDisposable Subscribe(IObserver<T> observer)
     {
@@ -29,8 +49,8 @@ internal sealed class DebounceImmediateObservable<T>(
         ArgumentExceptionHelper.ThrowIfNull(observer);
 
         DebounceImmediateSink sink = new(observer, dueTime, scheduler);
-        var subscription = source.Subscribe(sink);
-        return new DisposableBag(subscription, sink);
+        sink.Attach(source.Subscribe(sink));
+        return sink;
     }
 
     /// <summary>Sink that forwards the first value inline and debounces every later value by the due time.</summary>
@@ -51,6 +71,9 @@ internal sealed class DebounceImmediateObservable<T>(
 
         /// <summary>Serializes downstream deliveries.</summary>
         private SerializedDelivery<T> _delivery = new();
+
+        /// <summary>Upstream subscription handle.</summary>
+        private IDisposable? _subscription;
 
         /// <summary>Whether the first value has yet to be emitted.</summary>
         private bool _isFirst = true;
@@ -94,7 +117,7 @@ internal sealed class DebounceImmediateObservable<T>(
                 return;
             }
 
-            _timer.Disposable = scheduler.Schedule(dueTime, Emit);
+            _timer.Disposable = scheduler.Schedule(this, dueTime, static s => s.Emit());
         }
 
         /// <inheritdoc/>
@@ -113,6 +136,7 @@ internal sealed class DebounceImmediateObservable<T>(
                 _ = _delivery.PostError(error);
             }
 
+            SinkSubscription.Dispose(ref _subscription);
             Flush();
         }
 
@@ -132,6 +156,7 @@ internal sealed class DebounceImmediateObservable<T>(
                 _ = _delivery.PostCompleted();
             }
 
+            SinkSubscription.Dispose(ref _subscription);
             Flush();
         }
 
@@ -141,7 +166,21 @@ internal sealed class DebounceImmediateObservable<T>(
             lock (_gate)
             {
                 _done = true;
+                _lastValue = default;
+                _hasValue = false;
                 _timer.Dispose();
+            }
+
+            SinkSubscription.Dispose(ref _subscription);
+        }
+
+        /// <summary>Attaches the upstream subscription handle.</summary>
+        /// <param name="subscription">The upstream subscription handle.</param>
+        internal void Attach(IDisposable? subscription)
+        {
+            if (subscription is not null)
+            {
+                SinkSubscription.Set(ref _subscription, subscription);
             }
         }
 
@@ -173,8 +212,21 @@ internal sealed class DebounceImmediateObservable<T>(
         private void Flush() => _delivery.Flush(new PendingDrain(this));
 
         /// <summary>Delivers the queued notifications to the downstream observer.</summary>
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private void DrainPending() => _ = _delivery.DrainTo(downstream);
+        private void DrainPending()
+        {
+            try
+            {
+                if (_delivery.DrainTo(downstream))
+                {
+                    SinkSubscription.Dispose(ref _subscription);
+                }
+            }
+            catch
+            {
+                Dispose();
+                throw;
+            }
+        }
 
         /// <summary>Drains this sink's queued notifications for the delivery gate.</summary>
         /// <param name="Owner">The sink.</param>

@@ -26,7 +26,7 @@ public static partial class LinqExtensions
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public IObservable<GroupedSignal<TKey, TSource>> GroupBy<TKey>(Func<TSource, TKey> keySelector)
             where TKey : notnull =>
-            GroupByCore(source, keySelector, static value => value, null, 0);
+            GroupBySignal.Create(source, keySelector);
 
         /// <summary>Splits the source into groups by key, comparing keys with a comparer.</summary>
         /// <typeparam name="TKey">The key type.</typeparam>
@@ -39,7 +39,7 @@ public static partial class LinqExtensions
             Func<TSource, TKey> keySelector,
             IEqualityComparer<TKey>? comparer)
             where TKey : notnull =>
-            GroupByCore(source, keySelector, static value => value, comparer, 0);
+            GroupBySignal.Create(source, keySelector, comparer);
 
         /// <summary>Splits the source into groups by key, with the initial capacity of the group table.</summary>
         /// <typeparam name="TKey">The key type.</typeparam>
@@ -51,7 +51,7 @@ public static partial class LinqExtensions
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public IObservable<GroupedSignal<TKey, TSource>> GroupBy<TKey>(Func<TSource, TKey> keySelector, int capacity)
             where TKey : notnull =>
-            GroupByCore(source, keySelector, static value => value, null, capacity);
+            GroupBySignal.Create(source, keySelector, capacity);
 
         /// <summary>Splits the source into groups by key, with the initial capacity of the group table and a key comparer.</summary>
         /// <typeparam name="TKey">The key type.</typeparam>
@@ -67,7 +67,7 @@ public static partial class LinqExtensions
             int capacity,
             IEqualityComparer<TKey>? comparer)
             where TKey : notnull =>
-            GroupByCore(source, keySelector, static value => value, comparer, capacity);
+            GroupBySignal.Create(source, keySelector, capacity, comparer);
 
         /// <summary>Splits the source into groups by key and projects each value before it enters its group.</summary>
         /// <typeparam name="TKey">The key type.</typeparam>
@@ -81,7 +81,7 @@ public static partial class LinqExtensions
             Func<TSource, TKey> keySelector,
             Func<TSource, TElement> elementSelector)
             where TKey : notnull =>
-            GroupByCore(source, keySelector, elementSelector, null, 0);
+            new GroupBySignal<TSource, TKey, TElement>(source, keySelector, elementSelector);
 
         /// <summary>Splits the source into groups by key, projecting each value and comparing keys with a comparer.</summary>
         /// <typeparam name="TKey">The key type.</typeparam>
@@ -97,7 +97,7 @@ public static partial class LinqExtensions
             Func<TSource, TElement> elementSelector,
             IEqualityComparer<TKey>? comparer)
             where TKey : notnull =>
-            GroupByCore(source, keySelector, elementSelector, comparer, 0);
+            new GroupBySignal<TSource, TKey, TElement>(source, keySelector, elementSelector, comparer);
 
         /// <summary>Splits the source into groups by key, projecting each value, with the initial capacity of the group table.</summary>
         /// <typeparam name="TKey">The key type.</typeparam>
@@ -114,7 +114,7 @@ public static partial class LinqExtensions
             Func<TSource, TElement> elementSelector,
             int capacity)
             where TKey : notnull =>
-            GroupByCore(source, keySelector, elementSelector, null, capacity);
+            new GroupBySignal<TSource, TKey, TElement>(source, keySelector, elementSelector, capacity);
 
         /// <summary>Splits the source into groups by key, projecting each value, with the initial capacity of the group table and a key comparer.</summary>
         /// <typeparam name="TKey">The key type.</typeparam>
@@ -133,7 +133,7 @@ public static partial class LinqExtensions
             int capacity,
             IEqualityComparer<TKey>? comparer)
             where TKey : notnull =>
-            GroupByCore(source, keySelector, elementSelector, comparer, capacity);
+            new GroupBySignal<TSource, TKey, TElement>(source, keySelector, elementSelector, comparer, capacity);
 
         /// <summary>Splits the source into groups by key; each group ends when its duration signal emits or completes.</summary>
         /// <typeparam name="TKey">The key type.</typeparam>
@@ -147,7 +147,7 @@ public static partial class LinqExtensions
             Func<TSource, TKey> keySelector,
             Func<GroupedSignal<TKey, TSource>, IObservable<TDuration>> durationSelector)
             where TKey : notnull =>
-            GroupByUntilCore(source, keySelector, static value => value, durationSelector, null, 0);
+            GroupByUntilSignal.Create(source, keySelector, durationSelector);
 
         /// <summary>Splits the source into groups by key that end with a duration signal, comparing keys with a comparer.</summary>
         /// <typeparam name="TKey">The key type.</typeparam>
@@ -163,7 +163,7 @@ public static partial class LinqExtensions
             Func<GroupedSignal<TKey, TSource>, IObservable<TDuration>> durationSelector,
             IEqualityComparer<TKey>? comparer)
             where TKey : notnull =>
-            GroupByUntilCore(source, keySelector, static value => value, durationSelector, comparer, 0);
+            GroupByUntilSignal.Create(source, keySelector, durationSelector, comparer);
 
         /// <summary>Splits the source into groups by key that end with a duration signal, with the initial capacity of the group table.</summary>
         /// <typeparam name="TKey">The key type.</typeparam>
@@ -180,7 +180,7 @@ public static partial class LinqExtensions
             Func<GroupedSignal<TKey, TSource>, IObservable<TDuration>> durationSelector,
             int capacity)
             where TKey : notnull =>
-            GroupByUntilCore(source, keySelector, static value => value, durationSelector, null, capacity);
+            GroupByUntilSignal.Create(source, keySelector, durationSelector, capacity);
 
         /// <summary>Splits the source into groups by key that end with a duration signal, with the initial capacity of the group table and a key comparer.</summary>
         /// <typeparam name="TKey">The key type.</typeparam>
@@ -199,7 +199,7 @@ public static partial class LinqExtensions
             int capacity,
             IEqualityComparer<TKey>? comparer)
             where TKey : notnull =>
-            GroupByUntilCore(source, keySelector, static value => value, durationSelector, comparer, capacity);
+            GroupByUntilSignal.Create(source, keySelector, durationSelector, capacity, comparer);
 
         /// <summary>Splits the source into groups by key, projecting each value; each group ends when its duration signal emits or completes.</summary>
         /// <typeparam name="TKey">The key type.</typeparam>
@@ -216,7 +216,7 @@ public static partial class LinqExtensions
             Func<TSource, TElement> elementSelector,
             Func<GroupedSignal<TKey, TElement>, IObservable<TDuration>> durationSelector)
             where TKey : notnull =>
-            GroupByUntilCore(source, keySelector, elementSelector, durationSelector, null, 0);
+            new GroupByUntilSignal<TSource, TKey, TElement, TDuration>(source, keySelector, elementSelector, durationSelector);
 
         /// <summary>Splits the source into groups by key, projecting each value, with a duration signal per group and a key comparer.</summary>
         /// <typeparam name="TKey">The key type.</typeparam>
@@ -235,7 +235,12 @@ public static partial class LinqExtensions
             Func<GroupedSignal<TKey, TElement>, IObservable<TDuration>> durationSelector,
             IEqualityComparer<TKey>? comparer)
             where TKey : notnull =>
-            GroupByUntilCore(source, keySelector, elementSelector, durationSelector, comparer, 0);
+            new GroupByUntilSignal<TSource, TKey, TElement, TDuration>(
+                source,
+                keySelector,
+                elementSelector,
+                durationSelector,
+                comparer);
 
         /// <summary>Splits the source into groups by key, projecting each value, with a duration signal per group and the initial capacity of the group table.</summary>
         /// <typeparam name="TKey">The key type.</typeparam>
@@ -255,7 +260,12 @@ public static partial class LinqExtensions
             Func<GroupedSignal<TKey, TElement>, IObservable<TDuration>> durationSelector,
             int capacity)
             where TKey : notnull =>
-            GroupByUntilCore(source, keySelector, elementSelector, durationSelector, null, capacity);
+            new GroupByUntilSignal<TSource, TKey, TElement, TDuration>(
+                source,
+                keySelector,
+                elementSelector,
+                durationSelector,
+                capacity);
 
         /// <summary>Splits the source into groups by key, projecting each value, with a duration signal per group, the initial capacity of the group table and a key comparer.</summary>
         /// <typeparam name="TKey">The key type.</typeparam>
@@ -277,47 +287,12 @@ public static partial class LinqExtensions
             int capacity,
             IEqualityComparer<TKey>? comparer)
             where TKey : notnull =>
-            GroupByUntilCore(source, keySelector, elementSelector, durationSelector, comparer, capacity);
+            new GroupByUntilSignal<TSource, TKey, TElement, TDuration>(
+                source,
+                keySelector,
+                elementSelector,
+                durationSelector,
+                comparer,
+                capacity);
     }
-
-    /// <summary>Builds the signal shared by every <c>GroupBy</c> overload.</summary>
-    /// <typeparam name="TSource">The type of the source values.</typeparam>
-    /// <typeparam name="TKey">The key type.</typeparam>
-    /// <typeparam name="TElement">The type of the values inside each group.</typeparam>
-    /// <param name="source">The source sequence.</param>
-    /// <param name="keySelector">Extracts the key of a value.</param>
-    /// <param name="elementSelector">Projects the value stored in its group.</param>
-    /// <param name="comparer">Compares keys, or <see langword="null"/> for the default comparer.</param>
-    /// <param name="capacity">The initial capacity of the group table.</param>
-    /// <returns>The grouping signal.</returns>
-    private static GroupBySignal<TSource, TKey, TElement> GroupByCore<TSource, TKey, TElement>(
-        IObservable<TSource> source,
-        Func<TSource, TKey> keySelector,
-        Func<TSource, TElement> elementSelector,
-        IEqualityComparer<TKey>? comparer,
-        int capacity)
-        where TKey : notnull =>
-        new(source, keySelector, elementSelector, comparer, capacity);
-
-    /// <summary>Builds the signal shared by every <c>GroupByUntil</c> overload.</summary>
-    /// <typeparam name="TSource">The type of the source values.</typeparam>
-    /// <typeparam name="TKey">The key type.</typeparam>
-    /// <typeparam name="TElement">The type of the values inside each group.</typeparam>
-    /// <typeparam name="TDuration">The value type of the duration signals.</typeparam>
-    /// <param name="source">The source sequence.</param>
-    /// <param name="keySelector">Extracts the key of a value.</param>
-    /// <param name="elementSelector">Projects the value stored in its group.</param>
-    /// <param name="durationSelector">Supplies the signal that ends a group.</param>
-    /// <param name="comparer">Compares keys, or <see langword="null"/> for the default comparer.</param>
-    /// <param name="capacity">The initial capacity of the group table.</param>
-    /// <returns>The grouping signal.</returns>
-    private static GroupByUntilSignal<TSource, TKey, TElement, TDuration> GroupByUntilCore<TSource, TKey, TElement, TDuration>(
-        IObservable<TSource> source,
-        Func<TSource, TKey> keySelector,
-        Func<TSource, TElement> elementSelector,
-        Func<GroupedSignal<TKey, TElement>, IObservable<TDuration>> durationSelector,
-        IEqualityComparer<TKey>? comparer,
-        int capacity)
-        where TKey : notnull =>
-        new(source, keySelector, elementSelector, durationSelector, comparer, capacity);
 }

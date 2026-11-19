@@ -10,16 +10,44 @@ namespace ReactiveUI.Primitives.Advanced;
 
 /// <summary>Enumerable <c>Blend</c> signal with bounded concurrency.</summary>
 /// <typeparam name="T">The value type.</typeparam>
-/// <param name="sources">The sources to merge.</param>
-/// <param name="maxConcurrent">The maximum number of active inner subscriptions.</param>
 [System.Diagnostics.DebuggerDisplay("MaxConcurrentEnumerableBlendSignal: Sources = {_sources}, MaxConcurrent = {_maxConcurrent}")]
-public sealed class MaxConcurrentEnumerableBlendSignal<T>(IEnumerable<IObservable<T>> sources, int maxConcurrent) : IObservable<T>
+public sealed class MaxConcurrentEnumerableBlendSignal<T> : IObservable<T>
 {
     /// <summary>The sources to merge.</summary>
-    private readonly IEnumerable<IObservable<T>> _sources = sources;
+    private readonly IEnumerable<IObservable<T>> _sources;
 
     /// <summary>The maximum number of active inner subscriptions.</summary>
-    private readonly int _maxConcurrent = maxConcurrent;
+    private readonly int _maxConcurrent;
+
+    /// <summary>Initializes a new instance of the <see cref="MaxConcurrentEnumerableBlendSignal{T}"/> class.</summary>
+    /// <param name="sources">The sources to merge.</param>
+    /// <param name="maxConcurrent">The maximum number of active inner subscriptions.</param>
+    /// <exception cref="ArgumentNullException"><paramref name="sources"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentOutOfRangeException"><paramref name="maxConcurrent"/> is zero or negative.</exception>
+    public MaxConcurrentEnumerableBlendSignal(IEnumerable<IObservable<T>> sources, int maxConcurrent)
+    {
+        ArgumentExceptionHelper.ThrowIfNull(sources);
+        ArgumentOutOfRangeExceptionHelper.ThrowIfNegativeOrZero(maxConcurrent);
+
+        _sources = sources;
+        _maxConcurrent = maxConcurrent;
+    }
+
+    /// <summary>Creates a bounded-concurrency blend signal, simplifying to <see cref="EnumerableBlendSignal{T}"/> when <paramref name="maxConcurrent"/> is <see cref="int.MaxValue"/>.</summary>
+    /// <param name="sources">The sources to merge.</param>
+    /// <param name="maxConcurrent">The maximum number of active inner subscriptions.</param>
+    /// <returns>The merged observable sequence.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="sources"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentOutOfRangeException"><paramref name="maxConcurrent"/> is zero or negative.</exception>
+    public static IObservable<T> Create(IEnumerable<IObservable<T>> sources, int maxConcurrent)
+    {
+        ArgumentExceptionHelper.ThrowIfNull(sources);
+        ArgumentOutOfRangeExceptionHelper.ThrowIfNegativeOrZero(maxConcurrent);
+
+        return maxConcurrent == int.MaxValue
+            ? new EnumerableBlendSignal<T>(sources)
+            : new MaxConcurrentEnumerableBlendSignal<T>(sources, maxConcurrent);
+    }
 
     /// <inheritdoc/>
     public IDisposable Subscribe(IObserver<T> observer)

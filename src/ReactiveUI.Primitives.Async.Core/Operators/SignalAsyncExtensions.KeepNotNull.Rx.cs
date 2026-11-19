@@ -2,6 +2,8 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Runtime.CompilerServices;
+
 namespace ReactiveUI.Primitives.Async;
 
 /// <summary>Provides Rx-compatible parity helper names for asynchronous observable sequences.</summary>
@@ -15,11 +17,8 @@ public static partial class SignalAsyncExtensions
     {
         /// <summary>Keeps non-null reference values.</summary>
         /// <returns>An observable sequence of non-null values.</returns>
-        public IObservableAsync<T> KeepNotNull()
-        {
-            ArgumentExceptionHelper.ThrowIfNull(source);
-
-            return new WhereIsNotNullSignal<T>(source);
-        }
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public IObservableAsync<T> KeepNotNull() =>
+            new WhereIsNotNullSignal<T>(source);
     }
 }

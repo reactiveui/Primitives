@@ -70,7 +70,7 @@ public partial class SignalOperatorMixinsTests
         List<int> values = [];
         var completed = 0;
         var claimed = false;
-        LinqExtensions.ShiftCoordinator<int>? coordinator = null;
+        Advanced.ShiftCoordinator<int>? coordinator = null;
         var observer = new DelegateWitness<int>(
             value =>
             {
