@@ -87,7 +87,7 @@ public sealed class BlendWitness<T> : IDisposable
         }
 
         _ = Interlocked.Increment(ref _active);
-        Subscriptions.Add(source.Subscribe(OnInnerNext, OnAnyError, OnInnerCompleted));
+        Subscriptions.Add(source.Subscribe(new Arm(this)));
     }
 
     /// <summary>Forwards an inner value, directly when nothing else is delivering.</summary>
@@ -132,5 +132,22 @@ public sealed class BlendWitness<T> : IDisposable
         /// <inheritdoc/>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Drain() => _ = Owner._delivery.DrainTo(Owner.Observer);
+    }
+
+    /// <summary>Receives the notifications of one source and passes them to the witness.</summary>
+    /// <param name="parent">The witness.</param>
+    private sealed class Arm(BlendWitness<T> parent) : IObserver<T>
+    {
+        /// <inheritdoc/>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void OnNext(T value) => parent.OnInnerNext(value);
+
+        /// <inheritdoc/>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void OnError(Exception error) => parent.OnAnyError(error);
+
+        /// <inheritdoc/>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void OnCompleted() => parent.OnInnerCompleted();
     }
 }

@@ -25,17 +25,21 @@ public sealed class RepeatSourceCoordinator<T> : IDisposable
     /// <summary>The active source subscription or queued resubscription.</summary>
     private readonly SingleReplaceableDisposable _active = new();
 
-    /// <summary>Guards completion raised synchronously while a subscription is being assigned.</summary>
-    private readonly Lock _gate = new();
+    /// <summary>
+    /// The cancel handle of the downstream subscription, which can be disposed before this coordinator is: a bounding operator
+    /// such as <c>Take</c> disposes it from inside a value, while the loop that subscribes again is still running.
+    /// </summary>
+    private readonly IsDisposed? _downstream;
 
-    /// <summary>The remaining number of finite subscriptions.</summary>
+    /// <summary>The remaining number of finite subscriptions. Only the thread that is subscribing reads or writes it.</summary>
     private int _remaining;
 
-    /// <summary>Tracks whether a source subscription is currently being created.</summary>
-    private bool _subscribing;
-
-    /// <summary>Tracks synchronous completion before the subscription disposable is returned.</summary>
-    private bool _completedWhileSubscribing;
+    /// <summary>
+    /// The subscriptions asked for and not yet made. The thread that raises it from zero makes them all, so a source that
+    /// completes on another thread while this one is still subscribing to it is followed by the next subscription and never
+    /// by a second thread subscribing at the same time.
+    /// </summary>
+    private int _pending;
 
     /// <summary>Tracks the current subscription generation.</summary>
     private int _generation;
@@ -55,6 +59,16 @@ public sealed class RepeatSourceCoordinator<T> : IDisposable
     /// </exception>
     /// <exception cref="ArgumentOutOfRangeException"><paramref name="repeatCount"/> is less than zero.</exception>
     public RepeatSourceCoordinator(IObservable<T> source, int? repeatCount, IObserver<T> observer)
+        : this(source, repeatCount, observer, null)
+    {
+    }
+
+    /// <summary>Initializes a new instance of the <see cref="RepeatSourceCoordinator{T}"/> class that stops when the downstream subscription is disposed.</summary>
+    /// <param name="source">The source sequence.</param>
+    /// <param name="repeatCount">The number of repetitions, or <see langword="null"/> for indefinite repetition.</param>
+    /// <param name="observer">The downstream observer.</param>
+    /// <param name="downstream">The cancel handle of the downstream subscription, or <see langword="null"/> when there is none to watch.</param>
+    internal RepeatSourceCoordinator(IObservable<T> source, int? repeatCount, IObserver<T> observer, IsDisposed? downstream)
     {
         ArgumentExceptionHelper.ThrowIfNull(source);
 
@@ -69,6 +83,7 @@ public sealed class RepeatSourceCoordinator<T> : IDisposable
         _observer = observer;
         _repeatCount = repeatCount;
         _remaining = repeatCount.GetValueOrDefault();
+        _downstream = downstream;
     }
 
     /// <inheritdoc/>
@@ -153,26 +168,37 @@ public sealed class RepeatSourceCoordinator<T> : IDisposable
         }
     }
 
-    /// <summary>Schedules the next source subscription on the current-thread trampoline.</summary>
+    /// <summary>
+    /// Asks for the next source subscription. The first caller makes every subscription asked for while it works: a source
+    /// that completes inside its own <c>Subscribe</c>, or on another thread before <c>Subscribe</c> returns, only raises the
+    /// count, and the subscribing thread goes round again. No stack grows and no two threads subscribe at once.
+    /// </summary>
     internal void ScheduleNext()
     {
-        if (IsDisposed())
+        if (IsDisposed() || Interlocked.Increment(ref _pending) != 1)
         {
             return;
         }
 
-        lock (_gate)
-        {
-            _completedWhileSubscribing |= _subscribing;
-        }
-
-        var scheduled = Sequencer.CurrentThread.Schedule(SubscribeNext);
+        // The loop goes on the current-thread trampoline, which runs it once the subscription handle exists, so a bounding
+        // operator such as Take can dispose the subscription from inside a value and stop the loop.
+        var scheduled = Sequencer.CurrentThread.Schedule(SubscribeWhilePending);
         if (ReferenceEquals(scheduled, EmptyDisposable.Instance) || IsDisposed())
         {
             return;
         }
 
         _active.Create(scheduled);
+    }
+
+    /// <summary>Subscribes for each subscription asked for, including those asked for while this one is subscribing.</summary>
+    internal void SubscribeWhilePending()
+    {
+        do
+        {
+            SubscribeNext();
+        }
+        while (!IsDisposed() && Interlocked.Decrement(ref _pending) != 0);
     }
 
     /// <summary>Subscribes to the source for the next repetition.</summary>
@@ -197,14 +223,7 @@ public sealed class RepeatSourceCoordinator<T> : IDisposable
         var generation = Interlocked.Increment(ref _generation);
         Volatile.Write(ref _activeGeneration, generation);
         RepeatSourceWitness<T> observer = new(this, generation);
-        IDisposable? subscription = null;
-        var completedWhileSubscribing = false;
-        lock (_gate)
-        {
-            _subscribing = true;
-            _completedWhileSubscribing = false;
-        }
-
+        IDisposable subscription;
         try
         {
             subscription = _source.Subscribe(observer);
@@ -212,23 +231,12 @@ public sealed class RepeatSourceCoordinator<T> : IDisposable
         catch (Exception error)
         {
             observer.OnError(error);
-        }
-        finally
-        {
-            lock (_gate)
-            {
-                completedWhileSubscribing = _completedWhileSubscribing;
-                _completedWhileSubscribing = false;
-                _subscribing = false;
-            }
-        }
-
-        if (subscription is null)
-        {
             return;
         }
 
-        if (completedWhileSubscribing || IsDisposed())
+        // A run that has already completed asked for the next one, which this thread makes next, so its subscription is
+        // done with. Keeping it would only hold it until the next run replaces it.
+        if (IsDisposed() || Volatile.Read(ref _pending) > 1)
         {
             subscription.Dispose();
             return;
@@ -239,7 +247,7 @@ public sealed class RepeatSourceCoordinator<T> : IDisposable
 
     /// <summary>Gets a value indicating whether the coordinator is disposed.</summary>
     /// <returns><see langword="true"/> when the coordinator is disposed; otherwise, <see langword="false"/>.</returns>
-    private bool IsDisposed() => Volatile.Read(ref _disposed) != 0;
+    private bool IsDisposed() => Volatile.Read(ref _disposed) != 0 || _downstream is { IsDisposed: true };
 
     /// <summary>Gets a value indicating whether a notification belongs to the active generation.</summary>
     /// <param name="generation">The source subscription generation.</param>

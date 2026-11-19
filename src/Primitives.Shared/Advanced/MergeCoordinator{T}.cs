@@ -83,19 +83,7 @@ public sealed class MergeCoordinator<T> : IDisposable
         }
 
         _ = Interlocked.Increment(ref _active);
-        var completed = 0;
-        Subscriptions.Add(source.Subscribe(
-            OnInnerNext,
-            OnAnyError,
-            () =>
-            {
-                if (Interlocked.Exchange(ref completed, 1) != 0)
-                {
-                    return;
-                }
-
-                OnInnerCompleted();
-            }));
+        Subscriptions.Add(source.Subscribe(new Arm(this)));
     }
 
     /// <summary>Forwards the first terminal error.</summary>
@@ -140,5 +128,32 @@ public sealed class MergeCoordinator<T> : IDisposable
         /// <inheritdoc/>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Drain() => _ = Owner._delivery.DrainTo(Owner.Observer);
+    }
+
+    /// <summary>Receives the notifications of one source and passes them to the coordinator, counting its completion once.</summary>
+    /// <param name="parent">The coordinator.</param>
+    private sealed class Arm(MergeCoordinator<T> parent) : IObserver<T>
+    {
+        /// <summary>Set to 1 once this source has completed, so a repeated completion is not counted twice.</summary>
+        private int _completed;
+
+        /// <inheritdoc/>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void OnNext(T value) => parent.OnInnerNext(value);
+
+        /// <inheritdoc/>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void OnError(Exception error) => parent.OnAnyError(error);
+
+        /// <inheritdoc/>
+        public void OnCompleted()
+        {
+            if (Interlocked.Exchange(ref _completed, 1) != 0)
+            {
+                return;
+            }
+
+            parent.OnInnerCompleted();
+        }
     }
 }
