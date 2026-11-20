@@ -117,20 +117,36 @@ internal static class DirectSequenceEmission
     /// <param name="tap">The state and side-effect action pair.</param>
     /// <param name="observer">The downstream observer.</param>
     /// <returns><see langword="true"/> when <paramref name="source"/> was emitted directly; otherwise, <see langword="false"/>.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal static bool TrySubscribeTapped<TSource, TState>(
         IObservable<TSource> source,
         StateCallbackPair<TState, Action<TState, TSource>> tap,
+        IObserver<TSource> observer) =>
+        TrySubscribeTapped(source, tap, null, observer);
+
+    /// <summary>Invokes side-effect callbacks and forwards values directly when <paramref name="source"/> is a synchronous range or indexable enumerable.</summary>
+    /// <typeparam name="TSource">The source element type.</typeparam>
+    /// <typeparam name="TState">The state type passed to the side-effect callback.</typeparam>
+    /// <param name="source">The source observable.</param>
+    /// <param name="tap">The state and side-effect action pair.</param>
+    /// <param name="onCompleted">Optional completion side-effect callback.</param>
+    /// <param name="observer">The downstream observer.</param>
+    /// <returns><see langword="true"/> when <paramref name="source"/> was emitted directly; otherwise, <see langword="false"/>.</returns>
+    internal static bool TrySubscribeTapped<TSource, TState>(
+        IObservable<TSource> source,
+        StateCallbackPair<TState, Action<TState, TSource>> tap,
+        Action? onCompleted,
         IObserver<TSource> observer)
     {
         if (typeof(TSource) == typeof(int) && source is RangeSignal range)
         {
-            EmitRangeTapped(range, tap, observer);
+            EmitRangeTapped(range, tap, onCompleted, observer);
             return true;
         }
 
         if (source is FromEnumerableSignal<TSource> enumerable && enumerable.TryGetReadOnlyValues(out var values))
         {
-            EmitListTapped(values, tap, observer);
+            EmitListTapped(values, tap, onCompleted, observer);
             return true;
         }
 
@@ -471,15 +487,17 @@ internal static class DirectSequenceEmission
         observer.OnCompleted();
     }
 
-    /// <summary>Invokes a stateful side effect on each range value and forwards it to <paramref name="observer"/>.</summary>
+    /// <summary>Invokes side effects on each range value, forwards it to <paramref name="observer"/>, and completes.</summary>
     /// <typeparam name="TSource">The source element type (verified to be <see cref="int"/>).</typeparam>
     /// <typeparam name="TState">The state type.</typeparam>
     /// <param name="range">The range source.</param>
     /// <param name="tap">The state and side-effect callback pair.</param>
+    /// <param name="onCompleted">Optional completion side-effect callback.</param>
     /// <param name="observer">The downstream observer.</param>
     private static void EmitRangeTapped<TSource, TState>(
         RangeSignal range,
         StateCallbackPair<TState, Action<TState, TSource>> tap,
+        Action? onCompleted,
         IObserver<TSource> observer)
     {
         var intCallback = Unsafe.As<Action<TState, int>>(tap.Callback);
@@ -503,18 +521,20 @@ internal static class DirectSequenceEmission
             intObserver.OnNext(value);
         }
 
-        observer.OnCompleted();
+        CompleteTapped(onCompleted, observer);
     }
 
-    /// <summary>Invokes a stateful side effect on each list value and forwards it to <paramref name="observer"/>.</summary>
+    /// <summary>Invokes side effects on each list value, forwards it to <paramref name="observer"/>, and completes.</summary>
     /// <typeparam name="TSource">The source element type.</typeparam>
     /// <typeparam name="TState">The state type.</typeparam>
     /// <param name="values">The indexable values.</param>
     /// <param name="tap">The state and side-effect callback pair.</param>
+    /// <param name="onCompleted">Optional completion side-effect callback.</param>
     /// <param name="observer">The downstream observer.</param>
     private static void EmitListTapped<TSource, TState>(
         IReadOnlyList<TSource> values,
         StateCallbackPair<TState, Action<TState, TSource>> tap,
+        Action? onCompleted,
         IObserver<TSource> observer)
     {
         var (state, callback) = tap;
@@ -532,6 +552,28 @@ internal static class DirectSequenceEmission
             }
 
             observer.OnNext(value);
+        }
+
+        CompleteTapped(onCompleted, observer);
+    }
+
+    /// <summary>Runs the optional completion side effect before completing or faulting <paramref name="observer"/>.</summary>
+    /// <typeparam name="TSource">The source element type.</typeparam>
+    /// <param name="onCompleted">Optional completion side-effect callback.</param>
+    /// <param name="observer">The downstream observer.</param>
+    private static void CompleteTapped<TSource>(Action? onCompleted, IObserver<TSource> observer)
+    {
+        if (onCompleted is not null)
+        {
+            try
+            {
+                onCompleted();
+            }
+            catch (Exception error) when (!UnaryWitnessDelivery.IsFatal(error))
+            {
+                observer.OnError(error);
+                return;
+            }
         }
 
         observer.OnCompleted();
@@ -700,7 +742,11 @@ internal static class DirectSequenceEmission
         var count = range.Count;
         for (var i = 0; i < count; i++)
         {
-            current = intAccumulator(current, start + i);
+            if (!TryStepAccumulator(intAccumulator, ref current, start + i, observer))
+            {
+                return;
+            }
+
             if (emitEachStep)
             {
                 observer.OnNext(current);
@@ -733,7 +779,11 @@ internal static class DirectSequenceEmission
         var current = seed;
         for (var i = 0; i < values.Count; i++)
         {
-            current = accumulator(current, values[i]);
+            if (!TryStepAccumulator(accumulator, ref current, values[i], observer))
+            {
+                return;
+            }
+
             if (emitEachStep)
             {
                 observer.OnNext(current);
@@ -746,5 +796,31 @@ internal static class DirectSequenceEmission
         }
 
         observer.OnCompleted();
+    }
+
+    /// <summary>Advances <paramref name="current"/> using <paramref name="accumulator"/>, routing non-fatal callback failures to <paramref name="observer"/>.</summary>
+    /// <typeparam name="TItem">The source item type.</typeparam>
+    /// <typeparam name="TAccumulate">The accumulator type.</typeparam>
+    /// <param name="accumulator">The accumulation function.</param>
+    /// <param name="current">The running accumulator value.</param>
+    /// <param name="item">The incoming element.</param>
+    /// <param name="observer">The downstream observer.</param>
+    /// <returns><see langword="true"/> when accumulation succeeded; <see langword="false"/> when faulted.</returns>
+    private static bool TryStepAccumulator<TItem, TAccumulate>(
+        Func<TAccumulate, TItem, TAccumulate> accumulator,
+        ref TAccumulate current,
+        TItem item,
+        IObserver<TAccumulate> observer)
+    {
+        try
+        {
+            current = accumulator(current, item);
+            return true;
+        }
+        catch (Exception error) when (!UnaryWitnessDelivery.IsFatal(error))
+        {
+            observer.OnError(error);
+            return false;
+        }
     }
 }

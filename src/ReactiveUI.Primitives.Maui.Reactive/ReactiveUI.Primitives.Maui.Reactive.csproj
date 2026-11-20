@@ -17,12 +17,6 @@
     <ProjectReference Include="..\ReactiveUI.Primitives.Reactive\ReactiveUI.Primitives.Reactive.csproj"/>
   </ItemGroup>
 
-  <ItemGroup Condition="$([MSBuild]::IsTargetFrameworkCompatible('$(TargetFramework)', 'net11.0'))">
-    <PackageReference Include="Microsoft.Extensions.Configuration"/>
-    <PackageReference Include="Microsoft.Extensions.DependencyInjection"/>
-    <PackageReference Include="Microsoft.Extensions.Logging"/>
-  </ItemGroup>
-
   <ItemGroup>
     <InternalsVisibleTo Include="ReactiveUI.Primitives.Maui.Reactive.Tests"/>
   </ItemGroup>

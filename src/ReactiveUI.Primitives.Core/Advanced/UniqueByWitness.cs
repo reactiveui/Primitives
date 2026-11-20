@@ -3,6 +3,7 @@
 // See the LICENSE file in the project root for full license information.
 
 using System.Runtime.CompilerServices;
+using ReactiveUI.Primitives.Core.Internal;
 
 namespace ReactiveUI.Primitives.Advanced;
 
@@ -33,14 +34,34 @@ public sealed class UniqueByWitness<T, TKey>(
     /// <summary>The most recently observed key.</summary>
     private TKey? _last;
 
+    /// <summary>Non-zero once stopped.</summary>
+    private int _stopped;
+
     /// <summary>The upstream subscription.</summary>
     private IDisposable? _subscription;
 
     /// <inheritdoc/>
     public void OnNext(T value)
     {
-        var key = _keySelector(value);
-        if (_hasLast && _comparer.Equals(_last!, key))
+        if (Volatile.Read(ref _stopped) != 0)
+        {
+            return;
+        }
+
+        TKey key;
+        bool duplicate;
+        try
+        {
+            key = _keySelector(value);
+            duplicate = _hasLast && _comparer.Equals(_last!, key);
+        }
+        catch (Exception error) when (!CoreFatalExceptionHelper.IsFatal(error))
+        {
+            UnaryWitnessDelivery.Fault(ref _stopped, _observer, error, this);
+            return;
+        }
+
+        if (duplicate)
         {
             return;
         }
@@ -52,11 +73,11 @@ public sealed class UniqueByWitness<T, TKey>(
 
     /// <inheritdoc/>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public void OnError(Exception error) => SinkTerminal.Fault(_observer, error, this);
+    public void OnError(Exception error) => UnaryWitnessDelivery.Fault(ref _stopped, _observer, error, this);
 
     /// <inheritdoc/>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public void OnCompleted() => SinkTerminal.Complete(_observer, this);
+    public void OnCompleted() => UnaryWitnessDelivery.Complete(ref _stopped, _observer, this);
 
     /// <summary>Assigns the upstream subscription, disposing the incoming one when this sink holds a subscription or has been disposed.</summary>
     /// <param name="subscription">The upstream subscription.</param>
@@ -65,5 +86,5 @@ public sealed class UniqueByWitness<T, TKey>(
 
     /// <inheritdoc/>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public void Dispose() => SinkSubscription.Dispose(ref _subscription);
+    public void Dispose() => UnaryWitnessDelivery.Dispose(ref _stopped, ref _subscription);
 }

@@ -116,15 +116,15 @@ public sealed class UniqueBySignal<T, TKey> : IObservable<T>
         for (var i = 0; i < count; i++)
         {
             var value = start + i;
-            var key = intKeySelector(value);
-            if (hasLast && comparer.Equals(last!, key))
+            if (!TryAcceptKey(value, intKeySelector, comparer, ref hasLast, ref last, observer, out var accepted))
             {
-                continue;
+                return;
             }
 
-            hasLast = true;
-            last = key;
-            intObserver.OnNext(value);
+            if (accepted)
+            {
+                intObserver.OnNext(value);
+            }
         }
 
         observer.OnCompleted();
@@ -142,17 +142,62 @@ public sealed class UniqueBySignal<T, TKey> : IObservable<T>
         for (var i = 0; i < values.Count; i++)
         {
             var value = values[i];
-            var key = keySelector(value);
-            if (hasLast && comparer.Equals(last!, key))
+            if (!TryAcceptKey(value, keySelector, comparer, ref hasLast, ref last, observer, out var accepted))
             {
-                continue;
+                return;
             }
 
-            hasLast = true;
-            last = key;
-            observer.OnNext(value);
+            if (accepted)
+            {
+                observer.OnNext(value);
+            }
         }
 
         observer.OnCompleted();
+    }
+
+    /// <summary>Projects and compares a key for <paramref name="value"/>, forwarding non-fatal callback failures to <paramref name="observer"/>.</summary>
+    /// <typeparam name="TItem">The source item type.</typeparam>
+    /// <param name="value">The candidate item.</param>
+    /// <param name="keySelector">The key projection.</param>
+    /// <param name="comparer">The key comparer.</param>
+    /// <param name="hasLast">Tracks whether a previous key has been observed.</param>
+    /// <param name="last">Stores the previous key.</param>
+    /// <param name="observer">The downstream observer.</param>
+    /// <param name="accepted">Receives whether <paramref name="value"/> should be emitted.</param>
+    /// <returns><see langword="true"/> when enumeration should continue; <see langword="false"/> when faulted.</returns>
+    private static bool TryAcceptKey<TItem>(
+        TItem value,
+        Func<TItem, TKey> keySelector,
+        IEqualityComparer<TKey> comparer,
+        ref bool hasLast,
+        ref TKey? last,
+        IObserver<T> observer,
+        out bool accepted)
+    {
+        TKey key;
+        bool duplicate;
+        try
+        {
+            key = keySelector(value);
+            duplicate = hasLast && comparer.Equals(last!, key);
+        }
+        catch (Exception error) when (!FatalExceptionHelper.IsFatal(error))
+        {
+            accepted = false;
+            observer.OnError(error);
+            return false;
+        }
+
+        if (duplicate)
+        {
+            accepted = false;
+            return true;
+        }
+
+        hasLast = true;
+        last = key;
+        accepted = true;
+        return true;
     }
 }

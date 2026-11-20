@@ -3,6 +3,7 @@
 // See the LICENSE file in the project root for full license information.
 
 using System.Runtime.CompilerServices;
+using ReactiveUI.Primitives.Core.Internal;
 
 namespace ReactiveUI.Primitives.Advanced;
 
@@ -27,23 +28,42 @@ public sealed class FoldWitness<TSource, TAccumulate>(
     /// <summary>The current accumulated value.</summary>
     private TAccumulate _current = seed;
 
+    /// <summary>Non-zero once stopped.</summary>
+    private int _stopped;
+
     /// <summary>The upstream subscription.</summary>
     private IDisposable? _subscription;
 
     /// <inheritdoc/>
     public void OnNext(TSource value)
     {
-        _current = _accumulator(_current, value);
-        SinkDelivery.Next(_observer, _current, this);
+        if (Volatile.Read(ref _stopped) != 0)
+        {
+            return;
+        }
+
+        TAccumulate next;
+        try
+        {
+            next = _accumulator(_current, value);
+        }
+        catch (Exception error) when (!CoreFatalExceptionHelper.IsFatal(error))
+        {
+            UnaryWitnessDelivery.Fault(ref _stopped, _observer, error, this);
+            return;
+        }
+
+        _current = next;
+        SinkDelivery.Next(_observer, next, this);
     }
 
     /// <inheritdoc/>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public void OnError(Exception error) => SinkTerminal.Fault(_observer, error, this);
+    public void OnError(Exception error) => UnaryWitnessDelivery.Fault(ref _stopped, _observer, error, this);
 
     /// <inheritdoc/>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public void OnCompleted() => SinkTerminal.Complete(_observer, this);
+    public void OnCompleted() => UnaryWitnessDelivery.Complete(ref _stopped, _observer, this);
 
     /// <summary>Assigns the upstream subscription, disposing the incoming one when this sink holds a subscription or has been disposed.</summary>
     /// <param name="subscription">The upstream subscription.</param>
@@ -52,5 +72,5 @@ public sealed class FoldWitness<TSource, TAccumulate>(
 
     /// <inheritdoc/>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public void Dispose() => SinkSubscription.Dispose(ref _subscription);
+    public void Dispose() => UnaryWitnessDelivery.Dispose(ref _stopped, ref _subscription);
 }

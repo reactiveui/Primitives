@@ -3,6 +3,7 @@
 // See the LICENSE file in the project root for full license information.
 
 using System.Runtime.CompilerServices;
+using ReactiveUI.Primitives.Core.Internal;
 
 namespace ReactiveUI.Primitives.Advanced;
 
@@ -25,13 +26,32 @@ public sealed class UniqueWitness<T>(IObserver<T> observer, IEqualityComparer<T>
     /// <summary>The most recently forwarded value.</summary>
     private T? _last;
 
+    /// <summary>Non-zero once stopped.</summary>
+    private int _stopped;
+
     /// <summary>The upstream subscription.</summary>
     private IDisposable? _subscription;
 
     /// <inheritdoc/>
     public void OnNext(T value)
     {
-        if (_hasLast && _comparer.Equals(_last!, value))
+        if (Volatile.Read(ref _stopped) != 0)
+        {
+            return;
+        }
+
+        bool duplicate;
+        try
+        {
+            duplicate = _hasLast && _comparer.Equals(_last!, value);
+        }
+        catch (Exception error) when (!CoreFatalExceptionHelper.IsFatal(error))
+        {
+            UnaryWitnessDelivery.Fault(ref _stopped, _observer, error, this);
+            return;
+        }
+
+        if (duplicate)
         {
             return;
         }
@@ -43,11 +63,11 @@ public sealed class UniqueWitness<T>(IObserver<T> observer, IEqualityComparer<T>
 
     /// <inheritdoc/>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public void OnError(Exception error) => SinkTerminal.Fault(_observer, error, this);
+    public void OnError(Exception error) => UnaryWitnessDelivery.Fault(ref _stopped, _observer, error, this);
 
     /// <inheritdoc/>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public void OnCompleted() => SinkTerminal.Complete(_observer, this);
+    public void OnCompleted() => UnaryWitnessDelivery.Complete(ref _stopped, _observer, this);
 
     /// <summary>Assigns the upstream subscription, disposing the incoming one when this sink holds a subscription or has been disposed.</summary>
     /// <param name="subscription">The upstream subscription.</param>
@@ -56,5 +76,5 @@ public sealed class UniqueWitness<T>(IObserver<T> observer, IEqualityComparer<T>
 
     /// <inheritdoc/>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public void Dispose() => SinkSubscription.Dispose(ref _subscription);
+    public void Dispose() => UnaryWitnessDelivery.Dispose(ref _stopped, ref _subscription);
 }

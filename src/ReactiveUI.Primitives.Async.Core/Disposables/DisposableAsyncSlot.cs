@@ -60,6 +60,32 @@ public static class DisposableAsyncSlot
     public static bool IsDisposed(IAsyncDisposable? slot) =>
         ReferenceEquals(slot, DisposedSentinel);
 
+    /// <summary>Closes and disposes the slot using notification-context semantics when <paramref name="fromNotification"/> is <see langword="true"/>.</summary>
+    /// <param name="slot">Reference to the caller-owned <see cref="IAsyncDisposable"/> field.</param>
+    /// <param name="fromNotification">Whether disposal started from within an active notification.</param>
+    /// <returns>A <see cref="ValueTask"/> that completes once the prior occupant has been disposed.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [DebuggerStepThrough]
+    internal static ValueTask DisposeCoreAsync(ref IAsyncDisposable? slot, bool fromNotification) =>
+        fromNotification ? DisposeFromNotificationAsync(ref slot) : DisposeAsync(ref slot);
+
+    /// <summary>Closes and disposes the slot from within an active notification, propagating notification disposal to an <see cref="IWitnessState"/> occupant.</summary>
+    /// <param name="slot">Reference to the caller-owned <see cref="IAsyncDisposable"/> field.</param>
+    /// <returns>A <see cref="ValueTask"/> that completes once the prior occupant has been disposed.</returns>
+    [DebuggerStepThrough]
+    internal static ValueTask DisposeFromNotificationAsync(ref IAsyncDisposable? slot)
+    {
+        var current = Interlocked.Exchange(ref slot, DisposedSentinel);
+        if (current is null || ReferenceEquals(current, DisposedSentinel))
+        {
+            return default;
+        }
+
+        return current is IWitnessState witness
+            ? WitnessAsync.DisposeFromNotificationAsync(witness)
+            : current.DisposeAsync();
+    }
+
     /// <summary>Retries a swap when the slot changed after the caller's observation.</summary>
     /// <param name="slot">The slot to replace.</param>
     /// <param name="value">The incoming disposable.</param>

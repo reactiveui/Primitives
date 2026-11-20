@@ -197,7 +197,7 @@ public static class WitnessAsync
     /// <returns>The disposal operation, or a completed task when a waiter owns disposal.</returns>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal static ValueTask CompleteOrChainDispose<T>(IWitnessAsync<T> witness) =>
-        witness.Witness.ExitOnSomethingCall() ? witness.DisposeAsync() : default;
+        witness.Witness.ExitOnSomethingCall() ? DisposeFromNotificationAsync(witness) : default;
 
     /// <summary>Attempts to enter a notification for the supplied caller thread.</summary>
     /// <param name="witness">The witness entering a notification.</param>
@@ -332,7 +332,7 @@ public static class WitnessAsync
 
         if (witness.Witness.ExitOnSomethingCall())
         {
-            await witness.DisposeAsync().ConfigureAwait(false);
+            await DisposeFromNotificationAsync(witness).ConfigureAwait(false);
         }
     }
 }

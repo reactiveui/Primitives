@@ -121,9 +121,9 @@ public sealed class AsyncStopCoordinator<T, TOther> : IAsyncDisposable
         {
             _ = value;
             _ = cancellationToken;
-            await parent._lifecycle.RelayCompletionAsync(Result.Success).ConfigureAwait(false);
             await parent._disposable.DisposeAsync().ConfigureAwait(false);
-            await parent._otherDisposable.DisposeAsync().ConfigureAwait(false);
+            await parent._otherDisposable.DisposeFromNotificationAsync().ConfigureAwait(false);
+            await parent._lifecycle.RelayCompletionAsync(Result.Success).ConfigureAwait(false);
             await WitnessAsync.DisposeFromNotificationAsync(this).ConfigureAwait(false);
         }
 
@@ -144,12 +144,12 @@ public sealed class AsyncStopCoordinator<T, TOther> : IAsyncDisposable
                 return;
             }
 
+            await parent._disposable.DisposeAsync().ConfigureAwait(false);
+            await parent._otherDisposable.DisposeFromNotificationAsync().ConfigureAwait(false);
             await parent._lifecycle.RelayCompletionAsync(
                 parent._parent.Options.SourceFailsWhenOtherFails
                     ? result
                     : Result.Success).ConfigureAwait(false);
-            await parent._disposable.DisposeAsync().ConfigureAwait(false);
-            await parent._otherDisposable.DisposeAsync().ConfigureAwait(false);
         }
     }
 }

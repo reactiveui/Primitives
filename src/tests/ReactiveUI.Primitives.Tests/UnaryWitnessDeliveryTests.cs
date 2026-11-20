@@ -145,4 +145,171 @@ public sealed class UnaryWitnessDeliveryTests
         await Assert.That(filteredObserver.Errors.Count).IsEqualTo(1);
         await Assert.That(faultCleanup).IsEqualTo(1);
     }
+
+    /// <summary>Verifies value-bearing completion and tapped completion enforce stop state and route non-fatal callback faults.</summary>
+    /// <returns>A task representing the asynchronous test.</returns>
+    [Test]
+    public async Task CompleteWithValueAndCompleteTapped_EnforceStopAndRouteFaults()
+    {
+        var valueStopped = 0;
+        var valueCleanup = 0;
+        ActionDisposable cleanup = new(() => valueCleanup++);
+        RecordingWitness<int> valueObserver = new();
+
+        UnaryWitnessDelivery.Complete(ref valueStopped, valueObserver, Ten, cleanup);
+        UnaryWitnessDelivery.Complete(ref valueStopped, valueObserver, Five, cleanup);
+
+        await Assert.That(valueObserver.Values.SequenceEqual([Ten])).IsTrue();
+        await Assert.That(valueObserver.Completed).IsEqualTo(1);
+        await Assert.That(valueCleanup).IsEqualTo(1);
+
+        var tapDoneStopped = 0;
+        var tapDoneRuns = 0;
+        var tapDoneCleanup = 0;
+        RecordingWitness<int> tapDoneObserver = new();
+        UnaryWitnessDelivery.CompleteTapped(
+            ref tapDoneStopped,
+            () => tapDoneRuns++,
+            tapDoneObserver,
+            new ActionDisposable(() => tapDoneCleanup++));
+        UnaryWitnessDelivery.CompleteTapped(
+            ref tapDoneStopped,
+            () => tapDoneRuns++,
+            tapDoneObserver,
+            EmptyDisposable.Instance);
+
+        await Assert.That(tapDoneRuns).IsEqualTo(1);
+        await Assert.That(tapDoneObserver.Completed).IsEqualTo(1);
+        await Assert.That(tapDoneCleanup).IsEqualTo(1);
+
+        InvalidOperationException completeFault = new("complete-fault");
+        var tapCompleteFaultStopped = 0;
+        RecordingWitness<int> tapCompleteFaultObserver = new();
+        UnaryWitnessDelivery.CompleteTapped(
+            ref tapCompleteFaultStopped,
+            () => throw completeFault,
+            tapCompleteFaultObserver,
+            EmptyDisposable.Instance);
+        await Assert.That(tapCompleteFaultObserver.Errors.SequenceEqual([completeFault])).IsTrue();
+    }
+
+    /// <summary>Verifies tapped fault handling and fatal-exception passthrough across all delivery helpers.</summary>
+    /// <returns>A task representing the asynchronous test.</returns>
+    [Test]
+    public async Task FaultTappedAndFatalPassthrough_EnforceStopAndRethrowFatal()
+    {
+        InvalidOperationException upstreamError = new("upstream-error");
+        Exception? tappedSeen = null;
+        var tapErrStopped = 0;
+        RecordingWitness<int> tapErrObserver = new();
+        UnaryWitnessDelivery.FaultTapped(
+            ref tapErrStopped,
+            upstreamError,
+            ex => tappedSeen = ex,
+            tapErrObserver,
+            EmptyDisposable.Instance);
+        UnaryWitnessDelivery.FaultTapped(
+            ref tapErrStopped,
+            upstreamError,
+            static _ => throw new InvalidOperationException("ignored"),
+            tapErrObserver,
+            EmptyDisposable.Instance);
+
+        await Assert.That(tappedSeen).IsSameReferenceAs(upstreamError);
+        await Assert.That(tapErrObserver.Errors.SequenceEqual([upstreamError])).IsTrue();
+
+        InvalidOperationException callbackError = new("callback-error");
+        var tapErrThrowStopped = 0;
+        RecordingWitness<int> tapErrThrowObserver = new();
+        UnaryWitnessDelivery.FaultTapped(
+            ref tapErrThrowStopped,
+            upstreamError,
+            _ => throw callbackError,
+            tapErrThrowObserver,
+            EmptyDisposable.Instance);
+        await Assert.That(tapErrThrowObserver.Errors.SequenceEqual([callbackError])).IsTrue();
+
+        await AssertTerminalFatalPassthrough(tapErrObserver);
+        await AssertNextFatalPassthrough(tapErrObserver);
+    }
+
+    /// <summary>Verifies fatal exceptions bypass terminal <see cref="UnaryWitnessDelivery"/> exception filters.</summary>
+    /// <param name="observer">The target observer.</param>
+    /// <returns>A task representing the asynchronous assertions.</returns>
+    private static async Task AssertTerminalFatalPassthrough(RecordingWitness<int> observer)
+    {
+        await Assert.That(() =>
+        {
+            var stopped = 0;
+            UnaryWitnessDelivery.CompleteTapped(
+                ref stopped,
+                static () => throw new BadImageFormatException(),
+                observer,
+                EmptyDisposable.Instance);
+        }).Throws<BadImageFormatException>();
+
+        await Assert.That(() =>
+        {
+            var stopped = 0;
+            UnaryWitnessDelivery.FaultTapped(
+                ref stopped,
+                new InvalidOperationException("source"),
+                static _ => throw new BadImageFormatException(),
+                observer,
+                EmptyDisposable.Instance);
+        }).Throws<BadImageFormatException>();
+    }
+
+    /// <summary>Verifies fatal exceptions bypass value <see cref="UnaryWitnessDelivery"/> exception filters.</summary>
+    /// <param name="observer">The target observer.</param>
+    /// <returns>A task representing the asynchronous assertions.</returns>
+    private static async Task AssertNextFatalPassthrough(RecordingWitness<int> observer)
+    {
+        await Assert.That(() =>
+        {
+            var stopped = 0;
+            CoreUnaryWitnessDelivery.NextFiltered(
+                ref stopped,
+                1,
+                0,
+                static (_, _) => throw new BadImageFormatException(),
+                observer,
+                EmptyDisposable.Instance);
+        }).Throws<BadImageFormatException>();
+
+        await Assert.That(() =>
+        {
+            var stopped = 0;
+            UnaryWitnessDelivery.NextProjected(
+                ref stopped,
+                1,
+                0,
+                static (_, _) => throw new BadImageFormatException(),
+                observer,
+                EmptyDisposable.Instance);
+        }).Throws<BadImageFormatException>();
+
+        await Assert.That(() =>
+        {
+            var stopped = 0;
+            UnaryWitnessDelivery.NextTapped(
+                ref stopped,
+                1,
+                new StateCallbackPair<int, Action<int, int>>(0, static (_, _) => throw new BadImageFormatException()),
+                observer,
+                EmptyDisposable.Instance);
+        }).Throws<BadImageFormatException>();
+
+        await Assert.That(() =>
+        {
+            var stopped = 0;
+            UnaryWitnessDelivery.NextFilteredProjection(
+                ref stopped,
+                1,
+                0,
+                static (_, _) => throw new BadImageFormatException(),
+                observer,
+                EmptyDisposable.Instance);
+        }).Throws<BadImageFormatException>();
+    }
 }
