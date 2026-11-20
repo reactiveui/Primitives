@@ -3,10 +3,13 @@
 // See the LICENSE file in the project root for full license information.
 
 using System.Runtime.CompilerServices;
-
 #if REACTIVE_SHIM
+using ReactiveUI.Primitives.Reactive.Internal;
+
 namespace ReactiveUI.Primitives.Reactive.Advanced;
 #else
+using ReactiveUI.Primitives.Internal;
+
 namespace ReactiveUI.Primitives.Advanced;
 #endif
 
@@ -66,7 +69,7 @@ public sealed class AsyncSubscriptionLifetime : IDisposable
         }
 
         Volatile.Write(ref _canceled, 1);
-        CancelIgnoringDisposed(_cts);
+        _ = CancellationRaceHelper.TryCancel(_cts);
         _subscription.Dispose();
         _cts.Dispose();
     }
@@ -87,20 +90,5 @@ public sealed class AsyncSubscriptionLifetime : IDisposable
 
         _cts.Dispose();
         return true;
-    }
-
-    /// <summary>Cancels the source while tolerating a concurrent completion disposing it first.</summary>
-    /// <param name="cts">The cancellation source to cancel.</param>
-    [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
-    private static void CancelIgnoringDisposed(CancellationTokenSource cts)
-    {
-        try
-        {
-            cts.Cancel();
-        }
-        catch (ObjectDisposedException)
-        {
-            // Concurrent completion does not prevent subscription disposal.
-        }
     }
 }
