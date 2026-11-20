@@ -146,4 +146,55 @@ public class SelectAsyncSequentialObservableTests
         await Assert.That(queuedCompletedImmediately).IsTrue();
         await Assert.That(results).IsCollectionEqualTo([First, Second]);
     }
+
+    /// <summary>Verifies a faulted async selector disposes the upstream subscription.</summary>
+    /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
+    [Test]
+    public async Task WhenSelectorFaults_ThenDisposesUpstreamSubscription()
+    {
+        SyncDirectSource<int> source = new();
+        TaskCompletionSource<Exception> faulted = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        InvalidOperationException expected = new(SelectorErrorMessage);
+        using var sub = source.SelectAsyncSequential(_ => Task.FromException<int>(expected))
+            .Subscribe(static _ => { }, ex => faulted.TrySetResult(ex));
+
+        source.Observer.OnNext(1);
+
+        var caught = await faulted.Task;
+        await Assert.That(caught).IsSameReferenceAs(expected);
+        await Assert.That(source.DisposeCount).IsEqualTo(1);
+    }
+
+    /// <summary>Verifies duplicate <c>Dispose</c>, <c>OnNextAsync</c> after disposal, and throwing downstream completion are handled cleanly.</summary>
+    /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
+    [Test]
+    public async Task WhenDisposedTwiceOrDownstreamOnCompletedThrows_ThenGuardsAndDisposes()
+    {
+        List<int> results = [];
+        SelectAsyncSequentialObservable<int, int>.SelectAsyncSequentialSink sink = new(
+            ReactiveUI.Primitives.Advanced.Witness.Create<int>(results.Add),
+            static (value, _) => Task.FromResult(value));
+        sink.Dispose();
+        sink.Dispose();
+        await sink.OnNextAsync(1);
+        await Assert.That(results).IsEmpty();
+
+        SyncDirectSource<int> source = new();
+        InvalidOperationException expected = new("complete");
+        using var sub = source.SelectAsyncSequential(Task.FromResult).Subscribe(
+            ReactiveUI.Primitives.Advanced.Witness.Create<int>(static _ => { }, static _ => { }, () => throw expected));
+        _ = Assert.Throws<InvalidOperationException>(() => source.Observer.OnCompleted());
+        await Assert.That(source.DisposeCount).IsEqualTo(1);
+    }
+
+    /// <summary>Verifies a null task-only selector is accepted at construction and rejected when subscribing.</summary>
+    /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
+    [Test]
+    public async Task WhenTaskOnlySelectorIsNull_ThenSubscribeThrowsInvalidOperation()
+    {
+        using Subject<int> subject = new();
+        SelectAsyncSequentialObservable<int, int> projection = new(subject, (Func<int, Task<int>>)null!);
+
+        await Assert.That(() => projection.Subscribe(static _ => { })).ThrowsExactly<InvalidOperationException>();
+    }
 }

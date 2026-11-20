@@ -32,6 +32,9 @@ public sealed class SwitchWitness<T> : IDisposable
     /// <summary>The current inner source version.</summary>
     private int _version;
 
+    /// <summary>The subscription to the outer source.</summary>
+    private IDisposable? _outer;
+
     /// <summary>The subscription to the current inner source; guarded by the gate.</summary>
     private IDisposable? _inner;
 
@@ -39,11 +42,11 @@ public sealed class SwitchWitness<T> : IDisposable
     /// <param name="observer">The downstream observer.</param>
     public SwitchWitness(IObserver<T> observer) => Observer = observer;
 
+    /// <summary>Gets the gate guarding the generation bookkeeping.</summary>
+    internal Lock Gate => _gate;
+
     /// <summary>Gets the downstream observer.</summary>
     private IObserver<T> Observer { get; }
-
-    /// <summary>Gets the outer subscription.</summary>
-    private MultipleDisposable Subscriptions { get; } = [];
 
     /// <summary>Gets or sets a value indicating whether the outer source completed.</summary>
     private bool IsOuterCompleted { get; set; }
@@ -66,7 +69,7 @@ public sealed class SwitchWitness<T> : IDisposable
         }
 
         inner?.Dispose();
-        Subscriptions.Dispose();
+        SinkSubscription.Dispose(ref _outer);
     }
 
     /// <summary>Starts observing the outer source.</summary>
@@ -74,34 +77,39 @@ public sealed class SwitchWitness<T> : IDisposable
     /// <returns>The observer that owns the subscriptions.</returns>
     public SwitchWitness<T> Run(IObservable<IObservable<T>> sources)
     {
-        Subscriptions.Add(sources.Subscribe(OnSource, OnOuterError, OnOuterCompleted));
+        SinkSubscription.Set(ref _outer, sources.Subscribe(new OuterWitness(this)));
         return this;
     }
 
-    /// <summary>Switches to a new inner source.</summary>
-    /// <param name="source">The new inner source.</param>
-    private void OnSource(IObservable<T> source)
+    /// <summary>Activates the next inner generation unless a terminal notification has been sent.</summary>
+    /// <param name="version">The activated generation, or zero when the witness is done.</param>
+    /// <returns><see langword="true"/> when an inner generation was activated; otherwise, <see langword="false"/>.</returns>
+    internal bool TryBeginSource(out int version)
     {
-        int current;
         lock (_gate)
         {
             if (IsDone)
             {
-                return;
+                version = 0;
+                return false;
             }
 
-            current = _version + 1;
-            Volatile.Write(ref _version, current);
+            version = _version + 1;
+            Volatile.Write(ref _version, version);
             IsInnerActive = true;
+            return true;
         }
+    }
 
-        var subscription = source.Subscribe(new InnerWitness(this, current));
-
-        // Only the newest subscription is kept, whichever order overlapping subscriptions return in.
+    /// <summary>Keeps the subscription for a generation when it is still current, otherwise disposes it.</summary>
+    /// <param name="version">The generation the subscription belongs to.</param>
+    /// <param name="subscription">The inner subscription.</param>
+    internal void Install(int version, IDisposable subscription)
+    {
         IDisposable? displaced;
         lock (_gate)
         {
-            if (IsDone || current != _version)
+            if (IsDone || version != _version)
             {
                 displaced = subscription;
             }
@@ -116,7 +124,7 @@ public sealed class SwitchWitness<T> : IDisposable
     }
 
     /// <summary>Marks the outer source complete.</summary>
-    private void OnOuterCompleted()
+    internal void OnOuterCompleted()
     {
         lock (_gate)
         {
@@ -137,7 +145,7 @@ public sealed class SwitchWitness<T> : IDisposable
 
     /// <summary>Forwards the outer source error once.</summary>
     /// <param name="error">The error to forward.</param>
-    private void OnOuterError(Exception error)
+    internal void OnOuterError(Exception error)
     {
         lock (_gate)
         {
@@ -156,7 +164,7 @@ public sealed class SwitchWitness<T> : IDisposable
     /// <summary>Forwards a current inner value.</summary>
     /// <param name="version">The inner source version.</param>
     /// <param name="value">The value to forward.</param>
-    private void OnNext(int version, T value)
+    internal void OnNext(int version, T value)
     {
         lock (_gate)
         {
@@ -174,7 +182,7 @@ public sealed class SwitchWitness<T> : IDisposable
     /// <summary>Forwards a current inner error.</summary>
     /// <param name="version">The inner source version.</param>
     /// <param name="error">The error to forward.</param>
-    private void OnError(int version, Exception error)
+    internal void OnError(int version, Exception error)
     {
         lock (_gate)
         {
@@ -192,7 +200,7 @@ public sealed class SwitchWitness<T> : IDisposable
 
     /// <summary>Marks a current inner source complete.</summary>
     /// <param name="version">The inner source version.</param>
-    private void OnCompleted(int version)
+    internal void OnCompleted(int version)
     {
         lock (_gate)
         {
@@ -209,6 +217,24 @@ public sealed class SwitchWitness<T> : IDisposable
         }
 
         _delivery.Flush(new PendingDrain(this));
+    }
+
+    /// <summary>Switches to a new inner source.</summary>
+    /// <param name="source">The new inner source.</param>
+    private void OnSource(IObservable<T> source)
+    {
+        if (source is null)
+        {
+            OnOuterError(new InvalidOperationException("Switch source contained null."));
+            return;
+        }
+
+        if (!TryBeginSource(out var current))
+        {
+            return;
+        }
+
+        Install(current, source.Subscribe(new InnerWitness(this, current)));
     }
 
     /// <summary>Queues completion once the outer source and current inner source are done; called under the gate.</summary>
@@ -229,8 +255,30 @@ public sealed class SwitchWitness<T> : IDisposable
     private readonly record struct PendingDrain(SwitchWitness<T> Owner) : IDrainTarget
     {
         /// <inheritdoc/>
+        public void Drain()
+        {
+            if (Owner._delivery.DrainTo(Owner.Observer))
+            {
+                Owner.Dispose();
+            }
+        }
+    }
+
+    /// <summary>Observes the outer sequence of inner observables.</summary>
+    /// <param name="parent">The coordinator.</param>
+    private sealed class OuterWitness(SwitchWitness<T> parent) : IObserver<IObservable<T>>
+    {
+        /// <inheritdoc/>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Drain() => _ = Owner._delivery.DrainTo(Owner.Observer);
+        public void OnNext(IObservable<T> value) => parent.OnSource(value);
+
+        /// <inheritdoc/>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void OnError(Exception error) => parent.OnOuterError(error);
+
+        /// <inheritdoc/>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void OnCompleted() => parent.OnOuterCompleted();
     }
 
     /// <summary>Receives the notifications of one source and passes them on, tagged with the version the source was subscribed at.</summary>

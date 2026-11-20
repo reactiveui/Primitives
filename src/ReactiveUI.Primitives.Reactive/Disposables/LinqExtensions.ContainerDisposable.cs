@@ -2,6 +2,7 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Runtime.CompilerServices;
 using ReactiveUI.Primitives.Reactive.Disposables;
 
 namespace ReactiveUI.Primitives.Reactive;
@@ -20,12 +21,8 @@ public static partial class LinqExtensions
         /// <returns>The original disposable.</returns>
         /// <exception cref="ArgumentExceptionHelper"><paramref name="disposables"/> is <see langword="null"/>.</exception>
         /// <remarks>This overload resolves DisposeWith calls when System.Reactive also supplies a composite overload.</remarks>
-        public T DisposeWith(ContainerDisposable disposables)
-        {
-            ArgumentExceptionHelper.ThrowIfNull(disposables);
-
-            disposables.Add(disposable);
-            return disposable;
-        }
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public T DisposeWith(ContainerDisposable disposables) =>
+            ContainerDisposable.AddTo(disposable, disposables);
     }
 }

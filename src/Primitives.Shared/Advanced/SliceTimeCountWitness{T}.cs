@@ -139,6 +139,25 @@ public sealed class SliceTimeCountWitness<T> : IObserver<T>, IDisposable
         _upstream.Dispose();
     }
 
+    /// <summary>Ends the window the timer belongs to and starts the next, unless the window has already ended.</summary>
+    /// <param name="windowId">The identity of the window the timer belongs to.</param>
+    internal void Tick(int windowId)
+    {
+        int nextId;
+        lock (_gate)
+        {
+            if (_done != 0 || windowId != _windowId)
+            {
+                return;
+            }
+
+            nextId = Advance();
+        }
+
+        Deliver();
+        ScheduleTick(nextId);
+    }
+
     /// <summary>Ends the current window and opens the next; the caller holds the lock.</summary>
     /// <returns>The identity of the new window.</returns>
     private int Advance()
@@ -156,25 +175,6 @@ public sealed class SliceTimeCountWitness<T> : IObserver<T>, IDisposable
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private void ScheduleTick(int windowId) =>
         _timer.Create(_sequencer.Schedule((Sink: this, WindowId: windowId), _timeSpan, static state => state.Sink.Tick(state.WindowId)));
-
-    /// <summary>Ends the window the timer belongs to and starts the next, unless the window has already ended.</summary>
-    /// <param name="windowId">The identity of the window the timer belongs to.</param>
-    private void Tick(int windowId)
-    {
-        int nextId;
-        lock (_gate)
-        {
-            if (_done != 0 || windowId != _windowId)
-            {
-                return;
-            }
-
-            nextId = Advance();
-        }
-
-        Deliver();
-        ScheduleTick(nextId);
-    }
 
     /// <summary>Delivers the posted notifications, tearing the sink down when a downstream observer throws.</summary>
     private void Deliver()

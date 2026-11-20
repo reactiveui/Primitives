@@ -14,7 +14,7 @@ namespace ReactiveUI.Primitives.Async.Advanced;
 public sealed class SyncLatestEnumerableCoordinator<TSource, TResult> : IAsyncDisposable
 {
     /// <summary>Synchronization gate.</summary>
-    private readonly AsyncSerialGate _gate = new();
+    private readonly ReactiveUI.Primitives.Async.Internal.AsyncFlowGate _gate = new();
 
     /// <summary>Cancellation source for disposal.</summary>
     private readonly CancellationTokenSource _disposeCts = new();
@@ -218,7 +218,6 @@ public sealed class SyncLatestEnumerableCoordinator<TSource, TResult> : IAsyncDi
         finally
         {
             _disposeCts.Dispose();
-            _gate.Dispose();
         }
     }
 }

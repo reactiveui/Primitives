@@ -79,6 +79,33 @@ internal sealed class RaceArms<T> : IDisposable
         }
     }
 
+    /// <summary>Forwards an error from the winning candidate.</summary>
+    /// <param name="candidate">The candidate index.</param>
+    /// <param name="error">The error to forward.</param>
+    internal void OnError(int candidate, Exception error)
+    {
+        if (!Win(candidate))
+        {
+            return;
+        }
+
+        _observer.OnError(error);
+    }
+
+    /// <summary>Claims the winner slot when unclaimed and disposes all losing arms.</summary>
+    /// <param name="candidate">The candidate index.</param>
+    /// <returns><see langword="true"/> when <paramref name="candidate"/> claimed the slot; otherwise, <see langword="false"/>.</returns>
+    internal bool ClaimWinner(int candidate)
+    {
+        if (Interlocked.CompareExchange(ref _winner, candidate, -1) != -1)
+        {
+            return false;
+        }
+
+        DiscardLosers(candidate);
+        return true;
+    }
+
     /// <summary>Forwards a value from the winning candidate.</summary>
     /// <param name="candidate">The candidate index.</param>
     /// <param name="value">The value to forward.</param>
@@ -90,19 +117,6 @@ internal sealed class RaceArms<T> : IDisposable
         }
 
         _observer.OnNext(value);
-    }
-
-    /// <summary>Forwards an error from the winning candidate.</summary>
-    /// <param name="candidate">The candidate index.</param>
-    /// <param name="error">The error to forward.</param>
-    private void OnError(int candidate, Exception error)
-    {
-        if (!Win(candidate))
-        {
-            return;
-        }
-
-        _observer.OnError(error);
     }
 
     /// <summary>Forwards completion from the winning candidate.</summary>
@@ -128,18 +142,7 @@ internal sealed class RaceArms<T> : IDisposable
             return true;
         }
 
-        if (current >= 0)
-        {
-            return false;
-        }
-
-        if (Interlocked.CompareExchange(ref _winner, candidate, -1) != -1)
-        {
-            return false;
-        }
-
-        DiscardLosers(candidate);
-        return true;
+        return current < 0 && ClaimWinner(candidate);
     }
 
     /// <summary>Disposes all inner subscriptions except the winner.</summary>

@@ -618,7 +618,7 @@ public partial class TransformationOperatorTests
     {
         var source = SignalAsync.Return(SentinelValue);
         var observed = source.Yield();
-        await Assert.That(observed).IsTypeOf<SignalAsyncReactiveExtensions.YieldSignal<int>>();
+        await Assert.That(observed).IsTypeOf<YieldSignal<int>>();
         await Assert.That(observed).IsNotSameReferenceAs(source);
     }
 

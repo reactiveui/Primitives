@@ -33,6 +33,50 @@ public sealed class GroupBySignal<TSource, TKey, TElement> : IObservable<Grouped
     /// <param name="source">The source observable.</param>
     /// <param name="keySelector">The selector that extracts the key of a value.</param>
     /// <param name="elementSelector">The selector that extracts the value stored in a group.</param>
+    /// <exception cref="ArgumentNullException"><paramref name="source"/>, <paramref name="keySelector"/> or <paramref name="elementSelector"/> is <see langword="null"/>.</exception>
+    public GroupBySignal(
+        IObservable<TSource> source,
+        Func<TSource, TKey> keySelector,
+        Func<TSource, TElement> elementSelector)
+        : this(source, keySelector, elementSelector, null, 0)
+    {
+    }
+
+    /// <summary>Initializes a new instance of the <see cref="GroupBySignal{TSource, TKey, TElement}"/> class.</summary>
+    /// <param name="source">The source observable.</param>
+    /// <param name="keySelector">The selector that extracts the key of a value.</param>
+    /// <param name="elementSelector">The selector that extracts the value stored in a group.</param>
+    /// <param name="comparer">The key comparer, or <see langword="null"/> for the default comparer.</param>
+    /// <exception cref="ArgumentNullException"><paramref name="source"/>, <paramref name="keySelector"/> or <paramref name="elementSelector"/> is <see langword="null"/>.</exception>
+    public GroupBySignal(
+        IObservable<TSource> source,
+        Func<TSource, TKey> keySelector,
+        Func<TSource, TElement> elementSelector,
+        IEqualityComparer<TKey>? comparer)
+        : this(source, keySelector, elementSelector, comparer, 0)
+    {
+    }
+
+    /// <summary>Initializes a new instance of the <see cref="GroupBySignal{TSource, TKey, TElement}"/> class.</summary>
+    /// <param name="source">The source observable.</param>
+    /// <param name="keySelector">The selector that extracts the key of a value.</param>
+    /// <param name="elementSelector">The selector that extracts the value stored in a group.</param>
+    /// <param name="capacity">The initial capacity of the group table; zero uses the default.</param>
+    /// <exception cref="ArgumentNullException"><paramref name="source"/>, <paramref name="keySelector"/> or <paramref name="elementSelector"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentOutOfRangeException"><paramref name="capacity"/> is negative.</exception>
+    public GroupBySignal(
+        IObservable<TSource> source,
+        Func<TSource, TKey> keySelector,
+        Func<TSource, TElement> elementSelector,
+        int capacity)
+        : this(source, keySelector, elementSelector, null, capacity)
+    {
+    }
+
+    /// <summary>Initializes a new instance of the <see cref="GroupBySignal{TSource, TKey, TElement}"/> class.</summary>
+    /// <param name="source">The source observable.</param>
+    /// <param name="keySelector">The selector that extracts the key of a value.</param>
+    /// <param name="elementSelector">The selector that extracts the value stored in a group.</param>
     /// <param name="comparer">The key comparer, or <see langword="null"/> for the default comparer.</param>
     /// <param name="capacity">The initial capacity of the group table; zero uses the default.</param>
     /// <exception cref="ArgumentNullException"><paramref name="source"/>, <paramref name="keySelector"/> or <paramref name="elementSelector"/> is <see langword="null"/>.</exception>

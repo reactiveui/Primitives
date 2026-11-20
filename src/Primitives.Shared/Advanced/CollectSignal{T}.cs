@@ -13,6 +13,15 @@ namespace ReactiveUI.Primitives.Advanced;
 [System.Diagnostics.DebuggerDisplay("CollectSignal: Source = {Source}, TimeSpan = {TimeSpan}")]
 public sealed class CollectSignal<T> : IObservable<IList<T>>
 {
+    /// <summary>Initializes a new instance of the <see cref="CollectSignal{T}"/> class using the default sequencer.</summary>
+    /// <param name="source">The source observable.</param>
+    /// <param name="timeSpan">The buffer window duration.</param>
+    /// <exception cref="ArgumentNullException"><paramref name="source"/> is <see langword="null"/>.</exception>
+    public CollectSignal(IObservable<T> source, TimeSpan timeSpan)
+        : this(source, timeSpan, Concurrency.Sequencer.Default)
+    {
+    }
+
     /// <summary>Initializes a new instance of the <see cref="CollectSignal{T}"/> class.</summary>
     /// <param name="source">The source observable.</param>
     /// <param name="timeSpan">The buffer window duration.</param>

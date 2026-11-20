@@ -740,7 +740,7 @@ public partial class CombiningOperatorTests
         await Assert.That(sub).IsNotNull();
     }
 
-    /// <summary>Verifies the <see cref = "SignalAsyncExtensions.BlendCoordinator{T}.RelayNextIfActiveAsync"/>
+    /// <summary>Verifies the <see cref = "BlendCoordinator{T}.RelayNextIfActiveAsync"/>
     /// inside-gate after-dispose guard by subscribing, disposing the subscription, then calling
     /// the locked-helper directly - exercising the defensive branch that is otherwise only
     /// reachable through a real concurrency race between dispose and gate acquisition.</summary>
@@ -750,20 +750,20 @@ public partial class CombiningOperatorTests
     {
         TaskCompletionSource<int> captured = new(TaskCreationOptions.RunContinuationsAsynchronously);
         CapturingWitness<int> downstream = new(captured);
-        SignalAsyncExtensions.BlendCoordinator<int> subscription = new(downstream);
+        BlendCoordinator<int> subscription = new(downstream);
         await subscription.DisposeAsync();
         await subscription.RelayNextIfActiveAsync(1);
         await Assert.That(captured.Task.IsCompleted).IsFalse();
     }
 
-    /// <summary>Verifies the <see cref = "SignalAsyncExtensions.BlendCoordinator{T}.RelayErrorIfActiveAsync"/> inside-gate after-dispose guard.</summary>
+    /// <summary>Verifies the <see cref = "BlendCoordinator{T}.RelayErrorIfActiveAsync"/> inside-gate after-dispose guard.</summary>
     /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenMergeRelayErrorIfActiveAsyncAfterDispose_ThenDropped()
     {
         TaskCompletionSource<Exception> captured = new(TaskCreationOptions.RunContinuationsAsynchronously);
         CapturingWitness<int> downstream = new(onError: captured);
-        SignalAsyncExtensions.BlendCoordinator<int> subscription = new(downstream);
+        BlendCoordinator<int> subscription = new(downstream);
         await subscription.DisposeAsync();
         await subscription.RelayErrorIfActiveAsync(new InvalidOperationException("late"));
         await Assert.That(captured.Task.IsCompleted).IsFalse();
@@ -781,7 +781,7 @@ public partial class CombiningOperatorTests
         // and call the Locked helper directly to verify the inside-gate guard.
         IObservableAsync<int>[] sources = [SignalAsync.Never<int>()];
         var sub = await sources.Merge().SubscribeAsync(downstream, CancellationToken.None);
-        var enumerableSub = (SignalAsyncExtensions.BlendEnumerableSignal<int>.BlendSequenceCoordinator)sub;
+        var enumerableSub = (BlendSequenceCoordinator<int>)sub;
         await enumerableSub.DisposeAsync();
         await enumerableSub.RelayNextIfActiveAsync(1);
         await Assert.That(captured.Task.IsCompleted).IsFalse();
@@ -796,7 +796,7 @@ public partial class CombiningOperatorTests
         CapturingWitness<int> downstream = new(onError: captured);
         IObservableAsync<int>[] sources = [SignalAsync.Never<int>()];
         var sub = await sources.Merge().SubscribeAsync(downstream, CancellationToken.None);
-        var enumerableSub = (SignalAsyncExtensions.BlendEnumerableSignal<int>.BlendSequenceCoordinator)sub;
+        var enumerableSub = (BlendSequenceCoordinator<int>)sub;
         await enumerableSub.DisposeAsync();
         await enumerableSub.RelayErrorIfActiveAsync(new InvalidOperationException("late"));
         await Assert.That(captured.Task.IsCompleted).IsFalse();

@@ -32,22 +32,19 @@ public sealed class WitnessLatestOnSignal<T>(IObservable<T> source, ISequencer s
     /// <param name="observer">The downstream observer.</param>
     /// <returns>The subscription.</returns>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public IDisposable Subscribe(IObserver<T> observer) =>
-        SignalSubscription.Subscribe(observer, true, SubscribeCore);
+    public IDisposable Subscribe(IObserver<T> observer)
+    {
+        ArgumentExceptionHelper.ThrowIfNull(observer);
 
-    /// <summary>Builds the dispatching sink and subscribes it to the source.</summary>
-    /// <param name="observer">The downstream observer.</param>
-    /// <param name="cancel">The subscription handle owned by the subscription helper.</param>
-    /// <returns>The source subscription together with the sink.</returns>
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private IDisposable SubscribeCore(IObserver<T> observer, IDisposable cancel) =>
-        new WitnessLatestOn(this, observer, cancel).Run();
+        return SubscriptionScheduling.OnCurrentThread(
+            (Self: this, observer),
+            static s => new WitnessLatestOn(s.Self, s.observer).Run());
+    }
 
     /// <summary>Holds the newest source value and delivers it on the sequencer.</summary>
     /// <param name="parent">The owning signal.</param>
     /// <param name="observer">The downstream observer.</param>
-    /// <param name="cancel">The subscription handle released on teardown.</param>
-    private sealed class WitnessLatestOn(WitnessLatestOnSignal<T> parent, IObserver<T> observer, IDisposable cancel) : IObserver<T>, IWorkItem, IsDisposed
+    private sealed class WitnessLatestOn(WitnessLatestOnSignal<T> parent, IObserver<T> observer) : IObserver<T>, IWorkItem, IsDisposed
     {
         /// <summary>The owning signal.</summary>
         private readonly WitnessLatestOnSignal<T> _parent = parent;
@@ -59,7 +56,7 @@ public sealed class WitnessLatestOnSignal<T>(IObservable<T> source, ISequencer s
         private readonly Lock _gate = new();
 
         /// <summary>Upstream subscription disposed on teardown.</summary>
-        private readonly IDisposable _cancel = cancel;
+        private IDisposable? _sourceSubscription;
 
         /// <summary>The newest value awaiting delivery.</summary>
         private T _pending = default!;
@@ -92,12 +89,11 @@ public sealed class WitnessLatestOnSignal<T>(IObservable<T> source, ISequencer s
         }
 
         /// <summary>Subscribes to the source.</summary>
-        /// <returns>The source subscription together with this sink.</returns>
-        public MultipleDisposable Run()
+        /// <returns>This sink, which owns the source subscription.</returns>
+        public WitnessLatestOn Run()
         {
-            var sourceDisposable = _parent._source.Subscribe(this);
-
-            return new(sourceDisposable, this);
+            SinkSubscription.Set(ref _sourceSubscription, _parent._source.Subscribe(this));
+            return this;
         }
 
         /// <summary>Stores a value as the newest pending value.</summary>
@@ -205,20 +201,11 @@ public sealed class WitnessLatestOnSignal<T>(IObservable<T> source, ISequencer s
 
                 if (isValue)
                 {
-                    _observer.OnNext(value);
+                    SinkDelivery.Next(_observer, value, this);
                     continue;
                 }
 
-                if (error is not null)
-                {
-                    _observer.OnError(error);
-                }
-                else
-                {
-                    _observer.OnCompleted();
-                }
-
-                Dispose();
+                DeliverTerminal(error);
                 return;
             }
         }
@@ -238,7 +225,28 @@ public sealed class WitnessLatestOnSignal<T>(IObservable<T> source, ISequencer s
                 _hasPending = false;
             }
 
-            _cancel.Dispose();
+            SinkSubscription.Dispose(ref _sourceSubscription);
+        }
+
+        /// <summary>Delivers the terminal notification and disposes the sink.</summary>
+        /// <param name="error">The terminal error, or <see langword="null"/> for completion.</param>
+        private void DeliverTerminal(Exception? error)
+        {
+            try
+            {
+                if (error is not null)
+                {
+                    _observer.OnError(error);
+                }
+                else
+                {
+                    _observer.OnCompleted();
+                }
+            }
+            finally
+            {
+                Dispose();
+            }
         }
     }
 }

@@ -31,6 +31,18 @@ internal sealed class UnhandledExceptionCapture : IDisposable
         UnhandledExceptionHandler.Register(Capture);
     }
 
+    /// <summary>Gets the number of captured unhandled exceptions.</summary>
+    internal int Count
+    {
+        get
+        {
+            lock (_gate)
+            {
+                return _exceptions.Count;
+            }
+        }
+    }
+
     /// <inheritdoc/>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void Dispose() => Restore();

@@ -2,6 +2,7 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Runtime.CompilerServices;
 using ReactiveUI.Primitives.Disposables;
 
 #if REACTIVE_SHIM
@@ -12,7 +13,8 @@ namespace ReactiveUI.Primitives.Extensions.Operators;
 
 /// <summary>Schedules source values without forwarding errors or completion.</summary>
 /// <typeparam name="T">The element type of the source observable.</typeparam>
-internal sealed class ScheduledSourceObservable<T> : IObservable<T>
+[System.Diagnostics.DebuggerDisplay("ScheduledSourceObservable: Source = {_source}")]
+public sealed class ScheduledSourceObservable<T> : IObservable<T>
 {
     /// <summary>The upstream observable.</summary>
     private readonly IObservable<T> _source;
@@ -30,6 +32,84 @@ internal sealed class ScheduledSourceObservable<T> : IObservable<T>
         _source = source;
         _config = config;
     }
+
+    /// <summary>Creates an observable that schedules each source value after <paramref name="dueTime"/> on <paramref name="scheduler"/>.</summary>
+    /// <param name="source">The upstream observable.</param>
+    /// <param name="dueTime">The relative delay.</param>
+    /// <param name="scheduler">The sequencer the work runs on.</param>
+    /// <returns>A scheduled observable sequence.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static ScheduledSourceObservable<T> CreateDelayed(
+        IObservable<T> source,
+        TimeSpan dueTime,
+        ISequencer scheduler) =>
+        new(source, ScheduleConfig<T>.Delayed(scheduler, dueTime));
+
+    /// <summary>Creates an observable that schedules <paramref name="action"/> and each source value after <paramref name="dueTime"/> on <paramref name="scheduler"/>.</summary>
+    /// <param name="source">The upstream observable.</param>
+    /// <param name="dueTime">The relative delay.</param>
+    /// <param name="scheduler">The sequencer the work runs on.</param>
+    /// <param name="action">Side-effect invoked before emission.</param>
+    /// <returns>A scheduled observable sequence.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static ScheduledSourceObservable<T> CreateDelayed(
+        IObservable<T> source,
+        TimeSpan dueTime,
+        ISequencer scheduler,
+        Action<T> action) =>
+        new(source, ScheduleConfig<T>.Delayed(scheduler, dueTime).WithAction(action));
+
+    /// <summary>Creates an observable that transforms and emits each source value after <paramref name="dueTime"/> on <paramref name="scheduler"/>.</summary>
+    /// <param name="source">The upstream observable.</param>
+    /// <param name="dueTime">The relative delay.</param>
+    /// <param name="scheduler">The sequencer the work runs on.</param>
+    /// <param name="function">Transform applied before emission.</param>
+    /// <returns>A scheduled observable sequence.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static ScheduledSourceObservable<T> CreateDelayed(
+        IObservable<T> source,
+        TimeSpan dueTime,
+        ISequencer scheduler,
+        Func<T, T> function) =>
+        new(source, ScheduleConfig<T>.Delayed(scheduler, dueTime).WithTransform(function));
+
+    /// <summary>Creates an observable that schedules each source value at <paramref name="dueTime"/> on <paramref name="scheduler"/>.</summary>
+    /// <param name="source">The upstream observable.</param>
+    /// <param name="dueTime">The absolute due time.</param>
+    /// <param name="scheduler">The sequencer the work runs on.</param>
+    /// <returns>A scheduled observable sequence.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static ScheduledSourceObservable<T> CreateAbsolute(
+        IObservable<T> source,
+        DateTimeOffset dueTime,
+        ISequencer scheduler) =>
+        new(source, ScheduleConfig<T>.Absolute(scheduler, dueTime));
+
+    /// <summary>Creates an observable that schedules <paramref name="action"/> and each source value at <paramref name="dueTime"/> on <paramref name="scheduler"/>.</summary>
+    /// <param name="source">The upstream observable.</param>
+    /// <param name="dueTime">The absolute due time.</param>
+    /// <param name="scheduler">The sequencer the work runs on.</param>
+    /// <param name="action">Side-effect invoked before emission.</param>
+    /// <returns>A scheduled observable sequence.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static ScheduledSourceObservable<T> CreateAbsolute(
+        IObservable<T> source,
+        DateTimeOffset dueTime,
+        ISequencer scheduler,
+        Action<T> action) =>
+        new(source, ScheduleConfig<T>.Absolute(scheduler, dueTime).WithAction(action));
+
+    /// <summary>Creates an observable that transforms and emits each source value immediately on <paramref name="scheduler"/>.</summary>
+    /// <param name="source">The upstream observable.</param>
+    /// <param name="scheduler">The sequencer the work runs on.</param>
+    /// <param name="function">Transform applied before emission.</param>
+    /// <returns>A scheduled observable sequence.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static ScheduledSourceObservable<T> CreateImmediate(
+        IObservable<T> source,
+        ISequencer scheduler,
+        Func<T, T> function) =>
+        new(source, ScheduleConfig<T>.Immediate(scheduler).WithTransform(function));
 
     /// <inheritdoc/>
     public IDisposable Subscribe(IObserver<T> observer)

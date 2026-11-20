@@ -25,7 +25,7 @@ public sealed class ContextSwitchSignalAsync<T>(
         CancellationToken cancellationToken)
     {
         ContextSwitchWitness contextSwitchObserver = new(observer, asyncContext, forceYielding);
-        return source.SubscribeAsync(contextSwitchObserver, cancellationToken);
+        return WitnessSubscription.SubscribeAsync(source, contextSwitchObserver, observer, cancellationToken);
     }
 
     /// <summary>An observer that switches each notification onto the specified async context before forwarding.</summary>

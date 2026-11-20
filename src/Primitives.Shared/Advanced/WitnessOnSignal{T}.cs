@@ -12,19 +12,30 @@ namespace ReactiveUI.Primitives.Advanced;
 
 /// <summary>Re-dispatches source notifications onto a sequencer, preserving their order.</summary>
 /// <typeparam name="T">The value type.</typeparam>
-/// <param name="source">The source observable.</param>
-/// <param name="scheduler">The sequencer that dispatches the notifications.</param>
 [System.Diagnostics.DebuggerDisplay("WitnessOnSignal<{typeof(T).Name,nq}>")]
-public sealed class WitnessOnSignal<T>(IObservable<T> source, ISequencer scheduler) : IRequireCurrentThread<T>
+public sealed class WitnessOnSignal<T> : IRequireCurrentThread<T>
 {
     /// <summary>The source observable.</summary>
-    private readonly IObservable<T> _source = source;
+    private readonly IObservable<T> _source;
 
     /// <summary>The sequencer that dispatches the notifications.</summary>
-    private readonly ISequencer _scheduler = scheduler;
+    private readonly ISequencer _scheduler;
 
     /// <summary>Reports whether the calling thread owns <see cref="_scheduler"/>, or <see langword="null"/> to always dispatch.</summary>
     private readonly IThreadAffineSequencer? _owner;
+
+    /// <summary>Initializes a new instance of the <see cref="WitnessOnSignal{T}"/> class.</summary>
+    /// <param name="source">The source observable.</param>
+    /// <param name="scheduler">The sequencer that dispatches the notifications.</param>
+    /// <exception cref="ArgumentNullException"><paramref name="source"/> or <paramref name="scheduler"/> is <see langword="null"/>.</exception>
+    public WitnessOnSignal(IObservable<T> source, ISequencer scheduler)
+    {
+        ArgumentExceptionHelper.ThrowIfNull(source);
+        ArgumentExceptionHelper.ThrowIfNull(scheduler);
+
+        _source = source;
+        _scheduler = scheduler;
+    }
 
     /// <summary>Initializes a new instance of the <see cref="WitnessOnSignal{T}"/> class that delivers inline on the owning thread.</summary>
     /// <param name="source">The source observable.</param>
@@ -33,8 +44,27 @@ public sealed class WitnessOnSignal<T>(IObservable<T> source, ISequencer schedul
     /// Reports whether the calling thread owns <paramref name="scheduler"/>. A notification raised on that thread while
     /// nothing is waiting is delivered inline; once any notification waits, later ones queue behind it.
     /// </param>
+    /// <exception cref="ArgumentNullException"><paramref name="source"/>, <paramref name="scheduler"/>, or <paramref name="owner"/> is <see langword="null"/>.</exception>
     public WitnessOnSignal(IObservable<T> source, ISequencer scheduler, IThreadAffineSequencer owner)
-        : this(source, scheduler) => _owner = owner;
+        : this(source, scheduler)
+    {
+        ArgumentExceptionHelper.ThrowIfNull(owner);
+
+        _owner = owner;
+    }
+
+    /// <summary>Schedules observer notifications on <paramref name="scheduler"/>, returning <paramref name="source"/> unchanged when <paramref name="scheduler"/> is immediate.</summary>
+    /// <param name="source">The source observable.</param>
+    /// <param name="scheduler">The sequencer that dispatches the notifications.</param>
+    /// <returns>The observed sequence.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="source"/> or <paramref name="scheduler"/> is <see langword="null"/>.</exception>
+    public static IObservable<T> CreateObserveOn(IObservable<T> source, ISequencer scheduler)
+    {
+        ArgumentExceptionHelper.ThrowIfNull(source);
+        ArgumentExceptionHelper.ThrowIfNull(scheduler);
+
+        return scheduler.IsImmediate ? source : new WitnessOnSignal<T>(source, scheduler);
+    }
 
     /// <summary>Reports that subscription is dispatched through the current-thread sequencer.</summary>
     /// <returns>Always <see langword="true"/>.</returns>
@@ -45,22 +75,19 @@ public sealed class WitnessOnSignal<T>(IObservable<T> source, ISequencer schedul
     /// <param name="observer">The downstream observer.</param>
     /// <returns>The subscription.</returns>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public IDisposable Subscribe(IObserver<T> observer) =>
-        SignalSubscription.Subscribe(observer, true, SubscribeCore);
+    public IDisposable Subscribe(IObserver<T> observer)
+    {
+        ArgumentExceptionHelper.ThrowIfNull(observer);
 
-    /// <summary>Builds the dispatching sink and subscribes it to the source.</summary>
-    /// <param name="observer">The downstream observer.</param>
-    /// <param name="cancel">The subscription handle owned by the subscription helper.</param>
-    /// <returns>The source subscription together with the sink.</returns>
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private IDisposable SubscribeCore(IObserver<T> observer, IDisposable cancel) =>
-        new WitnessOn(this, observer, cancel).Run();
+        return SubscriptionScheduling.OnCurrentThread(
+            (Self: this, observer),
+            static s => new WitnessOn(s.Self, s.observer).Run());
+    }
 
     /// <summary>Queues source notifications and drains them on the sequencer.</summary>
     /// <param name="parent">The owning signal.</param>
     /// <param name="observer">The downstream observer.</param>
-    /// <param name="cancel">The subscription handle released on teardown.</param>
-    private sealed class WitnessOn(WitnessOnSignal<T> parent, IObserver<T> observer, IDisposable cancel) : IObserver<T>, IWorkItem, IsDisposed
+    private sealed class WitnessOn(WitnessOnSignal<T> parent, IObserver<T> observer) : IObserver<T>, IWorkItem, IsDisposed
     {
         /// <summary>The owning signal.</summary>
         private readonly WitnessOnSignal<T> _parent = parent;
@@ -75,7 +102,7 @@ public sealed class WitnessOnSignal<T>(IObservable<T> source, ISequencer schedul
         private readonly Queue<Notification> _actions = new();
 
         /// <summary>Upstream subscription disposed on teardown.</summary>
-        private readonly IDisposable _cancel = cancel;
+        private IDisposable? _sourceSubscription;
 
         /// <summary>Whether the sink has been torn down.</summary>
         private bool _isDisposed;
@@ -96,14 +123,11 @@ public sealed class WitnessOnSignal<T>(IObservable<T> source, ISequencer schedul
         }
 
         /// <summary>Subscribes to the source.</summary>
-        /// <returns>The source subscription together with this sink.</returns>
-        public MultipleDisposable Run()
+        /// <returns>This sink, which owns the source subscription.</returns>
+        public WitnessOn Run()
         {
-            _isDisposed = false;
-
-            var sourceDisposable = _parent._source.Subscribe(this);
-
-            return new(sourceDisposable, this);
+            SinkSubscription.Set(ref _sourceSubscription, _parent._source.Subscribe(this));
+            return this;
         }
 
         /// <summary>Queues a value for dispatch.</summary>
@@ -143,13 +167,37 @@ public sealed class WitnessOnSignal<T>(IObservable<T> source, ISequencer schedul
                     action = _actions.Dequeue();
                 }
 
-                Dispatch(in action);
                 if (action.Kind == SparkKind.OnNext)
                 {
+                    try
+                    {
+                        _observer.OnNext(action.Value);
+                    }
+                    catch
+                    {
+                        Dispose();
+                        throw;
+                    }
+
                     continue;
                 }
 
-                Dispose();
+                try
+                {
+                    if (action.Kind == SparkKind.OnError)
+                    {
+                        _observer.OnError(action.Exception);
+                    }
+                    else
+                    {
+                        _observer.OnCompleted();
+                    }
+                }
+                finally
+                {
+                    Dispose();
+                }
+
                 return;
             }
         }
@@ -168,7 +216,7 @@ public sealed class WitnessOnSignal<T>(IObservable<T> source, ISequencer schedul
                 _actions.Clear();
             }
 
-            _cancel.Dispose();
+            SinkSubscription.Dispose(ref _sourceSubscription);
         }
 
         /// <summary>Queues a notification and schedules a drain when one is not pending.</summary>
@@ -200,25 +248,6 @@ public sealed class WitnessOnSignal<T>(IObservable<T> source, ISequencer schedul
             }
 
             _parent._scheduler.Schedule(this);
-        }
-
-        /// <summary>Forwards one notification to the downstream observer.</summary>
-        /// <param name="action">The notification to forward.</param>
-        private void Dispatch(in Notification action)
-        {
-            if (action.Kind == SparkKind.OnNext)
-            {
-                _observer.OnNext(action.Value);
-                return;
-            }
-
-            if (action.Kind == SparkKind.OnError)
-            {
-                _observer.OnError(action.Exception);
-                return;
-            }
-
-            _observer.OnCompleted();
         }
 
         /// <summary>Value-type observer notification used for the dispatch queue to avoid a per-OnNext heap allocation.</summary>

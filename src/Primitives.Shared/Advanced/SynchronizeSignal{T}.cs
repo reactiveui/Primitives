@@ -15,7 +15,13 @@ public sealed class SynchronizeSignal<T> : IObservable<T>
 {
     /// <summary>Initializes a new instance of the <see cref="SynchronizeSignal{T}"/> class.</summary>
     /// <param name="source">The source observable.</param>
-    public SynchronizeSignal(IObservable<T> source) => Source = source;
+    /// <exception cref="ArgumentNullException"><paramref name="source"/> is <see langword="null"/>.</exception>
+    public SynchronizeSignal(IObservable<T> source)
+    {
+        ArgumentExceptionHelper.ThrowIfNull(source);
+
+        Source = source;
+    }
 
     /// <summary>Gets the source observable.</summary>
     private IObservable<T> Source { get; }

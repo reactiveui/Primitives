@@ -13,7 +13,7 @@ namespace ReactiveUI.Primitives.Extensions.Operators;
 #endif
 
 /// <summary>Caches and shares one running timer per <c>(TimeSpan, ISequencer)</c> key.</summary>
-internal static class SyncTimerObservable
+public static class SyncTimerObservable
 {
     /// <summary>The timer cache, keyed by <c>(TimeSpan, ISequencer)</c>.</summary>
     private static readonly ConcurrentDictionary<(TimeSpan TimeSpan, ISequencer Scheduler), SharedTimer>
@@ -23,11 +23,18 @@ internal static class SyncTimerObservable
     private static readonly Func<(TimeSpan TimeSpan, ISequencer Scheduler), SharedTimer> _create =
         static key => new(key.TimeSpan, key.Scheduler);
 
+    /// <summary>Gets a shared timer for the specified period on <see cref="Sequencer.Default"/>.</summary>
+    /// <param name="timeSpan">The period.</param>
+    /// <returns>A shared observable sequence of timer ticks.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static IObservable<DateTime> Get(TimeSpan timeSpan) =>
+        Get(timeSpan, Sequencer.Default);
+
     /// <summary>Gets a shared timer for the specified period and scheduler.</summary>
     /// <param name="timeSpan">The period.</param>
     /// <param name="scheduler">The sequencer that times each tick.</param>
     /// <returns>A shared observable sequence of timer ticks.</returns>
-    internal static IObservable<DateTime> Get(TimeSpan timeSpan, ISequencer scheduler)
+    public static IObservable<DateTime> Get(TimeSpan timeSpan, ISequencer scheduler)
     {
         ArgumentExceptionHelper.ThrowIfNull(scheduler);
 

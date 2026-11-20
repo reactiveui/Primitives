@@ -18,12 +18,20 @@ namespace ReactiveUI.Primitives.Extensions.Operators;
 /// <param name="resource">The resource to use during the operation and dispose at the end.</param>
 /// <param name="action">An optional action invoked against the resource.</param>
 /// <param name="scheduler">An optional scheduler; <c>null</c> runs the action synchronously inline.</param>
-internal sealed class UsingActionObservable<T>(
+public sealed class UsingActionObservable<T>(
     T resource,
     Action<T>? action,
     ISequencer? scheduler) : IObservable<RxVoid>
     where T : IDisposable
 {
+    /// <summary>Initializes a new instance of the <see cref="UsingActionObservable{T}"/> class that runs inline.</summary>
+    /// <param name="resource">The resource to use during the operation and dispose at the end.</param>
+    /// <param name="action">An optional action invoked against the resource.</param>
+    public UsingActionObservable(T resource, Action<T>? action)
+        : this(resource, action, null)
+    {
+    }
+
     /// <inheritdoc/>
     public IDisposable Subscribe(IObserver<RxVoid> observer)
     {

@@ -163,6 +163,24 @@ public class ObserveOnIfObservableTests
         await Assert.That(values).IsCollectionEqualTo([1]);
     }
 
+    /// <summary>Verifies source completion disposes both the source and condition subscriptions.</summary>
+    /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
+    [Test]
+    public async Task WhenSourceCompletes_ThenDisposesBothSourceAndConditionSubscriptions()
+    {
+        SyncDirectSource<int> source = new();
+        SyncDirectSource<bool> condition = new();
+        var completed = false;
+        using var sub = source.ObserveOnIf(condition, Sequencer.Immediate, Sequencer.Immediate)
+            .Subscribe(static _ => { }, () => completed = true);
+
+        source.Observer.OnCompleted();
+
+        await Assert.That(completed).IsTrue();
+        await Assert.That(source.DisposeCount).IsEqualTo(1);
+        await Assert.That(condition.DisposeCount).IsEqualTo(1);
+    }
+
     /// <summary>Sequencer that delegates to the default thread-pool sequencer but records each scheduled work item.</summary>
     private sealed class RecordingScheduler : ISequencer
     {

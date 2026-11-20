@@ -2,6 +2,8 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Runtime.CompilerServices;
+
 namespace ReactiveUI.Primitives.Async;
 
 /// <summary>Provides Rx-compatible bind names for asynchronous observable sequences.</summary>
@@ -17,11 +19,8 @@ public static partial class SignalAsyncExtensions
         /// <param name="selector">The projection producing an inner sequence for each value.</param>
         /// <returns>An observable sequence of merged inner values.</returns>
         /// <exception cref="ArgumentNullException"><paramref name="selector"/> is <see langword="null"/>.</exception>
-        public IObservableAsync<TResult> Bind<TResult>(Func<T, IObservableAsync<TResult>> selector)
-        {
-            ArgumentExceptionHelper.ThrowIfNull(selector);
-
-            return new FlatMapSignal<T, TResult>(source, selector);
-        }
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public IObservableAsync<TResult> Bind<TResult>(Func<T, IObservableAsync<TResult>> selector) =>
+            new FlatMapSignal<T, TResult>(source, selector);
     }
 }

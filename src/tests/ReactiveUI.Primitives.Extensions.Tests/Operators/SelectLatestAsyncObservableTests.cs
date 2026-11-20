@@ -226,4 +226,36 @@ public class SelectLatestAsyncObservableTests
         await Assert.That(values).IsEmpty();
         await Assert.That(caught).IsNull();
     }
+
+    /// <summary>Verifies a faulted async selector disposes the upstream subscription.</summary>
+    /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
+    [Test]
+    public async Task WhenSelectorFaults_ThenDisposesUpstreamSubscription()
+    {
+        SyncDirectSource<int> source = new();
+        TaskCompletionSource<Exception> faulted = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        InvalidOperationException expected = new(SelectorErrorMessage);
+        using var sub = source.SelectLatestAsync(_ => Task.FromException<int>(expected))
+            .Subscribe(static _ => { }, ex => faulted.TrySetResult(ex));
+
+        source.Observer.OnNext(1);
+
+        var caught = await faulted.Task;
+        await Assert.That(caught).IsSameReferenceAs(expected);
+        await Assert.That(source.DisposeCount).IsEqualTo(1);
+    }
+
+    /// <summary>Verifies a throwing downstream completion handler disposes the sink and rethrows.</summary>
+    /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
+    [Test]
+    public async Task WhenDownstreamOnCompletedThrows_ThenDisposesAndRethrows()
+    {
+        SyncDirectSource<int> source = new();
+        InvalidOperationException expected = new("complete");
+        using var sub = source.SelectLatestAsync(Task.FromResult).Subscribe(
+            ReactiveUI.Primitives.Advanced.Witness.Create<int>(static _ => { }, static _ => { }, () => throw expected));
+
+        _ = Assert.Throws<InvalidOperationException>(() => source.Observer.OnCompleted());
+        await Assert.That(source.DisposeCount).IsEqualTo(1);
+    }
 }

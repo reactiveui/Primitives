@@ -3,59 +3,50 @@
 // See the LICENSE file in the project root for full license information.
 
 using System.Runtime.CompilerServices;
-using ReactiveUI.Primitives.Disposables;
-
 #if REACTIVE_SHIM
+using ReactiveUI.Primitives.Extensions.Reactive.Operators;
+
 namespace ReactiveUI.Primitives.Extensions.Reactive;
 #else
+using ReactiveUI.Primitives.Extensions.Operators;
+
 namespace ReactiveUI.Primitives.Extensions;
 #endif
 
 /// <summary>Provides extension methods that subscribe to a sequence and block the calling thread until it produces a value or terminates, returning the emitted value or the captured error.</summary>
 public static class ObservableSubscriptionExtensions
 {
-    /// <summary>The default timeout used by the <c>WaitFor*</c> helpers when no override is supplied.</summary>
-    private static readonly TimeSpan DefaultTimeout = TimeSpan.FromSeconds(30);
-
     /// <summary>Blocking subscribe and wait operators for a <see cref="RxVoid"/>-producing source.</summary>
     /// <param name="source">The observable to subscribe to.</param>
     extension(IObservable<RxVoid> source)
     {
         /// <summary>Subscribes to a synchronously terminating sequence and discards its value.</summary>
-        public void SubscribeAndComplete()
-        {
-            ArgumentExceptionHelper.ThrowIfNull(source);
-
-            using var subscription = source.Subscribe(NoopWitness<RxVoid>.Instance);
-        }
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void SubscribeAndComplete() =>
+            BlockingSubscription.SubscribeAndComplete(source);
 
         /// <summary>Subscribes to the source and returns any error emitted during the synchronous <see cref="IObservable{T}.Subscribe(IObserver{T})"/> call.</summary>
         /// <returns>The captured error, or <see langword="null"/> if none.</returns>
-        public Exception? SubscribeGetError()
-        {
-            ArgumentExceptionHelper.ThrowIfNull(source);
-
-            ErrorCaptureWitness<RxVoid> sink = new();
-            using var subscription = source.Subscribe(sink);
-            return sink.Error;
-        }
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public Exception? SubscribeGetError() =>
+            BlockingSubscription.SubscribeGetError(source);
 
         /// <summary>Blocks until the <see cref="RxVoid"/>-producing source completes (default 30s timeout); rethrows any captured error.</summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void WaitForCompletion() =>
-            WaitForCompletionCore(source, null, DefaultTimeout);
+            BlockingSubscription.WaitForCompletion(source);
 
         /// <summary>Blocks until the <see cref="RxVoid"/>-producing source completes, honoring an explicit <paramref name="timeout"/>; rethrows any captured error.</summary>
         /// <param name="timeout">The wait timeout.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void WaitForCompletion(TimeSpan timeout) =>
-            WaitForCompletionCore(source, null, timeout);
+            BlockingSubscription.WaitForCompletion(source, timeout);
 
         /// <summary>Blocks until the <see cref="RxVoid"/>-producing source completes, routing the subscribe call through <paramref name="scheduler"/>; rethrows any captured error.</summary>
         /// <param name="scheduler">Scheduler used to dispatch the subscribe call.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void WaitForCompletion(ISequencer scheduler) =>
-            WaitForCompletionCore(source, scheduler, DefaultTimeout);
+            BlockingSubscription.WaitForCompletion(source, scheduler);
 
         /// <summary>
         /// Blocks until the <see cref="RxVoid"/>-producing source completes, routing the subscribe call
@@ -65,7 +56,7 @@ public static class ObservableSubscriptionExtensions
         /// <param name="timeout">The wait timeout.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void WaitForCompletion(ISequencer scheduler, TimeSpan timeout) =>
-            WaitForCompletionCore(source, scheduler, timeout);
+            BlockingSubscription.WaitForCompletion(source, scheduler, timeout);
     }
 
     /// <summary>Blocking subscribe and wait operators for an observable source sequence.</summary>
@@ -75,32 +66,22 @@ public static class ObservableSubscriptionExtensions
     {
         /// <summary>Subscribes to the source and returns the last value emitted during the synchronous <see cref="IObservable{T}.Subscribe(IObserver{T})"/> call.</summary>
         /// <returns>The last emitted value, or <see langword="default"/> if no value was emitted.</returns>
-        public T? SubscribeGetValue()
-        {
-            ArgumentExceptionHelper.ThrowIfNull(source);
-
-            ValueCaptureWitness<T> sink = new();
-            using var subscription = source.Subscribe(sink);
-            return sink.Value;
-        }
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public T? SubscribeGetValue() =>
+            BlockingSubscription.SubscribeGetValue(source);
 
         /// <summary>Subscribes to the source and returns any error emitted during the synchronous <see cref="IObservable{T}.Subscribe(IObserver{T})"/> call.</summary>
         /// <returns>The captured error, or <see langword="null"/> if none.</returns>
-        public Exception? SubscribeGetError()
-        {
-            ArgumentExceptionHelper.ThrowIfNull(source);
-
-            ErrorCaptureWitness<T> sink = new();
-            using var subscription = source.Subscribe(sink);
-            return sink.Error;
-        }
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public Exception? SubscribeGetError() =>
+            BlockingSubscription.SubscribeGetError(source);
 
         /// <summary>Blocks until the source emits a value, errors, or completes (default 30s timeout).</summary>
         /// <returns>The last value emitted before terminal, or <see langword="default"/> if the sequence completed empty.</returns>
         /// <exception cref="TimeoutException">The sequence did not terminate in time.</exception>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public T? WaitForValue() =>
-            WaitForValueCore(source, null, DefaultTimeout);
+            BlockingSubscription.WaitForValue(source);
 
         /// <summary>Blocks until the source emits a value, errors, or completes, honoring an explicit <paramref name="timeout"/>.</summary>
         /// <param name="timeout">The wait timeout.</param>
@@ -108,7 +89,7 @@ public static class ObservableSubscriptionExtensions
         /// <exception cref="TimeoutException">The sequence did not terminate within <paramref name="timeout"/>.</exception>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public T? WaitForValue(TimeSpan timeout) =>
-            WaitForValueCore(source, null, timeout);
+            BlockingSubscription.WaitForValue(source, timeout);
 
         /// <summary>Blocks until the source emits a value, errors, or completes, routing the subscribe call through <paramref name="scheduler"/> (default 30s timeout).</summary>
         /// <param name="scheduler">Scheduler used to dispatch the subscribe call.</param>
@@ -116,7 +97,7 @@ public static class ObservableSubscriptionExtensions
         /// <exception cref="TimeoutException">The sequence did not terminate in time.</exception>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public T? WaitForValue(ISequencer scheduler) =>
-            WaitForValueCore(source, scheduler, DefaultTimeout);
+            BlockingSubscription.WaitForValue(source, scheduler);
 
         /// <summary>Blocks until the source emits a value, errors, or completes, routing the subscribe call through <paramref name="scheduler"/> with an explicit <paramref name="timeout"/>.</summary>
         /// <param name="scheduler">Scheduler used to dispatch the subscribe call.</param>
@@ -125,27 +106,27 @@ public static class ObservableSubscriptionExtensions
         /// <exception cref="TimeoutException">The sequence did not terminate within <paramref name="timeout"/>.</exception>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public T? WaitForValue(ISequencer scheduler, TimeSpan timeout) =>
-            WaitForValueCore(source, scheduler, timeout);
+            BlockingSubscription.WaitForValue(source, scheduler, timeout);
 
         /// <summary>Blocks until the source terminates or the timeout expires, returning any captured error without throwing it.</summary>
         /// <returns>The captured error, or <see langword="null"/> if completion was normal.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public Exception? WaitForError() =>
-            WaitForErrorCore(source, null, DefaultTimeout);
+            BlockingSubscription.WaitForError(source);
 
         /// <summary>Blocks until the source terminates with an explicit <paramref name="timeout"/>; returns any captured error (does NOT rethrow).</summary>
         /// <param name="timeout">The wait timeout.</param>
         /// <returns>The captured error, or <see langword="null"/> if completion was normal.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public Exception? WaitForError(TimeSpan timeout) =>
-            WaitForErrorCore(source, null, timeout);
+            BlockingSubscription.WaitForError(source, timeout);
 
         /// <summary>Blocks until the source terminates, routing the subscribe call through <paramref name="scheduler"/>; returns any captured error (does NOT rethrow).</summary>
         /// <param name="scheduler">Scheduler used to dispatch the subscribe call.</param>
         /// <returns>The captured error, or <see langword="null"/> if completion was normal.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public Exception? WaitForError(ISequencer scheduler) =>
-            WaitForErrorCore(source, scheduler, DefaultTimeout);
+            BlockingSubscription.WaitForError(source, scheduler);
 
         /// <summary>
         /// Blocks until the source terminates, routing the subscribe call
@@ -157,237 +138,6 @@ public static class ObservableSubscriptionExtensions
         /// <returns>The captured error, or <see langword="null"/> if completion was normal.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public Exception? WaitForError(ISequencer scheduler, TimeSpan timeout) =>
-            WaitForErrorCore(source, scheduler, timeout);
-    }
-
-    /// <summary>Shared implementation of the <c>WaitForValue</c> operators.</summary>
-    /// <typeparam name="T">The element type.</typeparam>
-    /// <param name="source">The source observable.</param>
-    /// <param name="scheduler">Optional scheduler for the subscribe call.</param>
-    /// <param name="timeout">The wait timeout.</param>
-    /// <returns>The last value emitted before terminal, or <see langword="default"/>.</returns>
-    /// <exception cref="TimeoutException">The sequence did not terminate within <paramref name="timeout"/>.</exception>
-    private static T? WaitForValueCore<T>(IObservable<T> source, ISequencer? scheduler, TimeSpan timeout)
-    {
-        ArgumentExceptionHelper.ThrowIfNull(source);
-
-        using ManualResetEventSlim done = new();
-        BlockingValueWitness<T> sink = new(done);
-        using var subscription = ScheduledSubscribe(source, sink, scheduler);
-
-        if (!WaitForTerminal(done, timeout))
-        {
-            throw new TimeoutException(
-                $"WaitForValue timed out after {timeout.TotalSeconds}s.");
-        }
-
-        return sink.Result;
-    }
-
-    /// <summary>Shared implementation of the <c>WaitForCompletion</c> operators.</summary>
-    /// <param name="source">The source observable.</param>
-    /// <param name="scheduler">Optional scheduler for the subscribe call.</param>
-    /// <param name="timeout">The wait timeout.</param>
-    /// <exception cref="TimeoutException">The sequence did not terminate within <paramref name="timeout"/>.</exception>
-    private static void WaitForCompletionCore(IObservable<RxVoid> source, ISequencer? scheduler, TimeSpan timeout)
-    {
-        ArgumentExceptionHelper.ThrowIfNull(source);
-
-        using ManualResetEventSlim done = new();
-        BlockingTerminalWitness<RxVoid> sink = new(done);
-        using var subscription = ScheduledSubscribe(source, sink, scheduler);
-
-        if (!WaitForTerminal(done, timeout))
-        {
-            throw new TimeoutException(
-                $"WaitForCompletion timed out after {timeout.TotalSeconds}s.");
-        }
-
-        if (sink.Error is null)
-        {
-            return;
-        }
-
-        throw sink.Error;
-    }
-
-    /// <summary>Shared implementation of the <c>WaitForError</c> operators.</summary>
-    /// <typeparam name="T">The element type.</typeparam>
-    /// <param name="source">The source observable.</param>
-    /// <param name="scheduler">Optional scheduler for the subscribe call.</param>
-    /// <param name="timeout">The wait timeout.</param>
-    /// <returns>The captured error, or <see langword="null"/>.</returns>
-    /// <exception cref="TimeoutException">The sequence did not terminate within <paramref name="timeout"/>.</exception>
-    private static Exception? WaitForErrorCore<T>(IObservable<T> source, ISequencer? scheduler, TimeSpan timeout)
-    {
-        ArgumentExceptionHelper.ThrowIfNull(source);
-
-        using ManualResetEventSlim done = new();
-        BlockingTerminalWitness<T> sink = new(done);
-        using var subscription = ScheduledSubscribe(source, sink, scheduler);
-
-        if (!WaitForTerminal(done, timeout))
-        {
-            throw new TimeoutException(
-                $"WaitForError timed out after {timeout.TotalSeconds}s.");
-        }
-
-        return sink.Error;
-    }
-
-    /// <summary>Blocks until a terminal signal arrives or the timeout expires.</summary>
-    /// <param name="done">The terminal signal.</param>
-    /// <param name="timeout">The maximum wait duration.</param>
-    /// <returns>True when the signal arrives; false on timeout.</returns>
-    [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static bool WaitForTerminal(ManualResetEventSlim done, TimeSpan timeout) => done.Wait(timeout);
-
-    /// <summary>Subscribes <paramref name="observer"/> to <paramref name="source"/> on <paramref name="scheduler"/>, or inline when no scheduler is supplied.</summary>
-    /// <typeparam name="T">The type of the elements in <paramref name="source"/>.</typeparam>
-    /// <param name="source">The observable to subscribe to.</param>
-    /// <param name="observer">The observer to receive notifications from the observable.</param>
-    /// <param name="scheduler">
-    /// The scheduler on which to execute the subscription logic. If <see langword="null"/>, the subscription occurs directly without scheduling.
-    /// </param>
-    /// <returns>A disposable representing the subscription.</returns>
-    private static IDisposable ScheduledSubscribe<T>(
-        IObservable<T> source,
-        IObserver<T> observer,
-        ISequencer? scheduler)
-    {
-        if (scheduler is null)
-        {
-            return source.Subscribe(observer);
-        }
-
-        SwapDisposable swap = new();
-        var scheduled = scheduler.Schedule(
-            (Swap: swap, Source: source, Observer: observer),
-            static (_, state) =>
-            {
-                state.Swap.Disposable = state.Source.Subscribe(state.Observer);
-                return EmptyDisposable.Instance;
-            });
-        return new DisposableBag(scheduled, swap);
-    }
-
-    /// <summary>No-op observer used by <see cref="SubscribeAndComplete"/> to absorb signals without allocating a delegate trio.</summary>
-    /// <typeparam name="T">The element type of the source.</typeparam>
-    private sealed class NoopWitness<T> : IObserver<T>
-    {
-        /// <summary>Singleton instance to avoid per-call allocation.</summary>
-        public static readonly NoopWitness<T> Instance = new();
-
-        /// <inheritdoc/>
-        public void OnNext(T value)
-        {
-        }
-
-        /// <inheritdoc/>
-        public void OnError(Exception error)
-        {
-        }
-
-        /// <inheritdoc/>
-        public void OnCompleted()
-        {
-        }
-    }
-
-    /// <summary>Observer that captures the last value seen during synchronous subscribe.</summary>
-    /// <typeparam name="T">The element type of the source.</typeparam>
-    private sealed class ValueCaptureWitness<T> : IObserver<T>
-    {
-        /// <summary>Gets the captured value, or <see langword="default"/> if none.</summary>
-        public T? Value { get; private set; }
-
-        /// <inheritdoc/>
-        public void OnNext(T value) => Value = value;
-
-        /// <inheritdoc/>
-        public void OnError(Exception error)
-        {
-        }
-
-        /// <inheritdoc/>
-        public void OnCompleted()
-        {
-        }
-    }
-
-    /// <summary>Observer that captures the first error seen during synchronous subscribe.</summary>
-    /// <typeparam name="T">The element type of the source.</typeparam>
-    private sealed class ErrorCaptureWitness<T> : IObserver<T>
-    {
-        /// <summary>Gets the captured error, or <see langword="null"/> if none.</summary>
-        public Exception? Error { get; private set; }
-
-        /// <inheritdoc/>
-        public void OnNext(T value)
-        {
-        }
-
-        /// <inheritdoc/>
-        public void OnError(Exception error) => Error ??= error;
-
-        /// <inheritdoc/>
-        public void OnCompleted()
-        {
-        }
-    }
-
-    /// <summary>
-    /// Observer used by the value-returning <c>WaitFor</c> path: captures the last value,
-    /// signals the gate on terminal, swallows errors (caller's timeout / default reflects outcome).
-    /// </summary>
-    /// <typeparam name="T">The element type of the source.</typeparam>
-    /// <param name="done">The gate signalled on terminal.</param>
-    private sealed class BlockingValueWitness<T>(ManualResetEventSlim done) : IObserver<T>
-    {
-        /// <summary>Gets the most recent value seen.</summary>
-        public T? Result { get; private set; }
-
-        /// <inheritdoc/>
-        public void OnNext(T value) => Result = value;
-
-        /// <inheritdoc/>
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void OnError(Exception error) => done.Set();
-
-        /// <inheritdoc/>
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        [System.Diagnostics.CodeAnalysis.SuppressMessage(
-            "Design",
-            "SST2318:Members should not have identical bodies",
-            Justification =
-                "Completion and error are distinct IObserver<T> channels that deliberately share one action: "
-                + "releasing the gate.")]
-        public void OnCompleted() => done.Set();
-    }
-
-    /// <summary>Observer used by the completion / error <c>WaitFor</c> paths: captures any terminal error and signals the gate on terminal.</summary>
-    /// <typeparam name="T">The element type of the source.</typeparam>
-    /// <param name="done">The gate signalled on terminal.</param>
-    private sealed class BlockingTerminalWitness<T>(ManualResetEventSlim done) : IObserver<T>
-    {
-        /// <summary>Gets the captured terminal error, or <see langword="null"/> if completion was normal.</summary>
-        public Exception? Error { get; private set; }
-
-        /// <inheritdoc/>
-        public void OnNext(T value)
-        {
-        }
-
-        /// <inheritdoc/>
-        public void OnError(Exception error)
-        {
-            Error = error;
-            done.Set();
-        }
-
-        /// <inheritdoc/>
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void OnCompleted() => done.Set();
+            BlockingSubscription.WaitForError(source, scheduler, timeout);
     }
 }

@@ -5,16 +5,32 @@
 using System.Runtime.CompilerServices;
 
 #if REACTIVE_SHIM
+using ReactiveUI.Primitives.Reactive.Advanced;
+
 namespace ReactiveUI.Primitives.Extensions.Reactive.Operators;
 #else
+using ReactiveUI.Primitives.Advanced;
+
 namespace ReactiveUI.Primitives.Extensions.Operators;
 #endif
 
 /// <summary>Replaces each source element with <see cref="RxVoid.Default"/>, leaving error and completion untouched.</summary>
 /// <typeparam name="T">The element type of the source observable (ignored).</typeparam>
 /// <param name="source">The source observable whose values are ignored.</param>
-internal sealed class AsSignalObservable<T>(IObservable<T> source) : IObservable<RxVoid>
+public sealed class AsSignalObservable<T>(IObservable<T> source) : IObservable<RxVoid>
 {
+    /// <summary>Creates an <see cref="RxVoid"/> signal over <paramref name="source"/>, short-circuiting empty and never singletons.</summary>
+    /// <param name="source">The source observable whose values are ignored.</param>
+    /// <returns>An observable sequence emitting <see cref="RxVoid.Default"/> for each source value.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static IObservable<RxVoid> Create(IObservable<T> source) =>
+        source switch
+        {
+            ImmutableEmptySignal<T> => ImmutableEmptySignal<RxVoid>.Instance,
+            ImmutableNeverSignal<T> => ImmutableNeverSignal<RxVoid>.Instance,
+            _ => new AsSignalObservable<T>(source),
+        };
+
     /// <inheritdoc/>
     public IDisposable Subscribe(IObserver<RxVoid> observer)
     {

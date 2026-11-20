@@ -2,6 +2,7 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Runtime.CompilerServices;
 using Microsoft.AspNetCore.Components;
 
 namespace ReactiveUI.Primitives.Blazor.Reactive.Concurrency;
@@ -16,11 +17,7 @@ public static class BlazorRendererSequencerExtensions
         /// <summary>Adapts a Blazor renderer dispatcher to a scheduler.</summary>
         /// <returns>A scheduler that schedules through <paramref name="dispatcher"/>.</returns>
         /// <exception cref="ArgumentNullException"><paramref name="dispatcher"/> is <see langword="null"/>.</exception>
-        public BlazorRendererSequencer ToSequencer()
-        {
-            ArgumentExceptionHelper.ThrowIfNull(dispatcher);
-
-            return new(dispatcher);
-        }
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public BlazorRendererSequencer ToSequencer() => new(dispatcher);
     }
 }

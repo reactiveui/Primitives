@@ -3,6 +3,7 @@
 // See the LICENSE file in the project root for full license information.
 
 using System.Runtime.CompilerServices;
+using ReactiveUI.Primitives.Advanced;
 using ReactiveUI.Primitives.Disposables;
 using ReactiveUI.Primitives.Signals;
 
@@ -27,7 +28,11 @@ public sealed class ConnectableSignal<T> : IObservable<T>
     private readonly ISignal<T> _hub;
 
     /// <summary>The active source connection, whose returned handle owns disposal.</summary>
-    private StrongBox<Connection>? _connection;
+    [System.Diagnostics.CodeAnalysis.SuppressMessage(
+        "Usage",
+        "CA2213:Disposable fields should be disposed",
+        Justification = "ConnectableSignal is not IDisposable; callers own the Connection returned by Connect.")]
+    private Connection? _connection;
 
     /// <summary>Set after the source sends a terminal notification to the hub.</summary>
     private bool _terminated;
@@ -59,19 +64,19 @@ public sealed class ConnectableSignal<T> : IObservable<T>
                 return Scope.Empty;
             }
 
-            if (_connection?.Value is { } activeConnection)
+            if (_connection is { } activeConnection)
             {
                 return activeConnection;
             }
 
             connection = new(this);
-            _connection = new(connection);
+            _connection = connection;
         }
 
         IDisposable sourceSubscription;
         try
         {
-            sourceSubscription = _source.Subscribe(new ConnectionObserver(this));
+            sourceSubscription = _source.Subscribe(connection);
         }
         catch
         {
@@ -93,48 +98,51 @@ public sealed class ConnectableSignal<T> : IObservable<T>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public IDisposable Subscribe(IObserver<T> observer) => _hub.Subscribe(observer);
 
-    /// <summary>Forwards source notifications to the hub and latches terminal state.</summary>
-    private sealed class ConnectionObserver : IObserver<T>
+    /// <summary>Disconnect handle and source observer for a connection, published before its source subscription arrives.</summary>
+    /// <param name="parent">The owning connectable signal.</param>
+    private sealed class Connection(ConnectableSignal<T> parent) : IObserver<T>, IDisposable
     {
         /// <summary>The owning connectable signal.</summary>
-        private readonly ConnectableSignal<T> _parent;
+        private readonly ConnectableSignal<T> _parent = parent;
 
-        /// <summary>Initializes a new instance of the <see cref="ConnectionObserver"/> class.</summary>
-        /// <param name="parent">The owning connectable signal.</param>
-        public ConnectionObserver(ConnectableSignal<T> parent) => _parent = parent;
+        /// <summary>The source subscription feeding the hub.</summary>
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Usage", "CA2213:Disposable fields should be disposed", Justification = "Disposed via SinkSubscription.Dispose.")]
+        private IDisposable? _sourceSubscription;
+
+        /// <summary>Disposal latch; non-zero once the handle has been disposed.</summary>
+        private int _disposed;
 
         /// <inheritdoc/>
-        public void OnCompleted()
-        {
-            Volatile.Write(ref _parent._terminated, true);
-            _parent._hub.OnCompleted();
-        }
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void OnNext(T value) => _parent._hub.OnNext(value);
 
         /// <inheritdoc/>
         public void OnError(Exception error)
         {
             Volatile.Write(ref _parent._terminated, true);
-            _parent._hub.OnError(error);
+            try
+            {
+                _parent._hub.OnError(error);
+            }
+            finally
+            {
+                Dispose();
+            }
         }
 
         /// <inheritdoc/>
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void OnNext(T value) => _parent._hub.OnNext(value);
-    }
-
-    /// <summary>Disconnect handle for a source connection, published before its source subscription arrives.</summary>
-    /// <param name="parent">The owning connectable signal.</param>
-    private sealed class Connection(ConnectableSignal<T> parent) : IDisposable
-    {
-        /// <summary>The owning connectable signal.</summary>
-        private readonly ConnectableSignal<T> _parent = parent;
-
-        /// <summary>The source subscription feeding the hub; nulled once released.</summary>
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Usage", "CA2213:Disposable fields should be disposed", Justification = "Disposed via the Interlocked.Exchange'd local in Release.")]
-        private IDisposable? _sourceSubscription;
-
-        /// <summary>Disposal latch; non-zero once the handle has been disposed.</summary>
-        private int _disposed;
+        public void OnCompleted()
+        {
+            Volatile.Write(ref _parent._terminated, true);
+            try
+            {
+                _parent._hub.OnCompleted();
+            }
+            finally
+            {
+                Dispose();
+            }
+        }
 
         /// <inheritdoc/>
         public void Dispose()
@@ -144,29 +152,20 @@ public sealed class ConnectableSignal<T> : IObservable<T>
                 return;
             }
 
-            Release();
+            SinkSubscription.Dispose(ref _sourceSubscription);
             lock (_parent._gate)
             {
-                // Connect creates a new connection only after this one has cleared itself, so the slot still holds this handle.
-                _parent._connection = null;
+                if (ReferenceEquals(_parent._connection, this))
+                {
+                    _parent._connection = null;
+                }
             }
         }
 
         /// <summary>Stores the source subscription, releasing it at once when the handle was disposed while subscribing.</summary>
         /// <param name="sourceSubscription">The source subscription feeding the hub.</param>
-        internal void Attach(IDisposable sourceSubscription)
-        {
-            Volatile.Write(ref _sourceSubscription, sourceSubscription);
-            if (Volatile.Read(ref _disposed) == 0)
-            {
-                return;
-            }
-
-            Release();
-        }
-
-        /// <summary>Disposes the source subscription once, if it has arrived.</summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private void Release() => Interlocked.Exchange(ref _sourceSubscription, null)?.Dispose();
+        internal void Attach(IDisposable sourceSubscription) =>
+            SinkSubscription.Set(ref _sourceSubscription, sourceSubscription);
     }
 }

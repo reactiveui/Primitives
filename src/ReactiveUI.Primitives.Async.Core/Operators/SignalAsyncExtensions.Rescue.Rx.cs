@@ -2,6 +2,8 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Runtime.CompilerServices;
+
 namespace ReactiveUI.Primitives.Async;
 
 /// <summary>Provides rescue aliases for asynchronous observable sequences.</summary>
@@ -16,12 +18,8 @@ public static partial class SignalAsyncExtensions
         /// <param name="handler">The handler that produces a replacement sequence from the error.</param>
         /// <returns>An observable sequence that recovers from failures.</returns>
         /// <exception cref="ArgumentNullException"><paramref name="handler"/> is <see langword="null"/>.</exception>
-        public IObservableAsync<T> Rescue(Func<Exception, IObservableAsync<T>> handler)
-        {
-            ArgumentExceptionHelper.ThrowIfNull(source);
-            ArgumentExceptionHelper.ThrowIfNull(handler);
-
-            return new CatchSignal<T>(source, handler, null);
-        }
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public IObservableAsync<T> Rescue(Func<Exception, IObservableAsync<T>> handler) =>
+            new CatchSignal<T>(source, handler);
     }
 }

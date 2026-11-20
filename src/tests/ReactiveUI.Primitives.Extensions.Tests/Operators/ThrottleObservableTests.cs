@@ -126,4 +126,20 @@ public class ThrottleObservableTests
         clock.AdvanceBy(TimeSpan.FromTicks(1));
         await Assert.That(values).IsCollectionEqualTo([Latest]);
     }
+
+    /// <summary>Verifies a throwing downstream <c>OnNext</c> disposes the throttle sink and rethrows.</summary>
+    /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
+    [Test]
+    public async Task WhenDownstreamOnNextThrows_ThenDisposesAndRethrows()
+    {
+        VirtualClock scheduler = new();
+        SyncDirectSource<int> source = new();
+        InvalidOperationException expected = new("boom");
+        using var sub = source.ThrottleOnScheduler(TimeSpan.FromTicks(ThrottleTicks), scheduler).Subscribe(
+            ReactiveUI.Primitives.Advanced.Witness.Create<int>(_ => throw expected));
+
+        source.Observer.OnNext(1);
+        _ = Assert.Throws<InvalidOperationException>(() => scheduler.AdvanceBy(SettleTicks));
+        await Assert.That(source.DisposeCount).IsEqualTo(1);
+    }
 }

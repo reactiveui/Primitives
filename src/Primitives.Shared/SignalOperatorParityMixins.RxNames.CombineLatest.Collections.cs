@@ -26,7 +26,7 @@ public static partial class LinqExtensions
         /// <exception cref="ArgumentNullException"><paramref name="sources"/> or one of its elements is <see langword="null"/>.</exception>
         /// <remarks>The collection is enumerated once when the operator is called.</remarks>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public IObservable<IList<T>> CombineLatest() => CombineLatestOf(CombineLatestSources(sources));
+        public IObservable<IList<T>> CombineLatest() => CombineLatestSignal.CreateList(sources);
 
         /// <summary>Projects the latest value of every source through a selector, once per source notification.</summary>
         /// <typeparam name="TResult">The projected element type.</typeparam>
@@ -34,15 +34,9 @@ public static partial class LinqExtensions
         /// <returns>An observable sequence of projected results. An empty source collection produces an empty sequence.</returns>
         /// <exception cref="ArgumentNullException"><paramref name="sources"/>, one of its elements, or <paramref name="resultSelector"/> is <see langword="null"/>.</exception>
         /// <remarks>The collection is enumerated once when the operator is called.</remarks>
-        public IObservable<TResult> CombineLatest<TResult>(Func<IList<T>, TResult> resultSelector)
-        {
-            ArgumentExceptionHelper.ThrowIfNull(resultSelector);
-
-            var materialized = CombineLatestSources(sources);
-            return materialized.Length == 0
-                ? Signal.Empty<TResult>()
-                : CombineLatestSignal<TResult>.Create(materialized, slots => resultSelector(Snapshot(slots)));
-        }
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public IObservable<TResult> CombineLatest<TResult>(Func<IList<T>, TResult> resultSelector) =>
+            CombineLatestSignal<TResult>.CreateProjected(sources, resultSelector);
     }
 
     /// <summary>Combines the latest value of every source into a list, one list per source notification.</summary>
@@ -59,54 +53,5 @@ public static partial class LinqExtensions
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     [OverloadResolutionPriority(-2)]
     public static IObservable<IList<T>> CombineLatest<T>(params IObservable<T>[] sources) =>
-        CombineLatestOf(CombineLatestSources(sources));
-
-    /// <summary>Builds the list-valued combine-latest signal from validated sources.</summary>
-    /// <typeparam name="T">The element type shared by every source.</typeparam>
-    /// <param name="sources">The validated source array.</param>
-    /// <returns>The combine-latest signal.</returns>
-    private static IObservable<IList<T>> CombineLatestOf<T>(IObservable<T>[] sources) =>
-        sources.Length == 0
-            ? Signal.Empty<IList<T>>()
-            : CombineLatestSignal<IList<T>>.Create(sources, Snapshot);
-
-    /// <summary>Copies the subscription's latest-value slots into a list the subscriber owns.</summary>
-    /// <typeparam name="TResult">The projected element type.</typeparam>
-    /// <typeparam name="T">The element type shared by every source.</typeparam>
-    /// <param name="slots">The subscription's latest-value slots, reused across notifications.</param>
-    /// <returns>A list holding the latest value of every source.</returns>
-    private static T[] Snapshot<TResult, T>(CombineLatestSlot<TResult, T>[] slots)
-    {
-        var snapshot = new T[slots.Length];
-        for (var i = 0; i < slots.Length; i++)
-        {
-            snapshot[i] = slots[i].Value;
-        }
-
-        return snapshot;
-    }
-
-    /// <summary>Materializes and validates the sources a collection-based combine-latest operator was given.</summary>
-    /// <typeparam name="T">The element type shared by every source.</typeparam>
-    /// <param name="sources">The observable sources whose latest values are combined.</param>
-    /// <returns>The source array.</returns>
-    /// <exception cref="ArgumentNullException"><paramref name="sources"/> or one of its elements is <see langword="null"/>.</exception>
-    private static IObservable<T>[] CombineLatestSources<T>(IEnumerable<IObservable<T>> sources)
-    {
-        ArgumentExceptionHelper.ThrowIfNull(sources);
-
-        if (sources is not IObservable<T>[] materialized)
-        {
-            List<IObservable<T>> buffer = [];
-            buffer.AddRange(sources);
-            materialized = buffer.ToArray();
-        }
-
-        for (var i = 0; i < materialized.Length; i++)
-        {
-            ArgumentExceptionHelper.ThrowIfNull(materialized[i]);
-        }
-
-        return materialized;
-    }
+        CombineLatestSignal.CreateList(sources);
 }

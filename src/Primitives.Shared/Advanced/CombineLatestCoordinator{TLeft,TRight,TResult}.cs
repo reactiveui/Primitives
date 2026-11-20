@@ -2,6 +2,7 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Runtime.CompilerServices;
 using ReactiveUI.Primitives.Extensions;
 #if REACTIVE_SHIM
 using ReactiveUI.Primitives.Reactive.Internal;
@@ -30,6 +31,10 @@ public sealed class CombineLatestCoordinator<TLeft, TRight, TResult>(IObserver<T
     /// <summary>The projection function.</summary>
     private readonly Func<TLeft, TRight, TResult> _selector = selector;
 
+    /// <summary>Subscriptions to both arms, released on terminal delivery.</summary>
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("Usage", "CA2213:Disposable fields should be disposed", Justification = "Owned by the caller via Run and released early on terminal delivery.")]
+    private MultipleDisposable? _subscriptions;
+
     /// <summary>Serializes downstream deliveries, so no lock is held while the projection or the observer runs.</summary>
     private DeliveryGateState _delivery;
 
@@ -41,6 +46,9 @@ public sealed class CombineLatestCoordinator<TLeft, TRight, TResult>(IObserver<T
 
     /// <summary>Whether the right source completed, as 0 or 1.</summary>
     private int _rightDone;
+
+    /// <summary>Number of sides that have completed (0, 1, or 2).</summary>
+    private int _completedSides;
 
     /// <summary>A value indicating whether the left source has produced a value.</summary>
     private bool _hasLeft;
@@ -55,46 +63,29 @@ public sealed class CombineLatestCoordinator<TLeft, TRight, TResult>(IObserver<T
     private TRight? _latestRight;
 
     /// <inheritdoc/>
-    public void Drain()
-    {
-        while (true)
-        {
-            switch (_pending.TakeNext(out var update, out var error))
-            {
-                case PendingDelivery.Value:
-                {
-                    Apply(update);
-                    break;
-                }
-
-                case PendingDelivery.Terminal when error is null:
-                {
-                    _observer.OnCompleted();
-                    return;
-                }
-
-                case PendingDelivery.Terminal:
-                {
-                    _observer.OnError(error);
-                    return;
-                }
-
-                default:
-                {
-                    return;
-                }
-            }
-        }
-    }
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public void Drain() =>
+        BinaryCoordinatorHelper.DrainPending(
+            ref _pending,
+            this,
+            static (self, update) => self.Apply(in update),
+            _observer,
+            _subscriptions);
 
     /// <summary>Subscribes to both combine-latest sources.</summary>
     /// <param name="left">The left source.</param>
     /// <param name="right">The right source.</param>
     /// <returns>The subscription cleanup.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public MultipleDisposable Run(IObservable<TLeft> left, IObservable<TRight> right) =>
-        new(
-            left.Subscribe(OnLeftNext, OnError, OnLeftCompleted),
-            right.Subscribe(OnRightNext, OnError, OnRightCompleted));
+        BinaryCoordinatorHelper.SubscribeArms(
+            this,
+            out _subscriptions,
+            left,
+            new(static (self, v) => self.OnLeftNext(v), static (self, e) => self.OnError(e), static self => self.OnLeftCompleted()),
+            right,
+            new(static (self, v) => self.OnRightNext(v), static (self, e) => self.OnError(e), static self => self.OnRightCompleted()),
+            static self => self._pending.IsTerminated);
 
     /// <summary>Records a left value directly when nothing else is delivering, otherwise queues it for the delivering thread.</summary>
     /// <param name="value">The left value.</param>
@@ -190,7 +181,18 @@ public sealed class CombineLatestCoordinator<TLeft, TRight, TResult>(IObserver<T
             return;
         }
 
-        _observer.OnNext(_selector(_latestLeft!, _latestRight!));
+        TResult projected;
+        try
+        {
+            projected = _selector(_latestLeft!, _latestRight!);
+        }
+        catch (Exception selectorError)
+        {
+            OnError(selectorError);
+            return;
+        }
+
+        _observer.OnNext(projected);
     }
 
     /// <summary>Requests the first error as the terminal notification.</summary>
@@ -208,26 +210,21 @@ public sealed class CombineLatestCoordinator<TLeft, TRight, TResult>(IObserver<T
     /// <summary>Marks the left source as complete.</summary>
     private void OnLeftCompleted()
     {
-        Volatile.Write(ref _leftDone, 1);
-        TryComplete();
+        if (BinaryCoordinatorHelper.TryCompleteBothSides(ref _leftDone, ref _completedSides)
+            && _pending.TryRequestTerminal(null))
+        {
+            DeliveryGate.Signal(ref _delivery, this);
+        }
     }
 
     /// <summary>Marks the right source as complete.</summary>
     private void OnRightCompleted()
     {
-        Volatile.Write(ref _rightDone, 1);
-        TryComplete();
-    }
-
-    /// <summary>Requests completion once both sources have completed.</summary>
-    private void TryComplete()
-    {
-        if (Volatile.Read(ref _leftDone) == 0 || Volatile.Read(ref _rightDone) == 0 || !_pending.TryRequestTerminal(null))
+        if (BinaryCoordinatorHelper.TryCompleteBothSides(ref _rightDone, ref _completedSides)
+            && _pending.TryRequestTerminal(null))
         {
-            return;
+            DeliveryGate.Signal(ref _delivery, this);
         }
-
-        DeliveryGate.Signal(ref _delivery, this);
     }
 
     /// <summary>A value from one side, queued while another thread delivers.</summary>

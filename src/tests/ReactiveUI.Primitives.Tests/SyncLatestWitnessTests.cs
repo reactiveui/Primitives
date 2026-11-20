@@ -4,6 +4,7 @@
 
 using System.Runtime.CompilerServices;
 using ReactiveUI.Primitives.Advanced;
+using ReactiveUI.Primitives.Signals;
 
 namespace ReactiveUI.Primitives.Tests;
 
@@ -18,6 +19,12 @@ public sealed class SyncLatestWitnessTests
 
     /// <summary>The multiplier the combining selectors apply to the left value.</summary>
     private const int OneHundred = 100;
+
+    /// <summary>Iteration count for concurrent completion stress loops.</summary>
+    private const int RaceIterations = 150;
+
+    /// <summary>Maximum wait in seconds for concurrent completion.</summary>
+    private const int StressTimeoutSeconds = 5;
 
     /// <summary>Completion waits for both sources, and a repeated completion delivers nothing more.</summary>
     /// <returns>A task representing the asynchronous test.</returns>
@@ -201,5 +208,30 @@ public sealed class SyncLatestWitnessTests
             () => left!.OnNext(One),
             () => right!.OnNext(One),
             () => right!.OnNext(Two));
+    }
+
+    /// <summary>Concurrent completion of both SyncLatest arms never drops the terminal completion signal.</summary>
+    /// <returns>A task representing the asynchronous test.</returns>
+    [Test]
+    public async Task Run_ConcurrentArmCompletion_AlwaysDeliversCompletion()
+    {
+        for (var i = 0; i < RaceIterations; i++)
+        {
+            using Signal<int> left = new();
+            using Signal<int> right = new();
+            TaskCompletionSource<bool> done = new(TaskCreationOptions.RunContinuationsAsynchronously);
+            using var sub = new SyncLatestWitness<int, int, int>(
+                new DelegateWitness<int>(static _ => { }, static _ => { }, () => done.TrySetResult(true)),
+                static (a, b) => a + b).Run(left, right);
+
+            left.OnNext(One);
+            right.OnNext(Two);
+            var t1 = Task.Run(left.OnCompleted);
+            var t2 = Task.Run(right.OnCompleted);
+
+            await Task.WhenAll(t1, t2);
+            using CancellationTokenSource timeout = new(TimeSpan.FromSeconds(StressTimeoutSeconds));
+            await Assert.That(await done.Task.WaitAsync(timeout.Token)).IsTrue();
+        }
     }
 }

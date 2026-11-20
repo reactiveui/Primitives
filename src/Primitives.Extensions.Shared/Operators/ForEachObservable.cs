@@ -14,10 +14,17 @@ namespace ReactiveUI.Primitives.Extensions.Operators;
 /// <typeparam name="T">The element type emitted to the downstream observer.</typeparam>
 /// <param name="source">The source observable of enumerables.</param>
 /// <param name="scheduler">An optional scheduler that source notifications are marshalled onto.</param>
-internal sealed class ForEachObservable<T>(
+public sealed class ForEachObservable<T>(
     IObservable<IEnumerable<T>> source,
     ISequencer? scheduler) : IObservable<T>
 {
+    /// <summary>Initializes a new instance of the <see cref="ForEachObservable{T}"/> class that flattens batches inline.</summary>
+    /// <param name="source">The source observable of enumerables.</param>
+    public ForEachObservable(IObservable<IEnumerable<T>> source)
+        : this(source, null)
+    {
+    }
+
     /// <inheritdoc/>
     public IDisposable Subscribe(IObserver<T> observer)
     {

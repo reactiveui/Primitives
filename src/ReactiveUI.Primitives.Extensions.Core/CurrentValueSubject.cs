@@ -50,6 +50,15 @@ public sealed class CurrentValueSubject<T> : IObservable<T>, IObserver<T>, IDisp
         }
     }
 
+    /// <summary>Creates a current-value subject pair consisting of a read-only observable view and its push-side observer.</summary>
+    /// <param name="initialValue">The initial value replayed to subscribers.</param>
+    /// <returns>A tuple of the read-only observable and push-side observer.</returns>
+    public static (IObservable<T> Observable, IObserver<T> Observer) CreateReadOnlyBehavior(T initialValue)
+    {
+        CurrentValueSubject<T> subject = new(initialValue);
+        return (subject.AsObservable(), subject);
+    }
+
     /// <inheritdoc/>
     public void OnNext(T value)
     {

@@ -12,6 +12,9 @@ public partial class TerminalOperatorTests
     /// <summary>Expected sum for the sequence 1, 2, 3.</summary>
     private const int ReduceCoverageExpectedSum = 6;
 
+    /// <summary>Expected formatted sum string for the sequence 1, 2, 3.</summary>
+    private const string ExpectedFormattedSum = "Sum=6";
+
     /// <summary>Tests AggregateAsync cancellation-token overloads forward through ReduceAsync aliases.</summary>
     /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
@@ -36,7 +39,29 @@ public partial class TerminalOperatorTests
             cancellation.Token);
         await Assert.That(asyncResult).IsEqualTo(ReduceCoverageExpectedSum);
         await Assert.That(syncResult).IsEqualTo(ReduceCoverageExpectedSum);
-        await Assert.That(selectedResult).IsEqualTo("Sum=6");
+        await Assert.That(selectedResult).IsEqualTo(ExpectedFormattedSum);
+
+        var reduceAsyncToken = await SignalAsync.Range(1, ShortSourceValueCount).ReduceAsync(
+            0,
+            static (accumulator, value, _) => new ValueTask<int>(accumulator + value),
+            cancellation.Token);
+        var reduceSyncToken = await SignalAsync.Range(1, ShortSourceValueCount).ReduceAsync(
+            0,
+            static (accumulator, value) => accumulator + value,
+            cancellation.Token);
+        var reduceSelected = await SignalAsync.Range(1, ShortSourceValueCount).ReduceAsync(
+            0,
+            static (accumulator, value) => accumulator + value,
+            static accumulator => $"Sum={accumulator}");
+        var reduceSelectedToken = await SignalAsync.Range(1, ShortSourceValueCount).ReduceAsync(
+            0,
+            static (accumulator, value) => accumulator + value,
+            static accumulator => $"Sum={accumulator}",
+            cancellation.Token);
+        await Assert.That(reduceAsyncToken).IsEqualTo(ReduceCoverageExpectedSum);
+        await Assert.That(reduceSyncToken).IsEqualTo(ReduceCoverageExpectedSum);
+        await Assert.That(reduceSelected).IsEqualTo(ExpectedFormattedSum);
+        await Assert.That(reduceSelectedToken).IsEqualTo(ExpectedFormattedSum);
     }
 
     /// <summary>Tests async ReduceAsync propagates resumable source errors.</summary>

@@ -2,7 +2,11 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Runtime.CompilerServices;
 using ReactiveUI.Primitives.Advanced;
+using ReactiveUI.Primitives.Core.Internal;
+using ReactiveUI.Primitives.Disposables;
+using ReactiveUI.Primitives.Internal;
 
 namespace ReactiveUI.Primitives.Signals;
 
@@ -21,8 +25,9 @@ public sealed class KeepSignal<T>(IObservable<T> source, Func<T, bool> predicate
 
     /// <summary>Preserves the source's current-thread subscription requirement.</summary>
     /// <returns><see langword="true"/> when the source requires current-thread subscription.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public bool IsRequiredSubscribeOnCurrentThread() =>
-        _source is IRequireCurrentThread<T> currentThread && currentThread.IsRequiredSubscribeOnCurrentThread();
+        DirectSequenceEmission.RequiresCurrentThread(_source);
 
     /// <summary>Subscribes an observer to source values accepted by the predicate.</summary>
     /// <param name="observer">The downstream observer.</param>
@@ -31,72 +36,21 @@ public sealed class KeepSignal<T>(IObservable<T> source, Func<T, bool> predicate
     {
         ArgumentExceptionHelper.ThrowIfNull(observer);
 
-        return _source.Subscribe(new KeepWitness(observer, _predicate));
-    }
-
-    /// <summary>Applies the predicate to each source value and forwards the ones it accepts.</summary>
-    /// <param name="observer">The downstream observer.</param>
-    /// <param name="predicate">The predicate applied to each source value.</param>
-    private sealed class KeepWitness(IObserver<T> observer, Func<T, bool> predicate) : IObserver<T>
-    {
-        /// <summary>The downstream observer.</summary>
-        private readonly IObserver<T> _observer = observer;
-
-        /// <summary>The predicate applied to each source value.</summary>
-        private readonly Func<T, bool> _predicate = predicate;
-
-        /// <summary>Non-zero once a terminal notification has been forwarded.</summary>
-        private int _stopped;
-
-        /// <summary>Forwards completion only while the sink is active.</summary>
-        public void OnCompleted()
+        if (DirectSequenceEmission.TrySubscribeFiltered(
+            _source,
+            _predicate,
+            static (item, pred) => System.Runtime.CompilerServices.Unsafe.As<Func<int, bool>>(pred)(item),
+            static (item, pred) => pred(item),
+            observer))
         {
-            if (Interlocked.Exchange(ref _stopped, 1) != 0)
-            {
-                return;
-            }
-
-            _observer.OnCompleted();
+            return EmptyDisposable.Instance;
         }
 
-        /// <summary>Stops the sink and forwards its first error.</summary>
-        /// <param name="error">The terminal error.</param>
-        public void OnError(Exception error)
-        {
-            if (Interlocked.Exchange(ref _stopped, 1) != 0)
-            {
-                return;
-            }
-
-            _observer.OnError(error);
-        }
-
-        /// <summary>Filters active values and turns predicate failures into terminal errors.</summary>
-        /// <param name="value">The source value.</param>
-        public void OnNext(T value)
-        {
-            if (Volatile.Read(ref _stopped) != 0)
-            {
-                return;
-            }
-
-            bool keep;
-            try
-            {
-                keep = _predicate(value);
-            }
-            catch (Exception error)
-            {
-                OnError(error);
-                return;
-            }
-
-            if (!keep)
-            {
-                return;
-            }
-
-            _observer.OnNext(value);
-        }
+        CoreFilteredObserverWitness<T, Func<T, bool>> sink = new(
+            observer,
+            _predicate,
+            static (item, pred) => pred(item));
+        sink.SetSubscription(_source.Subscribe(sink));
+        return sink;
     }
 }

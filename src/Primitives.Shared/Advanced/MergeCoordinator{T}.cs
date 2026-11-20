@@ -24,8 +24,8 @@ public sealed class MergeCoordinator<T> : IDisposable
     /// <summary>Serializes downstream deliveries.</summary>
     private SerializedDelivery<T> _delivery = new();
 
-    /// <summary>The number of active inner subscriptions.</summary>
-    private int _active;
+    /// <summary>Remaining active participants (1 for enumeration plus 1 per active inner).</summary>
+    private int _active = 1;
 
     /// <summary>Whether the outer source has completed, as 0 or 1.</summary>
     private int _outerCompleted;
@@ -53,6 +53,11 @@ public sealed class MergeCoordinator<T> : IDisposable
     {
         foreach (var source in sources)
         {
+            if (_delivery.IsTerminated)
+            {
+                break;
+            }
+
             OnSource(source);
         }
 
@@ -67,7 +72,11 @@ public sealed class MergeCoordinator<T> : IDisposable
     public MergeCoordinator<T> Run(IObservable<T> first, IObservable<T> second)
     {
         OnSource(first);
-        OnSource(second);
+        if (!_delivery.IsTerminated)
+        {
+            OnSource(second);
+        }
+
         OnOuterCompleted();
         return this;
     }
@@ -82,8 +91,15 @@ public sealed class MergeCoordinator<T> : IDisposable
             return;
         }
 
+        if (_delivery.IsTerminated)
+        {
+            return;
+        }
+
         _ = Interlocked.Increment(ref _active);
-        Subscriptions.Add(source.Subscribe(new Arm(this)));
+        Arm arm = new(this);
+        Subscriptions.Add(arm);
+        arm.Attach(source.Subscribe(arm));
     }
 
     /// <summary>Forwards the first terminal error.</summary>
@@ -91,34 +107,35 @@ public sealed class MergeCoordinator<T> : IDisposable
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void OnAnyError(Exception error) => _delivery.OnError(error, new PendingDrain(this));
 
+    /// <summary>Marks source enumeration complete.</summary>
+    internal void OnOuterCompleted()
+    {
+        if (Interlocked.Exchange(ref _outerCompleted, 1) != 0)
+        {
+            return;
+        }
+
+        if (Interlocked.Decrement(ref _active) == 0)
+        {
+            _delivery.OnCompleted(new PendingDrain(this));
+        }
+    }
+
     /// <summary>Forwards an inner value, directly when nothing else is delivering.</summary>
     /// <param name="value">The value to forward.</param>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private void OnInnerNext(T value) => _delivery.OnNext(Observer, value, new PendingDrain(this));
 
-    /// <summary>Marks one inner source complete.</summary>
-    private void OnInnerCompleted()
+    /// <summary>Marks one inner source complete and detaches its handle.</summary>
+    /// <param name="arm">The completed inner arm.</param>
+    private void OnInnerCompleted(Arm arm)
     {
-        _ = Interlocked.Decrement(ref _active);
-        TryComplete();
-    }
-
-    /// <summary>Marks source enumeration complete.</summary>
-    private void OnOuterCompleted()
-    {
-        Volatile.Write(ref _outerCompleted, 1);
-        TryComplete();
-    }
-
-    /// <summary>Delivers completion once enumeration and all inners are done.</summary>
-    private void TryComplete()
-    {
-        if (Volatile.Read(ref _outerCompleted) == 0 || Volatile.Read(ref _active) != 0)
+        _ = Subscriptions.Remove(arm);
+        arm.Dispose();
+        if (Interlocked.Decrement(ref _active) == 0)
         {
-            return;
+            _delivery.OnCompleted(new PendingDrain(this));
         }
-
-        _delivery.OnCompleted(new PendingDrain(this));
     }
 
     /// <summary>Drains this coordinator's queued notifications for the delivery gate.</summary>
@@ -126,14 +143,22 @@ public sealed class MergeCoordinator<T> : IDisposable
     private readonly record struct PendingDrain(MergeCoordinator<T> Owner) : IDrainTarget
     {
         /// <inheritdoc/>
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Drain() => _ = Owner._delivery.DrainTo(Owner.Observer);
+        public void Drain()
+        {
+            if (Owner._delivery.DrainTo(Owner.Observer))
+            {
+                Owner.Dispose();
+            }
+        }
     }
 
     /// <summary>Receives the notifications of one source and passes them to the coordinator, counting its completion once.</summary>
     /// <param name="parent">The coordinator.</param>
-    private sealed class Arm(MergeCoordinator<T> parent) : IObserver<T>
+    private sealed class Arm(MergeCoordinator<T> parent) : IObserver<T>, IDisposable
     {
+        /// <summary>The inner subscription.</summary>
+        private IDisposable? _subscription;
+
         /// <summary>Set to 1 once this source has completed, so a repeated completion is not counted twice.</summary>
         private int _completed;
 
@@ -153,7 +178,16 @@ public sealed class MergeCoordinator<T> : IDisposable
                 return;
             }
 
-            parent.OnInnerCompleted();
+            parent.OnInnerCompleted(this);
         }
+
+        /// <inheritdoc/>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void Dispose() => SinkSubscription.Dispose(ref _subscription);
+
+        /// <summary>Assigns the inner subscription.</summary>
+        /// <param name="subscription">The inner subscription.</param>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        internal void Attach(IDisposable subscription) => SinkSubscription.Set(ref _subscription, subscription);
     }
 }

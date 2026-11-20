@@ -464,7 +464,7 @@ public class ParityHelpersOperatorFusionsTests
             await release.Task;
             values.Add(value);
         });
-        await using SignalAsyncExtensions.DropIfBusySignal<int>.DropIfBusyWitness witness = new(
+        await using DropIfBusyWitness<int> witness = new(
             downstream,
             static (_, _) => default,
             CancellationToken.None);
@@ -560,7 +560,7 @@ public class ParityHelpersOperatorFusionsTests
             values.Add(value);
             return default;
         });
-        await using SignalAsyncExtensions.ThrottleDistinctSignal<int>.ThrottleDistinctWitness observer = new(
+        await using ThrottleDistinctWitness<int> observer = new(
             downstream,
             ShortDebounceWindow,
             time,
@@ -632,7 +632,7 @@ public class ParityHelpersOperatorFusionsTests
     {
         ManualTimeProvider time = new();
         List<int> values = [];
-        SignalAsyncExtensions.DebounceUntilSignal<int>.DebounceUntilWitness observer = new(
+        DebounceUntilWitness<int> observer = new(
             new CallbackWitnessAsync<int>((v, _) =>
             {
                 values.Add(v);
@@ -709,7 +709,7 @@ public class ParityHelpersOperatorFusionsTests
     [Test]
     public async Task WhenThrottleDistinctTryClaimEmissionSuperseded_ThenReturnsFalse()
     {
-        SignalAsyncExtensions.ThrottleDistinctSignal<int>.ThrottleDistinctWitness observer = new(
+        ThrottleDistinctWitness<int> observer = new(
             new NoOpAsyncWitness<int>(),
             TimeSpan.FromHours(1),
             new ManualTimeProvider(),
@@ -729,7 +729,7 @@ public class ParityHelpersOperatorFusionsTests
     [Test]
     public async Task WhenThrottleDistinctTryClaimEmissionDuplicate_ThenReturnsFalse()
     {
-        SignalAsyncExtensions.ThrottleDistinctSignal<int>.ThrottleDistinctWitness observer = new(
+        ThrottleDistinctWitness<int> observer = new(
             new NoOpAsyncWitness<int>(),
             TimeSpan.FromHours(1),
             new ManualTimeProvider(),
@@ -755,7 +755,7 @@ public class ParityHelpersOperatorFusionsTests
     [Test]
     public async Task WhenDebounceUntilIsCurrentEmission_ThenMatchesIdState()
     {
-        SignalAsyncExtensions.DebounceUntilSignal<int>.DebounceUntilWitness observer = new(
+        DebounceUntilWitness<int> observer = new(
             new NoOpAsyncWitness<int>(),
             TimeSpan.FromHours(1),
             static _ => false,
@@ -769,7 +769,7 @@ public class ParityHelpersOperatorFusionsTests
         await Assert.That(observer.IsCurrentEmission(1)).IsFalse();
     }
 
-    /// <summary>Verifies that <see cref="SignalAsyncExtensions.PartitionCoordinator{T}.TryAttachSourceSubscription"/>
+    /// <summary>Verifies that <see cref="PartitionCoordinator{T}.TryAttachSourceSubscription"/>
     /// returns <see langword="false"/> when both branches have already been disposed by the time
     /// the source subscription returns - the disposeNow race fast-path that is otherwise only
     /// reachable through a real concurrency race.</summary>
@@ -778,7 +778,7 @@ public class ParityHelpersOperatorFusionsTests
     public async Task WhenPartitionTryAttachSourceSubscriptionAndBothBranchesGone_ThenReturnsFalse()
     {
         var signal = Signal.Create<int>();
-        SignalAsyncExtensions.PartitionCoordinator<int> coordinator = new(signal.Values, static x => x % Two == 0);
+        PartitionCoordinator<int> coordinator = new(signal.Values, static x => x % Two == 0);
 
         // Subscribe then immediately dispose so both branch slots are null.
         var sub = await coordinator.TrueBranch.SubscribeAsync(static (_, _) => default);
@@ -789,13 +789,13 @@ public class ParityHelpersOperatorFusionsTests
         await Assert.That(attached).IsFalse();
     }
 
-    /// <summary>Verifies that <see cref="SignalAsyncExtensions.PartitionCoordinator{T}.TryAttachSourceSubscription"/> returns <see langword="true"/> when at least one branch is still alive.</summary>
+    /// <summary>Verifies that <see cref="PartitionCoordinator{T}.TryAttachSourceSubscription"/> returns <see langword="true"/> when at least one branch is still alive.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenPartitionTryAttachSourceSubscriptionAndBranchAlive_ThenReturnsTrue()
     {
         var signal = Signal.Create<int>();
-        SignalAsyncExtensions.PartitionCoordinator<int> coordinator = new(signal.Values, static x => x % Two == 0);
+        PartitionCoordinator<int> coordinator = new(signal.Values, static x => x % Two == 0);
 
         await using var sub = await coordinator.TrueBranch.SubscribeAsync(static (_, _) => default);
 
@@ -813,7 +813,7 @@ public class ParityHelpersOperatorFusionsTests
     public async Task WhenPartitionSubscriptionArrives_ThenOwnershipFollowsBranchState(bool branchAlive)
     {
         await using var signal = Signal.Create<int>();
-        SignalAsyncExtensions.PartitionCoordinator<int> coordinator = new(signal.Values, static _ => true);
+        PartitionCoordinator<int> coordinator = new(signal.Values, static _ => true);
         await using var branch = branchAlive
             ? await coordinator.TrueBranch.SubscribeAsync(static (_, _) => default)
             : DisposableAsync.Empty;

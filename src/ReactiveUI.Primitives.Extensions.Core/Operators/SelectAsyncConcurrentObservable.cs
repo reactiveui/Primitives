@@ -4,7 +4,6 @@
 
 using System.Runtime.CompilerServices;
 using ReactiveUI.Primitives.Advanced;
-using ReactiveUI.Primitives.Disposables;
 
 namespace ReactiveUI.Primitives.Extensions.Operators;
 
@@ -24,8 +23,8 @@ public sealed class SelectAsyncConcurrentObservable<TSource, TResult>(IObservabl
         InvalidOperationExceptionHelper.ThrowIfNull(selector);
         ArgumentExceptionHelper.ThrowIfNull(observer);
         SelectAsyncConcurrentSink sink = new(observer, selector, maxConcurrency);
-        var sub = source.Subscribe(sink);
-        return new DisposableBag(sub, sink);
+        sink.Attach(source.Subscribe(sink));
+        return sink;
     }
 
     /// <summary>Processes source values and owns the subscription state.</summary>
@@ -43,6 +42,9 @@ public sealed class SelectAsyncConcurrentObservable<TSource, TResult>(IObservabl
 
         /// <summary>Serializes downstream deliveries.</summary>
         private SerializedDelivery<TResult> _delivery = new();
+
+        /// <summary>Upstream subscription handle.</summary>
+        private IDisposable? _subscription;
 
         /// <summary>The number of currently running async operations.</summary>
         private int _running;
@@ -100,6 +102,19 @@ public sealed class SelectAsyncConcurrentObservable<TSource, TResult>(IObservabl
             lock (_gate)
             {
                 _disposed = true;
+                _queue.Clear();
+            }
+
+            SinkSubscription.Dispose(ref _subscription);
+        }
+
+        /// <summary>Attaches the upstream subscription handle.</summary>
+        /// <param name="subscription">The upstream subscription handle.</param>
+        internal void Attach(IDisposable? subscription)
+        {
+            if (subscription is not null)
+            {
+                SinkSubscription.Set(ref _subscription, subscription);
             }
         }
 
@@ -178,6 +193,7 @@ public sealed class SelectAsyncConcurrentObservable<TSource, TResult>(IObservabl
                     if (!_disposed)
                     {
                         _done = true;
+                        _queue.Clear();
                         _ = _delivery.PostError(ex);
                     }
                 }
@@ -216,8 +232,21 @@ public sealed class SelectAsyncConcurrentObservable<TSource, TResult>(IObservabl
         private void Flush() => _delivery.Flush(new PendingDrain(this));
 
         /// <summary>Delivers the queued notifications to the downstream observer.</summary>
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private void DrainPending() => _ = _delivery.DrainTo(downstream);
+        private void DrainPending()
+        {
+            try
+            {
+                if (_delivery.DrainTo(downstream))
+                {
+                    SinkSubscription.Dispose(ref _subscription);
+                }
+            }
+            catch
+            {
+                Dispose();
+                throw;
+            }
+        }
 
         /// <summary>Drains this sink's queued notifications for the delivery gate.</summary>
         /// <param name="Owner">The sink.</param>

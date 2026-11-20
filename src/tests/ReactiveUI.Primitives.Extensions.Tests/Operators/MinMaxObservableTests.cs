@@ -310,4 +310,46 @@ public class MinMaxObservableTests
         SerializedDeliveryAssertions.ObserverMarshallingCompletionDoesNotDeadlock<int>(
             static (source, observer) => source.GetMax().Subscribe(observer),
             static observer => observer.OnNext(LowValue));
+
+    /// <summary>Verifies early empty completion of one arm disposes the remaining binary and general sources.</summary>
+    /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
+    [Test]
+    public async Task WhenOneSourceCompletesWithoutEmitting_ThenDisposesRemainingSiblingSources()
+    {
+        SyncDirectSource<int> left = new();
+        SyncDirectSource<int> right = new();
+        using var binarySub = left.GetMax(right).Subscribe(static _ => { });
+
+        left.Observer.OnCompleted();
+
+        await Assert.That(left.DisposeCount).IsEqualTo(1);
+        await Assert.That(right.DisposeCount).IsEqualTo(1);
+
+        SyncDirectSource<int> first = new();
+        SyncDirectSource<int> second = new();
+        SyncDirectSource<int> third = new();
+        using var manySub = first.GetMax(second, third).Subscribe(static _ => { });
+
+        first.Observer.OnCompleted();
+
+        await Assert.That(first.DisposeCount).IsEqualTo(1);
+        await Assert.That(second.DisposeCount).IsEqualTo(1);
+        await Assert.That(third.DisposeCount).IsEqualTo(1);
+    }
+
+    /// <summary>Verifies a throwing downstream completion handler on the binary fast path disposes both sources and rethrows.</summary>
+    /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
+    [Test]
+    public async Task WhenBinaryDownstreamOnCompletedThrows_ThenDisposesBothSourcesAndRethrows()
+    {
+        SyncDirectSource<int> left = new();
+        SyncDirectSource<int> right = new();
+        InvalidOperationException expected = new("boom");
+        using var sub = left.GetMax(right).Subscribe(
+            ReactiveUI.Primitives.Advanced.Witness.Create<int>(static _ => { }, static _ => { }, () => throw expected));
+
+        _ = Assert.Throws<InvalidOperationException>(() => left.Observer.OnCompleted());
+        await Assert.That(left.DisposeCount).IsEqualTo(1);
+        await Assert.That(right.DisposeCount).IsEqualTo(1);
+    }
 }

@@ -17,7 +17,7 @@ namespace ReactiveUI.Primitives.Async.Advanced;
 public sealed class SyncLatestLifecycle<TResult> : IAsyncDisposable
 {
     /// <summary>Serializes downstream notifications so OnNext / OnError / OnCompleted never overlap.</summary>
-    private readonly AsyncSerialGate _gate = new();
+    private readonly ReactiveUI.Primitives.Async.Internal.AsyncFlowGate _gate = new();
 
     /// <summary>Cancellation source for subscription disposal; cancelled exactly once.</summary>
     private readonly CancellationTokenSource _disposeCts = new();
@@ -68,23 +68,11 @@ public sealed class SyncLatestLifecycle<TResult> : IAsyncDisposable
     /// <see cref="DisposeToken"/> alone covers both and no per-emission linked source is needed.
     /// </summary>
     /// <param name="external">The subscribe-time token.</param>
-    public void LinkExternalCancellation(CancellationToken external)
-    {
-        if (!external.CanBeCanceled || external == DisposeToken)
-        {
-            return;
-        }
-
-        if (external.IsCancellationRequested)
-        {
-            _disposeCts.Cancel();
-            return;
-        }
-
-        _externalLinkRegistration = external.UnsafeRegister(
-            static state => ((CancellationTokenSource)state!).Cancel(),
-            _disposeCts);
-    }
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public void LinkExternalCancellation(CancellationToken external) =>
+        _externalLinkRegistration = ReactiveUI.Primitives.Async.Internal.AsyncStopTokenHelper.LinkExternal(
+            _disposeCts,
+            external);
 
     /// <summary>Forwards an upstream error to the downstream observer under the gate, respecting disposal.</summary>
     /// <param name="error">The error to forward.</param>
@@ -185,7 +173,6 @@ public sealed class SyncLatestLifecycle<TResult> : IAsyncDisposable
         _externalLinkRegistration.Dispose();
 #endif
         _disposeCts.Dispose();
-        _gate.Dispose();
         failure?.Throw();
     }
 }

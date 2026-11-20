@@ -12,6 +12,17 @@ namespace ReactiveUI.Primitives.Extensions.Operators;
 /// <param name="logger">Invoked once with the source error before downstream sees it.</param>
 public sealed class LogErrorsObservable<T>(IObservable<T> source, Action<Exception> logger) : IObservable<T>
 {
+    /// <summary>Creates an error-logging sequence over <paramref name="source"/>, validating arguments eagerly.</summary>
+    /// <param name="source">Upstream source.</param>
+    /// <param name="logger">Invoked once with the source error before downstream sees it.</param>
+    /// <returns>A sequence that logs errors before propagating them.</returns>
+    public static LogErrorsObservable<T> Create(IObservable<T> source, Action<Exception> logger)
+    {
+        ArgumentExceptionHelper.ThrowIfNull(source);
+        ArgumentExceptionHelper.ThrowIfNull(logger);
+        return new(source, logger);
+    }
+
     /// <inheritdoc/>
     public IDisposable Subscribe(IObserver<T> observer)
     {

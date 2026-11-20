@@ -54,6 +54,23 @@ public sealed class PooledDelaySource : IValueTaskSource
         return cached;
     }
 
+    /// <summary>Creates a cancellable delay using the supplied time provider.</summary>
+    /// <param name="delay">The duration to delay.</param>
+    /// <param name="timeProvider">The time provider to use for the delay.</param>
+    /// <param name="cancellationToken">A token to cancel the delay.</param>
+    /// <returns>A <see cref="ValueTask"/> that completes after the specified delay.</returns>
+    public static ValueTask DelayAsync(
+        TimeSpan delay,
+        TimeProvider timeProvider,
+        CancellationToken cancellationToken)
+    {
+        ArgumentExceptionHelper.ThrowIfNull(timeProvider);
+
+        return timeProvider == TimeProvider.System
+            ? DelayOnSystemClockAsync(delay, cancellationToken)
+            : Rent().BeginAsync(delay, timeProvider, cancellationToken);
+    }
+
     /// <summary>Begins a delay that completes when its timer or cancellation fires first.</summary>
     /// <param name="delay">The dueTime passed to <see cref="TimeProvider.CreateTimer"/>.</param>
     /// <param name="timeProvider">The non-System time provider supplying the timer.</param>
@@ -115,6 +132,14 @@ public sealed class PooledDelaySource : IValueTaskSource
             ReturnToPool();
         }
     }
+
+    /// <summary>Waits for the system clock or cancellation.</summary>
+    /// <param name="delay">The duration to wait.</param>
+    /// <param name="cancellationToken">Cancellation for the wait.</param>
+    /// <returns>The delay operation.</returns>
+    [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
+    private static ValueTask DelayOnSystemClockAsync(TimeSpan delay, CancellationToken cancellationToken) =>
+        new(Task.Delay(delay, cancellationToken));
 
     /// <summary>Completes the delay successfully when the timer's dueTime elapses, unless cancellation claimed it first.</summary>
     private void OnTimerFired()

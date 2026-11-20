@@ -13,6 +13,7 @@ namespace ReactiveUI.Primitives.Async.Reactive
         public static ReactiveUI.Primitives.Async.Reactive.AsyncContext From(System.Threading.SynchronizationContext synchronizationContext) { }
         public static ReactiveUI.Primitives.Async.Reactive.AsyncContext From(System.Threading.Tasks.TaskScheduler taskScheduler) { }
         public static ReactiveUI.Primitives.Async.Reactive.AsyncContext GetCurrent() { }
+        public static bool IsSameAsCurrent(ReactiveUI.Primitives.Async.Reactive.AsyncContext context) { }
         [System.Diagnostics.DebuggerDisplay("AsyncContextSwitcherAwaitable: IsCompleted = {IsCompleted}, ForceYielding = {ForceYielding}")]
         public readonly record struct AsyncContextSwitcherAwaitable : System.IEquatable<ReactiveUI.Primitives.Async.Reactive.AsyncContext.AsyncContextSwitcherAwaitable>, System.Runtime.CompilerServices.INotifyCompletion
         {
@@ -31,6 +32,7 @@ namespace ReactiveUI.Primitives.Async.Reactive
     {
         extension(ReactiveUI.Primitives.Async.Reactive.AsyncContext context)
         {
+            [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
             public bool IsSameAsCurrentAsyncContext() { }
         }
     }
@@ -45,11 +47,14 @@ namespace ReactiveUI.Primitives.Async.Reactive
         public static ReactiveUI.Primitives.Async.IObservableAsync<System.Reactive.Unit> EmitRxVoid() { }
         extension(System.Action action)
         {
+            [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
             public ReactiveUI.Primitives.Async.IObservableAsync<System.Reactive.Unit> Start() { }
+            [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
             public ReactiveUI.Primitives.Async.IObservableAsync<System.Reactive.Unit> Start(System.Threading.Tasks.TaskScheduler? taskScheduler) { }
         }
         extension(System.Func<System.Threading.CancellationToken, System.Threading.Tasks.ValueTask> factory)
         {
+            [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
             public ReactiveUI.Primitives.Async.IObservableAsync<System.Reactive.Unit> FromAsync() { }
         }
         extension(System.Threading.Tasks.Task task)
@@ -59,14 +64,23 @@ namespace ReactiveUI.Primitives.Async.Reactive
         }
         extension<T>(ReactiveUI.Primitives.Async.IObservableAsync<T> source)
         {
+            [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
             public ReactiveUI.Primitives.Async.IObservableAsync<System.Reactive.Unit> AsSignal() { }
+            [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
             public ReactiveUI.Primitives.Async.IObservableAsync<T> ObserveOnIf(bool condition, ReactiveUI.Primitives.Async.Reactive.AsyncContext asyncContext) { }
+            [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
             public ReactiveUI.Primitives.Async.IObservableAsync<T> ObserveOnIf(bool condition, System.Threading.Tasks.TaskScheduler taskScheduler) { }
+            [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
             public ReactiveUI.Primitives.Async.IObservableAsync<T> ObserveOnIf(bool condition, ReactiveUI.Primitives.Async.Reactive.AsyncContext asyncContext, bool forceYielding) { }
+            [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
             public ReactiveUI.Primitives.Async.IObservableAsync<T> ObserveOnIf(bool condition, System.Threading.Tasks.TaskScheduler taskScheduler, bool forceYielding) { }
+            [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
             public ReactiveUI.Primitives.Async.IObservableAsync<T> ObserveOnSafe(ReactiveUI.Primitives.Async.Reactive.AsyncContext? asyncContext) { }
+            [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
             public ReactiveUI.Primitives.Async.IObservableAsync<T> ObserveOnSafe(System.Threading.Tasks.TaskScheduler? taskScheduler) { }
+            [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
             public ReactiveUI.Primitives.Async.IObservableAsync<T> ObserveOnSafe(ReactiveUI.Primitives.Async.Reactive.AsyncContext? asyncContext, bool forceYielding) { }
+            [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
             public ReactiveUI.Primitives.Async.IObservableAsync<T> ObserveOnSafe(System.Threading.Tasks.TaskScheduler? taskScheduler, bool forceYielding) { }
         }
         extension<T>(ReactiveUI.Primitives.Async.IObservableAsync<T> source)
@@ -81,18 +95,49 @@ namespace ReactiveUI.Primitives.Async.Reactive
             public ReactiveUI.Primitives.Async.IObservableAsync<T> WitnessOn(System.Threading.Tasks.TaskScheduler taskScheduler) { }
             [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
             public ReactiveUI.Primitives.Async.IObservableAsync<T> WitnessOn(ReactiveUI.Primitives.Async.Reactive.AsyncContext asyncContext, bool forceYielding) { }
+            [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
             public ReactiveUI.Primitives.Async.IObservableAsync<T> WitnessOn(System.Reactive.Concurrency.IScheduler scheduler, bool forceYielding) { }
+            [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
             public ReactiveUI.Primitives.Async.IObservableAsync<T> WitnessOn(System.Threading.SynchronizationContext synchronizationContext, bool forceYielding) { }
+            [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
             public ReactiveUI.Primitives.Async.IObservableAsync<T> WitnessOn(System.Threading.Tasks.TaskScheduler taskScheduler, bool forceYielding) { }
         }
         extension<T>(ReactiveUI.Primitives.Async.IObservableAsync<T> source)
         {
+            [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
             public ReactiveUI.Primitives.Async.IObservableAsync<T> Yield() { }
         }
     }
 }
 namespace ReactiveUI.Primitives.Async.Reactive.Advanced
 {
+    [System.Diagnostics.DebuggerDisplay("AsRxVoidSignal: Source = {_source}")]
+    public sealed class AsRxVoidSignal<T> : ReactiveUI.Primitives.Async.IObservableAsync<System.Reactive.Unit>
+    {
+        public AsRxVoidSignal(ReactiveUI.Primitives.Async.IObservableAsync<T> source) { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        System.Threading.Tasks.ValueTask<System.IAsyncDisposable> ReactiveUI.Primitives.Async.IObservableAsync<System.Reactive.Unit>.SubscribeAsync(ReactiveUI.Primitives.Async.IObserverAsync<System.Reactive.Unit> observer, System.Threading.CancellationToken cancellationToken) { }
+    }
+    [System.Diagnostics.DebuggerDisplay("AsSignalWitness<T>: {_witness}")]
+    public sealed class AsSignalWitness<T> : ReactiveUI.Primitives.Async.IWitnessAsync<T>
+    {
+        public AsSignalWitness(ReactiveUI.Primitives.Async.IObserverAsync<System.Reactive.Unit> downstream, System.Threading.CancellationToken subscribeToken) { }
+        ReactiveUI.Primitives.Async.WitnessAsyncState ReactiveUI.Primitives.Async.IWitnessState.Witness { get; }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public System.Threading.Tasks.ValueTask DisposeAsync() { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public System.Threading.Tasks.ValueTask OnCompletedAsync(ReactiveUI.Primitives.Result result) { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public System.Threading.Tasks.ValueTask OnErrorResumeAsync(System.Exception error, System.Threading.CancellationToken cancellationToken) { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public System.Threading.Tasks.ValueTask OnNextAsync(T value, System.Threading.CancellationToken cancellationToken) { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        System.Threading.Tasks.ValueTask ReactiveUI.Primitives.Async.IWitnessAsync<T>.OnCompletedAsyncCore(ReactiveUI.Primitives.Result result) { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        System.Threading.Tasks.ValueTask ReactiveUI.Primitives.Async.IWitnessAsync<T>.OnErrorResumeAsyncCore(System.Exception error, System.Threading.CancellationToken cancellationToken) { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        System.Threading.Tasks.ValueTask ReactiveUI.Primitives.Async.IWitnessAsync<T>.OnNextAsyncCore(T value, System.Threading.CancellationToken cancellationToken) { }
+    }
     [System.Diagnostics.DebuggerDisplay("FromAsyncSignal: Factory = {Factory}")]
     public sealed class FromAsyncSignal : ReactiveUI.Primitives.Async.IObservableAsync<System.Reactive.Unit>
     {
@@ -112,6 +157,7 @@ namespace ReactiveUI.Primitives.Async.Reactive.Advanced
     [System.Diagnostics.DebuggerDisplay("StartSignal: Action = {Action}, TaskScheduler = {TaskScheduler}")]
     public sealed class StartSignal : ReactiveUI.Primitives.Async.IObservableAsync<System.Reactive.Unit>
     {
+        public StartSignal(System.Action action) { }
         public StartSignal(System.Action action, System.Threading.Tasks.TaskScheduler? taskScheduler) { }
         System.Threading.Tasks.ValueTask<System.IAsyncDisposable> ReactiveUI.Primitives.Async.IObservableAsync<System.Reactive.Unit>.SubscribeAsync(ReactiveUI.Primitives.Async.IObserverAsync<System.Reactive.Unit> observer, System.Threading.CancellationToken cancellationToken) { }
     }
@@ -144,8 +190,23 @@ namespace ReactiveUI.Primitives.Async.Reactive.Advanced
     [System.Diagnostics.DebuggerDisplay("WitnessOnSignal: Source = {Source}, ForceYielding = {ForceYielding}")]
     public sealed class WitnessOnSignal<T> : ReactiveUI.Primitives.Async.IObservableAsync<T>
     {
+        public WitnessOnSignal(ReactiveUI.Primitives.Async.IObservableAsync<T> source, ReactiveUI.Primitives.Async.Reactive.AsyncContext asyncContext) { }
+        public WitnessOnSignal(ReactiveUI.Primitives.Async.IObservableAsync<T> source, System.Reactive.Concurrency.IScheduler scheduler) { }
+        public WitnessOnSignal(ReactiveUI.Primitives.Async.IObservableAsync<T> source, System.Threading.SynchronizationContext synchronizationContext) { }
+        public WitnessOnSignal(ReactiveUI.Primitives.Async.IObservableAsync<T> source, System.Threading.Tasks.TaskScheduler taskScheduler) { }
         public WitnessOnSignal(ReactiveUI.Primitives.Async.IObservableAsync<T> source, ReactiveUI.Primitives.Async.Reactive.AsyncContext asyncContext, bool forceYielding) { }
+        public WitnessOnSignal(ReactiveUI.Primitives.Async.IObservableAsync<T> source, System.Reactive.Concurrency.IScheduler scheduler, bool forceYielding) { }
+        public WitnessOnSignal(ReactiveUI.Primitives.Async.IObservableAsync<T> source, System.Threading.SynchronizationContext synchronizationContext, bool forceYielding) { }
+        public WitnessOnSignal(ReactiveUI.Primitives.Async.IObservableAsync<T> source, System.Threading.Tasks.TaskScheduler taskScheduler, bool forceYielding) { }
         System.Threading.Tasks.ValueTask<System.IAsyncDisposable> ReactiveUI.Primitives.Async.IObservableAsync<T>.SubscribeAsync(ReactiveUI.Primitives.Async.IObserverAsync<T> observer, System.Threading.CancellationToken cancellationToken) { }
+        public static ReactiveUI.Primitives.Async.IObservableAsync<T> CreateIf(ReactiveUI.Primitives.Async.IObservableAsync<T> source, bool condition, ReactiveUI.Primitives.Async.Reactive.AsyncContext asyncContext) { }
+        public static ReactiveUI.Primitives.Async.IObservableAsync<T> CreateIf(ReactiveUI.Primitives.Async.IObservableAsync<T> source, bool condition, System.Threading.Tasks.TaskScheduler taskScheduler) { }
+        public static ReactiveUI.Primitives.Async.IObservableAsync<T> CreateIf(ReactiveUI.Primitives.Async.IObservableAsync<T> source, bool condition, ReactiveUI.Primitives.Async.Reactive.AsyncContext asyncContext, bool forceYielding) { }
+        public static ReactiveUI.Primitives.Async.IObservableAsync<T> CreateIf(ReactiveUI.Primitives.Async.IObservableAsync<T> source, bool condition, System.Threading.Tasks.TaskScheduler taskScheduler, bool forceYielding) { }
+        public static ReactiveUI.Primitives.Async.IObservableAsync<T> CreateSafe(ReactiveUI.Primitives.Async.IObservableAsync<T> source, ReactiveUI.Primitives.Async.Reactive.AsyncContext? asyncContext) { }
+        public static ReactiveUI.Primitives.Async.IObservableAsync<T> CreateSafe(ReactiveUI.Primitives.Async.IObservableAsync<T> source, System.Threading.Tasks.TaskScheduler? taskScheduler) { }
+        public static ReactiveUI.Primitives.Async.IObservableAsync<T> CreateSafe(ReactiveUI.Primitives.Async.IObservableAsync<T> source, ReactiveUI.Primitives.Async.Reactive.AsyncContext? asyncContext, bool forceYielding) { }
+        public static ReactiveUI.Primitives.Async.IObservableAsync<T> CreateSafe(ReactiveUI.Primitives.Async.IObservableAsync<T> source, System.Threading.Tasks.TaskScheduler? taskScheduler, bool forceYielding) { }
     }
     [System.Diagnostics.DebuggerDisplay("WitnessOnWitness: AsyncContext = {AsyncContext}, ForceYielding = {ForceYielding}")]
     public sealed class WitnessOnWitness<T> : ReactiveUI.Primitives.Async.IWitnessAsync<T>
@@ -163,5 +224,11 @@ namespace ReactiveUI.Primitives.Async.Reactive.Advanced
         System.Threading.Tasks.ValueTask ReactiveUI.Primitives.Async.IWitnessAsync<T>.OnCompletedAsyncCore(ReactiveUI.Primitives.Result result) { }
         System.Threading.Tasks.ValueTask ReactiveUI.Primitives.Async.IWitnessAsync<T>.OnErrorResumeAsyncCore(System.Exception error, System.Threading.CancellationToken cancellationToken) { }
         System.Threading.Tasks.ValueTask ReactiveUI.Primitives.Async.IWitnessAsync<T>.OnNextAsyncCore(T value, System.Threading.CancellationToken cancellationToken) { }
+    }
+    [System.Diagnostics.DebuggerDisplay("YieldSignal: Source = {_source}")]
+    public sealed class YieldSignal<T> : ReactiveUI.Primitives.Async.IObservableAsync<T>
+    {
+        public YieldSignal(ReactiveUI.Primitives.Async.IObservableAsync<T> source) { }
+        System.Threading.Tasks.ValueTask<System.IAsyncDisposable> ReactiveUI.Primitives.Async.IObservableAsync<T>.SubscribeAsync(ReactiveUI.Primitives.Async.IObserverAsync<T> observer, System.Threading.CancellationToken cancellationToken) { }
     }
 }

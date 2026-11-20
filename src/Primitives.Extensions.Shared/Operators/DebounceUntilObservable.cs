@@ -2,8 +2,6 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
-using ReactiveUI.Primitives.Disposables;
-
 #if REACTIVE_SHIM
 namespace ReactiveUI.Primitives.Extensions.Reactive.Operators;
 #else
@@ -16,12 +14,35 @@ namespace ReactiveUI.Primitives.Extensions.Operators;
 /// <param name="debounce">The debounce duration.</param>
 /// <param name="condition">The condition to determine if an element should be emitted immediately or debounced.</param>
 /// <param name="scheduler">The scheduler to use for timing.</param>
-internal sealed class DebounceUntilObservable<T>(
+public sealed class DebounceUntilObservable<T>(
     IObservable<T> source,
     TimeSpan debounce,
     Func<T, bool> condition,
     ISequencer scheduler) : IObservable<T>
 {
+    /// <summary>Initializes a new instance of the <see cref="DebounceUntilObservable{T}"/> class using <see cref="Sequencer.Default"/>.</summary>
+    /// <param name="source">The source observable.</param>
+    /// <param name="debounce">The debounce duration.</param>
+    /// <param name="condition">The condition to determine if an element should be emitted immediately or debounced.</param>
+    public DebounceUntilObservable(IObservable<T> source, TimeSpan debounce, Func<T, bool> condition)
+        : this(source, debounce, condition, Sequencer.Default)
+    {
+    }
+
+    /// <summary>Creates a debounce-until sequence, defaulting a <see langword="null"/> <paramref name="scheduler"/> to <see cref="Sequencer.Default"/>.</summary>
+    /// <param name="source">The source observable.</param>
+    /// <param name="debounce">The debounce duration.</param>
+    /// <param name="condition">The condition to determine if an element should be emitted immediately or debounced.</param>
+    /// <param name="scheduler">Optional scheduler to use for timing.</param>
+    /// <returns>A debounce-until sequence.</returns>
+    [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+    public static DebounceUntilObservable<T> Create(
+        IObservable<T> source,
+        TimeSpan debounce,
+        Func<T, bool> condition,
+        ISequencer? scheduler) =>
+        new(source, debounce, condition, scheduler ?? Sequencer.Default);
+
     /// <inheritdoc/>
     public IDisposable Subscribe(IObserver<T> observer)
     {
@@ -31,8 +52,8 @@ internal sealed class DebounceUntilObservable<T>(
         ArgumentExceptionHelper.ThrowIfNull(observer);
 
         DebounceUntilSink sink = new(observer, debounce, condition, scheduler);
-        var subscription = source.Subscribe(sink);
-        return new DisposableBag(subscription, sink);
+        sink.Attach(source.Subscribe(sink));
+        return sink;
     }
 
     /// <summary>Sink that forwards a value inline when the condition holds and otherwise after the debounce window.</summary>
@@ -55,6 +76,9 @@ internal sealed class DebounceUntilObservable<T>(
 
         /// <summary>The timer slot, terminal state and serialized delivery shared with the operator's handlers.</summary>
         private readonly TimerSinkState<T> _state = new(downstream);
+
+        /// <summary>Upstream subscription handle.</summary>
+        private IDisposable? _subscription;
 
         /// <inheritdoc/>
         public void OnNext(T value)
@@ -85,6 +109,7 @@ internal sealed class DebounceUntilObservable<T>(
                 _ = _state.QueueErrorLocked(error);
             }
 
+            SinkSubscription.Dispose(ref _subscription);
             _state.Flush();
         }
 
@@ -96,6 +121,7 @@ internal sealed class DebounceUntilObservable<T>(
                 _ = _state.QueueCompletedLocked();
             }
 
+            SinkSubscription.Dispose(ref _subscription);
             _state.Flush();
         }
 
@@ -105,6 +131,18 @@ internal sealed class DebounceUntilObservable<T>(
             lock (_gate)
             {
                 _state.HandleDisposeLocked();
+            }
+
+            SinkSubscription.Dispose(ref _subscription);
+        }
+
+        /// <summary>Attaches the upstream subscription handle.</summary>
+        /// <param name="subscription">The upstream subscription handle.</param>
+        internal void Attach(IDisposable? subscription)
+        {
+            if (subscription is not null)
+            {
+                SinkSubscription.Set(ref _subscription, subscription);
             }
         }
 

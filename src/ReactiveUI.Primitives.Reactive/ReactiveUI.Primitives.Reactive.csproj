@@ -40,6 +40,7 @@
 
   <!-- The RxVoid/ISequencer-aware shared source, compiled here under the .Reactive namespace (REACTIVE_SHIM). -->
   <ItemGroup>
+    <Compile Include="..\Primitives.Core.Shared\**\*.cs" Link="Primitives.Core.Shared\%(RecursiveDir)%(Filename)%(Extension)" />
     <Compile Include="..\Primitives.Shared\**\*.cs" Link="Primitives.Shared\%(RecursiveDir)%(Filename)%(Extension)" />
   </ItemGroup>
 

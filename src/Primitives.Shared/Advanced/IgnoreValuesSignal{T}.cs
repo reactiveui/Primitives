@@ -15,10 +15,32 @@ public sealed class IgnoreValuesSignal<T> : IObservable<T>
 {
     /// <summary>Initializes a new instance of the <see cref="IgnoreValuesSignal{T}"/> class.</summary>
     /// <param name="source">The source observable.</param>
-    public IgnoreValuesSignal(IObservable<T> source) => Source = source;
+    /// <exception cref="ArgumentNullException"><paramref name="source"/> is <see langword="null"/>.</exception>
+    public IgnoreValuesSignal(IObservable<T> source)
+    {
+        ArgumentExceptionHelper.ThrowIfNull(source);
+
+        Source = source;
+    }
 
     /// <summary>Gets the source observable.</summary>
     private IObservable<T> Source { get; }
+
+    /// <summary>Applies <c>IgnoreValues</c>/<c>IgnoreElements</c> reductions and idempotence.</summary>
+    /// <param name="source">The source observable.</param>
+    /// <returns>The reduced observable sequence.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="source"/> is <see langword="null"/>.</exception>
+    public static IObservable<T> Create(IObservable<T> source)
+    {
+        ArgumentExceptionHelper.ThrowIfNull(source);
+
+        return source switch
+        {
+            ImmutableEmptySignal<T> or ImmutableNeverSignal<T> or IgnoreValuesSignal<T> => source,
+            RangeSignal or ImmediateReturnSignal<T> => ImmutableEmptySignal<T>.Instance,
+            _ => new IgnoreValuesSignal<T>(source),
+        };
+    }
 
     /// <inheritdoc/>
     public IDisposable Subscribe(IObserver<T> observer)

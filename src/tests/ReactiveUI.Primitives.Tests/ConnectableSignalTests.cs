@@ -581,4 +581,30 @@ public sealed class ConnectableSignalTests
 
         await Assert.That(sourceDisposals).IsEqualTo(1);
     }
+
+    /// <summary>Completing the connected upstream source disposes the upstream connection handle automatically.</summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    [Test]
+    public async Task Connect_WhenUpstreamCompletes_DisposesSourceConnection()
+    {
+        var sourceDisposals = 0;
+        IObserver<int>? upstream = null;
+        var source = Signal.Create<int>(obs =>
+        {
+            upstream = obs;
+            return new ActionDisposable(() => sourceDisposals++);
+        });
+
+        var published = source.ShareLive();
+        RecordingWitness<int> observer = new();
+        using var sub = published.Subscribe(observer);
+        using var connection = published.Connect();
+
+        upstream!.OnNext(1);
+        upstream.OnCompleted();
+
+        await Assert.That(sourceDisposals).IsEqualTo(1);
+        await Assert.That(observer.Values.SequenceEqual([1])).IsTrue();
+        await Assert.That(observer.Completed).IsEqualTo(1);
+    }
 }

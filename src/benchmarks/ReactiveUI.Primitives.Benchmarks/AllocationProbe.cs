@@ -97,6 +97,9 @@ internal static class AllocationProbe
         Section("Projection / combination");
         ProbeProjection(observer);
 
+        Section("Operator chain fusions");
+        ProbeFusions(observer);
+
         Section("Pass-through / terminal (Tranche B-D)");
         ProbePassThroughTerminal(observer, sparkObserver, intervalObserver, listObserver, arrayObserver);
 
@@ -174,6 +177,37 @@ internal static class AllocationProbe
             "FlatMap",
             () => Signal.Sequence(1, FlatMapSourceCount)
                 .FlatMap(static x => Signal.Sequence(x * FlatMapMultiplier, InnerCount)).Subscribe(observer).Dispose());
+    }
+
+    /// <summary>Probes fused multi-operator chains and reductions.</summary>
+    /// <param name="observer">The reused integer observer.</param>
+    private static void ProbeFusions(IntSignalWitness observer)
+    {
+        CountingSignalWitness<bool> boolObserver = new();
+        Row(
+            "Map+Map",
+            () => Signal.Sequence(0, Count).Map(static x => x + 1).Map(static x => x * KeyDivisor).Subscribe(observer)
+                .Dispose());
+        Row(
+            "Keep+Keep",
+            () => Signal.Sequence(0, Count).Keep(static x => (x & 1) == 0).Keep(static x => x > Window)
+                .Subscribe(observer).Dispose());
+        Row(
+            "Keep+Map",
+            () => Signal.Sequence(0, Count).Keep(static x => (x & 1) == 0).Map(static x => x + 1).Subscribe(observer)
+                .Dispose());
+        Row(
+            "Skip+Skip (Range)",
+            () => Signal.Sequence(0, Count).Skip(RetryCount).Skip(RetryCount).Subscribe(observer).Dispose());
+        Row(
+            "Take+Take (Range)",
+            () => Signal.Sequence(0, Count).Take(TakeWhileBound).Take(Window).Subscribe(observer).Dispose());
+        Row(
+            "Keep+Count",
+            () => Signal.Sequence(0, Count).Where(static x => (x & 1) == 0).Count().Subscribe(observer).Dispose());
+        Row(
+            "Keep+Any",
+            () => Signal.Sequence(0, Count).Where(static x => x == Window).Any().Subscribe(boolObserver).Dispose());
     }
 
     /// <summary>Probes pass-through and terminal operator allocation.</summary>

@@ -23,6 +23,22 @@ public sealed class MinMaxObservable<T>(IReadOnlyList<IObservable<T>> sources, b
     /// <summary>The source list.</summary>
     private readonly IReadOnlyList<IObservable<T>> _sourceList = InvalidOperationExceptionHelper.Check(sources);
 
+    /// <summary>Creates a sequence emitting the maximum of the latest values across <paramref name="source"/> and <paramref name="sources"/>.</summary>
+    /// <param name="source">The first observable.</param>
+    /// <param name="sources">Additional observables.</param>
+    /// <returns>An observable emitting the maximum latest value.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static IObservable<T> CreateMax(IObservable<T> source, params IObservable<T>[] sources) =>
+        CreateCore(source, sources, true);
+
+    /// <summary>Creates a sequence emitting the minimum of the latest values across <paramref name="source"/> and <paramref name="sources"/>.</summary>
+    /// <param name="source">The first observable.</param>
+    /// <param name="sources">Additional observables.</param>
+    /// <returns>An observable emitting the minimum latest value.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static IObservable<T> CreateMin(IObservable<T> source, params IObservable<T>[] sources) =>
+        CreateCore(source, sources, false);
+
     /// <inheritdoc/>
     public IDisposable Subscribe(IObserver<T> observer)
     {
@@ -34,18 +50,46 @@ public sealed class MinMaxObservable<T>(IReadOnlyList<IObservable<T>> sources, b
             return EmptyDisposable.Instance;
         }
 
-        Sink sink = new(observer, _sourceList.Count, emitMaximum);
-        return IndexedSubscribeHelper.SubscribeIndexed(_sourceList, sink.OnNext, sink.OnError, sink.OnCompleted);
+        DisposableBag subscriptions = new();
+        Sink sink = new(observer, _sourceList.Count, emitMaximum, subscriptions);
+        return IndexedSubscribeHelper.SubscribeIndexed(subscriptions, _sourceList, sink.OnNext, sink.OnError, sink.OnCompleted);
+    }
+
+    /// <summary>Builds a unary, binary, or multi-source min/max observable.</summary>
+    /// <param name="source">The first observable.</param>
+    /// <param name="sources">Additional observables.</param>
+    /// <param name="emitMaximum"><see langword="true"/> for maximum; <see langword="false"/> for minimum.</param>
+    /// <returns>The extreme-value observable sequence.</returns>
+    private static IObservable<T> CreateCore(
+        IObservable<T> source,
+        IObservable<T>[] sources,
+        bool emitMaximum)
+    {
+        if (sources.Length == 0)
+        {
+            return source;
+        }
+
+        if (sources.Length == 1)
+        {
+            return new BinaryMinMaxObservable<T>(source, sources[0], emitMaximum);
+        }
+
+        var allSources = new IObservable<T>[sources.Length + 1];
+        allSources[0] = source;
+        Array.Copy(sources, 0, allSources, 1, sources.Length);
+        return new MinMaxObservable<T>(allSources, emitMaximum);
     }
 
     /// <summary>Sink that holds the latest value per source and emits the maximum or the minimum of them.</summary>
     /// <param name="downstream">The downstream observer.</param>
     /// <param name="count">The number of sources.</param>
     /// <param name="emitMaximum"><c>true</c> for max; <c>false</c> for min.</param>
-    private sealed class Sink(IObserver<T> downstream, int count, bool emitMaximum)
+    /// <param name="subscriptions">Composite handle disposed when the sink terminates.</param>
+    private sealed class Sink(IObserver<T> downstream, int count, bool emitMaximum, IDisposable subscriptions)
     {
         /// <summary>The shared gate, per-source value cache and terminal-state bookkeeping.</summary>
-        private readonly ReduceSinkState<T, T> _state = new(downstream, count);
+        private readonly ReduceSinkState<T, T> _state = CreateState(downstream, count, subscriptions);
 
         /// <summary>Reduces the per-source latest values to the maximum or minimum.</summary>
         private readonly Func<T?[], T> _reduce = values =>
@@ -79,5 +123,17 @@ public sealed class MinMaxObservable<T>(IReadOnlyList<IObservable<T>> sources, b
         /// <param name="index">Source index.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void OnCompleted(int index) => _state.HandleCompleted(index);
+
+        /// <summary>Creates and attaches the shared reduction state.</summary>
+        /// <param name="downstream">The downstream observer.</param>
+        /// <param name="count">The source count.</param>
+        /// <param name="subscriptions">The composite subscription handle.</param>
+        /// <returns>The initialized reduction state.</returns>
+        private static ReduceSinkState<T, T> CreateState(IObserver<T> downstream, int count, IDisposable subscriptions)
+        {
+            ReduceSinkState<T, T> state = new(downstream, count);
+            state.AttachSubscriptions(subscriptions);
+            return state;
+        }
     }
 }

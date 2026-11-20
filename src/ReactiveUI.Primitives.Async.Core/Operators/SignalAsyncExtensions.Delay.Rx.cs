@@ -2,6 +2,8 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Runtime.CompilerServices;
+
 namespace ReactiveUI.Primitives.Async;
 
 /// <summary>Provides Rx-compatible delay names for asynchronous observable sequences.</summary>
@@ -16,14 +18,9 @@ public static partial class SignalAsyncExtensions
         /// <param name="delayInterval">The time span by which to delay each element notification. Must be non-negative.</param>
         /// <returns>An observable sequence with element notifications time-shifted by the specified duration.</returns>
         /// <exception cref="ArgumentOutOfRangeException">Thrown if <paramref name="delayInterval"/> is negative.</exception>
-        public IObservableAsync<T> Delay(TimeSpan delayInterval)
-        {
-            ArgumentOutOfRangeExceptionHelper.ThrowIfLessThan(delayInterval, TimeSpan.Zero);
-
-            return delayInterval == TimeSpan.Zero
-                ? source
-                : new DelaySignal<T>(source, delayInterval, TimeProvider.System);
-        }
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public IObservableAsync<T> Delay(TimeSpan delayInterval) =>
+            DelaySignal<T>.Create(source, delayInterval);
 
         /// <summary>Delays each element notification by the specified duration.</summary>
         /// <param name="delayInterval">The time span by which to delay each element notification. Must be non-negative.</param>
@@ -31,13 +28,8 @@ public static partial class SignalAsyncExtensions
         /// is used.</param>
         /// <returns>An observable sequence with element notifications time-shifted by the specified duration.</returns>
         /// <exception cref="ArgumentOutOfRangeException">Thrown if <paramref name="delayInterval"/> is negative.</exception>
-        public IObservableAsync<T> Delay(TimeSpan delayInterval, TimeProvider? timeProvider)
-        {
-            ArgumentOutOfRangeExceptionHelper.ThrowIfLessThan(delayInterval, TimeSpan.Zero);
-
-            return delayInterval == TimeSpan.Zero
-                ? source
-                : new DelaySignal<T>(source, delayInterval, timeProvider ?? TimeProvider.System);
-        }
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public IObservableAsync<T> Delay(TimeSpan delayInterval, TimeProvider? timeProvider) =>
+            DelaySignal<T>.Create(source, delayInterval, timeProvider);
     }
 }

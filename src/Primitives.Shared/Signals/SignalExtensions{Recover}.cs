@@ -2,6 +2,8 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Runtime.CompilerServices;
+
 #if REACTIVE_SHIM
 namespace ReactiveUI.Primitives.Reactive.Signals;
 #else
@@ -19,12 +21,8 @@ public static partial class SignalExtensions
         /// <summary>Continues an observable sequence that is terminated by an exception with the next observable sequence.</summary>
         /// <returns>An observable sequence containing elements from consecutive source sequences until a source sequence terminates successfully.</returns>
         /// <exception cref="ArgumentExceptionHelper"><paramref name="sources"/> is null.</exception>
-        public IObservable<TSource> Recover()
-        {
-            ArgumentExceptionHelper.ThrowIfNull(sources);
-
-            return new CatchSignal<TSource>(sources);
-        }
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public IObservable<TSource> Recover() => new CatchSignal<TSource>(sources);
     }
 
     /// <summary>Error-handling and cleanup operators for an observable source sequence.</summary>
@@ -39,26 +37,16 @@ public static partial class SignalExtensions
         /// An observable sequence containing the source sequence's elements, followed by the handler sequence's elements when an exception occurs.
         /// </returns>
         /// <exception cref="ArgumentExceptionHelper"><paramref name="source"/> or <paramref name="handler"/> is null.</exception>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public IObservable<TSource> Recover<TException>(Func<TException, IObservable<TSource>> handler)
-            where TException : Exception
-        {
-            ArgumentExceptionHelper.ThrowIfNull(source);
-
-            ArgumentExceptionHelper.ThrowIfNull(handler);
-
-            return new RecoverSignal<TSource, TException>(source, handler);
-        }
+            where TException : Exception =>
+            new RecoverSignal<TSource, TException>(source, handler);
 
         /// <summary>Invokes an action when the subscription is torn down, whether the source terminated or the subscription was disposed.</summary>
         /// <param name="finallyAction">The action to invoke on teardown.</param>
         /// <returns>An observable sequence that forwards the source and invokes <paramref name="finallyAction"/> on teardown.</returns>
-        public IObservable<TSource> OnCleanup(Action finallyAction)
-        {
-            ArgumentExceptionHelper.ThrowIfNull(source);
-
-            ArgumentExceptionHelper.ThrowIfNull(finallyAction);
-
-            return new FinallySignal<TSource>(source, finallyAction);
-        }
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public IObservable<TSource> OnCleanup(Action finallyAction) =>
+            new FinallySignal<TSource>(source, finallyAction);
     }
 }

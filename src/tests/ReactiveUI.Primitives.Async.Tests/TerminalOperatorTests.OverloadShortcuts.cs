@@ -81,4 +81,63 @@ public partial class TerminalOperatorTests
         var result = await SignalAsync.Range(1, ShortSourceValueCount).ContainsAsync(Match, CancellationToken.None);
         await Assert.That(result).IsTrue();
     }
+
+    /// <summary>Exercises the remaining terminal operator forwarding overloads with predicates, defaults, comparers, and tokens.</summary>
+    /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
+    [Test]
+    public async Task WhenRemainingTerminalOverloadsInvoked_ThenForwardExpectedResults()
+    {
+        const int Match = 2;
+        const int MissingThreshold = 10;
+        const int FallbackValue = -1;
+        var range = SignalAsync.Range(1, ShortSourceValueCount);
+
+        await Assert.That(await range.AnyAsync(CancellationToken.None)).IsTrue();
+        await Assert.That(await range.AnyAsync(static x => x == Match)).IsTrue();
+        await Assert.That(await range.AllAsync(static x => x > 0, CancellationToken.None)).IsTrue();
+        await Assert.That(await range.ContainsAsync(Match, EqualityComparer<int>.Default, CancellationToken.None)).IsTrue();
+        await Assert.That(await range.CountAsync(static x => x >= Match, CancellationToken.None)).IsEqualTo(Match);
+        await Assert.That(await range.LongCountAsync(static x => x >= Match, CancellationToken.None)).IsEqualTo(Match);
+        await Assert.That(await range.FirstAsync(static x => x == Match, CancellationToken.None)).IsEqualTo(Match);
+        await Assert.That(await range.FirstOrDefaultAsync(static x => x > MissingThreshold, FallbackValue, CancellationToken.None))
+            .IsEqualTo(FallbackValue);
+        await Assert.That(await SignalAsync.Empty<int>().FirstOrDefaultAsync(FallbackValue, CancellationToken.None))
+            .IsEqualTo(FallbackValue);
+
+        List<int> visited = [];
+        await range.ForEachAsync(visited.Add, CancellationToken.None);
+        await Assert.That(visited).Count().IsEqualTo(ShortSourceValueCount);
+
+        await Assert.That(await range.LastAsync(static x => x <= Match, CancellationToken.None)).IsEqualTo(Match);
+        await Assert.That(await range.LastAsync(CancellationToken.None)).IsEqualTo(ShortSourceValueCount);
+        await Assert.That(await range.LastOrDefaultAsync(static x => x > MissingThreshold, FallbackValue, CancellationToken.None))
+            .IsEqualTo(FallbackValue);
+        await Assert.That(await SignalAsync.Empty<int>().LastOrDefaultAsync(FallbackValue, CancellationToken.None))
+            .IsEqualTo(FallbackValue);
+
+        await Assert.That(await range.SingleAsync(static x => x == Match, CancellationToken.None)).IsEqualTo(Match);
+        await Assert.That(await SignalAsync.Return(Match).SingleAsync(CancellationToken.None)).IsEqualTo(Match);
+        await Assert.That(await range.SingleOrDefaultAsync(static x => x > MissingThreshold, FallbackValue, CancellationToken.None))
+            .IsEqualTo(FallbackValue);
+        await Assert.That(await SignalAsync.Empty<int>().SingleOrDefaultAsync(FallbackValue, CancellationToken.None))
+            .IsEqualTo(FallbackValue);
+
+        List<int> enumerated = [];
+        await foreach (var item in range.ToAsyncEnumerable(
+            static () => System.Threading.Channels.Channel.CreateUnbounded<int>(),
+            static (_, _) => default))
+        {
+            enumerated.Add(item);
+        }
+
+        await Assert.That(enumerated).Count().IsEqualTo(ShortSourceValueCount);
+
+        var dictionary = await range.ToDictionaryAsync(static x => x, EqualityComparer<int>.Default, CancellationToken.None);
+        await Assert.That(dictionary.Count).IsEqualTo(ShortSourceValueCount);
+
+        var list = await range.ToListAsync(CancellationToken.None);
+        await Assert.That(list).Count().IsEqualTo(ShortSourceValueCount);
+
+        await range.WaitCompletionAsync(CancellationToken.None);
+    }
 }

@@ -31,6 +31,12 @@ public static partial class Sequencer
     /// <returns>The specified TimeSpan value if it is zero or positive; otherwise, <see cref="TimeSpan.Zero"/>.</returns>
     public static TimeSpan Normalize(TimeSpan timeSpan) => timeSpan.Ticks < 0 ? TimeSpan.Zero : timeSpan;
 
+    /// <summary>Determines whether <paramref name="sequencer"/> executes work immediately on the calling thread.</summary>
+    /// <param name="sequencer">The sequencer to test; may be <see langword="null"/>.</param>
+    /// <returns><see langword="true"/> when <paramref name="sequencer"/> is an <see cref="ImmediateSequencer"/>; otherwise, <see langword="false"/>.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static bool IsImmediate(ISequencer? sequencer) => sequencer is ImmediateSequencer;
+
     /// <summary>Adds a relative duration to an absolute monotonic timestamp.</summary>
     /// <param name="timestamp">Absolute monotonic timestamp.</param>
     /// <param name="dueTime">Relative duration.</param>

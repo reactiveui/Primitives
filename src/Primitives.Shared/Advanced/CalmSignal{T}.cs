@@ -22,6 +22,15 @@ public sealed class CalmSignal<T> : IRequireCurrentThread<T>
     /// <summary>The sequencer used to schedule quiet-period timers.</summary>
     private readonly ISequencer _scheduler;
 
+    /// <summary>Initializes a new instance of the <see cref="CalmSignal{T}"/> class on the thread-pool sequencer.</summary>
+    /// <param name="source">The source observable.</param>
+    /// <param name="dueTime">The quiet period.</param>
+    /// <exception cref="ArgumentNullException"><paramref name="source"/> is <see langword="null"/>.</exception>
+    public CalmSignal(IObservable<T> source, TimeSpan dueTime)
+        : this(source, dueTime, ThreadPoolSequencer.Instance)
+    {
+    }
+
     /// <summary>Initializes a new instance of the <see cref="CalmSignal{T}"/> class.</summary>
     /// <param name="source">The source observable.</param>
     /// <param name="dueTime">The quiet period.</param>
@@ -38,6 +47,19 @@ public sealed class CalmSignal<T> : IRequireCurrentThread<T>
         _scheduler = scheduler;
     }
 
+    /// <summary>Creates a <see cref="CalmSignal{T}"/> on <paramref name="scheduler"/>, defaulting to the thread pool when <see langword="null"/>.</summary>
+    /// <param name="source">The source observable.</param>
+    /// <param name="dueTime">The quiet period.</param>
+    /// <param name="scheduler">The sequencer used to schedule quiet-period timers, or <see langword="null"/> for the thread pool.</param>
+    /// <returns>The quiet-period signal.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="source"/> is <see langword="null"/>.</exception>
+    public static CalmSignal<T> Create(IObservable<T> source, TimeSpan dueTime, ISequencer? scheduler)
+    {
+        ArgumentExceptionHelper.ThrowIfNull(source);
+
+        return new(source, dueTime, scheduler ?? ThreadPoolSequencer.Instance);
+    }
+
     /// <inheritdoc/>
     public bool IsRequiredSubscribeOnCurrentThread() => _scheduler == Sequencer.CurrentThread;
 
@@ -47,19 +69,10 @@ public sealed class CalmSignal<T> : IRequireCurrentThread<T>
         ArgumentExceptionHelper.ThrowIfNull(observer);
 
         CalmCoordinator<T> coordinator = new(_source, _dueTime, _scheduler);
-        if (!IsRequiredSubscribeOnCurrentThread() || !CurrentThreadSequencer.IsScheduleRequired)
-        {
-            return coordinator.Run(observer);
-        }
-
-        SingleDisposable subscription = new();
-        _ = Sequencer.CurrentThread.Schedule(
-            (subscription, coordinator, observer),
-            static (_, s) =>
-            {
-                s.subscription.Create(s.coordinator.Run(s.observer));
-                return EmptyDisposable.Instance;
-            });
-        return subscription;
+        return !IsRequiredSubscribeOnCurrentThread() || !CurrentThreadSequencer.IsScheduleRequired
+            ? coordinator.Run(observer)
+            : CurrentThreadSequencer.RunTrampoline(
+                (coordinator, observer),
+                static s => s.coordinator.Run(s.observer));
     }
 }

@@ -117,6 +117,20 @@ public class ObserveOnObservableTests
         await Assert.That(source.Subscription.IsDisposed).IsTrue();
     }
 
+    /// <summary>Verifies an unhandled downstream exception during scheduled delivery disposes upstream.</summary>
+    /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
+    [Test]
+    public async Task WhenDownstreamOnNextThrows_ThenDisposesUpstream()
+    {
+        SyncDirectSource<int> source = new();
+        using var sub = source.ObserveOnSafe(Sequencer.CurrentThread).Subscribe(
+            static _ => throw new InvalidOperationException("downstream failure"));
+
+        _ = Assert.Throws<InvalidOperationException>(() => source.Observer.OnNext(1));
+
+        await Assert.That(source.DisposeCount).IsEqualTo(1);
+    }
+
     /// <summary>Observable that errors during <c>Subscribe</c> and exposes the handle it returned.</summary>
     /// <typeparam name = "T">The element type.</typeparam>
     /// <param name = "error">The exception to emit synchronously.</param>

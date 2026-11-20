@@ -20,16 +20,38 @@ public sealed class FromEnumerableSignal<T> : IRequireCurrentThread<T>, IInlineS
 
     /// <summary>Initializes a new instance of the <see cref="FromEnumerableSignal{T}"/> class.</summary>
     /// <param name="values">The source values.</param>
-    public FromEnumerableSignal(IEnumerable<T> values) =>
+    /// <exception cref="ArgumentNullException"><paramref name="values"/> is <see langword="null"/>.</exception>
+    public FromEnumerableSignal(IEnumerable<T> values)
+    {
+        ArgumentExceptionHelper.ThrowIfNull(values);
+
         _values = values;
+    }
 
     /// <summary>Initializes a new instance of the <see cref="FromEnumerableSignal{T}"/> class.</summary>
     /// <param name="values">The source values.</param>
     /// <param name="cancellationToken">The cancellation token.</param>
+    /// <exception cref="ArgumentNullException"><paramref name="values"/> is <see langword="null"/>.</exception>
     public FromEnumerableSignal(IEnumerable<T> values, CancellationToken cancellationToken)
     {
+        ArgumentExceptionHelper.ThrowIfNull(values);
+
         _values = values;
         _cancellationToken = cancellationToken;
+    }
+
+    /// <summary>Creates a signal over <paramref name="values"/>, attaching <paramref name="cancellationToken"/> only when it can be canceled.</summary>
+    /// <param name="values">The source values.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>The enumerable-backed signal.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="values"/> is <see langword="null"/>.</exception>
+    public static FromEnumerableSignal<T> Create(IEnumerable<T> values, CancellationToken cancellationToken)
+    {
+        ArgumentExceptionHelper.ThrowIfNull(values);
+
+        return cancellationToken.CanBeCanceled
+            ? new(values, cancellationToken)
+            : new(values);
     }
 
     /// <summary>Indicates whether subscription has to happen on the calling thread.</summary>

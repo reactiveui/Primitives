@@ -2,6 +2,7 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Runtime.CompilerServices;
 using ReactiveUI.Primitives.Disposables;
 
 #if REACTIVE_SHIM
@@ -15,11 +16,31 @@ namespace ReactiveUI.Primitives.Extensions.Operators;
 /// <param name="source">The source observable.</param>
 /// <param name="idleTime">The duration of inactivity required to flush the buffer.</param>
 /// <param name="scheduler">The scheduler to run the idle timer on.</param>
-internal sealed class BufferUntilIdleObservable<T>(
+public sealed class BufferUntilIdleObservable<T>(
     IObservable<T> source,
     TimeSpan idleTime,
     ISequencer scheduler) : IObservable<IList<T>>
 {
+    /// <summary>Initializes a new instance of the <see cref="BufferUntilIdleObservable{T}"/> class using <see cref="Sequencer.Default"/>.</summary>
+    /// <param name="source">The source observable.</param>
+    /// <param name="idleTime">The duration of inactivity required to flush the buffer.</param>
+    public BufferUntilIdleObservable(IObservable<T> source, TimeSpan idleTime)
+        : this(source, idleTime, Sequencer.Default)
+    {
+    }
+
+    /// <summary>Creates a buffer-until-idle sequence, defaulting a <see langword="null"/> <paramref name="scheduler"/> to <see cref="Sequencer.Default"/>.</summary>
+    /// <param name="source">The source observable.</param>
+    /// <param name="idleTime">The duration of inactivity required to flush the buffer.</param>
+    /// <param name="scheduler">The optional scheduler to run the idle timer on.</param>
+    /// <returns>A sequence of buffered lists.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static BufferUntilIdleObservable<T> Create(
+        IObservable<T> source,
+        TimeSpan idleTime,
+        ISequencer? scheduler) =>
+        new(source, idleTime, scheduler ?? Sequencer.Default);
+
     /// <inheritdoc/>
     public IDisposable Subscribe(IObserver<IList<T>> observer)
     {
@@ -28,8 +49,8 @@ internal sealed class BufferUntilIdleObservable<T>(
         ArgumentExceptionHelper.ThrowIfNull(observer);
 
         BufferUntilIdleSink sink = new(observer, idleTime, scheduler);
-        var subscription = source.Subscribe(sink);
-        return new DisposableBag(subscription, sink);
+        sink.SetSubscription(source.Subscribe(sink));
+        return sink;
     }
 
     /// <summary>Sink that accumulates elements and emits the buffer once the idle timer elapses.</summary>
@@ -48,8 +69,20 @@ internal sealed class BufferUntilIdleObservable<T>(
         /// <summary>The timer slot, terminal state and serialized delivery shared with the operator's handlers.</summary>
         private readonly TimerSinkState<IList<T>> _state = new(downstream);
 
+        /// <summary>The upstream subscription handle.</summary>
+        [System.Diagnostics.CodeAnalysis.SuppressMessage(
+            "Usage",
+            "CA2213:Disposable fields should be disposed",
+            Justification = "Disposed atomically via SinkSubscription.Dispose.")]
+        private IDisposable? _subscription;
+
         /// <summary>The current buffer of elements.</summary>
         private List<T> _buffer = [];
+
+        /// <summary>Assigns the upstream subscription.</summary>
+        /// <param name="subscription">The upstream subscription.</param>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void SetSubscription(IDisposable subscription) => SinkSubscription.Set(ref _subscription, subscription);
 
         /// <inheritdoc/>
         public void OnNext(T value)
@@ -77,6 +110,7 @@ internal sealed class BufferUntilIdleObservable<T>(
             }
 
             _state.Flush();
+            SinkSubscription.Dispose(ref _subscription);
         }
 
         /// <inheritdoc/>
@@ -89,6 +123,7 @@ internal sealed class BufferUntilIdleObservable<T>(
             }
 
             _state.Flush();
+            SinkSubscription.Dispose(ref _subscription);
         }
 
         /// <inheritdoc/>
@@ -97,14 +132,19 @@ internal sealed class BufferUntilIdleObservable<T>(
             lock (_gate)
             {
                 _state.HandleDisposeLocked();
+                _buffer = [];
             }
+
+            SinkSubscription.Dispose(ref _subscription);
         }
 
         /// <summary>Replaces any pending flush with one scheduled a further idle period ahead.</summary>
-        private void ScheduleFlush() => _state.Timer.Disposable = scheduler.Schedule(idleTime, EmitBuffer);
+        private void ScheduleFlush() =>
+            _state.Timer.Disposable = scheduler.Schedule(this, idleTime, static (_, self) => self.EmitBuffer());
 
         /// <summary>Queues the current buffer and delivers it to the downstream observer.</summary>
-        private void EmitBuffer()
+        /// <returns>An empty disposable.</returns>
+        private EmptyDisposable EmitBuffer()
         {
             lock (_gate)
             {
@@ -112,6 +152,7 @@ internal sealed class BufferUntilIdleObservable<T>(
             }
 
             _state.Flush();
+            return EmptyDisposable.Instance;
         }
 
         /// <summary>Queues the current buffer when it holds elements and starts a new one, while the caller holds the gate.</summary>

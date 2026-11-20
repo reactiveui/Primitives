@@ -17,6 +17,8 @@
     <Using Include="System.Threading"/>
     <Using Include="System.Threading.Tasks"/>
     <Using Include="TUnit.Assertions.Extensions"/>
+    <Using Include="ReactiveUI.Primitives.Async.Advanced"/>
+    <Using Include="ReactiveUI.Primitives.Async.Reactive.Advanced"/>
   </ItemGroup>
 
   <ItemGroup>

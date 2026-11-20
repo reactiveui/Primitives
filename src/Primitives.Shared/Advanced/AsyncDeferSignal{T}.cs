@@ -58,7 +58,7 @@ public sealed class AsyncDeferSignal<T> : IObservable<T>
         {
             source = await observableFactory(subscription.Token).ConfigureAwait(false);
         }
-        catch (Exception error)
+        catch (Exception error) when (!FatalExceptionHelper.IsFatal(error))
         {
             try
             {
@@ -79,7 +79,7 @@ public sealed class AsyncDeferSignal<T> : IObservable<T>
                 ? EmptyDisposable.Instance
                 : source.Subscribe(observer));
         }
-        catch (Exception error)
+        catch (Exception error) when (!FatalExceptionHelper.IsFatal(error))
         {
             observer.OnError(error);
             subscription.SetSubscription(EmptyDisposable.Instance);

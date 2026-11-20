@@ -48,6 +48,21 @@ public sealed class MultipleDisposable : IsDisposed, ICollection<IDisposable>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static IDisposable Create(params IDisposable[] disposables) => new DisposableArray(disposables);
 
+    /// <summary>Adds <paramref name="disposable"/> to <paramref name="disposables"/> and returns <paramref name="disposable"/>.</summary>
+    /// <typeparam name="T">The disposable type.</typeparam>
+    /// <param name="disposable">The disposable to add.</param>
+    /// <param name="disposables">The composite taking ownership of the disposable.</param>
+    /// <returns>The supplied <paramref name="disposable"/>.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="disposables"/> or <paramref name="disposable"/> is <see langword="null"/>.</exception>
+    public static T AddTo<T>(T disposable, MultipleDisposable disposables)
+        where T : IDisposable
+    {
+        ArgumentExceptionHelper.ThrowIfNull(disposables);
+
+        disposables.Add(disposable);
+        return disposable;
+    }
+
     /// <summary>Adds a disposable to the group, or disposes it immediately when the group is disposed.</summary>
     /// <param name="item">Disposable to add.</param>
     /// <exception cref="ArgumentNullException"><paramref name="item"/> is <see langword="null"/>.</exception>

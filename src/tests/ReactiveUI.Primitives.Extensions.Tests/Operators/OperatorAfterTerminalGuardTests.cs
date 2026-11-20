@@ -98,6 +98,16 @@ public class OperatorAfterTerminalGuardTests
         // hitting the SubscribeToSource _disposed guard rather than re-subscribing.
         scheduler.AdvanceBy(TickWindow * SettleMultiplier);
         await Assert.That(subscribeCount).IsEqualTo(1);
+
+        RetryWithDelayObservable<int>.RetryWithDelaySink disposedSink = new(
+            ReactiveUI.Primitives.Advanced.Witness.Create<int>(static _ => { }),
+            source,
+            1,
+            static _ => TimeSpan.Zero,
+            scheduler);
+        disposedSink.Dispose();
+        disposedSink.SubscribeToSource();
+        await Assert.That(subscribeCount).IsEqualTo(1);
     }
 
     /// <summary>Exercises <c>RetryWithBackoff.SubscribeToSource</c>'s <c>_disposed</c> guard - same shape as the RetryWithDelay variant.</summary>
@@ -121,6 +131,14 @@ public class OperatorAfterTerminalGuardTests
             scheduler).Subscribe(static _ => { });
         sub.Dispose();
         scheduler.AdvanceBy(TickWindow * SettleMultiplier);
+        await Assert.That(subscribeCount).IsEqualTo(1);
+
+        RetryWithBackoffObservable<int>.RetryWithBackoffSink disposedSink = new(
+            ReactiveUI.Primitives.Advanced.Witness.Create<int>(static _ => { }),
+            source,
+            new(1, TimeSpan.Zero, 1.0, null, scheduler, null));
+        disposedSink.Dispose();
+        disposedSink.SubscribeToSource();
         await Assert.That(subscribeCount).IsEqualTo(1);
     }
 
@@ -469,5 +487,20 @@ public class OperatorAfterTerminalGuardTests
         Subject<int> second = new();
         using var sub2 = second.SubscribeSynchronous(static _ => default);
         second.OnCompleted();
+    }
+
+    /// <summary>Verifies <see cref="ScheduledValueObservable{T}"/> forwards exceptions thrown by its transform callback to <c>OnError</c>.</summary>
+    /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
+    [Test]
+    public async Task WhenScheduledValueTransformThrows_ThenForwardsError()
+    {
+        InvalidOperationException expected = new("transform-failed");
+        Exception? caught = null;
+        using var sub = ScheduledValueObservable<int>.CreateImmediate(
+            1,
+            Sequencer.Immediate,
+            _ => throw expected).Subscribe(static _ => { }, ex => caught = ex);
+
+        await Assert.That(caught).IsSameReferenceAs(expected);
     }
 }

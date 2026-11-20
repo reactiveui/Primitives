@@ -69,7 +69,7 @@ public class SubjectSubscriptionBenchmarks
             disposables[i] = subject.Subscribe(observer);
         }
 
-        var before = subject.HasObservers ? 1 : 0;
+        var before = subject.HasObservers ? disposables.Length : 0;
         for (var i = 0; i < subscribers; i++)
         {
             disposables[i].Dispose();

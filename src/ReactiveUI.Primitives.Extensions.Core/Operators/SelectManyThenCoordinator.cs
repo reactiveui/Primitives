@@ -5,6 +5,7 @@
 using System.Runtime.CompilerServices;
 using ReactiveUI.Primitives.Advanced;
 using ReactiveUI.Primitives.Disposables;
+using ReactiveUI.Primitives.Extensions.Internal;
 
 namespace ReactiveUI.Primitives.Extensions.Operators;
 
@@ -22,6 +23,9 @@ public sealed class SelectManyThenCoordinator<TSource, TMid, TResult> : IObserve
 {
     /// <summary>Serializes downstream deliveries.</summary>
     private SerializedDelivery<TResult> _delivery = new();
+
+    /// <summary>The subscriptions this coordinator owns.</summary>
+    private DisposableSet _subscriptions;
 
     /// <summary>The number of sequences either stage has opened and that have not yet finished.</summary>
     private int _active;
@@ -47,9 +51,6 @@ public sealed class SelectManyThenCoordinator<TSource, TMid, TResult> : IObserve
         Second = second ?? throw new ArgumentNullException(nameof(second));
     }
 
-    /// <summary>Gets the subscriptions this coordinator owns.</summary>
-    private MultipleDisposable Subscriptions { get; } = [];
-
     /// <summary>Gets the downstream observer.</summary>
     private IObserver<TResult> Observer { get; }
 
@@ -70,36 +71,27 @@ public sealed class SelectManyThenCoordinator<TSource, TMid, TResult> : IObserve
 
     /// <inheritdoc/>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public void Dispose() => Subscriptions.Dispose();
+    public void Dispose()
+    {
+        Volatile.Write(ref _done, 1);
+        _subscriptions.Dispose();
+    }
 
     /// <inheritdoc/>
-    public void OnNext(TSource value)
-    {
-        if (Done)
-        {
-            return;
-        }
-
-        IObservable<TMid> mid;
-        try
-        {
-            mid = First(value);
-        }
-        catch (Exception error)
-        {
-            OnAnyError(error);
-            return;
-        }
-
-        if (mid is null)
-        {
-            OnAnyError(new InvalidOperationException("SelectManyThen first projection returned null."));
-            return;
-        }
-
-        _ = Interlocked.Increment(ref _active);
-        Subscriptions.Add(mid.Subscribe(OnMidNext, OnAnyError, OnStageCompleted));
-    }
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public void OnNext(TSource value) =>
+        SelectManyThenStageHelper.SubscribeProjectedStage(
+            this,
+            value,
+            Done,
+            ref _subscriptions,
+            ref _active,
+            new SelectManyThenStageSpec<SelectManyThenCoordinator<TSource, TMid, TResult>, TSource, TMid>(
+                First,
+                "SelectManyThen first projection returned null.",
+                static (self, mid) => self.OnMidNext(mid),
+                static (self, err) => self.OnAnyError(err),
+                static (self, sub) => self.OnStageCompleted(sub)));
 
     /// <inheritdoc/>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -108,7 +100,11 @@ public sealed class SelectManyThenCoordinator<TSource, TMid, TResult> : IObserve
     /// <inheritdoc/>
     public void OnCompleted()
     {
-        Volatile.Write(ref _sourceCompleted, 1);
+        if (Interlocked.Exchange(ref _sourceCompleted, 1) != 0)
+        {
+            return;
+        }
+
         TryComplete();
     }
 
@@ -117,7 +113,7 @@ public sealed class SelectManyThenCoordinator<TSource, TMid, TResult> : IObserve
     /// <returns>This coordinator, which is the subscription handle.</returns>
     public SelectManyThenCoordinator<TSource, TMid, TResult> Run(IObservable<TSource> source)
     {
-        Subscriptions.Add(source.Subscribe(this));
+        _subscriptions.Add(source.Subscribe(this));
         return this;
     }
 
@@ -125,62 +121,85 @@ public sealed class SelectManyThenCoordinator<TSource, TMid, TResult> : IObserve
     /// <param name="error">The error to forward.</param>
     public void OnAnyError(Exception error)
     {
-        Volatile.Write(ref _done, 1);
+        if (Interlocked.Exchange(ref _done, 1) != 0)
+        {
+            return;
+        }
+
+        _subscriptions.Dispose();
         _delivery.OnError(error, new PendingDrain(this));
     }
 
     /// <summary>Runs the second projection for an intermediate value and subscribes its sequence.</summary>
     /// <param name="value">The intermediate value.</param>
-    private void OnMidNext(TMid value)
-    {
-        if (Done)
-        {
-            return;
-        }
-
-        IObservable<TResult> inner;
-        try
-        {
-            inner = Second(value);
-        }
-        catch (Exception error)
-        {
-            OnAnyError(error);
-            return;
-        }
-
-        if (inner is null)
-        {
-            OnAnyError(new InvalidOperationException("SelectManyThen second projection returned null."));
-            return;
-        }
-
-        _ = Interlocked.Increment(ref _active);
-        Subscriptions.Add(inner.Subscribe(OnInnerNext, OnAnyError, OnStageCompleted));
-    }
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private void OnMidNext(TMid value) =>
+        SelectManyThenStageHelper.SubscribeProjectedStage(
+            this,
+            value,
+            Done,
+            ref _subscriptions,
+            ref _active,
+            new SelectManyThenStageSpec<SelectManyThenCoordinator<TSource, TMid, TResult>, TMid, TResult>(
+                Second,
+                "SelectManyThen second projection returned null.",
+                static (self, res) => self.OnInnerNext(res),
+                static (self, err) => self.OnAnyError(err),
+                static (self, sub) => self.OnStageCompleted(sub)));
 
     /// <summary>Forwards a result value, directly when nothing else is delivering.</summary>
     /// <param name="value">The value to forward.</param>
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private void OnInnerNext(TResult value) => _delivery.OnNext(Observer, value, new PendingDrain(this));
-
-    /// <summary>Marks one opened sequence, from either stage, as finished.</summary>
-    private void OnStageCompleted()
+    private void OnInnerNext(TResult value)
     {
-        _ = Interlocked.Decrement(ref _active);
-        TryComplete();
+        try
+        {
+            _delivery.OnNext(Observer, value, new PendingDrain(this));
+        }
+        catch
+        {
+            Dispose();
+            throw;
+        }
+    }
+
+    /// <summary>Marks one opened sequence, from either stage, as finished and removes its subscription.</summary>
+    /// <param name="stageSubscription">The completed stage witness to remove from the active set.</param>
+    private void OnStageCompleted(IDisposable stageSubscription)
+    {
+        _ = _subscriptions.Remove(stageSubscription);
+        if (Interlocked.Decrement(ref _active) == 0)
+        {
+            TryComplete();
+        }
     }
 
     /// <summary>Delivers completion once the source and every opened sequence are finished.</summary>
     private void TryComplete()
     {
-        if (!SourceCompleted || Active != 0 || Done)
+        if (!SourceCompleted || Active != 0 || Interlocked.CompareExchange(ref _done, 1, 0) != 0)
         {
             return;
         }
 
-        Volatile.Write(ref _done, 1);
+        _subscriptions.Dispose();
         _delivery.OnCompleted(new PendingDrain(this));
+    }
+
+    /// <summary>Drains queued notifications and tears down subscriptions upon terminal delivery or fault.</summary>
+    private void DrainPending()
+    {
+        try
+        {
+            if (_delivery.DrainTo(Observer))
+            {
+                _subscriptions.Dispose();
+            }
+        }
+        catch
+        {
+            Dispose();
+            throw;
+        }
     }
 
     /// <summary>Drains this coordinator's queued notifications for the delivery gate.</summary>
@@ -189,6 +208,6 @@ public sealed class SelectManyThenCoordinator<TSource, TMid, TResult> : IObserve
     {
         /// <inheritdoc/>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Drain() => _ = Owner._delivery.DrainTo(Owner.Observer);
+        public void Drain() => Owner.DrainPending();
     }
 }

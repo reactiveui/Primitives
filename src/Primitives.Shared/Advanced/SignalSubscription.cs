@@ -28,9 +28,9 @@ public static class SignalSubscription
 
         if (currentThreadRequired && CurrentThreadSequencer.IsScheduleRequired)
         {
-            _ = Sequencer.CurrentThread.Schedule(
+            _ = CurrentThreadSequencer.RunTrampoline(
                 (subscribeCore, subscription, observer),
-                static (_, s) =>
+                static s =>
                 {
                     s.subscription.Create(s.subscribeCore(s.observer, s.subscription));
                     return EmptyDisposable.Instance;

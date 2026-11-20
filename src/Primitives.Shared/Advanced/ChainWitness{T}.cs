@@ -30,8 +30,14 @@ public sealed class ChainWitness<T> : IDisposable
     /// <summary>Whether a terminal notification has been queued or the witness disposed; written under the gate.</summary>
     private bool _done;
 
-    /// <summary>The inner sources that have completed, so a subscribe can tell its source ended before it returned.</summary>
-    private int _completions;
+    /// <summary>Whether an inner subscription is currently inside <c>Subscribe</c>, guarded by <see cref="_gate"/>.</summary>
+    private bool _subscribing;
+
+    /// <summary>Whether the inner source being subscribed completed synchronously, guarded by <see cref="_gate"/>.</summary>
+    private bool _completedSynchronously;
+
+    /// <summary>The active inner subscription, guarded by <see cref="_gate"/>.</summary>
+    private IDisposable? _activeInner;
 
     /// <summary>The observer every inner source is subscribed with; the sources run one at a time, so one serves them all.</summary>
     private Arm? _arm;
@@ -41,7 +47,7 @@ public sealed class ChainWitness<T> : IDisposable
     public ChainWitness(IObserver<T> observer) => Observer = observer;
 
     /// <summary>Gets queued sources awaiting subscription.</summary>
-    private Queue<IObservable<T>> Queue { get; } = new();
+    private Queue<IObservable<T>?> Queue { get; } = new();
 
     /// <summary>Gets active subscriptions.</summary>
     private MultipleDisposable Subscriptions { get; } = [];
@@ -58,12 +64,16 @@ public sealed class ChainWitness<T> : IDisposable
     /// <inheritdoc/>
     public void Dispose()
     {
+        IDisposable? inner;
         lock (_gate)
         {
             Volatile.Write(ref _done, true);
             Queue.Clear();
+            inner = _activeInner;
+            _activeInner = null;
         }
 
+        inner?.Dispose();
         Subscriptions.Dispose();
     }
 
@@ -72,7 +82,9 @@ public sealed class ChainWitness<T> : IDisposable
     /// <returns>The observer that owns the subscriptions.</returns>
     public ChainWitness<T> Run(IObservable<IObservable<T>> sources)
     {
-        Subscriptions.Add(sources.Subscribe(OnSource, OnError, OnOuterCompleted));
+        OuterArm outer = new(this);
+        Subscriptions.Add(outer);
+        outer.Attach(sources.Subscribe(outer));
         return this;
     }
 
@@ -81,12 +93,17 @@ public sealed class ChainWitness<T> : IDisposable
     /// <returns>The observer that owns the subscriptions.</returns>
     public ChainWitness<T> Run(IEnumerable<IObservable<T>> sources)
     {
-        foreach (var source in sources)
+        lock (_gate)
         {
-            OnSource(source);
+            foreach (var source in sources)
+            {
+                Queue.Enqueue(source);
+            }
+
+            IsOuterCompleted = true;
         }
 
-        OnOuterCompleted();
+        Drain();
         return this;
     }
 
@@ -119,6 +136,11 @@ public sealed class ChainWitness<T> : IDisposable
 
         lock (_gate)
         {
+            if (_done)
+            {
+                return;
+            }
+
             Queue.Enqueue(source);
         }
 
@@ -139,12 +161,26 @@ public sealed class ChainWitness<T> : IDisposable
     /// <summary>Marks the active inner source complete.</summary>
     private void OnInnerCompleted()
     {
-        _ = Interlocked.Increment(ref _completions);
+        IDisposable? finished = null;
         lock (_gate)
         {
+            if (_done)
+            {
+                return;
+            }
+
+            if (_subscribing)
+            {
+                _completedSynchronously = true;
+                return;
+            }
+
+            finished = _activeInner;
+            _activeInner = null;
             IsActive = false;
         }
 
+        finished?.Dispose();
         Drain();
     }
 
@@ -179,56 +215,128 @@ public sealed class ChainWitness<T> : IDisposable
         _delivery.Flush(new PendingDrain(this));
     }
 
-    /// <summary>Subscribes the next queued source, or completes when the outer source is done and nothing is left.</summary>
+    /// <summary>Subscribes queued sources iteratively so synchronous sequences run in constant stack space.</summary>
     private void Drain()
     {
-        IObservable<T>? next = null;
+        while (TryAcquireNext(out var next, out var flushCompletion))
+        {
+            if (flushCompletion)
+            {
+                _delivery.Flush(new PendingDrain(this));
+                return;
+            }
+
+            if (!SubscribeAndAdvance(next))
+            {
+                return;
+            }
+        }
+    }
+
+    /// <summary>Acquires the next queued source or posts completion when all sources have finished.</summary>
+    /// <param name="next">The next source to subscribe, when available.</param>
+    /// <param name="flushCompletion"><see langword="true"/> when completion was posted and must be flushed.</param>
+    /// <returns><see langword="true"/> when the drain loop has work to perform.</returns>
+    private bool TryAcquireNext(out IObservable<T>? next, out bool flushCompletion)
+    {
+        next = null;
+        flushCompletion = false;
         lock (_gate)
         {
             if (_done)
             {
                 Queue.Clear();
-                return;
+                return false;
             }
 
             if (IsActive)
             {
-                return;
+                return false;
             }
 
             if (Queue.Count > 0)
             {
                 IsActive = true;
+                _subscribing = true;
+                _completedSynchronously = false;
                 next = Queue.Dequeue();
+                return true;
             }
-            else if (IsOuterCompleted)
+
+            if (!IsOuterCompleted)
             {
-                Volatile.Write(ref _done, true);
-                _ = _delivery.PostCompleted();
+                return false;
+            }
+
+            Volatile.Write(ref _done, true);
+            _ = _delivery.PostCompleted();
+            flushCompletion = true;
+            return true;
+        }
+    }
+
+    /// <summary>Subscribes an inner source and returns whether it completed synchronously so the loop should continue.</summary>
+    /// <param name="next">The inner source to subscribe.</param>
+    /// <returns><see langword="true"/> when the inner source completed synchronously and the drain loop should continue.</returns>
+    private bool SubscribeAndAdvance(IObservable<T>? next)
+    {
+        if (next is null)
+        {
+            lock (_gate)
+            {
+                _subscribing = false;
+                IsActive = false;
+            }
+
+            OnError(new InvalidOperationException("Chain source contained null."));
+            return false;
+        }
+
+        IDisposable subscription;
+        try
+        {
+            subscription = next.Subscribe(_arm ??= new(this));
+        }
+        catch (Exception error) when (!FatalExceptionHelper.IsFatal(error))
+        {
+            lock (_gate)
+            {
+                _subscribing = false;
+                IsActive = false;
+            }
+
+            OnError(error);
+            return false;
+        }
+
+        var loop = false;
+        var disposeImmediately = false;
+        lock (_gate)
+        {
+            _subscribing = false;
+            if (_done)
+            {
+                disposeImmediately = true;
+            }
+            else if (_completedSynchronously)
+            {
+                _completedSynchronously = false;
+                IsActive = false;
+                disposeImmediately = true;
+                loop = true;
             }
             else
             {
-                return;
+                _activeInner = subscription;
             }
         }
 
-        if (next is null)
-        {
-            _delivery.Flush(new PendingDrain(this));
-            return;
-        }
-
-        // One observer serves every source, because they run one at a time. A source that ended during its own subscribe has
-        // nothing left to dispose, so its subscription is released now and does not wait for the whole chain to end.
-        var completedBefore = Volatile.Read(ref _completions);
-        var subscription = next.Subscribe(_arm ??= new(this));
-        if (Volatile.Read(ref _completions) != completedBefore)
+        if (disposeImmediately)
         {
             subscription.Dispose();
-            return;
         }
 
-        Subscriptions.Add(subscription);
+        return loop;
     }
 
     /// <summary>Drains this witness's queued notifications for the delivery gate.</summary>
@@ -236,8 +344,42 @@ public sealed class ChainWitness<T> : IDisposable
     private readonly record struct PendingDrain(ChainWitness<T> Owner) : IDrainTarget
     {
         /// <inheritdoc/>
+        public void Drain()
+        {
+            if (Owner._delivery.DrainTo(Owner.Observer))
+            {
+                Owner.Dispose();
+            }
+        }
+    }
+
+    /// <summary>Observes the outer sequence of inner sources.</summary>
+    /// <param name="parent">The witness.</param>
+    private sealed class OuterArm(ChainWitness<T> parent) : IObserver<IObservable<T>>, IDisposable
+    {
+        /// <summary>The outer subscription.</summary>
+        private IDisposable? _subscription;
+
+        /// <inheritdoc/>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Drain() => _ = Owner._delivery.DrainTo(Owner.Observer);
+        public void OnNext(IObservable<T> value) => parent.OnSource(value);
+
+        /// <inheritdoc/>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void OnError(Exception error) => parent.OnError(error);
+
+        /// <inheritdoc/>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void OnCompleted() => parent.OnOuterCompleted();
+
+        /// <inheritdoc/>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void Dispose() => SinkSubscription.Dispose(ref _subscription);
+
+        /// <summary>Assigns the outer subscription.</summary>
+        /// <param name="subscription">The outer subscription.</param>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        internal void Attach(IDisposable subscription) => SinkSubscription.Set(ref _subscription, subscription);
     }
 
     /// <summary>Receives the notifications of whichever inner source is running and passes them to the witness.</summary>

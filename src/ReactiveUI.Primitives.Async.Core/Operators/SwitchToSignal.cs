@@ -47,7 +47,7 @@ public sealed class SwitchToSignal<T>(IObservableAsync<IObservableAsync<T>> sour
         private readonly Lock _gate = new();
 
         /// <summary>Async gate that serializes observer callbacks to ensure thread-safe emission.</summary>
-        private readonly AsyncSerialGate _observerOnSomethingGate = new();
+        private readonly ReactiveUI.Primitives.Async.Internal.AsyncFlowGate _observerOnSomethingGate = new();
 
         /// <summary>Registration that propagates the original subscribe-token cancellation into <see cref="_disposeCts"/>.</summary>
         private CancellationTokenRegistration _externalLinkRegistration;
@@ -189,23 +189,11 @@ public sealed class SwitchToSignal<T>(IObservableAsync<IObservableAsync<T>> sour
 
         /// <summary>Routes cancellation of the subscribe-time token into <see cref="_disposeCts"/>, so per-emission code needs no linked source.</summary>
         /// <param name="external">The subscribe-time token.</param>
-        internal void LinkExternalCancellation(CancellationToken external)
-        {
-            if (!external.CanBeCanceled || external == _disposeCancellationToken)
-            {
-                return;
-            }
-
-            if (external.IsCancellationRequested)
-            {
-                _disposeCts.Cancel();
-                return;
-            }
-
-            _externalLinkRegistration = external.UnsafeRegister(
-                static state => ((CancellationTokenSource)state!).Cancel(),
-                _disposeCts);
-        }
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        internal void LinkExternalCancellation(CancellationToken external) =>
+            _externalLinkRegistration = ReactiveUI.Primitives.Async.Internal.AsyncStopTokenHelper.LinkExternal(
+                _disposeCts,
+                external);
 
         /// <summary>Disposes the previous inner subscription (if any) and subscribes to the new inner observable.</summary>
         /// <param name="inner">The new inner observable to subscribe to.</param>
@@ -293,7 +281,6 @@ public sealed class SwitchToSignal<T>(IObservableAsync<IObservableAsync<T>> sour
             _externalLinkRegistration.Dispose();
 #endif
             _disposeCts.Dispose();
-            _observerOnSomethingGate.Dispose();
         }
 
         /// <summary>Witness for the outer observable sequence that delegates to the parent <see cref="SwitchToCoordinator"/>.</summary>

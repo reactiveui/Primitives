@@ -25,6 +25,23 @@ public sealed class CastSignal<TResult> : IRequireCurrentThread<TResult>
     /// <summary>Gets the source observable.</summary>
     private IObservable<object?> Source { get; }
 
+    /// <summary>Applies <c>CastTo</c>/<c>Cast</c> reductions and fusions.</summary>
+    /// <param name="source">The untyped source observable.</param>
+    /// <returns>The reduced or fused observable sequence.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="source"/> is <see langword="null"/>.</exception>
+    public static IObservable<TResult> Create(IObservable<object?> source)
+    {
+        ArgumentExceptionHelper.ThrowIfNull(source);
+
+        return source switch
+        {
+            ImmutableEmptySignal<object?> => ImmutableEmptySignal<TResult>.Instance,
+            ImmutableNeverSignal<object?> => ImmutableNeverSignal<TResult>.Instance,
+            IMapFusable<object?> map => map.FuseCast<TResult>(),
+            _ => new CastSignal<TResult>(source),
+        };
+    }
+
     /// <inheritdoc/>
     public bool IsRequiredSubscribeOnCurrentThread() =>
         Source is IRequireCurrentThread<object?> currentThread && currentThread.IsRequiredSubscribeOnCurrentThread();
@@ -34,8 +51,39 @@ public sealed class CastSignal<TResult> : IRequireCurrentThread<TResult>
     {
         ArgumentExceptionHelper.ThrowIfNull(observer);
 
+        if (Source is FromEnumerableSignal<object?> enumerable && enumerable.TryGetReadOnlyValues(out var values))
+        {
+            EmitReadOnlyList(values, observer);
+            return EmptyDisposable.Instance;
+        }
+
         CastWitness<TResult> castObserver = new(observer);
         castObserver.SetSubscription(Source.Subscribe(castObserver));
         return castObserver;
+    }
+
+    /// <summary>Casts values from an indexable synchronous list straight into <paramref name="observer"/>.</summary>
+    /// <param name="values">The indexable values.</param>
+    /// <param name="observer">The downstream observer.</param>
+    private static void EmitReadOnlyList(IReadOnlyList<object?> values, IObserver<TResult> observer)
+    {
+        for (var i = 0; i < values.Count; i++)
+        {
+            TResult result;
+            var element = values[i];
+            try
+            {
+                result = (TResult)element!;
+            }
+            catch (Exception error) when (!FatalExceptionHelper.IsFatal(error))
+            {
+                observer.OnError(error);
+                return;
+            }
+
+            observer.OnNext(result);
+        }
+
+        observer.OnCompleted();
     }
 }

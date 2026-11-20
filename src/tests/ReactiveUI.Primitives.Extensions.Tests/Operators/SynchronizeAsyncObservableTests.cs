@@ -101,4 +101,32 @@ public class SynchronizeAsyncObservableTests
         SerializedDeliveryAssertions.ObserverMarshallingCompletionDoesNotDeadlock<(int Value, IDisposable Sync)>(
             static (source, observer) => source.SynchronizeAsync().Subscribe(observer),
             static observer => observer.OnNext(1));
+
+    /// <summary>Verifies <c>WaitForDisposeAsync</c> after disposal completes synchronously and throwing downstream callbacks dispose the sink.</summary>
+    /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
+    [Test]
+    public async Task WhenAlreadyDisposedOrDownstreamCallbacksThrow_ThenHandledAndDisposed()
+    {
+        SynchronizeAsyncObservable<int>.SynchronizeAsyncSink.SyncSignal signal = new();
+        signal.Dispose();
+        var waitTask = signal.WaitForDisposeAsync();
+        await Assert.That(waitTask.IsCompletedSuccessfully).IsTrue();
+
+        SyncDirectSource<int> source1 = new();
+        InvalidOperationException nextFailure = new("next");
+        using var sub1 = source1.SynchronizeAsync().Subscribe(
+            ReactiveUI.Primitives.Advanced.Witness.Create<(int Value, IDisposable Sync)>(_ => throw nextFailure));
+        _ = Assert.Throws<InvalidOperationException>(() => source1.Observer.OnNext(1));
+        await Assert.That(source1.DisposeCount).IsEqualTo(1);
+
+        SyncDirectSource<int> source2 = new();
+        InvalidOperationException completeFailure = new("complete");
+        using var sub2 = source2.SynchronizeAsync().Subscribe(
+            ReactiveUI.Primitives.Advanced.Witness.Create<(int Value, IDisposable Sync)>(
+                static _ => { },
+                static _ => { },
+                () => throw completeFailure));
+        _ = Assert.Throws<InvalidOperationException>(() => source2.Observer.OnCompleted());
+        await Assert.That(source2.DisposeCount).IsEqualTo(1);
+    }
 }

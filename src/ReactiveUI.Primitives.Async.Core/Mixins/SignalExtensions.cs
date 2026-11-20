@@ -2,7 +2,6 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
-using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using ReactiveUI.Primitives.Async.Signals;
 
@@ -18,12 +17,9 @@ public static class SignalExtensions
     {
         /// <summary>Creates an asynchronous observer wrapper for the specified signal.</summary>
         /// <returns>An asynchronous observer that forwards notifications to the specified signal.</returns>
-        public IObserverAsync<T> AsObserverAsync()
-        {
-            ArgumentExceptionHelper.ThrowIfNull(source);
-
-            return new SignalAsyncWitness<T>(source);
-        }
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public IObserverAsync<T> AsObserverAsync() =>
+            new SignalAsyncWitness<T>(source);
 
         /// <summary>Creates a signal whose observers see <paramref name="mapper"/> applied to the source's value sequence.</summary>
         /// <param name="mapper">Projects the source's value sequence into the sequence observers receive.</param>
@@ -31,106 +27,8 @@ public static class SignalExtensions
         /// subscribers.</returns>
         /// <remarks><paramref name="mapper"/> runs once, against the source's value sequence, rather than per
         /// subscriber.</remarks>
-        public ISignalAsync<T> MapValues(Func<IObservableAsync<T>, IObservableAsync<T>> mapper)
-        {
-            ArgumentExceptionHelper.ThrowIfNull(source);
-            ArgumentExceptionHelper.ThrowIfNull(mapper);
-
-            return new MappedSignal<T>(source, mapper);
-        }
-    }
-
-    /// <summary>A signal that applies a transformation to the observable values of the source signal.</summary>
-    /// <typeparam name="T">The type of elements processed by the signal.</typeparam>
-    /// <param name="original">The source signal.</param>
-    /// <param name="mapper">Transforms the source's value sequence once during construction.</param>
-    internal sealed class MappedSignal<T>(
-        ISignalAsync<T> original,
-        Func<IObservableAsync<T>, IObservableAsync<T>> mapper) : ISignalAsync<T>
-    {
-        /// <inheritdoc/>
-        public IObservableAsync<T> Values { get; } = mapper(original.Values);
-
-        /// <inheritdoc/>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public ValueTask<IAsyncDisposable> SubscribeAsync(
-            IObserverAsync<T> observer,
-            CancellationToken cancellationToken) =>
-            Values.SubscribeAsync(observer, cancellationToken);
-
-        /// <inheritdoc/>
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public ValueTask OnNextAsync(T value, CancellationToken cancellationToken) =>
-            original.OnNextAsync(value, cancellationToken);
-
-        /// <inheritdoc/>
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public ValueTask OnErrorResumeAsync(Exception error, CancellationToken cancellationToken) =>
-            original.OnErrorResumeAsync(error, cancellationToken);
-
-        /// <inheritdoc/>
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public ValueTask OnCompletedAsync(Result result) => original.OnCompletedAsync(result);
-
-        /// <inheritdoc/>
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public ValueTask DisposeAsync() => original.DisposeAsync();
-    }
-
-    /// <summary>An asynchronous observer that forwards all notifications to the wrapped signal.</summary>
-    /// <typeparam name="T">The type of elements processed by the observer.</typeparam>
-    /// <param name="signal">The signal to forward notifications to.</param>
-    [DebuggerDisplay("SignalAsyncWitness: {_witness}")]
-    internal sealed class SignalAsyncWitness<T>(ISignalAsync<T> signal) : IWitnessAsync<T>
-    {
-        /// <summary>The notification gate, cancellation link and disposal state.</summary>
-        private WitnessAsyncState _witness;
-
-        /// <inheritdoc/>
-        ref WitnessAsyncState IWitnessState.Witness => ref _witness;
-
-        /// <inheritdoc/>
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public ValueTask OnNextAsync(T value, CancellationToken cancellationToken) =>
-            WitnessAsync.OnNextAsync(this, value, cancellationToken);
-
-        /// <inheritdoc/>
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public ValueTask OnErrorResumeAsync(Exception error, CancellationToken cancellationToken) =>
-            WitnessAsync.OnErrorResumeAsync(this, error, cancellationToken);
-
-        /// <inheritdoc/>
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public ValueTask OnCompletedAsync(Result result) => WitnessAsync.OnCompletedAsync(this, result);
-
-        /// <inheritdoc/>
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public ValueTask DisposeAsync() => WitnessAsync.DisposeStateAsync(this);
-
-        /// <summary>Forwards the value with an uncancelable token after the observer's disposal check.</summary>
-        /// <param name="value">The value to be processed by the observer.</param>
-        /// <param name="cancellationToken">The token captured by the base observer's TryEnter scope. Ignored on the forward.</param>
-        /// <returns>A ValueTask that represents the asynchronous operation.</returns>
-        ValueTask IWitnessAsync<T>.OnNextAsyncCore(T value, CancellationToken cancellationToken)
-        {
-            _ = cancellationToken;
-            return signal.OnNextAsync(value, CancellationToken.None);
-        }
-
-        /// <summary>Forwards the error to the wrapped signal.</summary>
-        /// <param name="error">The exception that caused the error condition. Cannot be null.</param>
-        /// <param name="cancellationToken">The token captured by the base observer's TryEnter scope. Ignored on the forward.</param>
-        /// <returns>A ValueTask that represents the asynchronous error handling operation.</returns>
-        ValueTask IWitnessAsync<T>.OnErrorResumeAsyncCore(Exception error, CancellationToken cancellationToken)
-        {
-            _ = cancellationToken;
-            return signal.OnErrorResumeAsync(error, CancellationToken.None);
-        }
-
-        /// <summary>Forwards the terminal result to the wrapped signal.</summary>
-        /// <param name="result">The result of the completed operation, containing any relevant outcome information.</param>
-        /// <returns>A task that completes when the signal has handled the result.</returns>
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        ValueTask IWitnessAsync<T>.OnCompletedAsyncCore(Result result) => signal.OnCompletedAsync(result);
+        public ISignalAsync<T> MapValues(Func<IObservableAsync<T>, IObservableAsync<T>> mapper) =>
+            new MappedSignal<T>(source, mapper);
     }
 }

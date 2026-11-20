@@ -12,7 +12,7 @@ namespace ReactiveUI.Primitives.Extensions.Operators;
 
 /// <summary>Runs sources sequentially and emits RxVoid on completion, propagating source errors and completing immediately for empty input.</summary>
 /// <param name="sources">The list of one-shot observables to run in order.</param>
-internal sealed class RunAllObservable(IReadOnlyList<IObservable<RxVoid>> sources) : IObservable<RxVoid>
+public sealed class RunAllObservable(IReadOnlyList<IObservable<RxVoid>> sources) : IObservable<RxVoid>
 {
     /// <inheritdoc/>
     public IDisposable Subscribe(IObserver<RxVoid> observer)

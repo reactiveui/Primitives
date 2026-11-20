@@ -141,6 +141,38 @@ public sealed partial class SwitchWitnessTests
         await Assert.That(downstream.Errors[0]).IsSameReferenceAs(expected);
     }
 
+    /// <summary>Concurrent outer completion and active inner completion never drop the terminal completion signal.</summary>
+    /// <returns>A task representing the asynchronous test.</returns>
+    [Test]
+    public async Task Run_ConcurrentOuterAndCurrentInnerCompletion_AlwaysDeliversCompletion()
+    {
+        const int RaceIterations = 150;
+        const int StressTimeoutSeconds = 5;
+
+        for (var i = 0; i < RaceIterations; i++)
+        {
+            using Signals.Signal<IObservable<int>> outer = new();
+            using Signals.Signal<int> inner = new();
+            TaskCompletionSource<bool> done = new(TaskCreationOptions.RunContinuationsAsynchronously);
+            using var sub = new SwitchWitness<int>(new Signals.DelegateWitness<int>(
+                static _ => { },
+                static _ => { },
+                () => done.TrySetResult(true))).Run(outer);
+
+            outer.OnNext(inner);
+            var t1 = Task.Run(outer.OnCompleted);
+            var t2 = Task.Run(() =>
+            {
+                inner.OnNext(One);
+                inner.OnCompleted();
+            });
+
+            await Task.WhenAll(t1, t2);
+            using CancellationTokenSource timeout = new(TimeSpan.FromSeconds(StressTimeoutSeconds));
+            await Assert.That(await done.Task.WaitAsync(timeout.Token)).IsTrue();
+        }
+    }
+
     /// <summary>Subscribes a switch witness over the outer source.</summary>
     /// <param name="sources">The outer source.</param>
     /// <param name="observer">The downstream observer.</param>

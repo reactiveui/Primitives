@@ -26,7 +26,7 @@ public static partial class SignalAsyncExtensions
         public ValueTask<T?> SingleOrDefaultAsync(
             Func<T, bool> predicate,
             T? defaultValue) =>
-            source.SingleOrDefaultAsync(predicate, defaultValue, CancellationToken.None);
+            SingleElementWitness<T>.SingleOrDefaultAsync(source, predicate, defaultValue);
 
         /// <summary>Asynchronously returns the only element of the sequence that satisfies a condition, or <paramref name="defaultValue"/> when no element does.</summary>
         /// <param name="predicate">A function to test each element for a condition. The method returns the element for which this predicate
@@ -42,7 +42,7 @@ public static partial class SignalAsyncExtensions
             Func<T, bool> predicate,
             T? defaultValue,
             CancellationToken cancellationToken) =>
-            SingleOrDefaultCoreAsync(source, predicate, defaultValue, cancellationToken);
+            SingleElementWitness<T>.SingleOrDefaultAsync(source, predicate, defaultValue, cancellationToken);
 
         /// <summary>Asynchronously returns the only element of the sequence, or the default of <typeparamref name="T"/> when the sequence is empty.</summary>
         /// <returns>A value task that represents the asynchronous operation. The task result contains the single element of the
@@ -50,7 +50,7 @@ public static partial class SignalAsyncExtensions
         /// <exception cref="InvalidOperationException">The source sequence contains more than one element.</exception>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public ValueTask<T?> SingleOrDefaultAsync() =>
-            source.SingleOrDefaultAsync(default, CancellationToken.None);
+            SingleElementWitness<T>.SingleOrDefaultAsync(source);
 
         /// <summary>Asynchronously returns the only element of the sequence, or the default of <typeparamref name="T"/> when the sequence is empty.</summary>
         /// <param name="cancellationToken">The token that cancels the operation.</param>
@@ -59,7 +59,7 @@ public static partial class SignalAsyncExtensions
         /// <exception cref="InvalidOperationException">The source sequence contains more than one element.</exception>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public ValueTask<T?> SingleOrDefaultAsync(CancellationToken cancellationToken) =>
-            source.SingleOrDefaultAsync(default, cancellationToken);
+            SingleElementWitness<T>.SingleOrDefaultAsync(source, cancellationToken);
 
         /// <summary>Asynchronously returns the single element of the sequence, or <paramref name="defaultValue"/> when the sequence is empty.</summary>
         /// <param name="defaultValue">The value to return if the sequence contains no elements.</param>
@@ -68,7 +68,7 @@ public static partial class SignalAsyncExtensions
         /// <exception cref="InvalidOperationException">The source sequence contains more than one element.</exception>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public ValueTask<T?> SingleOrDefaultAsync(T? defaultValue) =>
-            source.SingleOrDefaultAsync(defaultValue, CancellationToken.None);
+            SingleElementWitness<T>.SingleOrDefaultAsync(source, defaultValue);
 
         /// <summary>Asynchronously returns the single element of the sequence, or <paramref name="defaultValue"/> when the sequence is empty.</summary>
         /// <param name="defaultValue">The value to return if the sequence contains no elements.</param>
@@ -78,25 +78,6 @@ public static partial class SignalAsyncExtensions
         /// <exception cref="InvalidOperationException">The source sequence contains more than one element.</exception>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public ValueTask<T?> SingleOrDefaultAsync(T? defaultValue, CancellationToken cancellationToken) =>
-            SingleOrDefaultCoreAsync(source, null, defaultValue, cancellationToken);
-    }
-
-    /// <summary>Shared body for the <c>SingleOrDefaultAsync</c> overloads; subscribes the shared observer.</summary>
-    /// <typeparam name="T">The type of elements in the source sequence.</typeparam>
-    /// <param name="source">The source observable sequence.</param>
-    /// <param name="predicate">An optional predicate to filter elements.</param>
-    /// <param name="defaultValue">The value to return on empty.</param>
-    /// <param name="cancellationToken">A cancellation token for the operation.</param>
-    /// <returns>The single matching element, or the default value on empty.</returns>
-    private static async ValueTask<T?> SingleOrDefaultCoreAsync<T>(
-        IObservableAsync<T> source,
-        Func<T, bool>? predicate,
-        T? defaultValue,
-        CancellationToken cancellationToken)
-    {
-        cancellationToken.ThrowIfCancellationRequested();
-        SingleElementWitness<T> observer = new(predicate, false, defaultValue, cancellationToken);
-        await using var subscription = await source.SubscribeAsync(observer, cancellationToken).ConfigureAwait(false);
-        return await observer.AwaitResultAsync().ConfigureAwait(false);
+            SingleElementWitness<T>.SingleOrDefaultAsync(source, defaultValue, cancellationToken);
     }
 }

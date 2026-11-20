@@ -5,6 +5,8 @@
 using System.Runtime.CompilerServices;
 using System.Runtime.ExceptionServices;
 using ReactiveUI.Primitives.Disposables;
+using ReactiveUI.Primitives.Internal;
+using ReactiveUI.Primitives.Signals;
 
 namespace ReactiveUI.Primitives.Advanced;
 
@@ -93,6 +95,99 @@ public static class Witness
         }
 
         return new SafeWitness<T>(observer, cancel);
+    }
+
+    /// <summary>Rethrows <paramref name="exception"/> with its original stack trace, doing nothing when <see langword="null"/>.</summary>
+    /// <param name="exception">The exception to rethrow, or <see langword="null"/>.</param>
+    public static void RethrowIfNotNull(Exception? exception)
+    {
+        if (exception is not null)
+        {
+            ExceptionDispatchInfo.Capture(exception).Throw();
+        }
+    }
+
+    /// <summary>Subscribes to <paramref name="source"/> without handlers so it runs for side effects alone.</summary>
+    /// <typeparam name="T">The element type.</typeparam>
+    /// <param name="source">The source observable.</param>
+    /// <returns>A handle that unsubscribes from <paramref name="source"/> when disposed.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="source"/> is <see langword="null"/>.</exception>
+    public static IDisposable Subscribe<T>(IObservable<T> source)
+    {
+        ArgumentExceptionHelper.ThrowIfNull(source);
+
+        return Subscribe(source, OnNextNoOpCache<T>.Instance, Rethrow, Nop);
+    }
+
+    /// <summary>Subscribes a value callback to <paramref name="source"/>; terminal errors rethrow and completion is ignored.</summary>
+    /// <typeparam name="T">The element type.</typeparam>
+    /// <param name="source">The source observable.</param>
+    /// <param name="onNext">The callback invoked for each value.</param>
+    /// <returns>A handle that unsubscribes from <paramref name="source"/> when disposed.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="source"/> or <paramref name="onNext"/> is <see langword="null"/>.</exception>
+    public static IDisposable Subscribe<T>(IObservable<T> source, Action<T> onNext)
+    {
+        ArgumentExceptionHelper.ThrowIfNull(source);
+
+        ArgumentExceptionHelper.ThrowIfNull(onNext);
+
+        return source switch
+        {
+            Signal<T> signal => signal.SubscribeAction(onNext),
+            IInlineSignal<T> inline => inline.Subscribe(onNext, Rethrow, Nop),
+            _ => Subscribe(source, onNext, Rethrow, Nop),
+        };
+    }
+
+    /// <summary>Subscribes value and error callbacks to <paramref name="source"/>; completion is ignored.</summary>
+    /// <typeparam name="T">The element type.</typeparam>
+    /// <param name="source">The source observable.</param>
+    /// <param name="onNext">The callback invoked for each value.</param>
+    /// <param name="onError">The callback invoked with the terminal error.</param>
+    /// <returns>A handle that unsubscribes from <paramref name="source"/> when disposed.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="source"/>, <paramref name="onNext"/>, or <paramref name="onError"/> is <see langword="null"/>.</exception>
+    public static IDisposable Subscribe<T>(IObservable<T> source, Action<T> onNext, Action<Exception> onError)
+    {
+        ArgumentExceptionHelper.ThrowIfNull(onError);
+
+        return Subscribe(source, onNext, onError, Nop);
+    }
+
+    /// <summary>Subscribes value and completion callbacks to <paramref name="source"/>; terminal errors rethrow.</summary>
+    /// <typeparam name="T">The element type.</typeparam>
+    /// <param name="source">The source observable.</param>
+    /// <param name="onNext">The callback invoked for each value.</param>
+    /// <param name="onCompleted">The callback invoked on completion.</param>
+    /// <returns>A handle that unsubscribes from <paramref name="source"/> when disposed.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="source"/>, <paramref name="onNext"/>, or <paramref name="onCompleted"/> is <see langword="null"/>.</exception>
+    public static IDisposable Subscribe<T>(IObservable<T> source, Action<T> onNext, Action onCompleted)
+    {
+        ArgumentExceptionHelper.ThrowIfNull(onCompleted);
+
+        return Subscribe(source, onNext, Rethrow, onCompleted);
+    }
+
+    /// <summary>Subscribes value, error, and completion callbacks to <paramref name="source"/>.</summary>
+    /// <typeparam name="T">The element type.</typeparam>
+    /// <param name="source">The source observable.</param>
+    /// <param name="onNext">The callback invoked for each value.</param>
+    /// <param name="onError">The callback invoked with the terminal error.</param>
+    /// <param name="onCompleted">The callback invoked on completion.</param>
+    /// <returns>A handle that unsubscribes from <paramref name="source"/> when disposed.</returns>
+    /// <exception cref="ArgumentNullException">Any argument is <see langword="null"/>.</exception>
+    public static IDisposable Subscribe<T>(IObservable<T> source, Action<T> onNext, Action<Exception> onError, Action onCompleted)
+    {
+        ArgumentExceptionHelper.ThrowIfNull(source);
+
+        ArgumentExceptionHelper.ThrowIfNull(onNext);
+
+        ArgumentExceptionHelper.ThrowIfNull(onError);
+
+        ArgumentExceptionHelper.ThrowIfNull(onCompleted);
+
+        return source is IInlineSignal<T> inline
+            ? inline.Subscribe(onNext, onError, onCompleted)
+            : source.Subscribe(new EmptyWitness<T>(onNext, onError, onCompleted));
     }
 
     /// <summary>Observer wrapper that prevents notifications after termination.</summary>

@@ -42,7 +42,7 @@ public sealed class ContainsWitness<T>(IObserver<bool> observer, T value, IEqual
         {
             matches = _comparer.Equals(value, _value);
         }
-        catch (Exception error)
+        catch (Exception error) when (!CoreFatalExceptionHelper.IsFatal(error))
         {
             OnError(error);
             return;

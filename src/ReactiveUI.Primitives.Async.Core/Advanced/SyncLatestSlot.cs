@@ -32,6 +32,29 @@ public static class SyncLatestSlot
         return new(coordinator, 1 << sourceIndex, recordValue);
     }
 
+    /// <summary>Subscribes <paramref name="source"/> to its slot on <paramref name="coordinator"/>.</summary>
+    /// <typeparam name="TSource">The source element type.</typeparam>
+    /// <typeparam name="TResult">The coordinator's downstream element type.</typeparam>
+    /// <param name="source">The source to wire.</param>
+    /// <param name="coordinator">The coordinator that owns the slot.</param>
+    /// <param name="sourceIndex">The 0-based index of this source's slot.</param>
+    /// <param name="recordValue">Stores this source's latest value in the coordinator's slot.</param>
+    /// <param name="cancellationToken">A token to cancel the subscription.</param>
+    /// <returns>This source's subscription handle.</returns>
+    public static ValueTask<IAsyncDisposable> SubscribeToSlotAsync<TSource, TResult>(
+        IObservableAsync<TSource> source,
+        ISyncLatestCoordinator<TResult> coordinator,
+        int sourceIndex,
+        Action<TSource> recordValue,
+        CancellationToken cancellationToken)
+    {
+        ArgumentExceptionHelper.ThrowIfNull(source);
+
+        return source.SubscribeAsync(
+            CreateWitness(coordinator, sourceIndex, recordValue),
+            cancellationToken);
+    }
+
     /// <summary>Throws when a source index falls outside the coordinator's slots.</summary>
     /// <typeparam name="TResult">The downstream element type.</typeparam>
     /// <param name="coordinator">The coordinator whose slots bound the index.</param>

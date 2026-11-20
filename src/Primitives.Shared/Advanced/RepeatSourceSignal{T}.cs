@@ -21,6 +21,14 @@ public sealed class RepeatSourceSignal<T> : IRequireCurrentThread<T>
     /// <summary>The number of repetitions, or <see langword="null"/> for indefinite repetition.</summary>
     private readonly int? _repeatCount;
 
+    /// <summary>Initializes a new instance of the <see cref="RepeatSourceSignal{T}"/> class for indefinite repetition.</summary>
+    /// <param name="source">The source sequence.</param>
+    /// <exception cref="ArgumentNullException"><paramref name="source"/> is <see langword="null"/>.</exception>
+    public RepeatSourceSignal(IObservable<T> source)
+        : this(source, null)
+    {
+    }
+
     /// <summary>Initializes a new instance of the <see cref="RepeatSourceSignal{T}"/> class.</summary>
     /// <param name="source">The source sequence.</param>
     /// <param name="repeatCount">The number of repetitions, or <see langword="null"/> for indefinite repetition.</param>
@@ -37,6 +45,22 @@ public sealed class RepeatSourceSignal<T> : IRequireCurrentThread<T>
 
         _source = source;
         _repeatCount = repeatCount;
+    }
+
+    /// <summary>Repeats <paramref name="source"/> <paramref name="repeatCount"/> times, returning <see cref="ImmutableEmptySignal{T}.Instance"/> when <paramref name="repeatCount"/> is zero.</summary>
+    /// <param name="source">The source sequence.</param>
+    /// <param name="repeatCount">The number of times to repeat the source sequence.</param>
+    /// <returns>The repeated observable sequence.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="source"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentOutOfRangeException"><paramref name="repeatCount"/> is less than zero.</exception>
+    public static IObservable<T> Create(IObservable<T> source, int repeatCount)
+    {
+        ArgumentExceptionHelper.ThrowIfNull(source);
+        ArgumentOutOfRangeExceptionHelper.ThrowIfNegative(repeatCount);
+
+        return repeatCount == 0
+            ? ImmutableEmptySignal<T>.Instance
+            : new RepeatSourceSignal<T>(source, repeatCount);
     }
 
     /// <inheritdoc/>

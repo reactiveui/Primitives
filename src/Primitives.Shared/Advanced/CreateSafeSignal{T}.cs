@@ -34,6 +34,29 @@ public sealed class CreateSafeSignal<T> : IRequireCurrentThread<T>
         _isRequiredSubscribeOnCurrentThread = isRequiredSubscribeOnCurrentThread;
     }
 
+    /// <summary>Projects <paramref name="source"/> into a <see cref="ReadOnlyState{T}"/> backed by a safe signal.</summary>
+    /// <typeparam name="TSource">The source value type.</typeparam>
+    /// <param name="source">The source sequence.</param>
+    /// <param name="initialValue">The initial projected value.</param>
+    /// <param name="selector">The projection function.</param>
+    /// <returns>A read-only projected state.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="source"/> or <paramref name="selector"/> is <see langword="null"/>.</exception>
+    public static ReadOnlyState<T> CreateReadOnlyState<TSource>(
+        IObservable<TSource> source,
+        T initialValue,
+        Func<TSource, T> selector)
+    {
+        ArgumentExceptionHelper.ThrowIfNull(source);
+        ArgumentExceptionHelper.ThrowIfNull(selector);
+
+        return new(
+            new CreateSafeSignal<T>(observer => source.Subscribe(
+                value => observer.OnNext(selector(value)),
+                observer.OnError,
+                observer.OnCompleted)),
+            initialValue);
+    }
+
     /// <summary>Reports whether subscription must be dispatched through the current-thread sequencer.</summary>
     /// <returns><see langword="true"/> when current-thread dispatch is required.</returns>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]

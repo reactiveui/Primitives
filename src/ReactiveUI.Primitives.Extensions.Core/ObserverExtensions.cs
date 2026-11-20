@@ -2,6 +2,8 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Runtime.CompilerServices;
+
 namespace ReactiveUI.Primitives.Extensions;
 
 /// <summary>Extension methods for <see cref="IObserver{T}"/>.</summary>
@@ -18,55 +20,8 @@ public static class ObserverExtensions
         /// and enumerating anything else.
         /// </summary>
         /// <param name="source">The source collection to iterate.</param>
-        public void FastForEach(IEnumerable<T> source)
-        {
-            ArgumentExceptionHelper.ThrowIfNull(observer);
-            ArgumentExceptionHelper.ThrowIfNull(source);
-
-            if (source is T[] array)
-            {
-                for (var i = 0; i < array.Length; i++)
-                {
-                    observer.OnNext(array[i]);
-                }
-
-                return;
-            }
-
-            if (source is List<T> fullList)
-            {
-                for (var i = 0; i < fullList.Count; i++)
-                {
-                    observer.OnNext(fullList[i]);
-                }
-
-                return;
-            }
-
-            if (source is IList<T> list)
-            {
-                for (var i = 0; i < list.Count; i++)
-                {
-                    observer.OnNext(list[i]);
-                }
-
-                return;
-            }
-
-            if (source is IReadOnlyList<T> readOnlyList)
-            {
-                for (var i = 0; i < readOnlyList.Count; i++)
-                {
-                    observer.OnNext(readOnlyList[i]);
-                }
-
-                return;
-            }
-
-            foreach (var item in source)
-            {
-                observer.OnNext(item);
-            }
-        }
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void FastForEach(IEnumerable<T> source) =>
+            ObserverArrayHelpers.FastForEach(observer, source);
     }
 }

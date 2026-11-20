@@ -16,7 +16,7 @@ namespace ReactiveUI.Primitives.Extensions.Internal;
 /// <param name="scheduler">The scheduler each drain pass runs on.</param>
 /// <param name="target">The sink whose <see cref="IDrainTarget.Drain"/> the scheduled pass invokes.</param>
 /// <param name="gate">The gate, owned by the composing sink, protecting the queue and terminal state.</param>
-internal sealed class ScheduledDrainState<T>(ISequencer scheduler, IDrainTarget target, Lock gate)
+internal sealed class ScheduledDrainState<T>(ISequencer scheduler, IDrainTarget target, Lock gate) : IWorkItem, IsDisposed
 {
     /// <summary>The gate protecting the queue, drain flag, done flag, and the composing sink's own operator-specific state.</summary>
     private readonly Lock _gate = gate;
@@ -33,8 +33,26 @@ internal sealed class ScheduledDrainState<T>(ISequencer scheduler, IDrainTarget 
     /// <summary>Set to <see langword="true"/> once a terminal notification has been delivered or the sink disposed.</summary>
     private bool _done;
 
+    /// <inheritdoc/>
+    public bool IsDisposed => Volatile.Read(ref _done);
+
     /// <summary>Gets a value indicating whether the sink has reached a terminal state; read it inside the sink's gate.</summary>
     internal bool Done => _done;
+
+    /// <inheritdoc/>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    void IWorkItem.Execute() => target.Drain();
+
+    /// <inheritdoc/>
+    public void Dispose()
+    {
+        if (Volatile.Read(ref _done))
+        {
+            return;
+        }
+
+        BeginDispose()?.Dispose();
+    }
 
     /// <summary>Enqueues an OnNext notification and schedules a drain pass when none is in flight.</summary>
     /// <param name="value">The value to forward downstream.</param>
@@ -85,16 +103,6 @@ internal sealed class ScheduledDrainState<T>(ISequencer scheduler, IDrainTarget 
         }
     }
 
-    /// <summary>Marks the sink done and drops every queued notification, taking the gate itself.</summary>
-    internal void Terminate()
-    {
-        lock (_gate)
-        {
-            _done = true;
-            _queue.Clear();
-        }
-    }
-
     /// <summary>Marks the sink done, leaving the queue untouched; the caller must hold the gate.</summary>
     internal void MarkDoneLocked() => _done = true;
 
@@ -139,11 +147,7 @@ internal sealed class ScheduledDrainState<T>(ISequencer scheduler, IDrainTarget 
             _draining = true;
         }
 
-        _ = scheduler.Schedule(target, static (_, drainTarget) =>
-        {
-            drainTarget.Drain();
-            return EmptyDisposable.Instance;
-        });
+        scheduler.Schedule(this);
     }
 
     /// <summary>Discriminated notification payload enqueued for the scheduled drain.</summary>

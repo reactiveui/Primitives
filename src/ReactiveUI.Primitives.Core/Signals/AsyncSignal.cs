@@ -28,8 +28,14 @@ public sealed class AsyncSignal<T> : IAwaitSignal<T>
     /// <summary>The dispatch target: the empty witness or a <see cref="ListWitness{T}"/> fan-out.</summary>
     private IObserver<T> _outObserver = EmptyWitness<T>.Instance;
 
+    /// <summary>Whether this instance is completed.</summary>
+    private bool _isCompleted;
+
+    /// <summary>Whether this instance is disposed.</summary>
+    private bool _isDisposed;
+
     /// <summary>Gets a value indicating whether this instance is disposed.</summary>
-    public bool IsDisposed { get; private set; }
+    public bool IsDisposed => Volatile.Read(ref _isDisposed);
 
     /// <summary>Gets the value the signal completed with.</summary>
     /// <exception cref="InvalidOperationException">The signal has not completed.</exception>
@@ -37,23 +43,26 @@ public sealed class AsyncSignal<T> : IAwaitSignal<T>
     {
         get
         {
-            ThrowIfDisposed();
-            if (!IsCompleted)
+            lock (_observerLock)
             {
-                throw new InvalidOperationException("AsyncSignal is not completed yet");
+                ThrowIfDisposed();
+                if (!_isCompleted)
+                {
+                    throw new InvalidOperationException("AsyncSignal is not completed yet");
+                }
+
+                _lastError.Rethrow();
+
+                return _lastValue!;
             }
-
-            _lastError.Rethrow();
-
-            return _lastValue!;
         }
     }
 
     /// <summary>Gets a value indicating whether an observer is subscribed and the signal has neither completed nor been disposed.</summary>
-    public bool HasObservers => _outObserver is not EmptyWitness<T> && !IsCompleted && !IsDisposed;
+    public bool HasObservers => Volatile.Read(ref _outObserver) is not EmptyWitness<T> and not DisposedWitness<T> && !IsCompleted && !IsDisposed;
 
     /// <summary>Gets a value indicating whether this instance is completed.</summary>
-    public bool IsCompleted { get; private set; }
+    public bool IsCompleted => Volatile.Read(ref _isCompleted);
 
     /// <summary>Gets the debugger display text.</summary>
     [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
@@ -69,14 +78,14 @@ public sealed class AsyncSignal<T> : IAwaitSignal<T>
         lock (_observerLock)
         {
             ThrowIfDisposed();
-            if (IsCompleted)
+            if (_isCompleted)
             {
                 return;
             }
 
             observers = _outObserver;
             _outObserver = EmptyWitness<T>.Instance;
-            IsCompleted = true;
+            Volatile.Write(ref _isCompleted, true);
             completedValue = _lastValue;
             hasCompletedValue = _hasValue;
         }
@@ -113,14 +122,14 @@ public sealed class AsyncSignal<T> : IAwaitSignal<T>
         lock (_observerLock)
         {
             ThrowIfDisposed();
-            if (IsCompleted)
+            if (_isCompleted)
             {
                 return;
             }
 
             observers = _outObserver;
             _outObserver = EmptyWitness<T>.Instance;
-            IsCompleted = true;
+            Volatile.Write(ref _isCompleted, true);
             _lastError = error;
         }
 
@@ -134,7 +143,7 @@ public sealed class AsyncSignal<T> : IAwaitSignal<T>
         lock (_observerLock)
         {
             ThrowIfDisposed();
-            if (IsCompleted)
+            if (_isCompleted)
             {
                 return;
             }
@@ -159,7 +168,7 @@ public sealed class AsyncSignal<T> : IAwaitSignal<T>
         lock (_observerLock)
         {
             ThrowIfDisposed();
-            if (!IsCompleted)
+            if (!_isCompleted)
             {
                 if (_outObserver is ListWitness<T> listObserver)
                 {
@@ -199,19 +208,12 @@ public sealed class AsyncSignal<T> : IAwaitSignal<T>
     /// <summary>Drops the observers and the recorded value, making every later notification throw.</summary>
     public void Dispose()
     {
-        if (IsDisposed)
+        if (Volatile.Read(ref _isDisposed))
         {
             return;
         }
 
-        lock (_observerLock)
-        {
-            _outObserver = DisposedWitness<T>.Instance;
-            _lastError = null;
-            _lastValue = default;
-        }
-
-        IsDisposed = true;
+        DisposeCore();
     }
 
     /// <summary>Gets the awaiter for this signal.</summary>
@@ -224,14 +226,17 @@ public sealed class AsyncSignal<T> : IAwaitSignal<T>
     public T GetResult()
     {
         WaitIfPending(WaitForCompletion);
-        _lastError.Rethrow();
-
-        if (!_hasValue)
+        lock (_observerLock)
         {
-            throw new InvalidOperationException("The source completed without producing a value.");
-        }
+            _lastError.Rethrow();
 
-        return _lastValue!;
+            if (!_hasValue)
+            {
+                throw new InvalidOperationException("The source completed without producing a value.");
+            }
+
+            return _lastValue!;
+        }
     }
 
     /// <summary>Removes an observer registered via <see cref="Subscribe"/>; the observer's subscription handle calls this on disposal.</summary>
@@ -243,6 +248,23 @@ public sealed class AsyncSignal<T> : IAwaitSignal<T>
             _outObserver = _outObserver is ListWitness<T> listObserver
                 ? listObserver.Remove(observer)
                 : EmptyWitness<T>.Instance;
+        }
+    }
+
+    /// <summary>Marks the signal disposed and clears its state under <see cref="_observerLock"/>.</summary>
+    internal void DisposeCore()
+    {
+        lock (_observerLock)
+        {
+            if (_isDisposed)
+            {
+                return;
+            }
+
+            Volatile.Write(ref _isDisposed, true);
+            _outObserver = DisposedWitness<T>.Instance;
+            _lastError = null;
+            _lastValue = default;
         }
     }
 

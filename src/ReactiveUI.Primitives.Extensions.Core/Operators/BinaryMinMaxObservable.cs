@@ -4,7 +4,6 @@
 
 using System.Runtime.CompilerServices;
 using ReactiveUI.Primitives.Advanced;
-using ReactiveUI.Primitives.Disposables;
 
 namespace ReactiveUI.Primitives.Extensions.Operators;
 
@@ -30,22 +29,32 @@ public sealed class BinaryMinMaxObservable<T>(IObservable<T> left, IObservable<T
         ArgumentExceptionHelper.ThrowIfNull(observer);
 
         Sink sink = new(observer, emitMaximum);
-        return new DisposableBag(
-            _left.Subscribe(new IndexedWitness(sink, true)),
-            _right.Subscribe(new IndexedWitness(sink, false)));
+        sink.AttachLeft(_left.Subscribe(sink));
+        if (!sink.IsDone)
+        {
+            sink.AttachRight(_right.Subscribe(new RightWitness(sink)));
+        }
+
+        return sink;
     }
 
     /// <summary>Holds latest values and terminal state for two sources.</summary>
     /// <param name="downstream">The downstream observer.</param>
     /// <param name="emitMaximum"><c>true</c> for max; <c>false</c> for min.</param>
     /// <remarks>Emissions and terminals are queued in order under the gate and delivered after it is released.</remarks>
-    private sealed class Sink(IObserver<T> downstream, bool emitMaximum)
+    private sealed class Sink(IObserver<T> downstream, bool emitMaximum) : IObserver<T>, IDisposable
     {
         /// <summary>Guards the latest values, the flags and the order notifications are queued in; never held while the observer runs.</summary>
         private readonly Lock _gate = new();
 
         /// <summary>Serializes downstream deliveries.</summary>
         private SerializedDelivery<T> _delivery = new();
+
+        /// <summary>Left source subscription handle.</summary>
+        private IDisposable? _leftSub;
+
+        /// <summary>Right source subscription handle.</summary>
+        private IDisposable? _rightSub;
 
         /// <summary>The latest left value.</summary>
         private T _leftValue;
@@ -67,6 +76,22 @@ public sealed class BinaryMinMaxObservable<T>(IObservable<T> left, IObservable<T
 
         /// <summary>Whether the sink is terminal.</summary>
         private bool _isDone;
+
+        /// <summary>Gets a value indicating whether the sink has terminated.</summary>
+        internal bool IsDone
+        {
+            get
+            {
+                lock (_gate)
+                {
+                    return _isDone;
+                }
+            }
+        }
+
+        /// <inheritdoc/>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void OnNext(T value) => OnNext(true, value);
 
         /// <summary>Records one side's latest value and emits the winning comparison once both sides have a value.</summary>
         /// <param name="isLeft"><c>true</c> for the left source.</param>
@@ -104,8 +129,7 @@ public sealed class BinaryMinMaxObservable<T>(IObservable<T> left, IObservable<T
             Flush();
         }
 
-        /// <summary>Forwards the first error downstream and marks the sink terminal.</summary>
-        /// <param name="error">The error.</param>
+        /// <inheritdoc/>
         public void OnError(Exception error)
         {
             lock (_gate)
@@ -119,19 +143,62 @@ public sealed class BinaryMinMaxObservable<T>(IObservable<T> left, IObservable<T
                 _ = _delivery.PostError(error);
             }
 
+            DisposeUpstream();
             Flush();
         }
+
+        /// <inheritdoc/>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void OnCompleted() => OnCompleted(true);
 
         /// <summary>Records one side's completion, completing downstream when both sides finish or when this side never emitted.</summary>
         /// <param name="isLeft"><c>true</c> for the left source.</param>
         public void OnCompleted(bool isLeft)
         {
+            bool terminated;
             lock (_gate)
             {
                 RecordCompletionLocked(isLeft);
+                terminated = _isDone;
+            }
+
+            if (terminated)
+            {
+                DisposeUpstream();
             }
 
             Flush();
+        }
+
+        /// <inheritdoc/>
+        public void Dispose()
+        {
+            lock (_gate)
+            {
+                _isDone = true;
+            }
+
+            DisposeUpstream();
+        }
+
+        /// <summary>Attaches the left subscription handle.</summary>
+        /// <param name="subscription">The left subscription handle.</param>
+        internal void AttachLeft(IDisposable? subscription)
+        {
+            if (subscription is not null)
+            {
+                SinkSubscription.Set(ref _leftSub, subscription);
+            }
+        }
+
+        /// <summary>Attaches the right subscription handle.</summary>
+        /// <param name="subscription">The right subscription handle.</param>
+        internal void AttachRight(IDisposable? subscription)
+        {
+            if (subscription is not null)
+            {
+                SinkSubscription.Set(ref _rightSub, subscription);
+            }
         }
 
         /// <summary>Records one side's completion and queues completion when the sequence is finished, while the caller holds the gate.</summary>
@@ -183,13 +250,33 @@ public sealed class BinaryMinMaxObservable<T>(IObservable<T> left, IObservable<T
             _ = _delivery.PostCompleted();
         }
 
+        /// <summary>Disposes both upstream subscriptions.</summary>
+        private void DisposeUpstream()
+        {
+            SinkSubscription.Dispose(ref _leftSub);
+            SinkSubscription.Dispose(ref _rightSub);
+        }
+
         /// <summary>Delivers the queued notifications on the calling thread, or hands them to the thread already delivering.</summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private void Flush() => _delivery.Flush(new PendingDrain(this));
 
         /// <summary>Delivers the queued notifications to the downstream observer.</summary>
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private void DrainPending() => _ = _delivery.DrainTo(downstream);
+        private void DrainPending()
+        {
+            try
+            {
+                if (_delivery.DrainTo(downstream))
+                {
+                    DisposeUpstream();
+                }
+            }
+            catch
+            {
+                Dispose();
+                throw;
+            }
+        }
 
         /// <summary>Drains this sink's queued notifications for the delivery gate.</summary>
         /// <param name="Owner">The sink.</param>
@@ -201,14 +288,13 @@ public sealed class BinaryMinMaxObservable<T>(IObservable<T> left, IObservable<T
         }
     }
 
-    /// <summary>Observer that forwards notifications to the shared sink tagged with the side it came from.</summary>
+    /// <summary>Observer that forwards notifications from the right source to the shared sink.</summary>
     /// <param name="sink">The shared sink.</param>
-    /// <param name="isLeft"><c>true</c> when observing the left source.</param>
-    private sealed class IndexedWitness(Sink sink, bool isLeft) : IObserver<T>
+    private sealed class RightWitness(Sink sink) : IObserver<T>
     {
         /// <inheritdoc/>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void OnNext(T value) => sink.OnNext(isLeft, value);
+        public void OnNext(T value) => sink.OnNext(false, value);
 
         /// <inheritdoc/>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -216,6 +302,6 @@ public sealed class BinaryMinMaxObservable<T>(IObservable<T> left, IObservable<T
 
         /// <inheritdoc/>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void OnCompleted() => sink.OnCompleted(isLeft);
+        public void OnCompleted() => sink.OnCompleted(false);
     }
 }

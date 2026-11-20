@@ -3,11 +3,13 @@
 // See the LICENSE file in the project root for full license information.
 
 using System.Runtime.CompilerServices;
-using ReactiveUI.Primitives.Disposables;
-
 #if REACTIVE_SHIM
+using ReactiveUI.Primitives.Reactive.Advanced;
+
 namespace ReactiveUI.Primitives.Extensions.Reactive.Internal;
 #else
+using ReactiveUI.Primitives.Advanced;
+
 namespace ReactiveUI.Primitives.Extensions.Internal;
 #endif
 
@@ -29,7 +31,7 @@ internal static class SequencerPeriodicExtensions
             TState state,
             TimeSpan period,
             Action<TState> action) =>
-            SchedulePeriodic(scheduler, state, period, period, action);
+            PeriodicSubscription<TState>.SchedulePeriodic(scheduler, state, period, action);
 
         /// <summary>Schedules <paramref name="action"/> repeatedly with an explicit first due time.</summary>
         /// <param name="dueTime">The delay before the first tick.</param>
@@ -41,99 +43,6 @@ internal static class SequencerPeriodicExtensions
             TimeSpan dueTime,
             TimeSpan period,
             Action action) =>
-            SchedulePeriodic(scheduler, action, dueTime, period, static tick => tick());
-    }
-
-    /// <summary>Schedules a stateful periodic action.</summary>
-    /// <typeparam name="TState">The state type.</typeparam>
-    /// <param name="scheduler">The scheduler used for each tick.</param>
-    /// <param name="state">The state passed to each tick.</param>
-    /// <param name="dueTime">The delay before the first tick.</param>
-    /// <param name="period">The period between ticks.</param>
-    /// <param name="action">The tick action.</param>
-    /// <returns>A disposable that cancels future ticks.</returns>
-    private static PeriodicSubscription<TState> SchedulePeriodic<TState>(
-        ISequencer scheduler,
-        TState state,
-        TimeSpan dueTime,
-        TimeSpan period,
-        Action<TState> action)
-    {
-        ArgumentExceptionHelper.ThrowIfNull(scheduler);
-        ArgumentExceptionHelper.ThrowIfNull(action);
-
-        PeriodicSubscription<TState> subscription = new(scheduler, state, Sequencer.Normalize(period), action);
-        subscription.ScheduleNext(Sequencer.Normalize(dueTime));
-        return subscription;
-    }
-
-    /// <summary>Disposable state for one periodic schedule, re-arming itself after each tick until disposed.</summary>
-    /// <typeparam name="TState">The state type.</typeparam>
-    /// <param name="scheduler">The scheduler used for each tick.</param>
-    /// <param name="state">The state passed to each tick.</param>
-    /// <param name="period">The period between ticks.</param>
-    /// <param name="action">The tick action.</param>
-    internal sealed class PeriodicSubscription<TState>(
-        ISequencer scheduler,
-        TState state,
-        TimeSpan period,
-        Action<TState> action) : IDisposable
-    {
-        /// <summary>The scheduler used for each tick.</summary>
-        private readonly ISequencer _scheduler = scheduler;
-
-        /// <summary>The state passed to each tick.</summary>
-        private readonly TState _state = state;
-
-        /// <summary>The period between ticks.</summary>
-        private readonly TimeSpan _period = period;
-
-        /// <summary>The tick action.</summary>
-        private readonly Action<TState> _action = action;
-
-        /// <summary>The current scheduled work.</summary>
-        private readonly SwapDisposable _scheduled = new();
-
-        /// <summary>0 = active, 1 = disposed.</summary>
-        private int _disposed;
-
-        /// <inheritdoc/>
-        public void Dispose()
-        {
-            if (Interlocked.Exchange(ref _disposed, 1) != 0)
-            {
-                return;
-            }
-
-            _scheduled.Dispose();
-        }
-
-        /// <summary>Schedules the next tick.</summary>
-        /// <param name="dueTime">The delay before the tick.</param>
-        internal void ScheduleNext(TimeSpan dueTime)
-        {
-            if (Volatile.Read(ref _disposed) != 0)
-            {
-                return;
-            }
-
-            _scheduled.Disposable = _scheduler.Schedule(this, dueTime, static (_, subscription) =>
-            {
-                subscription.Tick();
-                return EmptyDisposable.Instance;
-            });
-        }
-
-        /// <summary>Runs one tick and schedules the next, unless disposed.</summary>
-        internal void Tick()
-        {
-            if (Volatile.Read(ref _disposed) != 0)
-            {
-                return;
-            }
-
-            _action(_state);
-            ScheduleNext(_period);
-        }
+            PeriodicSubscription.ScheduleAction(scheduler, dueTime, period, action);
     }
 }

@@ -2,6 +2,8 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Runtime.CompilerServices;
+
 #if REACTIVE_SHIM
 namespace ReactiveUI.Primitives.Reactive;
 #else
@@ -18,48 +20,27 @@ public static class ConnectableSignalExtensions
     {
         /// <summary>Connects on first subscriber and disconnects when the last subscriber disposes.</summary>
         /// <returns>A reference-counted sequence.</returns>
-        public IObservable<T> AutoShare()
-        {
-            ArgumentExceptionHelper.ThrowIfNull(source);
-
-            return new AutoShareSignal<T>(source);
-        }
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public IObservable<T> AutoShare() => new AutoShareSignal<T>(source);
 
         /// <summary>Connects on the first observer subscription.</summary>
         /// <returns>A sequence that connects after the first subscription.</returns>
-        public IObservable<T> AutoConnect()
-        {
-            ArgumentExceptionHelper.ThrowIfNull(source);
-
-            return new AutoConnectSignal<T>(source, 1);
-        }
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public IObservable<T> AutoConnect() => new AutoConnectSignal<T>(source);
 
         /// <summary>Connects after <paramref name="subscriberCount"/> observers have subscribed.</summary>
         /// <param name="subscriberCount">Number of observers required before connecting.</param>
         /// <returns>A sequence that connects after the requested number of subscriptions.</returns>
-        public IObservable<T> AutoConnect(int subscriberCount)
-        {
-            ArgumentExceptionHelper.ThrowIfNull(source);
-
-            ArgumentOutOfRangeExceptionHelper.ThrowIfNegative(subscriberCount);
-
-            return new AutoConnectSignal<T>(source, subscriberCount);
-        }
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public IObservable<T> AutoConnect(int subscriberCount) => new AutoConnectSignal<T>(source, subscriberCount);
 
         /// <summary>Connects after <paramref name="subscriberCount"/> observers have subscribed and reports the connection.</summary>
         /// <param name="subscriberCount">Number of observers required before connecting.</param>
         /// <param name="onConnect">Action invoked with the connection disposable when the source connects.</param>
         /// <returns>A sequence that connects after the requested number of subscriptions.</returns>
-        public IObservable<T> AutoConnect(int subscriberCount, Action<IDisposable> onConnect)
-        {
-            ArgumentExceptionHelper.ThrowIfNull(source);
-
-            ArgumentExceptionHelper.ThrowIfNull(onConnect);
-
-            ArgumentOutOfRangeExceptionHelper.ThrowIfNegative(subscriberCount);
-
-            return new AutoConnectSignal<T>(source, subscriberCount, onConnect);
-        }
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public IObservable<T> AutoConnect(int subscriberCount, Action<IDisposable> onConnect) =>
+            AutoConnectSignal<T>.Create(source, subscriberCount, onConnect);
     }
 
     /// <summary>Hot-sharing operators for an observable source sequence.</summary>
@@ -70,63 +51,36 @@ public static class ConnectableSignalExtensions
         /// <summary>Multicasts source values through the supplied hub.</summary>
         /// <param name="hub">Hub that receives source values.</param>
         /// <returns>A connectable signal.</returns>
-        public ConnectableSignal<T> Multicast(ISignal<T> hub)
-        {
-            ArgumentExceptionHelper.ThrowIfNull(source);
-
-            ArgumentExceptionHelper.ThrowIfNull(hub);
-
-            return new(source, hub);
-        }
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public ConnectableSignal<T> Multicast(ISignal<T> hub) => new(source, hub);
 
         /// <summary>Shares source values through a live signal hub.</summary>
         /// <returns>A connectable live signal.</returns>
-        public ConnectableSignal<T> ShareLive()
-        {
-            ArgumentExceptionHelper.ThrowIfNull(source);
-
-            return new(source, new Signal<T>());
-        }
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public ConnectableSignal<T> ShareLive() => AutoShareSignal<T>.CreateConnectable(source);
 
         /// <summary>Replays all source values through an unbounded replay hub.</summary>
         /// <returns>A connectable replay signal.</returns>
-        public ConnectableSignal<T> ReplayLive()
-        {
-            ArgumentExceptionHelper.ThrowIfNull(source);
-
-            return new(source, new ReplaySignal<T>());
-        }
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public ConnectableSignal<T> ReplayLive() => ReplaySignal<T>.CreateConnectable(source);
 
         /// <summary>Replays source values through a bounded replay hub.</summary>
         /// <param name="bufferSize">Maximum number of values to replay.</param>
         /// <returns>A connectable replay signal.</returns>
-        public ConnectableSignal<T> ReplayLive(int bufferSize)
-        {
-            var hub = new ReplaySignal<T>(bufferSize);
-            ArgumentExceptionHelper.ThrowIfNull(source);
-
-            return new(source, hub);
-        }
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public ConnectableSignal<T> ReplayLive(int bufferSize) => ReplaySignal<T>.CreateConnectable(source, bufferSize);
 
         /// <summary>Replays source values through a replay hub constrained by count and time.</summary>
         /// <param name="bufferSize">Maximum number of values to replay.</param>
         /// <param name="window">Maximum replay window.</param>
         /// <returns>A connectable replay signal.</returns>
-        public ConnectableSignal<T> ReplayLive(int bufferSize, TimeSpan window)
-        {
-            var hub = new ReplaySignal<T>(bufferSize, window);
-            ArgumentExceptionHelper.ThrowIfNull(source);
-
-            return new(source, hub);
-        }
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public ConnectableSignal<T> ReplayLive(int bufferSize, TimeSpan window) =>
+            ReplaySignal<T>.CreateConnectable(source, bufferSize, window);
 
         /// <summary>Shares one live source subscription while at least one observer is subscribed.</summary>
         /// <returns>A reference-counted live sequence.</returns>
-        public IObservable<T> ShareLatest()
-        {
-            ArgumentExceptionHelper.ThrowIfNull(source);
-
-            return new AutoShareSignal<T>(new(source, new Signal<T>()));
-        }
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public IObservable<T> ShareLatest() => AutoShareSignal<T>.CreateShareLatest(source);
     }
 }

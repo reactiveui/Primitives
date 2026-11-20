@@ -29,7 +29,31 @@ internal static class IndexedSubscribeHelper
         ArgumentExceptionHelper.ThrowIfNull(onCompleted);
 
         DisposableBag composite = new();
-        for (var i = 0; i < sources.Count; i++)
+        return SubscribeIndexed(composite, sources, onNext, onError, onCompleted);
+    }
+
+    /// <summary>Subscribes callbacks carrying each source's index into <paramref name="composite"/>, stopping early if <paramref name="composite"/> is disposed.</summary>
+    /// <typeparam name="T">The element type of the source observables.</typeparam>
+    /// <param name="composite">The pre-allocated composite disposable receiving each source subscription.</param>
+    /// <param name="sources">The source observables, indexed 0..N-1.</param>
+    /// <param name="onNext">Per-source OnNext hook: <c>(index, value)</c>.</param>
+    /// <param name="onError">Shared OnError hook (errors from any source forward unchanged).</param>
+    /// <param name="onCompleted">Per-source OnCompleted hook: <c>(index)</c>.</param>
+    /// <returns>The supplied <paramref name="composite"/> disposable.</returns>
+    internal static IDisposable SubscribeIndexed<T>(
+        DisposableBag composite,
+        IReadOnlyList<IObservable<T>> sources,
+        Action<int, T> onNext,
+        Action<Exception> onError,
+        Action<int> onCompleted)
+    {
+        ArgumentExceptionHelper.ThrowIfNull(composite);
+        ArgumentExceptionHelper.ThrowIfNull(sources);
+        ArgumentExceptionHelper.ThrowIfNull(onNext);
+        ArgumentExceptionHelper.ThrowIfNull(onError);
+        ArgumentExceptionHelper.ThrowIfNull(onCompleted);
+
+        for (var i = 0; i < sources.Count && !composite.IsDisposed; i++)
         {
             composite.Add(sources[i].Subscribe(new IndexedWitness<T>(i, onNext, onError, onCompleted)));
         }

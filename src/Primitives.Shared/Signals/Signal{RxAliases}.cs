@@ -6,10 +6,12 @@ using System.Runtime.CompilerServices;
 
 #if REACTIVE_SHIM
 using ReactiveUI.Primitives.Reactive.Advanced;
+using ReactiveUI.Primitives.Reactive.Internal;
 
 namespace ReactiveUI.Primitives.Reactive.Signals;
 #else
 using ReactiveUI.Primitives.Advanced;
+using ReactiveUI.Primitives.Internal;
 
 namespace ReactiveUI.Primitives.Signals;
 #endif
@@ -459,9 +461,7 @@ public static partial class Signal
     {
         ArgumentExceptionHelper.ThrowIfNull(sources);
 
-        return TryCreateSynchronousSwitchRangeSignal(sources, out var rangeSignal)
-            ? rangeSignal
-            : new SwitchSignal<T>(sources);
+        return SwitchSignal<T>.Create(sources);
     }
 
     /// <summary>Combines latest values from two signals using latest-fusion semantics.</summary>
@@ -472,55 +472,10 @@ public static partial class Signal
     /// <param name="right">The right signal.</param>
     /// <param name="selector">The function that combines the latest values.</param>
     /// <returns>An observable sequence that combines the latest paired values.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static IObservable<TResult> PairLatest<TLeft, TRight, TResult>(
         IObservable<TLeft> left,
         IObservable<TRight> right,
-        Func<TLeft, TRight, TResult> selector)
-    {
-        ArgumentExceptionHelper.ThrowIfNull(left);
-
-        ArgumentExceptionHelper.ThrowIfNull(right);
-
-        ArgumentExceptionHelper.ThrowIfNull(selector);
-
-        return typeof(TLeft) == typeof(int) && typeof(TRight) == typeof(int) && left is RangeSignal leftRange
-               && right is RangeSignal rightRange
-            ? new RangeSyncLatestSignal<TResult>(leftRange, rightRange, (Func<int, int, TResult>)(object)selector)
-            : new SyncLatestSignal<TLeft, TRight, TResult>(left, right, selector);
-    }
-
-    /// <summary>Creates a range-concat signal for synchronous Switch over known range inners.</summary>
-    /// <typeparam name="T">The value type.</typeparam>
-    /// <param name="sources">The outer source.</param>
-    /// <param name="signal">The optimized signal when available.</param>
-    /// <returns><see langword="true"/> when the fast path applies.</returns>
-    private static bool TryCreateSynchronousSwitchRangeSignal<T>(
-        IObservable<IObservable<T>> sources,
-        out IObservable<T> signal)
-    {
-        signal = null!;
-        if (typeof(T) != typeof(int) || sources is not FromEnumerableSignal<IObservable<T>> enumerable)
-        {
-            return false;
-        }
-
-        if (!enumerable.TryGetReadOnlyValues(out var innerSources) || innerSources.Count == 0)
-        {
-            return false;
-        }
-
-        var ranges = new RangeSignal[innerSources.Count];
-        for (var i = 0; i < innerSources.Count; i++)
-        {
-            if (innerSources[i] is not RangeSignal range)
-            {
-                return false;
-            }
-
-            ranges[i] = range;
-        }
-
-        signal = (IObservable<T>)(object)new RangeConcatSignal(ranges);
-        return true;
-    }
+        Func<TLeft, TRight, TResult> selector) =>
+        SyncLatest(left, right, selector);
 }

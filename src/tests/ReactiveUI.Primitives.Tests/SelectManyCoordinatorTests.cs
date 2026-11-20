@@ -4,12 +4,22 @@
 
 using System.Runtime.CompilerServices;
 using ReactiveUI.Primitives.Advanced;
+using ReactiveUI.Primitives.Signals;
 
 namespace ReactiveUI.Primitives.Tests;
 
 /// <summary>Tests SelectMany completion tracking and delivery serialization across inner sources.</summary>
 public sealed class SelectManyCoordinatorTests
 {
+    /// <summary>Iteration count for concurrent completion stress loops.</summary>
+    private const int RaceIterations = 150;
+
+    /// <summary>Maximum wait in seconds for concurrent completion.</summary>
+    private const int StressTimeoutSeconds = 5;
+
+    /// <summary>Second value emitted during concurrent completion tests.</summary>
+    private const int SecondValue = 2;
+
     /// <summary>
     /// An observer that marshals synchronously to another thread is not deadlocked when that thread pushes a value
     /// through a sibling inner source.
@@ -76,6 +86,34 @@ public sealed class SelectManyCoordinatorTests
     public async Task ConstantInnerConstructorRejectsANullObserver() =>
         await Assert.That(static () => new SelectManyCoordinator<int, int>(null!, new ScriptedObservable<int>(static _ => { })))
             .Throws<ArgumentNullException>();
+
+    /// <summary>Concurrent outer and inner completions never drop the terminal completion signal.</summary>
+    /// <returns>A task representing the asynchronous test.</returns>
+    [Test]
+    public async Task Run_ConcurrentOuterAndInnerCompletion_AlwaysDeliversCompletion()
+    {
+        for (var i = 0; i < RaceIterations; i++)
+        {
+            using Signal<int> outer = new();
+            using Signal<int> inner = new();
+            TaskCompletionSource<bool> done = new(TaskCreationOptions.RunContinuationsAsynchronously);
+            using var sub = new SelectManyCoordinator<int, int>(
+                new DelegateWitness<int>(static _ => { }, static _ => { }, () => done.TrySetResult(true)),
+                _ => inner).Run(outer);
+
+            outer.OnNext(1);
+            var t1 = Task.Run(outer.OnCompleted);
+            var t2 = Task.Run(() =>
+            {
+                inner.OnNext(SecondValue);
+                inner.OnCompleted();
+            });
+
+            await Task.WhenAll(t1, t2);
+            using CancellationTokenSource timeout = new(TimeSpan.FromSeconds(StressTimeoutSeconds));
+            await Assert.That(await done.Task.WaitAsync(timeout.Token)).IsTrue();
+        }
+    }
 
     /// <summary>Subscribes a coordinator whose outer source yields the index of each scenario source.</summary>
     /// <param name="sources">The inner sources.</param>

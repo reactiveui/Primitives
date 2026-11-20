@@ -39,5 +39,19 @@ public class SignalGetAwaiterTests
         _ = Assert.Throws<OperationCanceledException>(() => awaiter.GetResult());
         _ = Assert.Throws<ArgumentNullException>(static () => ((IObservable<int>)null!).GetAwaiter());
         _ = Assert.Throws<ArgumentNullException>(static () => ((IObservable<int>)null!).GetAwaiter(CancellationToken.None));
+
+        var canceledTask = Signal.ToTaskOrDefault(Signal.Silent<int>(), First, canceledBeforeSubscribe.Token);
+        await Assert.That(canceledTask.IsCanceled).IsTrue();
+
+        var handled = await Task.FromResult(Second).HandleCancellation(null);
+        await Assert.That(handled).IsEqualTo(Second);
+
+        var completedSafe = 0;
+        using var safeSub = Signal.CreateSafe<int>(static o =>
+        {
+            o.OnCompleted();
+            return ReactiveUI.Primitives.Disposables.EmptyDisposable.Instance;
+        }).Subscribe(static _ => { }, () => completedSafe++);
+        await Assert.That(completedSafe).IsEqualTo(First);
     }
 }

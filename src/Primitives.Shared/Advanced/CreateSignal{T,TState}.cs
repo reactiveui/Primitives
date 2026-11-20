@@ -57,67 +57,24 @@ public sealed class CreateSignal<T, TState> : IRequireCurrentThread<T>
     /// <param name="observer">The downstream observer.</param>
     /// <returns>The disposable that releases the subscription.</returns>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public IDisposable Subscribe(IObserver<T> observer) =>
-        SignalSubscription.Subscribe(observer, _currentThreadRequired, SubscribeCore);
-
-    /// <summary>Invokes the subscribe delegate with a wrapper that owns <paramref name="cancel"/>.</summary>
-    /// <param name="observer">The downstream observer.</param>
-    /// <param name="cancel">The outer subscription handle.</param>
-    /// <returns>The disposable returned by the subscribe delegate.</returns>
-    private IDisposable SubscribeCore(IObserver<T> observer, IDisposable cancel)
+    public IDisposable Subscribe(IObserver<T> observer)
     {
-        observer = new Create(observer, cancel);
-        return _subscribe(_state, observer) ?? EmptyDisposable.Instance;
+        ArgumentExceptionHelper.ThrowIfNull(observer);
+
+        return _currentThreadRequired
+            ? SubscriptionScheduling.OnCurrentThread(
+                (Self: this, observer),
+                static s => s.Self.SubscribeDirect(s.observer))
+            : SubscribeDirect(observer);
     }
 
-    /// <summary>Forwards notifications downstream and releases the subscription on termination.</summary>
+    /// <summary>Subscribes directly using a single <see cref="CreateSink{T}"/>.</summary>
     /// <param name="observer">The downstream observer.</param>
-    /// <param name="cancel">The outer subscription handle.</param>
-    private sealed class Create(IObserver<T> observer, IDisposable cancel) : IObserver<T>, IDisposable
+    /// <returns>The subscription sink.</returns>
+    private CreateSink<T> SubscribeDirect(IObserver<T> observer)
     {
-        /// <summary>The downstream observer.</summary>
-        private readonly IObserver<T> _observer = observer;
-
-        /// <summary>The outer subscription handle released on teardown.</summary>
-        private IDisposable? _cancel = cancel;
-
-        /// <summary>Disposed latch; 0 when alive, 1 once disposed.</summary>
-        private int _disposed;
-
-        /// <summary>Forwards a value downstream.</summary>
-        /// <param name="value">The value to forward.</param>
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void OnNext(T value) => _observer.OnNext(value);
-
-        /// <summary>Forwards the error downstream and releases the subscription.</summary>
-        /// <param name="error">The error to forward.</param>
-        public void OnError(Exception error)
-        {
-            try
-            {
-                _observer.OnError(error);
-            }
-            finally
-            {
-                Dispose();
-            }
-        }
-
-        /// <summary>Completes downstream and releases the subscription.</summary>
-        public void OnCompleted()
-        {
-            try
-            {
-                _observer.OnCompleted();
-            }
-            finally
-            {
-                Dispose();
-            }
-        }
-
-        /// <summary>Releases the outer subscription handle once.</summary>
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Dispose() => WitnessTeardown.Dispose(ref _disposed, ref _cancel);
+        CreateSink<T> sink = new(observer, false);
+        sink.SetCancel(_subscribe(_state, sink) ?? EmptyDisposable.Instance);
+        return sink;
     }
 }

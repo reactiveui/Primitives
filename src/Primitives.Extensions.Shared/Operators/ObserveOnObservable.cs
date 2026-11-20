@@ -14,8 +14,39 @@ namespace ReactiveUI.Primitives.Extensions.Operators;
 /// <typeparam name="T">The element type of the source sequence.</typeparam>
 /// <param name="source">The source observable.</param>
 /// <param name="scheduler">The scheduler every notification is delivered on.</param>
-internal sealed class ObserveOnObservable<T>(IObservable<T> source, ISequencer scheduler) : IObservable<T>
+public sealed class ObserveOnObservable<T>(IObservable<T> source, ISequencer scheduler) : IObservable<T>
 {
+    /// <summary>Returns <paramref name="source"/> unchanged when <paramref name="scheduler"/> is <see langword="null"/>; otherwise schedules callbacks on <paramref name="scheduler"/>.</summary>
+    /// <param name="source">The source observable.</param>
+    /// <param name="scheduler">Optional scheduler to notify observers on.</param>
+    /// <returns>The scheduled or original observable sequence.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static IObservable<T> CreateSafe(IObservable<T> source, ISequencer? scheduler) =>
+        scheduler is null ? source : new ObserveOnObservable<T>(source, scheduler);
+
+    /// <summary>Schedules callbacks on <paramref name="scheduler"/> when <paramref name="condition"/> holds; otherwise returns <paramref name="source"/> unchanged.</summary>
+    /// <param name="source">The source observable.</param>
+    /// <param name="condition">Whether to apply <paramref name="scheduler"/>.</param>
+    /// <param name="scheduler">The scheduler used when <paramref name="condition"/> is <see langword="true"/>.</param>
+    /// <returns>The scheduled or original observable sequence.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static IObservable<T> CreateIf(IObservable<T> source, bool condition, ISequencer scheduler) =>
+        condition ? new ObserveOnObservable<T>(source, scheduler) : source;
+
+    /// <summary>Schedules callbacks on <paramref name="trueScheduler"/> when <paramref name="condition"/> holds and on <paramref name="falseScheduler"/> otherwise.</summary>
+    /// <param name="source">The source observable.</param>
+    /// <param name="condition">Whether to select <paramref name="trueScheduler"/>.</param>
+    /// <param name="trueScheduler">The scheduler used when <paramref name="condition"/> is <see langword="true"/>.</param>
+    /// <param name="falseScheduler">The scheduler used when <paramref name="condition"/> is <see langword="false"/>.</param>
+    /// <returns>The scheduled observable sequence.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static ObserveOnObservable<T> CreateIf(
+        IObservable<T> source,
+        bool condition,
+        ISequencer trueScheduler,
+        ISequencer falseScheduler) =>
+        condition ? new(source, trueScheduler) : new(source, falseScheduler);
+
     /// <inheritdoc/>
     public IDisposable Subscribe(IObserver<T> observer)
     {
@@ -78,7 +109,7 @@ internal sealed class ObserveOnObservable<T>(IObservable<T> source, ISequencer s
 
         /// <inheritdoc/>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Dispose() => _state.BeginDispose()?.Dispose();
+        public void Dispose() => _state.Dispose();
 
         /// <inheritdoc/>
         void IDrainTarget.Drain()
@@ -89,21 +120,46 @@ internal sealed class ObserveOnObservable<T>(IObservable<T> source, ISequencer s
                 {
                     case DrainNotificationKind.Next:
                         {
-                            _downstream.OnNext(notification.Value);
+                            try
+                            {
+                                _downstream.OnNext(notification.Value);
+                            }
+                            catch
+                            {
+                                Dispose();
+                                throw;
+                            }
+
                             break;
                         }
 
                     case DrainNotificationKind.Error:
                         {
-                            _state.Terminate();
-                            _downstream.OnError(notification.Error!);
+                            var subscription = _state.BeginDispose();
+                            try
+                            {
+                                _downstream.OnError(notification.Error!);
+                            }
+                            finally
+                            {
+                                subscription?.Dispose();
+                            }
+
                             return;
                         }
 
                     default:
                         {
-                            _state.Terminate();
-                            _downstream.OnCompleted();
+                            var subscription = _state.BeginDispose();
+                            try
+                            {
+                                _downstream.OnCompleted();
+                            }
+                            finally
+                            {
+                                subscription?.Dispose();
+                            }
+
                             return;
                         }
                 }

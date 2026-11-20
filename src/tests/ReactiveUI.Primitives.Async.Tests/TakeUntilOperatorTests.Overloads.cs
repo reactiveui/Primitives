@@ -59,13 +59,13 @@ public partial class TakeUntilOperatorTests
         var other = SignalAsync.Never<int>();
         var options = TakeUntilOptions.Default;
 
-        await Assert.That(source.TakeUntil(other, (TakeUntilOptions?)null)).IsTypeOf<SignalAsyncExtensions.TakeUntilAsyncSignal<int, int>>();
-        await Assert.That(source.TakeUntil(other, CancellationToken.None)).IsTypeOf<SignalAsyncExtensions.TakeUntilAsyncSignal<int, int>>();
-        await Assert.That(source.TakeUntil(other, cancellation.Token)).IsTypeOf<SignalAsyncExtensions.TakeUntilAsyncSignal<int, int>>();
-        await Assert.That(source.TakeUntil(other, null, CancellationToken.None)).IsTypeOf<SignalAsyncExtensions.TakeUntilAsyncSignal<int, int>>();
-        await Assert.That(source.TakeUntil(other, options, CancellationToken.None)).IsTypeOf<SignalAsyncExtensions.TakeUntilAsyncSignal<int, int>>();
-        await Assert.That(source.TakeUntil(other, null, cancellation.Token)).IsTypeOf<SignalAsyncExtensions.TakeUntilAsyncSignal<int, int>>();
-        await Assert.That(source.TakeUntil(other, options, cancellation.Token)).IsTypeOf<SignalAsyncExtensions.TakeUntilAsyncSignal<int, int>>();
+        await Assert.That(source.TakeUntil(other, (TakeUntilOptions?)null)).IsTypeOf<TakeUntilAsyncSignal<int, int>>();
+        await Assert.That(source.TakeUntil(other, CancellationToken.None)).IsTypeOf<TakeUntilAsyncSignal<int, int>>();
+        await Assert.That(source.TakeUntil(other, cancellation.Token)).IsTypeOf<TakeUntilAsyncSignal<int, int>>();
+        await Assert.That(source.TakeUntil(other, null, CancellationToken.None)).IsTypeOf<TakeUntilAsyncSignal<int, int>>();
+        await Assert.That(source.TakeUntil(other, options, CancellationToken.None)).IsTypeOf<TakeUntilAsyncSignal<int, int>>();
+        await Assert.That(source.TakeUntil(other, null, cancellation.Token)).IsTypeOf<TakeUntilAsyncSignal<int, int>>();
+        await Assert.That(source.TakeUntil(other, options, cancellation.Token)).IsTypeOf<TakeUntilAsyncSignal<int, int>>();
     }
 
     /// <summary>Task overloads build one dedicated sink that also watches the token, and accept default options.</summary>
@@ -78,13 +78,13 @@ public partial class TakeUntilOperatorTests
         var task = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously).Task;
         var options = TakeUntilOptions.Default;
 
-        await Assert.That(source.TakeUntil(task, (TakeUntilOptions?)null)).IsTypeOf<SignalAsyncExtensions.TaskStopSignal<int>>();
-        await Assert.That(source.TakeUntil(task, CancellationToken.None)).IsTypeOf<SignalAsyncExtensions.TaskStopSignal<int>>();
-        await Assert.That(source.TakeUntil(task, cancellation.Token)).IsTypeOf<SignalAsyncExtensions.TaskStopSignal<int>>();
-        await Assert.That(source.TakeUntil(task, null, CancellationToken.None)).IsTypeOf<SignalAsyncExtensions.TaskStopSignal<int>>();
-        await Assert.That(source.TakeUntil(task, options, CancellationToken.None)).IsTypeOf<SignalAsyncExtensions.TaskStopSignal<int>>();
-        await Assert.That(source.TakeUntil(task, null, cancellation.Token)).IsTypeOf<SignalAsyncExtensions.TaskStopSignal<int>>();
-        await Assert.That(source.TakeUntil(task, options, cancellation.Token)).IsTypeOf<SignalAsyncExtensions.TaskStopSignal<int>>();
+        await Assert.That(source.TakeUntil(task, (TakeUntilOptions?)null)).IsTypeOf<TaskStopSignal<int>>();
+        await Assert.That(source.TakeUntil(task, CancellationToken.None)).IsTypeOf<TaskStopSignal<int>>();
+        await Assert.That(source.TakeUntil(task, cancellation.Token)).IsTypeOf<TaskStopSignal<int>>();
+        await Assert.That(source.TakeUntil(task, null, CancellationToken.None)).IsTypeOf<TaskStopSignal<int>>();
+        await Assert.That(source.TakeUntil(task, options, CancellationToken.None)).IsTypeOf<TaskStopSignal<int>>();
+        await Assert.That(source.TakeUntil(task, null, cancellation.Token)).IsTypeOf<TaskStopSignal<int>>();
+        await Assert.That(source.TakeUntil(task, options, cancellation.Token)).IsTypeOf<TaskStopSignal<int>>();
     }
 
     /// <summary>Predicate overloads build one dedicated sink that also watches the token.</summary>
@@ -95,10 +95,10 @@ public partial class TakeUntilOperatorTests
         using CancellationTokenSource cancellation = new();
         var source = SignalAsync.Never<int>();
 
-        await Assert.That(source.TakeUntil(static value => value > SecondItem, CancellationToken.None)).IsTypeOf<SignalAsyncExtensions.PredicateStopSignal<int>>();
-        await Assert.That(source.TakeUntil(static value => value > SecondItem, cancellation.Token)).IsTypeOf<SignalAsyncExtensions.PredicateStopSignal<int>>();
-        await Assert.That(source.TakeUntil(static (_, _) => new ValueTask<bool>(false), CancellationToken.None)).IsTypeOf<SignalAsyncExtensions.AsyncPredicateStopSignal<int>>();
-        await Assert.That(source.TakeUntil(static (_, _) => new ValueTask<bool>(false), cancellation.Token)).IsTypeOf<SignalAsyncExtensions.AsyncPredicateStopSignal<int>>();
+        await Assert.That(source.TakeUntil(static value => value > SecondItem, CancellationToken.None)).IsTypeOf<PredicateStopSignal<int>>();
+        await Assert.That(source.TakeUntil(static value => value > SecondItem, cancellation.Token)).IsTypeOf<PredicateStopSignal<int>>();
+        await Assert.That(source.TakeUntil(static (_, _) => new ValueTask<bool>(false), CancellationToken.None)).IsTypeOf<AsyncPredicateStopSignal<int>>();
+        await Assert.That(source.TakeUntil(static (_, _) => new ValueTask<bool>(false), cancellation.Token)).IsTypeOf<AsyncPredicateStopSignal<int>>();
     }
 
     /// <summary>Completion-delegate overloads build one dedicated sink that also watches the token, and accept default options.</summary>
@@ -111,12 +111,12 @@ public partial class TakeUntilOperatorTests
         CompletionSignalDelegate stopSignal = static _ => DisposableAsync.Empty;
         var options = TakeUntilOptions.Default;
 
-        await Assert.That(source.TakeUntil(stopSignal, (TakeUntilOptions?)null)).IsTypeOf<SignalAsyncExtensions.DelegateStopSignal<int>>();
-        await Assert.That(source.TakeUntil(stopSignal, CancellationToken.None)).IsTypeOf<SignalAsyncExtensions.DelegateStopSignal<int>>();
-        await Assert.That(source.TakeUntil(stopSignal, cancellation.Token)).IsTypeOf<SignalAsyncExtensions.DelegateStopSignal<int>>();
-        await Assert.That(source.TakeUntil(stopSignal, null, CancellationToken.None)).IsTypeOf<SignalAsyncExtensions.DelegateStopSignal<int>>();
-        await Assert.That(source.TakeUntil(stopSignal, options, CancellationToken.None)).IsTypeOf<SignalAsyncExtensions.DelegateStopSignal<int>>();
-        await Assert.That(source.TakeUntil(stopSignal, null, cancellation.Token)).IsTypeOf<SignalAsyncExtensions.DelegateStopSignal<int>>();
-        await Assert.That(source.TakeUntil(stopSignal, options, cancellation.Token)).IsTypeOf<SignalAsyncExtensions.DelegateStopSignal<int>>();
+        await Assert.That(source.TakeUntil(stopSignal, (TakeUntilOptions?)null)).IsTypeOf<DelegateStopSignal<int>>();
+        await Assert.That(source.TakeUntil(stopSignal, CancellationToken.None)).IsTypeOf<DelegateStopSignal<int>>();
+        await Assert.That(source.TakeUntil(stopSignal, cancellation.Token)).IsTypeOf<DelegateStopSignal<int>>();
+        await Assert.That(source.TakeUntil(stopSignal, null, CancellationToken.None)).IsTypeOf<DelegateStopSignal<int>>();
+        await Assert.That(source.TakeUntil(stopSignal, options, CancellationToken.None)).IsTypeOf<DelegateStopSignal<int>>();
+        await Assert.That(source.TakeUntil(stopSignal, null, cancellation.Token)).IsTypeOf<DelegateStopSignal<int>>();
+        await Assert.That(source.TakeUntil(stopSignal, options, cancellation.Token)).IsTypeOf<DelegateStopSignal<int>>();
     }
 }

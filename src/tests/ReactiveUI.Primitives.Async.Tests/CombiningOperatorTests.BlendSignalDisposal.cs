@@ -278,7 +278,7 @@ public partial class CombiningOperatorTests
             errors.Add(exception);
             return default;
         });
-        SignalAsyncExtensions.BlendCoordinator<int> coordinator = new(observer);
+        BlendCoordinator<int> coordinator = new(observer);
         await coordinator.DisposeAsync();
         await coordinator.RelayNextIfActiveAsync(SecondValue);
         await Assert.That(values).IsEmpty();
@@ -306,7 +306,7 @@ public partial class CombiningOperatorTests
             errors.Add(exception);
             return default;
         });
-        SignalAsyncExtensions.BlendCoordinator<int> coordinator = new(observer);
+        BlendCoordinator<int> coordinator = new(observer);
         await coordinator.DisposeAsync();
         await coordinator.RelayErrorIfActiveAsync(new InvalidOperationException("late"));
         await Assert.That(values).IsEmpty();

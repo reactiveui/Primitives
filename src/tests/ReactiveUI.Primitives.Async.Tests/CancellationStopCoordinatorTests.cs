@@ -26,8 +26,8 @@ public sealed class CancellationStopCoordinatorTests
             completions.Add(result);
             return default;
         });
-        SignalAsyncExtensions.CancellationStopSignal<int> signal = new(SignalAsync.Never<int>(), CancellationToken.None);
-        SignalAsyncExtensions.CancellationStopSignal<int>.CancellationStopCoordinator coordinator = new(signal, observer);
+        CancellationStopSignal<int> signal = new(SignalAsync.Never<int>(), CancellationToken.None);
+        CancellationStopCoordinator<int> coordinator = new(signal, observer);
 
         await Assert.That(async () => await coordinator.DisposeAsync()).ThrowsNothing();
         await Assert.That(completions).IsEmpty();
@@ -54,8 +54,8 @@ public sealed class CancellationStopCoordinatorTests
             await resume.Task;
             calls.Add("completion finished");
         });
-        SignalAsyncExtensions.CancellationStopSignal<int> signal = new(source.Values, CancellationToken.None);
-        await using SignalAsyncExtensions.CancellationStopSignal<int>.CancellationStopCoordinator coordinator = new(signal, observer);
+        CancellationStopSignal<int> signal = new(source.Values, CancellationToken.None);
+        await using CancellationStopCoordinator<int> coordinator = new(signal, observer);
         await coordinator.SubscribeSourcesAsync(CancellationToken.None);
         await source.OnNextAsync(1, CancellationToken.None);
         var completion = coordinator.CompleteFromCancellationAsync().AsTask();
@@ -64,5 +64,32 @@ public sealed class CancellationStopCoordinatorTests
         resume.SetResult();
         await completion;
         await Assert.That(calls).IsCollectionEqualTo([ValueNotification, CompletionEntered, "completion finished"]);
+    }
+
+    /// <summary>Cancelling the stop token during source subscription disposes the newly attached source subscription.</summary>
+    /// <returns>The test operation.</returns>
+    [Test]
+    public async Task SubscribeSourcesAsync_WhenTokenCancelledDuringSubscribe_DisposesSubscription()
+    {
+        using CancellationTokenSource cts = new();
+        int[] disposed = [0];
+        var source = SignalAsync.Create<int>(async (_, _) =>
+        {
+            await cts.CancelAsync();
+            return ReactiveUI.Primitives.Async.Disposables.DisposableAsync.Create(
+                disposed,
+                static state =>
+                {
+                    _ = Interlocked.Increment(ref state[0]);
+                    return default;
+                });
+        });
+
+        CallbackWitnessAsync<int> observer = new(static (_, _) => default);
+        CancellationStopSignal<int> signal = new(source, cts.Token);
+        await using CancellationStopCoordinator<int> coordinator = new(signal, observer);
+        await coordinator.SubscribeSourcesAsync(CancellationToken.None);
+
+        await Assert.That(Volatile.Read(ref disposed[0])).IsEqualTo(1);
     }
 }

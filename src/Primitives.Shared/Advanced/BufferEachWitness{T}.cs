@@ -16,7 +16,11 @@ namespace ReactiveUI.Primitives.Advanced;
 public sealed class BufferEachWitness<T> : IObserver<T>, IDisposable
 {
     /// <summary>The upstream subscription slot.</summary>
-    private readonly SingleReplaceableDisposable _subscription = new();
+    [System.Diagnostics.CodeAnalysis.SuppressMessage(
+        "Usage",
+        "CA2213:Disposable fields should be disposed",
+        Justification = "Disposed atomically via WitnessLifetime.Dispose.")]
+    private IDisposable? _subscription;
 
     /// <summary>Non-zero after termination or disposal.</summary>
     private int _stopped;
@@ -32,15 +36,15 @@ public sealed class BufferEachWitness<T> : IObserver<T>, IDisposable
 
     /// <inheritdoc/>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public void Dispose() => WitnessLifetime.Dispose(ref _stopped, _subscription);
+    public void Dispose() => WitnessLifetime.Dispose(ref _stopped, ref _subscription);
 
     /// <inheritdoc/>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public void OnCompleted() => WitnessLifetime.Complete(ref _stopped, _subscription, Observer);
+    public void OnCompleted() => WitnessLifetime.Complete(ref _stopped, ref _subscription, Observer);
 
     /// <inheritdoc/>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public void OnError(Exception error) => WitnessLifetime.Error(ref _stopped, _subscription, Observer, error);
+    public void OnError(Exception error) => WitnessLifetime.Error(ref _stopped, ref _subscription, Observer, error);
 
     /// <inheritdoc/>
     public void OnNext(T value)
@@ -50,12 +54,12 @@ public sealed class BufferEachWitness<T> : IObserver<T>, IDisposable
             return;
         }
 
-        Observer.OnNext([value]);
+        SinkDelivery.Next(Observer, [value], this);
     }
 
     /// <summary>Assigns the upstream subscription.</summary>
     /// <param name="subscription">The upstream subscription.</param>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void SetSubscription(IDisposable subscription) =>
-        WitnessLifetime.SetSubscription(ref _stopped, _subscription, subscription);
+        WitnessLifetime.SetSubscription(ref _stopped, ref _subscription, subscription);
 }

@@ -50,7 +50,7 @@ public sealed class ChainSignalSourcesSignal<T>(IObservableAsync<IObservableAsyn
         private readonly IObserverAsync<T> _observer;
 
         /// <summary>Async gate that serializes observer callbacks to ensure thread-safe emission.</summary>
-        private readonly AsyncSerialGate _observerOnSomethingGate = new();
+        private readonly ReactiveUI.Primitives.Async.Internal.AsyncFlowGate _observerOnSomethingGate = new();
 
         /// <summary>Indicates whether the outer observable sequence has completed.</summary>
         private bool _outerCompleted;
@@ -198,7 +198,6 @@ public sealed class ChainSignalSourcesSignal<T>(IObservableAsync<IObservableAsyn
             }
 
             _disposeCts.Dispose();
-            _observerOnSomethingGate.Dispose();
         }
 
         /// <summary>A witness for the outer observable sequence that delegates to the parent <see cref="ChainCoordinator"/>.</summary>

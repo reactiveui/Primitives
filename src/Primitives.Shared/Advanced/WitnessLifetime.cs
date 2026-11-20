@@ -14,10 +14,10 @@ internal static class WitnessLifetime
     /// <summary>Disposes a sink and its upstream subscription.</summary>
     /// <param name="stopped">The stopped flag.</param>
     /// <param name="subscription">The upstream subscription slot.</param>
-    internal static void Dispose(ref int stopped, SingleReplaceableDisposable subscription)
+    internal static void Dispose(ref int stopped, ref IDisposable? subscription)
     {
         _ = Interlocked.Exchange(ref stopped, 1);
-        subscription.Dispose();
+        SinkSubscription.Dispose(ref subscription);
     }
 
     /// <summary>Releases the cancellation resource and marks the witness stopped.</summary>
@@ -32,21 +32,22 @@ internal static class WitnessLifetime
     /// <summary>Gets a value indicating whether the sink has stopped.</summary>
     /// <param name="stopped">The stopped flag.</param>
     /// <returns><see langword="true"/> when the sink has stopped.</returns>
+    [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
     internal static bool IsStopped(ref int stopped) => Volatile.Read(ref stopped) != 0;
 
     /// <summary>Assigns the upstream subscription, disposing it when the sink has stopped.</summary>
     /// <param name="stopped">The stopped flag.</param>
     /// <param name="slot">The upstream subscription slot.</param>
     /// <param name="subscription">The upstream subscription.</param>
-    internal static void SetSubscription(ref int stopped, SingleReplaceableDisposable slot, IDisposable subscription)
+    internal static void SetSubscription(ref int stopped, ref IDisposable? slot, IDisposable subscription)
     {
-        slot.Create(subscription);
+        SinkSubscription.Set(ref slot, subscription);
         if (Volatile.Read(ref stopped) == 0)
         {
             return;
         }
 
-        slot.Dispose();
+        SinkSubscription.Dispose(ref slot);
     }
 
     /// <summary>Forwards completion exactly once and disposes the upstream subscription.</summary>
@@ -56,7 +57,7 @@ internal static class WitnessLifetime
     /// <param name="observer">The downstream observer.</param>
     internal static void Complete<T>(
         ref int stopped,
-        SingleReplaceableDisposable subscription,
+        ref IDisposable? subscription,
         IObserver<T> observer)
     {
         if (Interlocked.Exchange(ref stopped, 1) != 0)
@@ -64,8 +65,14 @@ internal static class WitnessLifetime
             return;
         }
 
-        using var _ = subscription;
-        observer.OnCompleted();
+        try
+        {
+            observer.OnCompleted();
+        }
+        finally
+        {
+            SinkSubscription.Dispose(ref subscription);
+        }
     }
 
     /// <summary>Forwards an error exactly once and disposes the upstream subscription.</summary>
@@ -76,7 +83,7 @@ internal static class WitnessLifetime
     /// <param name="terminalError">The terminal error.</param>
     internal static void Error<T>(
         ref int stopped,
-        SingleReplaceableDisposable subscription,
+        ref IDisposable? subscription,
         IObserver<T> observer,
         Exception terminalError)
     {
@@ -85,8 +92,14 @@ internal static class WitnessLifetime
             return;
         }
 
-        using var _ = subscription;
-        observer.OnError(terminalError);
+        try
+        {
+            observer.OnError(terminalError);
+        }
+        finally
+        {
+            SinkSubscription.Dispose(ref subscription);
+        }
     }
 
     /// <summary>Assigns the cancellation resource, disposing it when the witness has stopped.</summary>

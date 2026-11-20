@@ -62,7 +62,7 @@ public sealed class AsyncCreateSignal<T> : IObservable<T>
         {
             subscription.SetSubscription(EmptyDisposable.Instance);
         }
-        catch (Exception error)
+        catch (Exception error) when (!FatalExceptionHelper.IsFatal(error))
         {
             observer.OnError(error);
             subscription.SetSubscription(EmptyDisposable.Instance);

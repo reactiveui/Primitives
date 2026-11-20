@@ -57,6 +57,9 @@ public sealed class AsyncEnumerableSignal<T> : IAsyncEnumerableBackedSignal<T>
         /// <summary>One once the enumerator has been disposed by whichever path won ownership.</summary>
         private int _enumeratorDisposed;
 
+        /// <summary>Remaining owners of <see cref="_cts"/> (the pump and the disposer); zero releases it.</summary>
+        private int _ctsOwners = 2;
+
         /// <summary>Initializes a new instance of the <see cref="Subscription"/> class.</summary>
         /// <param name="observer">The downstream observer.</param>
         /// <param name="values">The source async enumerable.</param>
@@ -84,7 +87,7 @@ public sealed class AsyncEnumerableSignal<T> : IAsyncEnumerableBackedSignal<T>
                 FireAndForgetDispose(enumerator);
             }
 
-            _cts.Dispose();
+            ReleaseCts();
         }
 
         /// <summary>Starts the asynchronous pump.</summary>
@@ -128,12 +131,19 @@ public sealed class AsyncEnumerableSignal<T> : IAsyncEnumerableBackedSignal<T>
                 failure = ExceptionDispatchInfo.Capture(error);
             }
 
-            if (TryClaimEnumerator(out var claimed))
+            try
             {
-                await claimed.DisposeAsync().ConfigureAwait(false);
+                if (TryClaimEnumerator(out var claimed))
+                {
+                    await claimed.DisposeAsync().ConfigureAwait(false);
+                }
+            }
+            finally
+            {
+                Dispose();
+                ReleaseCts();
             }
 
-            Dispose();
             failure?.Throw();
         }
 
@@ -154,6 +164,15 @@ public sealed class AsyncEnumerableSignal<T> : IAsyncEnumerableBackedSignal<T>
                 {
                     // Unsupported concurrent enumerator disposal is ignored.
                 }
+            }
+        }
+
+        /// <summary>Disposes <see cref="_cts"/> once both the pump and <see cref="Dispose"/> have finished with it.</summary>
+        private void ReleaseCts()
+        {
+            if (Interlocked.Decrement(ref _ctsOwners) == 0)
+            {
+                _cts.Dispose();
             }
         }
 

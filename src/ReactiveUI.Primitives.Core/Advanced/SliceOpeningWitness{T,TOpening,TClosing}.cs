@@ -105,6 +105,28 @@ public sealed class SliceOpeningWitness<T, TOpening, TClosing> : IObserver<T>, I
         _upstream.Dispose();
     }
 
+    /// <summary>Ends a window when its closing signal fires.</summary>
+    /// <param name="window">The window to end.</param>
+    /// <param name="witness">The closing subscription to release.</param>
+    internal void Close(SliceWindow<T> window, IDisposable witness)
+    {
+        lock (_gate)
+        {
+            if (_done != 0)
+            {
+                return;
+            }
+
+            if (_open.Remove(window))
+            {
+                _router.Complete(window);
+            }
+        }
+
+        Deliver();
+        _ = _upstream.Remove(witness);
+    }
+
     /// <summary>Starts a window for an opening and watches its closing signal.</summary>
     /// <param name="opening">The opening value.</param>
     private void Open(TOpening opening)
@@ -137,28 +159,6 @@ public sealed class SliceOpeningWitness<T, TOpening, TClosing> : IObserver<T>, I
         ClosingWitness witness = new(this, window);
         _upstream.Add(witness);
         witness.SetSubscription(closing.Subscribe(witness));
-    }
-
-    /// <summary>Ends a window when its closing signal fires.</summary>
-    /// <param name="window">The window to end.</param>
-    /// <param name="witness">The closing subscription to release.</param>
-    private void Close(SliceWindow<T> window, ClosingWitness witness)
-    {
-        lock (_gate)
-        {
-            if (_done != 0)
-            {
-                return;
-            }
-
-            if (_open.Remove(window))
-            {
-                _router.Complete(window);
-            }
-        }
-
-        Deliver();
-        _ = _upstream.Remove(witness);
     }
 
     /// <summary>Completes the outer sequence when the opening signal completes; open windows stay open.</summary>

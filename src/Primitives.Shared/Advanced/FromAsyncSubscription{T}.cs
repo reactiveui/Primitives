@@ -165,7 +165,7 @@ public sealed class FromAsyncSubscription<T> : IDisposable
             task = TaskFactory(token);
             ArgumentExceptionHelper.ThrowIfNull(task);
         }
-        catch (Exception error)
+        catch (Exception error) when (!FatalExceptionHelper.IsFatal(error))
         {
             linkedSource?.Dispose();
             ExternalCancellation.Dispose();

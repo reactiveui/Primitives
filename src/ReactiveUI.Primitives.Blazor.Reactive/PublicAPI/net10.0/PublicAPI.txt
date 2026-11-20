@@ -37,6 +37,7 @@ namespace ReactiveUI.Primitives.Blazor.Reactive.Concurrency
     {
         extension(Microsoft.AspNetCore.Components.Dispatcher dispatcher)
         {
+            [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
             public ReactiveUI.Primitives.Blazor.Reactive.Concurrency.BlazorRendererSequencer ToSequencer() { }
         }
     }

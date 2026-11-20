@@ -5,6 +5,7 @@
 using System.Collections;
 using System.Runtime.CompilerServices;
 using ReactiveUI.Primitives.Advanced;
+using ReactiveUI.Primitives.Signals;
 
 namespace ReactiveUI.Primitives.Tests;
 
@@ -19,6 +20,12 @@ public sealed class MaxConcurrentBlendCoordinatorTests
 
     /// <summary>The message of the error raised for a null inner source.</summary>
     private const string NullSourceMessage = "Blend source contained null.";
+
+    /// <summary>Iteration count for concurrent completion stress loops.</summary>
+    private const int RaceIterations = 150;
+
+    /// <summary>Maximum wait in seconds for concurrent completion.</summary>
+    private const int StressTimeoutSeconds = 5;
 
     /// <summary>
     /// An observer that marshals synchronously to another thread is not deadlocked when that thread pushes a value
@@ -153,6 +160,41 @@ public sealed class MaxConcurrentBlendCoordinatorTests
         await Assert.That(downstream.Errors.Count).IsEqualTo(1);
         await Assert.That(siblingSubscription.DisposeCount).IsEqualTo(1);
         await Assert.That(sources.DisposeCount).IsEqualTo(1);
+    }
+
+    /// <summary>Concurrent completion of active and queued bounded-concurrency sources never drops completion.</summary>
+    /// <returns>A task representing the asynchronous test.</returns>
+    [Test]
+    public async Task Run_ConcurrentActiveAndQueuedSourceCompletion_AlwaysDeliversCompletion()
+    {
+        for (var i = 0; i < RaceIterations; i++)
+        {
+            using Signal<int> first = new();
+            using Signal<int> second = new();
+            using Signal<int> third = new();
+            IObservable<int>[] sources = [first, second, third];
+            TaskCompletionSource<bool> done = new(TaskCreationOptions.RunContinuationsAsynchronously);
+            using var sub = new MaxConcurrentBlendCoordinator<int>(
+                new DelegateWitness<int>(static _ => { }, static _ => { }, () => done.TrySetResult(true)))
+                .Run(sources, Second);
+
+            var t1 = Task.Run(() =>
+            {
+                first.OnNext(1);
+                first.OnCompleted();
+            });
+            var t2 = Task.Run(() =>
+            {
+                second.OnNext(Second);
+                second.OnCompleted();
+                third.OnNext(Third);
+                third.OnCompleted();
+            });
+
+            await Task.WhenAll(t1, t2);
+            using CancellationTokenSource timeout = new(TimeSpan.FromSeconds(StressTimeoutSeconds));
+            await Assert.That(await done.Task.WaitAsync(timeout.Token)).IsTrue();
+        }
     }
 
     /// <summary>Subscribes a coordinator that admits every source at once.</summary>

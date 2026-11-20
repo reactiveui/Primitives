@@ -46,23 +46,20 @@ public sealed class CreateSignal<T> : IRequireCurrentThread<T>
     {
         ArgumentExceptionHelper.ThrowIfNull(observer);
 
-        if (_currentThreadRequired)
-        {
-            return SignalSubscription.Subscribe(observer, _currentThreadRequired, SubscribeCore);
-        }
+        return _currentThreadRequired
+            ? SubscriptionScheduling.OnCurrentThread(
+                (Self: this, observer),
+                static s => s.Self.SubscribeDirect(s.observer))
+            : SubscribeDirect(observer);
+    }
 
+    /// <summary>Subscribes directly using a single <see cref="CreateSink{T}"/>.</summary>
+    /// <param name="observer">The downstream observer.</param>
+    /// <returns>The subscription sink.</returns>
+    private CreateSink<T> SubscribeDirect(IObserver<T> observer)
+    {
         CreateSink<T> sink = new(observer, false);
         sink.SetCancel(_subscribe(sink) ?? EmptyDisposable.Instance);
         return sink;
-    }
-
-    /// <summary>Invokes the subscribe delegate with a sink that owns <paramref name="cancel"/>.</summary>
-    /// <param name="observer">The downstream observer.</param>
-    /// <param name="cancel">The outer subscription handle.</param>
-    /// <returns>The disposable returned by the subscribe delegate.</returns>
-    private IDisposable SubscribeCore(IObserver<T> observer, IDisposable cancel)
-    {
-        CreateSink<T> sink = new(observer, cancel, false);
-        return _subscribe(sink) ?? EmptyDisposable.Instance;
     }
 }

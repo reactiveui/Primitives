@@ -15,11 +15,19 @@ namespace ReactiveUI.Primitives.Extensions.Operators;
 /// <param name="condition">The loop predicate. Evaluated before each iteration.</param>
 /// <param name="action">The action to invoke per iteration.</param>
 /// <param name="scheduler">An optional scheduler; <c>null</c> runs every iteration inline.</param>
-internal sealed class WhileObservable(
+public sealed class WhileObservable(
     Func<bool> condition,
     Action action,
     ISequencer? scheduler) : IObservable<RxVoid>
 {
+    /// <summary>Initializes a new instance of the <see cref="WhileObservable"/> class that runs every iteration inline.</summary>
+    /// <param name="condition">The loop predicate. Evaluated before each iteration.</param>
+    /// <param name="action">The action to invoke per iteration.</param>
+    public WhileObservable(Func<bool> condition, Action action)
+        : this(condition, action, null)
+    {
+    }
+
     /// <inheritdoc/>
     public IDisposable Subscribe(IObserver<RxVoid> observer)
     {

@@ -82,4 +82,19 @@ public class DebounceImmediateObservableTests
         SerializedDeliveryAssertions.ObserverMarshallingCompletionDoesNotDeadlock<int>(
             static (source, observer) => source.DebounceImmediate(TimeSpan.FromTicks(DebounceTicks), new VirtualClock()).Subscribe(observer),
             static observer => observer.OnNext(1));
+
+    /// <summary>Verifies a throwing downstream completion handler disposes the sink and rethrows.</summary>
+    /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
+    [Test]
+    public async Task WhenDownstreamOnCompletedThrows_ThenDisposesAndRethrows()
+    {
+        VirtualClock scheduler = new();
+        SyncDirectSource<int> source = new();
+        InvalidOperationException expected = new("boom");
+        using var sub = source.DebounceImmediate(TimeSpan.FromTicks(DebounceTicks), scheduler).Subscribe(
+            ReactiveUI.Primitives.Advanced.Witness.Create<int>(static _ => { }, static _ => { }, () => throw expected));
+
+        _ = Assert.Throws<InvalidOperationException>(() => source.Observer.OnCompleted());
+        await Assert.That(source.DisposeCount).IsEqualTo(1);
+    }
 }

@@ -42,6 +42,104 @@ public sealed class SingleElementWitness<T>(
     /// <inheritdoc/>
     ref WitnessAsyncState IWitnessState.Witness => ref _witness;
 
+    /// <summary>Asynchronously returns the single element of <paramref name="source"/>.</summary>
+    /// <param name="source">The source observable sequence.</param>
+    /// <returns>A task containing the single element.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static ValueTask<T> SingleAsync(IObservableAsync<T> source) =>
+        SingleCoreAsync(source, null, CancellationToken.None);
+
+    /// <summary>Asynchronously returns the single element of <paramref name="source"/>.</summary>
+    /// <param name="source">The source observable sequence.</param>
+    /// <param name="cancellationToken">A token to cancel the operation.</param>
+    /// <returns>A task containing the single element.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static ValueTask<T> SingleAsync(IObservableAsync<T> source, CancellationToken cancellationToken) =>
+        SingleCoreAsync(source, null, cancellationToken);
+
+    /// <summary>Asynchronously returns the single element of <paramref name="source"/> matching <paramref name="predicate"/>.</summary>
+    /// <param name="source">The source observable sequence.</param>
+    /// <param name="predicate">Predicate used to test each element.</param>
+    /// <returns>A task containing the single matching element.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static ValueTask<T> SingleAsync(IObservableAsync<T> source, Func<T, bool> predicate) =>
+        SingleCoreAsync(source, predicate, CancellationToken.None);
+
+    /// <summary>Asynchronously returns the single element of <paramref name="source"/> matching <paramref name="predicate"/>.</summary>
+    /// <param name="source">The source observable sequence.</param>
+    /// <param name="predicate">Predicate used to test each element.</param>
+    /// <param name="cancellationToken">A token to cancel the operation.</param>
+    /// <returns>A task containing the single matching element.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static ValueTask<T> SingleAsync(
+        IObservableAsync<T> source,
+        Func<T, bool> predicate,
+        CancellationToken cancellationToken) =>
+        SingleCoreAsync(source, predicate, cancellationToken);
+
+    /// <summary>Asynchronously returns the single element of <paramref name="source"/>, or <see langword="default"/> when empty.</summary>
+    /// <param name="source">The source observable sequence.</param>
+    /// <returns>A task containing the single element or <see langword="default"/>.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static ValueTask<T?> SingleOrDefaultAsync(IObservableAsync<T> source) =>
+        SingleOrDefaultCoreAsync(source, null, default, CancellationToken.None);
+
+    /// <summary>Asynchronously returns the single element of <paramref name="source"/>, or <see langword="default"/> when empty.</summary>
+    /// <param name="source">The source observable sequence.</param>
+    /// <param name="cancellationToken">A token to cancel the operation.</param>
+    /// <returns>A task containing the single element or <see langword="default"/>.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static ValueTask<T?> SingleOrDefaultAsync(
+        IObservableAsync<T> source,
+        CancellationToken cancellationToken) =>
+        SingleOrDefaultCoreAsync(source, null, default, cancellationToken);
+
+    /// <summary>Asynchronously returns the single element of <paramref name="source"/>, or <paramref name="defaultValue"/> when empty.</summary>
+    /// <param name="source">The source observable sequence.</param>
+    /// <param name="defaultValue">Fallback value returned when empty.</param>
+    /// <returns>A task containing the single element or <paramref name="defaultValue"/>.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static ValueTask<T?> SingleOrDefaultAsync(IObservableAsync<T> source, T? defaultValue) =>
+        SingleOrDefaultCoreAsync(source, null, defaultValue, CancellationToken.None);
+
+    /// <summary>Asynchronously returns the single element of <paramref name="source"/>, or <paramref name="defaultValue"/> when empty.</summary>
+    /// <param name="source">The source observable sequence.</param>
+    /// <param name="defaultValue">Fallback value returned when empty.</param>
+    /// <param name="cancellationToken">A token to cancel the operation.</param>
+    /// <returns>A task containing the single element or <paramref name="defaultValue"/>.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static ValueTask<T?> SingleOrDefaultAsync(
+        IObservableAsync<T> source,
+        T? defaultValue,
+        CancellationToken cancellationToken) =>
+        SingleOrDefaultCoreAsync(source, null, defaultValue, cancellationToken);
+
+    /// <summary>Asynchronously returns the single element of <paramref name="source"/> matching <paramref name="predicate"/>, or <paramref name="defaultValue"/> when none match.</summary>
+    /// <param name="source">The source observable sequence.</param>
+    /// <param name="predicate">Predicate used to test each element.</param>
+    /// <param name="defaultValue">Fallback value returned when none match.</param>
+    /// <returns>A task containing the single matching element or <paramref name="defaultValue"/>.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static ValueTask<T?> SingleOrDefaultAsync(
+        IObservableAsync<T> source,
+        Func<T, bool> predicate,
+        T? defaultValue) =>
+        SingleOrDefaultCoreAsync(source, predicate, defaultValue, CancellationToken.None);
+
+    /// <summary>Asynchronously returns the single element of <paramref name="source"/> matching <paramref name="predicate"/>, or <paramref name="defaultValue"/> when none match.</summary>
+    /// <param name="source">The source observable sequence.</param>
+    /// <param name="predicate">Predicate used to test each element.</param>
+    /// <param name="defaultValue">Fallback value returned when none match.</param>
+    /// <param name="cancellationToken">A token to cancel the operation.</param>
+    /// <returns>A task containing the single matching element or <paramref name="defaultValue"/>.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static ValueTask<T?> SingleOrDefaultAsync(
+        IObservableAsync<T> source,
+        Func<T, bool> predicate,
+        T? defaultValue,
+        CancellationToken cancellationToken) =>
+        SingleOrDefaultCoreAsync(source, predicate, defaultValue, cancellationToken);
+
     /// <inheritdoc/>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public ValueTask OnNextAsync(T value, CancellationToken cancellationToken) =>
@@ -64,6 +162,41 @@ public sealed class SingleElementWitness<T>(
     /// <returns>A task representing the asynchronous operation, containing the result value.</returns>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public ValueTask<T?> AwaitResultAsync() => _completion.AwaitResultAsync(this);
+
+    /// <summary>Shared body for single-element resolution requiring at least one match.</summary>
+    /// <param name="source">The source observable sequence.</param>
+    /// <param name="predicate">Optional predicate to filter elements.</param>
+    /// <param name="cancellationToken">A token to cancel the operation.</param>
+    /// <returns>The single matching element.</returns>
+    private static async ValueTask<T> SingleCoreAsync(
+        IObservableAsync<T> source,
+        Func<T, bool>? predicate,
+        CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        SingleElementWitness<T> observer = new(predicate, true, default, cancellationToken);
+        await using var subscription = await source.SubscribeAsync(observer, cancellationToken).ConfigureAwait(false);
+        var result = await observer.AwaitResultAsync().ConfigureAwait(false);
+        return result!;
+    }
+
+    /// <summary>Shared body for single-or-default element resolution.</summary>
+    /// <param name="source">The source observable sequence.</param>
+    /// <param name="predicate">Optional predicate to filter elements.</param>
+    /// <param name="defaultValue">Fallback value returned on empty.</param>
+    /// <param name="cancellationToken">A token to cancel the operation.</param>
+    /// <returns>The single matching element or <paramref name="defaultValue"/>.</returns>
+    private static async ValueTask<T?> SingleOrDefaultCoreAsync(
+        IObservableAsync<T> source,
+        Func<T, bool>? predicate,
+        T? defaultValue,
+        CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        SingleElementWitness<T> observer = new(predicate, false, defaultValue, cancellationToken);
+        await using var subscription = await source.SubscribeAsync(observer, cancellationToken).ConfigureAwait(false);
+        return await observer.AwaitResultAsync().ConfigureAwait(false);
+    }
 
     /// <inheritdoc/>
     async ValueTask IWitnessAsync<T>.OnNextAsyncCore(T value, CancellationToken cancellationToken)

@@ -14,6 +14,13 @@ public sealed class StartSignal : IObservableAsync<RxVoid>
 {
     /// <summary>Initializes a new instance of the <see cref="StartSignal"/> class.</summary>
     /// <param name="action">The action invoked for each subscription.</param>
+    public StartSignal(Action action)
+        : this(action, null)
+    {
+    }
+
+    /// <summary>Initializes a new instance of the <see cref="StartSignal"/> class.</summary>
+    /// <param name="action">The action invoked for each subscription.</param>
     /// <param name="taskScheduler">The scheduler used to start the action, or null to run during subscription start.</param>
     public StartSignal(Action action, TaskScheduler? taskScheduler)
     {

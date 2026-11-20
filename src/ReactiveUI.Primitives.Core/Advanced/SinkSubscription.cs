@@ -18,6 +18,8 @@ public static class SinkSubscription
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static void Set(ref IDisposable? subscription, IDisposable value)
     {
+        ArgumentExceptionHelper.ThrowIfNull(value);
+
         if (Interlocked.CompareExchange(ref subscription, value, null) is null)
         {
             return;

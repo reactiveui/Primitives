@@ -13,14 +13,20 @@ internal sealed class SyncDirectSource<T> : IObservable<T>
     /// <summary>The captured observer from the most recent subscription.</summary>
     private IObserver<T>? _observer;
 
+    /// <summary>Count of disposed subscription handles.</summary>
+    private int _disposeCount;
+
     /// <summary>Gets the captured observer; throws if no one has subscribed yet.</summary>
     internal IObserver<T> Observer => _observer
                                     ?? throw new InvalidOperationException("No observer is currently subscribed.");
+
+    /// <summary>Gets the number of subscription disposals observed.</summary>
+    internal int DisposeCount => Volatile.Read(ref _disposeCount);
 
     /// <inheritdoc/>
     public IDisposable Subscribe(IObserver<T> observer)
     {
         _observer = observer;
-        return EmptyDisposable.Instance;
+        return new ActionDisposable(() => _ = Interlocked.Increment(ref _disposeCount));
     }
 }

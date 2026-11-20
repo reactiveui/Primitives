@@ -81,7 +81,10 @@ public static partial class Sequencer
                 return;
             }
 
-            action(_state);
+            var state = _state;
+            _state = default!;
+            Volatile.Write(ref _action, null);
+            action(state);
         }
     }
 
@@ -98,11 +101,11 @@ public static partial class Sequencer
         /// <summary>The sequencer passed back to the scheduled action.</summary>
         private readonly ISequencer _scheduler = scheduler;
 
-        /// <summary>Scheduled state.</summary>
-        private readonly TState _state = state;
-
         /// <summary>Scheduled action.</summary>
         private readonly Func<ISequencer, TState, IDisposable> _action = action;
+
+        /// <summary>Scheduled state, cleared once executed or disposed.</summary>
+        private TState _state = state;
 
         /// <summary>Disposable returned by the scheduled action after it starts.</summary>
         private IDisposable? _disposable;
@@ -121,6 +124,7 @@ public static partial class Sequencer
                 return;
             }
 
+            _state = default!;
             ReleaseResult();
         }
 

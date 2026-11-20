@@ -2,6 +2,8 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Runtime.CompilerServices;
+
 namespace ReactiveUI.Primitives.Async;
 
 /// <summary>Provides Rx-compatible timeout names for asynchronous observable sequences.</summary>
@@ -17,12 +19,9 @@ public static partial class SignalAsyncExtensions
         /// <returns>An observable sequence that mirrors the source but completes with a
         /// <see cref="TimeoutException"/> if any inter-element interval exceeds the specified interval.</returns>
         /// <exception cref="ArgumentOutOfRangeException">Thrown if <paramref name="dueTime"/> is negative or zero.</exception>
-        public IObservableAsync<T> Timeout(TimeSpan dueTime)
-        {
-            ArgumentOutOfRangeExceptionHelper.ThrowIfLessThanOrEqual(dueTime, TimeSpan.Zero);
-
-            return new TimeoutSignal<T>(source, dueTime, TimeProvider.System);
-        }
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public IObservableAsync<T> Timeout(TimeSpan dueTime) =>
+            TimeoutSignal<T>.Create(source, dueTime);
 
         /// <summary>Completes with a TimeoutException when the next element misses the deadline.</summary>
         /// <param name="dueTime">The maximum time span allowed between consecutive elements. Must be positive.</param>
@@ -31,12 +30,9 @@ public static partial class SignalAsyncExtensions
         /// <returns>An observable sequence that mirrors the source but completes with a
         /// <see cref="TimeoutException"/> if any inter-element interval exceeds the specified interval.</returns>
         /// <exception cref="ArgumentOutOfRangeException">Thrown if <paramref name="dueTime"/> is negative or zero.</exception>
-        public IObservableAsync<T> Timeout(TimeSpan dueTime, TimeProvider? timeProvider)
-        {
-            ArgumentOutOfRangeExceptionHelper.ThrowIfLessThanOrEqual(dueTime, TimeSpan.Zero);
-
-            return new TimeoutSignal<T>(source, dueTime, timeProvider ?? TimeProvider.System);
-        }
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public IObservableAsync<T> Timeout(TimeSpan dueTime, TimeProvider? timeProvider) =>
+            TimeoutSignal<T>.Create(source, dueTime, timeProvider);
 
         /// <summary>Switches to the fallback sequence when the next element misses the deadline.</summary>
         /// <param name="dueTime">The maximum time span allowed between consecutive elements. Must be positive.</param>
@@ -45,13 +41,9 @@ public static partial class SignalAsyncExtensions
         /// if any inter-element interval exceeds the specified interval.</returns>
         /// <exception cref="ArgumentOutOfRangeException">Thrown if <paramref name="dueTime"/> is negative or zero.</exception>
         /// <exception cref="ArgumentNullException"><paramref name="fallback"/> is <see langword="null"/>.</exception>
-        public IObservableAsync<T> Timeout(TimeSpan dueTime, IObservableAsync<T> fallback)
-        {
-            ArgumentExceptionHelper.ThrowIfNull(fallback);
-            ArgumentOutOfRangeExceptionHelper.ThrowIfLessThanOrEqual(dueTime, TimeSpan.Zero);
-
-            return new TimeoutWithFallbackSignal<T>(source, dueTime, fallback, TimeProvider.System);
-        }
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public IObservableAsync<T> Timeout(TimeSpan dueTime, IObservableAsync<T> fallback) =>
+            TimeoutWithFallbackSignal<T>.Create(source, dueTime, fallback);
 
         /// <summary>Switches to the fallback sequence when the next element misses the deadline.</summary>
         /// <param name="dueTime">The maximum time span allowed between consecutive elements. Must be positive.</param>
@@ -62,15 +54,11 @@ public static partial class SignalAsyncExtensions
         /// if any inter-element interval exceeds the specified interval.</returns>
         /// <exception cref="ArgumentOutOfRangeException">Thrown if <paramref name="dueTime"/> is negative or zero.</exception>
         /// <exception cref="ArgumentNullException"><paramref name="fallback"/> is <see langword="null"/>.</exception>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public IObservableAsync<T> Timeout(
             TimeSpan dueTime,
             IObservableAsync<T> fallback,
-            TimeProvider? timeProvider)
-        {
-            ArgumentExceptionHelper.ThrowIfNull(fallback);
-            ArgumentOutOfRangeExceptionHelper.ThrowIfLessThanOrEqual(dueTime, TimeSpan.Zero);
-
-            return new TimeoutWithFallbackSignal<T>(source, dueTime, fallback, timeProvider ?? TimeProvider.System);
-        }
+            TimeProvider? timeProvider) =>
+            TimeoutWithFallbackSignal<T>.Create(source, dueTime, fallback, timeProvider);
     }
 }

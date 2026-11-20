@@ -15,5 +15,5 @@ public static partial class SignalAsync
     /// <returns>An observable sequence that merges the sources.</returns>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static IObservableAsync<T> Blend<T>(params IObservableAsync<T>[] sources) =>
-        new SignalAsyncExtensions.BlendEnumerableSignal<T>(sources);
+        new BlendEnumerableSignal<T>(sources);
 }

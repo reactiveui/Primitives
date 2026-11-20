@@ -38,6 +38,7 @@
     <Using Include="ReactiveUI.Primitives.Async"/>
     <Using Include="ReactiveUI.Primitives.Async.Reactive"/>
     <Using Include="ReactiveUI.Primitives.Async.Advanced"/>
+    <Using Include="ReactiveUI.Primitives.Async.Reactive.Advanced"/>
     <Using Include="ReactiveUI.Primitives.Async.Helpers"/>
     <!-- The IScheduler->ISequencer scheduling seam shim (Sequencer + Schedule extensions) lives here. -->
     <Using Include="ReactiveUI.Primitives.Reactive.Concurrency"/>

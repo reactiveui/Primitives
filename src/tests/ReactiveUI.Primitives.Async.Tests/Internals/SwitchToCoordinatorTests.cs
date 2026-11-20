@@ -50,6 +50,29 @@ public class SwitchToCoordinatorTests
         await second.DisposeAsync();
     }
 
+    /// <summary>Verifies switching waits for a previous inner subscription whose disposal finishes asynchronously before subscribing the next inner.</summary>
+    /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
+    [Test]
+    public async Task WhenPreviousInnerDisposesAsynchronously_ThenSwitchCompletesAfterDisposal()
+    {
+        CompletionCountingObserver observer = new();
+        SwitchToSignal<int>.SwitchToCoordinator coordinator = new(observer);
+        var next = Signal.Create<int>();
+        StrongBox<bool> previousDisposed = new();
+        var previous = DisposableAsync.Create(previousDisposed, static async state =>
+        {
+            await Task.Yield();
+            state.Value = true;
+        });
+
+        await coordinator.AcceptOuterValueAsync(next.Values);
+        await coordinator.SubscribeReplacementInnerAsync(next.Values, previous, FirstGeneration);
+
+        await Assert.That(previousDisposed.Value).IsTrue();
+        await Assert.That(observer.Completions).IsEqualTo(0);
+        await next.DisposeAsync();
+    }
+
     /// <summary>Observer that counts terminal notifications.</summary>
     private sealed class CompletionCountingObserver : IObserverAsync<int>
     {

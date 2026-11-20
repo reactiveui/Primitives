@@ -4,6 +4,7 @@
 
 using ReactiveUI.Primitives.Advanced;
 using ReactiveUI.Primitives.Disposables;
+using ReactiveUI.Primitives.Signals;
 
 namespace ReactiveUI.Primitives.Tests;
 
@@ -15,6 +16,15 @@ public sealed partial class ForkJoinWitnessTests
 
     /// <summary>The integer constant two.</summary>
     private const int Two = 2;
+
+    /// <summary>Expected sum of One and Two.</summary>
+    private const int Three = 3;
+
+    /// <summary>Iteration count for concurrent completion stress loops.</summary>
+    private const int RaceIterations = 150;
+
+    /// <summary>Maximum wait in seconds for concurrent completion.</summary>
+    private const int StressTimeoutSeconds = 5;
 
     /// <summary>Verifies both sources completing with values emits one result then completes.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
@@ -145,6 +155,81 @@ public sealed partial class ForkJoinWitnessTests
 
         await Assert.That(observer.Values).HasSingleItem();
         await Assert.That(observer.Completed).IsEqualTo(One);
+    }
+
+    /// <summary>Concurrent emissions and completions on both ForkJoin arms always deliver the combined result and completion.</summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    [Test]
+    public async Task Run_ConcurrentArmCompletion_AlwaysEmitsCombinedResultAndCompletes()
+    {
+        for (var i = 0; i < RaceIterations; i++)
+        {
+            using Signal<int> left = new();
+            using Signal<int> right = new();
+            TaskCompletionSource<int> done = new(TaskCreationOptions.RunContinuationsAsynchronously);
+            var sum = 0;
+            using var sub = new ForkJoinWitness<int, int, int>(
+                new DelegateWitness<int>(x => sum = x, static _ => { }, () => done.TrySetResult(sum)),
+                static (l, r) => l + r).Run(left, right);
+
+            var t1 = Task.Run(() =>
+            {
+                left.OnNext(One);
+                left.OnCompleted();
+            });
+            var t2 = Task.Run(() =>
+            {
+                right.OnNext(Two);
+                right.OnCompleted();
+            });
+
+            await Task.WhenAll(t1, t2);
+            using CancellationTokenSource timeout = new(TimeSpan.FromSeconds(StressTimeoutSeconds));
+            await Assert.That(await done.Task.WaitAsync(timeout.Token)).IsEqualTo(Three);
+        }
+    }
+
+    /// <summary>Verifies fork-join delivers completion and errors both during subscribe and after its subscriptions are stored.</summary>
+    /// <returns>A task representing the asynchronous test.</returns>
+    [Test]
+    public async Task Terminal_DuringSubscribeAndAfterSubscribe_DeliversOnceAndReleases()
+    {
+        InvalidOperationException boom = new("fork-join");
+
+        RecordingWitness<int> syncCompleted = new();
+        using (Signal.Return(One).ForkJoin(Signal.Return(Two), static (a, b) => a + b).Subscribe(syncCompleted))
+        {
+            await Assert.That(syncCompleted.Values.SequenceEqual([Three])).IsTrue();
+        }
+
+        RecordingWitness<int> syncFailed = new();
+        using (Signal.Throw<int>(boom).ForkJoin(Signal.Return(Two), static (a, b) => a + b).Subscribe(syncFailed))
+        {
+            await Assert.That(syncFailed.Errors.SequenceEqual([boom])).IsTrue();
+        }
+
+        using Signal<int> left = new();
+        using Signal<int> right = new();
+        RecordingWitness<int> liveCompleted = new();
+        using (left.ForkJoin(right, static (a, b) => a + b).Subscribe(liveCompleted))
+        {
+            left.OnNext(One);
+            left.OnCompleted();
+            right.OnNext(Two);
+            right.OnCompleted();
+        }
+
+        using Signal<int> failingLeft = new();
+        using Signal<int> failingRight = new();
+        RecordingWitness<int> liveFailed = new();
+        using (failingLeft.ForkJoin(failingRight, static (a, b) => a + b).Subscribe(liveFailed))
+        {
+            failingLeft.OnError(boom);
+        }
+
+        await Assert.That(liveCompleted.Values.SequenceEqual([Three])).IsTrue();
+        await Assert.That(liveCompleted.Completed).IsEqualTo(One);
+        await Assert.That(liveFailed.Errors.SequenceEqual([boom])).IsTrue();
     }
 
     /// <summary>An observable that captures its observer for manual notification.</summary>

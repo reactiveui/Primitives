@@ -26,6 +26,7 @@
   <!-- RxVoid/ISequencer-aware source shared with the Reactive leaf. Compiled here with the lean
        identity (RxVoid, ISequencer); the Reactive leaf links the same files with its aliases. -->
   <ItemGroup>
+    <Compile Include="..\Primitives.Core.Shared\**\*.cs" Link="Primitives.Core.Shared\%(RecursiveDir)%(Filename)%(Extension)" />
     <Compile Include="..\Primitives.Shared\**\*.cs" Link="Primitives.Shared\%(RecursiveDir)%(Filename)%(Extension)" />
   </ItemGroup>
 

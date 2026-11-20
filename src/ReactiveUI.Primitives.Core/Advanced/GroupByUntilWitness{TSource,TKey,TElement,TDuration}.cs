@@ -161,6 +161,30 @@ public sealed class GroupByUntilWitness<TSource, TKey, TElement, TDuration> : IO
         _upstream.Dispose();
     }
 
+    /// <summary>Ends a group when its duration signal fires.</summary>
+    /// <param name="key">The key of the group.</param>
+    /// <param name="group">The window that carries the group's values.</param>
+    /// <param name="witness">The duration subscription to release.</param>
+    internal void Expire(TKey key, SliceWindow<TElement> group, IDisposable witness)
+    {
+        lock (_gate)
+        {
+            if (_done != 0)
+            {
+                return;
+            }
+
+            if (_groups.TryGetValue(key, out var current) && ReferenceEquals(current, group))
+            {
+                _ = _groups.Remove(key);
+                _router.Complete(group);
+            }
+        }
+
+        Deliver();
+        _ = _upstream.Remove(witness);
+    }
+
     /// <summary>Delivers a new group to the outer observer and starts watching its duration signal.</summary>
     /// <param name="key">The key of the group.</param>
     /// <param name="group">The window that carries the group's values.</param>
@@ -195,30 +219,6 @@ public sealed class GroupByUntilWitness<TSource, TKey, TElement, TDuration> : IO
         _upstream.Add(witness);
         witness.SetSubscription(duration.Subscribe(witness));
         return true;
-    }
-
-    /// <summary>Ends a group when its duration signal fires.</summary>
-    /// <param name="key">The key of the group.</param>
-    /// <param name="group">The window that carries the group's values.</param>
-    /// <param name="witness">The duration subscription to release.</param>
-    private void Expire(TKey key, SliceWindow<TElement> group, DurationWitness witness)
-    {
-        lock (_gate)
-        {
-            if (_done != 0)
-            {
-                return;
-            }
-
-            if (_groups.TryGetValue(key, out var current) && ReferenceEquals(current, group))
-            {
-                _ = _groups.Remove(key);
-                _router.Complete(group);
-            }
-        }
-
-        Deliver();
-        _ = _upstream.Remove(witness);
     }
 
     /// <summary>Delivers the posted notifications, tearing the sink down when a downstream observer throws.</summary>

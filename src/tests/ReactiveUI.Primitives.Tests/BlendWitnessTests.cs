@@ -4,6 +4,7 @@
 
 using System.Runtime.CompilerServices;
 using ReactiveUI.Primitives.Advanced;
+using ReactiveUI.Primitives.Signals;
 
 namespace ReactiveUI.Primitives.Tests;
 
@@ -12,6 +13,15 @@ public sealed class BlendWitnessTests
 {
     /// <summary>The message of the error raised for a null inner source.</summary>
     private const string NullSourceMessage = "Blend source contained null.";
+
+    /// <summary>Iteration count for concurrent completion stress loops.</summary>
+    private const int RaceIterations = 150;
+
+    /// <summary>Maximum wait in seconds for concurrent completion.</summary>
+    private const int StressTimeoutSeconds = 5;
+
+    /// <summary>Second value emitted during concurrent completion tests.</summary>
+    private const int SecondValue = 2;
 
     /// <summary>
     /// An observer that marshals synchronously to another thread is not deadlocked when that thread pushes a value
@@ -111,6 +121,36 @@ public sealed class BlendWitnessTests
         await Assert.That(downstream.Errors.Count).IsEqualTo(1);
         await Assert.That(downstream.Errors[0].Message).IsEqualTo(NullSourceMessage);
         await Assert.That(downstream.Completed).IsEqualTo(0);
+    }
+
+    /// <summary>Concurrent outer and inner completions never drop the terminal completion signal.</summary>
+    /// <returns>A task representing the asynchronous test.</returns>
+    [Test]
+    public async Task Run_ConcurrentOuterAndInnerCompletion_AlwaysDeliversCompletion()
+    {
+        for (var i = 0; i < RaceIterations; i++)
+        {
+            using Signal<IObservable<int>> outer = new();
+            using Signal<int> inner = new();
+            TaskCompletionSource<bool> done = new(TaskCreationOptions.RunContinuationsAsynchronously);
+            RecordingWitness<int> recorder = new();
+            using var sub = new BlendWitness<int>(new DelegateWitness<int>(
+                recorder.OnNext,
+                recorder.OnError,
+                () => done.TrySetResult(true))).Run(outer);
+
+            outer.OnNext(inner);
+            var t1 = Task.Run(outer.OnCompleted);
+            var t2 = Task.Run(() =>
+            {
+                inner.OnNext(SecondValue);
+                inner.OnCompleted();
+            });
+
+            await Task.WhenAll(t1, t2);
+            using CancellationTokenSource timeout = new(TimeSpan.FromSeconds(StressTimeoutSeconds));
+            await Assert.That(await done.Task.WaitAsync(timeout.Token)).IsTrue();
+        }
     }
 
     /// <summary>Subscribes a blend witness over the sources.</summary>

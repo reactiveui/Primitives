@@ -6,9 +6,13 @@ using System.Runtime.CompilerServices;
 
 #if REACTIVE_SHIM
 using ReactiveUI.Primitives.Reactive.Advanced;
+using ReactiveUI.Primitives.Reactive.Internal;
 
 namespace ReactiveUI.Primitives.Reactive.Signals;
 #else
+using ReactiveUI.Primitives.Advanced;
+using ReactiveUI.Primitives.Internal;
+
 namespace ReactiveUI.Primitives.Signals;
 #endif
 
@@ -705,19 +709,10 @@ public static partial class Signal
     public static IObservable<TResult> Pair<TLeft, TRight, TResult>(
         IObservable<TLeft> left,
         IObservable<TRight> right,
-        Func<TLeft, TRight, TResult> selector)
-    {
-        ArgumentExceptionHelper.ThrowIfNull(left);
-
-        ArgumentExceptionHelper.ThrowIfNull(right);
-
-        ArgumentExceptionHelper.ThrowIfNull(selector);
-
-        return typeof(TLeft) == typeof(int) && typeof(TRight) == typeof(int) && left is RangeSignal leftRange
-               && right is RangeSignal rightRange
-            ? new RangeZipSignal<TResult>(leftRange, rightRange, (Func<int, int, TResult>)(object)selector)
+        Func<TLeft, TRight, TResult> selector) =>
+        BinaryCoordinatorHelper.ValidateAndTryMatchRanges(left, right, selector, out var ranges)
+            ? new RangeZipSignal<TResult>(ranges.Left, ranges.Right, ranges.Selector)
             : new PairSignal<TLeft, TRight, TResult>(left, right, selector);
-    }
 
     /// <summary>Combines the latest values from two signals.</summary>
     /// <typeparam name="TLeft">The type of the left signal values.</typeparam>
@@ -730,19 +725,10 @@ public static partial class Signal
     public static IObservable<TResult> SyncLatest<TLeft, TRight, TResult>(
         IObservable<TLeft> left,
         IObservable<TRight> right,
-        Func<TLeft, TRight, TResult> selector)
-    {
-        ArgumentExceptionHelper.ThrowIfNull(left);
-
-        ArgumentExceptionHelper.ThrowIfNull(right);
-
-        ArgumentExceptionHelper.ThrowIfNull(selector);
-
-        return typeof(TLeft) == typeof(int) && typeof(TRight) == typeof(int) && left is RangeSignal leftRange
-               && right is RangeSignal rightRange
-            ? new RangeSyncLatestSignal<TResult>(leftRange, rightRange, (Func<int, int, TResult>)(object)selector)
+        Func<TLeft, TRight, TResult> selector) =>
+        BinaryCoordinatorHelper.ValidateAndTryMatchRanges(left, right, selector, out var ranges)
+            ? new RangeSyncLatestSignal<TResult>(ranges.Left, ranges.Right, ranges.Selector)
             : new SyncLatestSignal<TLeft, TRight, TResult>(left, right, selector);
-    }
 
     /// <summary>Waits for both signals to complete and emits one result from their last values.</summary>
     /// <typeparam name="TLeft">The type of the left signal values.</typeparam>
@@ -752,22 +738,12 @@ public static partial class Signal
     /// <param name="right">The right signal.</param>
     /// <param name="selector">The function that combines the last values.</param>
     /// <returns>A signal that emits one combined result once both sources complete.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static IObservable<TResult> ForkJoin<TLeft, TRight, TResult>(
         IObservable<TLeft> left,
         IObservable<TRight> right,
-        Func<TLeft, TRight, TResult> selector)
-    {
-        ArgumentExceptionHelper.ThrowIfNull(left);
-
-        ArgumentExceptionHelper.ThrowIfNull(right);
-
-        ArgumentExceptionHelper.ThrowIfNull(selector);
-
-        return typeof(TLeft) == typeof(int) && typeof(TRight) == typeof(int) && left is RangeSignal leftRange
-               && right is RangeSignal rightRange
-            ? new RangeForkJoinSignal<TResult>(leftRange, rightRange, (Func<int, int, TResult>)(object)selector)
-            : new ForkJoinSignal<TLeft, TRight, TResult>(left, right, selector);
-    }
+        Func<TLeft, TRight, TResult> selector) =>
+        ForkJoinSignal<TLeft, TRight, TResult>.Create(left, right, selector);
 
     /// <summary>Validates source arrays supplied to params-based factories.</summary>
     /// <typeparam name="T">The source value type.</typeparam>

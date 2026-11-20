@@ -18,7 +18,7 @@ public sealed class RefCountSignalTests
         const int IgnoredValue = 2;
         var source = Signal.Create<int>();
         var connected = source.Values.Publish();
-        using SignalAsyncExtensions.RefCountSignal<int> signal = new(connected);
+        using RefCountSignal<int> signal = new(connected);
         List<int> values = [];
         await using var subscription = await ((IObservableAsync<int>)signal).SubscribeAsync(values.Add);
 
@@ -44,7 +44,7 @@ public sealed class RefCountSignalTests
         var multicast = Signal.Create<int>();
         await multicast.OnCompletedAsync(Result.Success);
         using ConnectableSignalAsync<int> connectable = new(source, multicast);
-        using SignalAsyncExtensions.RefCountSignal<int> signal = new(connectable);
+        using RefCountSignal<int> signal = new(connectable);
 
         await using var subscription = await ((IObservableAsync<int>)signal).SubscribeAsync(static _ => { });
 
@@ -63,7 +63,7 @@ public sealed class RefCountSignalTests
             return new ValueTask<IAsyncDisposable>(DisposableAsync.Empty);
         });
         using ConnectableSignalAsync<int> connectable = new(source, Signal.Create<int>());
-        using SignalAsyncExtensions.RefCountSignal<int> signal = new(connectable);
+        using RefCountSignal<int> signal = new(connectable);
 
         await using var first = await ((IObservableAsync<int>)signal).SubscribeAsync(static _ => { });
         await using var second = await ((IObservableAsync<int>)signal).SubscribeAsync(static _ => { });

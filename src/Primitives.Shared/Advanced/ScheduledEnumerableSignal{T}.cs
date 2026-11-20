@@ -32,6 +32,24 @@ public sealed class ScheduledEnumerableSignal<T> : IObservable<T>
     /// <summary>Gets the sequencer that enumerates and emits the values.</summary>
     private ISequencer Scheduler { get; }
 
+    /// <summary>
+    /// Creates an enumerable signal scheduled on <paramref name="scheduler"/>, using <see cref="FromEnumerableSignal{T}"/>
+    /// when <paramref name="scheduler"/> is immediate or current-thread.
+    /// </summary>
+    /// <param name="values">The values to emit.</param>
+    /// <param name="scheduler">The sequencer that enumerates and emits the values.</param>
+    /// <returns>The observable sequence.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="values"/> or <paramref name="scheduler"/> is <see langword="null"/>.</exception>
+    public static IObservable<T> Create(IEnumerable<T> values, ISequencer scheduler)
+    {
+        ArgumentExceptionHelper.ThrowIfNull(values);
+        ArgumentExceptionHelper.ThrowIfNull(scheduler);
+
+        return scheduler.IsImmediate || scheduler == Sequencer.CurrentThread
+            ? new FromEnumerableSignal<T>(values)
+            : new ScheduledEnumerableSignal<T>(values, scheduler);
+    }
+
     /// <inheritdoc/>
     public IDisposable Subscribe(IObserver<T> observer)
     {

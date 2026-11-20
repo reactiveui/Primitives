@@ -342,9 +342,9 @@ public partial class CombiningOperatorTests
         Exception? unhandled = null;
         UnhandledExceptionHandler.Register(ex => unhandled = ex);
 
-        SignalAsyncExtensions.BlendEnumerableSignal<int>.BlendSequenceCoordinator.RoutePostDisposalException(
+        BlendSequenceCoordinator<int>.RoutePostDisposalException(
             Result.Success);
-        SignalAsyncExtensions.BlendEnumerableSignal<int>.BlendSequenceCoordinator.RoutePostDisposalException(null);
+        BlendSequenceCoordinator<int>.RoutePostDisposalException(null);
 
         await Assert.That(unhandled).IsNull();
     }

@@ -2,7 +2,7 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
-using ReactiveUI.Primitives.Disposables;
+using System.Runtime.CompilerServices;
 
 namespace ReactiveUI.Primitives.Concurrency;
 
@@ -19,16 +19,9 @@ public static class SequencerExtensions
         /// <param name="action">Action to be executed.</param>
         /// <returns>The disposable object used to cancel the scheduled action (best effort).</returns>
         /// <exception cref="ArgumentNullException"><paramref name="scheduler"/> or <paramref name="action"/> is <c>null</c>.</exception>
-        public IDisposable Schedule<TState>(TState state, Func<ISequencer, TState, IDisposable> action)
-        {
-            ArgumentExceptionHelper.ThrowIfNull(scheduler);
-
-            ArgumentExceptionHelper.ThrowIfNull(action);
-
-            Sequencer.DelegateWorkItem<TState> item = new(scheduler, state, action);
-            scheduler.Schedule(item);
-            return item;
-        }
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public IDisposable Schedule<TState>(TState state, Func<ISequencer, TState, IDisposable> action) =>
+            Sequencer.Schedule(scheduler, state, action);
 
         /// <summary>Schedules a stateful action to be executed without capturing state in a closure.</summary>
         /// <typeparam name="TState">The type of the state passed to the scheduled action.</typeparam>
@@ -36,16 +29,9 @@ public static class SequencerExtensions
         /// <param name="action">Action to be executed.</param>
         /// <returns>The disposable object used to cancel the scheduled action (best effort).</returns>
         /// <exception cref="ArgumentNullException"><paramref name="scheduler"/> or <paramref name="action"/> is <c>null</c>.</exception>
-        public IDisposable Schedule<TState>(TState state, Action<TState> action)
-        {
-            ArgumentExceptionHelper.ThrowIfNull(scheduler);
-
-            ArgumentExceptionHelper.ThrowIfNull(action);
-
-            Sequencer.ActionWorkItem<TState> item = new(state, action);
-            scheduler.Schedule(item);
-            return item;
-        }
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public IDisposable Schedule<TState>(TState state, Action<TState> action) =>
+            Sequencer.Schedule(scheduler, state, action);
 
         /// <summary>Schedules an action to be executed after a relative due time.</summary>
         /// <typeparam name="TState">The type of the state passed to the scheduled action.</typeparam>
@@ -54,28 +40,12 @@ public static class SequencerExtensions
         /// <param name="action">Action to be executed.</param>
         /// <returns>The disposable object used to cancel the scheduled action (best effort).</returns>
         /// <exception cref="ArgumentNullException"><paramref name="scheduler"/> or <paramref name="action"/> is <c>null</c>.</exception>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public IDisposable Schedule<TState>(
             TState state,
             TimeSpan dueTime,
-            Func<ISequencer, TState, IDisposable> action)
-        {
-            ArgumentExceptionHelper.ThrowIfNull(scheduler);
-
-            ArgumentExceptionHelper.ThrowIfNull(action);
-
-            var normalized = Sequencer.Normalize(dueTime);
-            Sequencer.DelegateWorkItem<TState> item = new(scheduler, state, action);
-            if (normalized == TimeSpan.Zero)
-            {
-                scheduler.Schedule(item);
-            }
-            else
-            {
-                scheduler.Schedule(item, Sequencer.AddTimestamp(scheduler.Timestamp, normalized));
-            }
-
-            return item;
-        }
+            Func<ISequencer, TState, IDisposable> action) =>
+            Sequencer.Schedule(scheduler, state, dueTime, action);
 
         /// <summary>Schedules a stateful action to be executed after a relative due time without capturing state in a closure.</summary>
         /// <typeparam name="TState">The type of the state passed to the scheduled action.</typeparam>
@@ -84,17 +54,9 @@ public static class SequencerExtensions
         /// <param name="action">Action to be executed.</param>
         /// <returns>The disposable object used to cancel the scheduled action (best effort).</returns>
         /// <exception cref="ArgumentNullException"><paramref name="scheduler"/> or <paramref name="action"/> is <c>null</c>.</exception>
-        public IDisposable Schedule<TState>(TState state, TimeSpan dueTime, Action<TState> action)
-        {
-            ArgumentExceptionHelper.ThrowIfNull(scheduler);
-
-            ArgumentExceptionHelper.ThrowIfNull(action);
-
-            return scheduler.Schedule(
-                state,
-                Sequencer.AddTimestamp(scheduler.Timestamp, Sequencer.Normalize(dueTime)),
-                action);
-        }
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public IDisposable Schedule<TState>(TState state, TimeSpan dueTime, Action<TState> action) =>
+            Sequencer.Schedule(scheduler, state, dueTime, action);
 
         /// <summary>Schedules a stateful action to be executed at a monotonic timestamp without capturing state in a closure.</summary>
         /// <typeparam name="TState">The type of the state passed to the scheduled action.</typeparam>
@@ -103,16 +65,9 @@ public static class SequencerExtensions
         /// <param name="action">Action to be executed.</param>
         /// <returns>The disposable object used to cancel the scheduled action (best effort).</returns>
         /// <exception cref="ArgumentNullException"><paramref name="scheduler"/> or <paramref name="action"/> is <c>null</c>.</exception>
-        public IDisposable Schedule<TState>(TState state, long dueTimestamp, Action<TState> action)
-        {
-            ArgumentExceptionHelper.ThrowIfNull(scheduler);
-
-            ArgumentExceptionHelper.ThrowIfNull(action);
-
-            Sequencer.ActionWorkItem<TState> item = new(state, action);
-            scheduler.Schedule(item, dueTimestamp);
-            return item;
-        }
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public IDisposable Schedule<TState>(TState state, long dueTimestamp, Action<TState> action) =>
+            Sequencer.Schedule(scheduler, state, dueTimestamp, action);
 
         /// <summary>Schedules an action to be executed at an absolute wall-clock due time.</summary>
         /// <typeparam name="TState">The type of the state passed to the scheduled action.</typeparam>
@@ -121,70 +76,45 @@ public static class SequencerExtensions
         /// <param name="action">Action to be executed.</param>
         /// <returns>The disposable object used to cancel the scheduled action (best effort).</returns>
         /// <exception cref="ArgumentNullException"><paramref name="scheduler"/> or <paramref name="action"/> is <c>null</c>.</exception>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public IDisposable Schedule<TState>(
             TState state,
             DateTimeOffset dueTime,
-            Func<ISequencer, TState, IDisposable> action)
-        {
-            ArgumentExceptionHelper.ThrowIfNull(scheduler);
-
-            ArgumentExceptionHelper.ThrowIfNull(action);
-
-            return scheduler.Schedule(state, Sequencer.Normalize(dueTime - scheduler.Now), action);
-        }
+            Func<ISequencer, TState, IDisposable> action) =>
+            Sequencer.Schedule(scheduler, state, dueTime, action);
 
         /// <summary>Schedules an action to be executed.</summary>
         /// <param name="action">Action to execute.</param>
         /// <returns>The disposable object used to cancel the scheduled action (best effort).</returns>
         /// <exception cref="ArgumentNullException"><paramref name="scheduler"/> or <paramref name="action"/> is <c>null</c>.</exception>
-        public IDisposable Schedule(Action action)
-        {
-            ArgumentExceptionHelper.ThrowIfNull(scheduler);
-
-            ArgumentExceptionHelper.ThrowIfNull(action);
-
-            return scheduler.Schedule(action, static (_, a) => Sequencer.Invoke(a));
-        }
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public IDisposable Schedule(Action action) =>
+            Sequencer.Schedule(scheduler, action);
 
         /// <summary>Schedules an action to be executed after the specified relative due time.</summary>
         /// <param name="dueTime">Relative time after which to execute the action.</param>
         /// <param name="action">Action to execute.</param>
         /// <returns>The disposable object used to cancel the scheduled action (best effort).</returns>
         /// <exception cref="ArgumentNullException"><paramref name="scheduler" /> or <paramref name="action" /> is <c>null</c>.</exception>
-        public IDisposable Schedule(TimeSpan dueTime, Action action)
-        {
-            ArgumentExceptionHelper.ThrowIfNull(scheduler);
-
-            ArgumentExceptionHelper.ThrowIfNull(action);
-
-            return scheduler.Schedule(action, dueTime, static (_, a) => Sequencer.Invoke(a));
-        }
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public IDisposable Schedule(TimeSpan dueTime, Action action) =>
+            Sequencer.Schedule(scheduler, dueTime, action);
 
         /// <summary>Schedules an action to be executed at the specified absolute due time.</summary>
         /// <param name="dueTime">Absolute time at which to execute the action.</param>
         /// <param name="action">Action to execute.</param>
         /// <returns>The disposable object used to cancel the scheduled action (best effort).</returns>
         /// <exception cref="ArgumentNullException"><paramref name="scheduler" /> or <paramref name="action" /> is <c>null</c>.</exception>
-        public IDisposable Schedule(DateTimeOffset dueTime, Action action)
-        {
-            ArgumentExceptionHelper.ThrowIfNull(scheduler);
-
-            ArgumentExceptionHelper.ThrowIfNull(action);
-
-            return scheduler.Schedule(action, dueTime, static (_, a) => Sequencer.Invoke(a));
-        }
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public IDisposable Schedule(DateTimeOffset dueTime, Action action) =>
+            Sequencer.Schedule(scheduler, dueTime, action);
 
         /// <summary>Schedules a recursive action, which receives a delegate that schedules its next invocation.</summary>
         /// <param name="action">Action to execute; its argument schedules the next iteration.</param>
         /// <returns>The disposable object used to cancel the recursive work (best effort).</returns>
-        public IDisposable Schedule(Action<Action> action)
-        {
-            ArgumentExceptionHelper.ThrowIfNull(scheduler);
-
-            ArgumentExceptionHelper.ThrowIfNull(action);
-
-            return new Sequencer.RecursiveScheduleState(scheduler, action).Start();
-        }
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public IDisposable Schedule(Action<Action> action) =>
+            Sequencer.Schedule(scheduler, action);
 
         /// <summary>Schedules an action to be executed.</summary>
         /// <typeparam name="TState">The type of the state.</typeparam>
@@ -192,20 +122,9 @@ public static class SequencerExtensions
         /// <param name="action">Action to execute.</param>
         /// <returns>The disposable object used to cancel the scheduled action (best effort).</returns>
         /// <exception cref="ArgumentNullException"><paramref name="scheduler" /> or <paramref name="action" /> is <c>null</c>.</exception>
-        public IDisposable ScheduleAction<TState>(TState state, Action<TState> action)
-        {
-            ArgumentExceptionHelper.ThrowIfNull(scheduler);
-
-            ArgumentExceptionHelper.ThrowIfNull(action);
-
-            return scheduler.Schedule(
-                (action, state),
-                static (_, tuple) =>
-                {
-                    tuple.action(tuple.state);
-                    return EmptyDisposable.Instance;
-                });
-        }
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public IDisposable ScheduleAction<TState>(TState state, Action<TState> action) =>
+            Sequencer.ScheduleAction(scheduler, state, action);
 
         /// <summary>Schedules an action to be executed.</summary>
         /// <typeparam name="TState">The type of the state.</typeparam>
@@ -213,16 +132,9 @@ public static class SequencerExtensions
         /// <param name="action">Action to execute.</param>
         /// <returns>The disposable object used to cancel the scheduled action (best effort).</returns>
         /// <exception cref="ArgumentNullException"><paramref name="scheduler"/> or <paramref name="action"/> is <c>null</c>.</exception>
-        internal IDisposable ScheduleAction<TState>(TState state, Func<TState, IDisposable> action)
-        {
-            ArgumentExceptionHelper.ThrowIfNull(scheduler);
-
-            ArgumentExceptionHelper.ThrowIfNull(action);
-
-            return scheduler.Schedule(
-                (action, state),
-                static (_, tuple) => tuple.action(tuple.state));
-        }
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        internal IDisposable ScheduleAction<TState>(TState state, Func<TState, IDisposable> action) =>
+            Sequencer.ScheduleAction(scheduler, state, action);
 
         /// <summary>Schedules an action to be executed after the specified relative due time.</summary>
         /// <typeparam name="TState">The type of the state.</typeparam>
@@ -231,14 +143,9 @@ public static class SequencerExtensions
         /// <param name="action">Action to execute.</param>
         /// <returns>The disposable object used to cancel the scheduled action (best effort).</returns>
         /// <exception cref="ArgumentNullException"><paramref name="scheduler" /> or <paramref name="action" /> is <c>null</c>.</exception>
-        internal IDisposable ScheduleAction<TState>(TState state, TimeSpan dueTime, Action<TState> action)
-        {
-            ArgumentExceptionHelper.ThrowIfNull(scheduler);
-
-            ArgumentExceptionHelper.ThrowIfNull(action);
-
-            return scheduler.Schedule((state, action), dueTime, static (_, tuple) => Sequencer.Invoke(tuple));
-        }
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        internal IDisposable ScheduleAction<TState>(TState state, TimeSpan dueTime, Action<TState> action) =>
+            Sequencer.ScheduleAction(scheduler, state, dueTime, action);
 
         /// <summary>Schedules an action to be executed after the specified relative due time.</summary>
         /// <typeparam name="TState">The type of the state.</typeparam>
@@ -247,14 +154,9 @@ public static class SequencerExtensions
         /// <param name="action">Action to execute.</param>
         /// <returns>The disposable object used to cancel the scheduled action (best effort).</returns>
         /// <exception cref="ArgumentNullException"><paramref name="scheduler" /> or <paramref name="action" /> is <c>null</c>.</exception>
-        internal IDisposable ScheduleAction<TState>(TState state, TimeSpan dueTime, Func<TState, IDisposable> action)
-        {
-            ArgumentExceptionHelper.ThrowIfNull(scheduler);
-
-            ArgumentExceptionHelper.ThrowIfNull(action);
-
-            return scheduler.Schedule((state, action), dueTime, static (_, tuple) => Sequencer.Invoke(tuple));
-        }
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        internal IDisposable ScheduleAction<TState>(TState state, TimeSpan dueTime, Func<TState, IDisposable> action) =>
+            Sequencer.ScheduleAction(scheduler, state, dueTime, action);
 
         /// <summary>Schedules an action to be executed after the specified relative due time.</summary>
         /// <typeparam name="TState">The type of the state.</typeparam>
@@ -263,14 +165,9 @@ public static class SequencerExtensions
         /// <param name="action">Action to execute.</param>
         /// <returns>The disposable object used to cancel the scheduled action (best effort).</returns>
         /// <exception cref="ArgumentNullException"><paramref name="scheduler" /> or <paramref name="action" /> is <c>null</c>.</exception>
-        internal IDisposable ScheduleAction<TState>(TState state, DateTimeOffset dueTime, Action<TState> action)
-        {
-            ArgumentExceptionHelper.ThrowIfNull(scheduler);
-
-            ArgumentExceptionHelper.ThrowIfNull(action);
-
-            return scheduler.Schedule((state, action), dueTime, static (_, tuple) => Sequencer.Invoke(tuple));
-        }
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        internal IDisposable ScheduleAction<TState>(TState state, DateTimeOffset dueTime, Action<TState> action) =>
+            Sequencer.ScheduleAction(scheduler, state, dueTime, action);
 
         /// <summary>Schedules an action to be executed after the specified relative due time.</summary>
         /// <typeparam name="TState">The type of the state.</typeparam>
@@ -279,16 +176,11 @@ public static class SequencerExtensions
         /// <param name="action">Action to execute.</param>
         /// <returns>The disposable object used to cancel the scheduled action (best effort).</returns>
         /// <exception cref="ArgumentNullException"><paramref name="scheduler" /> or <paramref name="action" /> is <c>null</c>.</exception>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         internal IDisposable ScheduleAction<TState>(
             TState state,
             DateTimeOffset dueTime,
-            Func<TState, IDisposable> action)
-        {
-            ArgumentExceptionHelper.ThrowIfNull(scheduler);
-
-            ArgumentExceptionHelper.ThrowIfNull(action);
-
-            return scheduler.Schedule((state, action), dueTime, static (_, tuple) => Sequencer.Invoke(tuple));
-        }
+            Func<TState, IDisposable> action) =>
+            Sequencer.ScheduleAction(scheduler, state, dueTime, action);
     }
 }

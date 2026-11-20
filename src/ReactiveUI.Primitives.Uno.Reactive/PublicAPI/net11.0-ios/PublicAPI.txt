@@ -22,6 +22,7 @@ public static class DispatcherQueueSequencerExtensions
 {
     extension(Microsoft.UI.Dispatching.DispatcherQueue dispatcherQueue)
     {
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
         public ReactiveUI.Primitives.Reactive.Concurrency.DispatcherQueueSequencer ToSequencer() { }
     }
 }

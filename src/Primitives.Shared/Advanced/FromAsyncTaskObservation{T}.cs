@@ -55,7 +55,7 @@ internal sealed class FromAsyncTaskObservation<T>
         {
             ObserveCore(task);
         }
-        catch (Exception error)
+        catch (Exception error) when (!FatalExceptionHelper.IsFatal(error))
         {
             OnError(error);
         }

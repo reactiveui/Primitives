@@ -10,16 +10,27 @@ namespace ReactiveUI.Primitives.Advanced;
 
 /// <summary>Serializes source notifications behind a caller-supplied object gate.</summary>
 /// <typeparam name="T">The value type.</typeparam>
-/// <param name="source">The source observable.</param>
-/// <param name="gate">The gate shared across subscriptions and other synchronized sequences.</param>
 [System.Diagnostics.DebuggerDisplay("SynchronizeObjectSignal: Source = {_source}, Gate = {_gate}")]
-public sealed class SynchronizeObjectSignal<T>(IObservable<T> source, object gate) : IObservable<T>
+public sealed class SynchronizeObjectSignal<T> : IObservable<T>
 {
     /// <summary>The source observable.</summary>
-    private readonly IObservable<T> _source = source;
+    private readonly IObservable<T> _source;
 
     /// <summary>The shared gate.</summary>
-    private readonly object _gate = gate;
+    private readonly object _gate;
+
+    /// <summary>Initializes a new instance of the <see cref="SynchronizeObjectSignal{T}"/> class.</summary>
+    /// <param name="source">The source observable.</param>
+    /// <param name="gate">The gate shared across subscriptions and other synchronized sequences.</param>
+    /// <exception cref="ArgumentNullException"><paramref name="source"/> or <paramref name="gate"/> is <see langword="null"/>.</exception>
+    public SynchronizeObjectSignal(IObservable<T> source, object gate)
+    {
+        ArgumentExceptionHelper.ThrowIfNull(source);
+        ArgumentExceptionHelper.ThrowIfNull(gate);
+
+        _source = source;
+        _gate = gate;
+    }
 
     /// <inheritdoc/>
     public IDisposable Subscribe(IObserver<T> observer)

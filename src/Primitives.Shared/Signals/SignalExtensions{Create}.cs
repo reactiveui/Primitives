@@ -3,7 +3,6 @@
 // See the LICENSE file in the project root for full license information.
 
 using System.Runtime.CompilerServices;
-using System.Runtime.ExceptionServices;
 
 #if REACTIVE_SHIM
 namespace ReactiveUI.Primitives.Reactive.Signals;
@@ -49,44 +48,7 @@ public static partial class SignalExtensions
         /// <returns>The values observed before completion.</returns>
         /// <exception cref="ArgumentExceptionHelper"><paramref name="source"/> is <see langword="null"/>.</exception>
         /// <exception cref="Exception">Rethrows the source error if the signal terminates with an error.</exception>
-        public IEnumerable<T> ToEnumerable()
-        {
-            ArgumentExceptionHelper.ThrowIfNull(source);
-
-            List<T> values = [];
-            Exception? error = null;
-            using ManualResetEventSlim completed = new();
-            using var subscription = source.Subscribe(
-                values.Add,
-                ex =>
-                {
-                    error = ex;
-                    completed.Set();
-                },
-                completed.Set);
-
-            WaitForCompletion(completed);
-
-            return error is null ? values : Rethrow(error, values);
-        }
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public IEnumerable<T> ToEnumerable() => BlockingValueWitness<T>.ToEnumerable(source);
     }
-
-    /// <summary>Rethrows <paramref name="error"/> with its original stack, typed by <paramref name="fallback"/> so a value-returning caller can return the call.</summary>
-    /// <typeparam name="TResult">The caller's return type.</typeparam>
-    /// <param name="error">The failure to rethrow.</param>
-    /// <param name="fallback">The value the caller would otherwise return; never returned.</param>
-    /// <returns>Never returns; the return after the throw is unreachable.</returns>
-    [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static TResult Rethrow<TResult>(Exception error, TResult fallback)
-    {
-        ExceptionDispatchInfo.Capture(error).Throw();
-        return fallback;
-    }
-
-    /// <summary>Blocks until the source signals completion.</summary>
-    /// <param name="completed">The source's completion signal.</param>
-    [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static void WaitForCompletion(ManualResetEventSlim completed) => completed.Wait();
 }

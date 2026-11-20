@@ -18,7 +18,13 @@ public sealed class TaskChainSignal<T> : IObservable<T>
 
     /// <summary>Initializes a new instance of the <see cref="TaskChainSignal{T}"/> class.</summary>
     /// <param name="sources">The outer task source.</param>
-    public TaskChainSignal(IObservable<Task<T>> sources) => _sources = sources;
+    /// <exception cref="ArgumentNullException"><paramref name="sources"/> is <see langword="null"/>.</exception>
+    public TaskChainSignal(IObservable<Task<T>> sources)
+    {
+        ArgumentExceptionHelper.ThrowIfNull(sources);
+
+        _sources = sources;
+    }
 
     /// <inheritdoc/>
     public IDisposable Subscribe(IObserver<T> observer)

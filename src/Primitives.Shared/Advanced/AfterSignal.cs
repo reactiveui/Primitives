@@ -53,20 +53,11 @@ public sealed class AfterSignal : IRequireCurrentThread<long>
     {
         ArgumentExceptionHelper.ThrowIfNull(observer);
 
-        if (!IsRequiredSubscribeOnCurrentThread() || !CurrentThreadSequencer.IsScheduleRequired)
-        {
-            return Run(observer);
-        }
-
-        SingleDisposable subscription = new();
-        _ = Sequencer.CurrentThread.Schedule(
-            (Self: this, subscription, observer),
-            static (_, s) =>
-            {
-                s.subscription.Create(s.Self.Run(s.observer));
-                return EmptyDisposable.Instance;
-            });
-        return subscription;
+        return !IsRequiredSubscribeOnCurrentThread() || !CurrentThreadSequencer.IsScheduleRequired
+            ? Run(observer)
+            : CurrentThreadSequencer.RunTrampoline(
+                (Self: this, observer),
+                static s => s.Self.Run(s.observer));
     }
 
     /// <summary>Schedules the timer on the sequencer.</summary>

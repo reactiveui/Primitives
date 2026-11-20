@@ -22,6 +22,15 @@ public sealed class AbsoluteExpireSignal<T> : IRequireCurrentThread<T>
     /// <summary>The sequencer used to schedule the timeout.</summary>
     private readonly ISequencer _scheduler;
 
+    /// <summary>Initializes a new instance of the <see cref="AbsoluteExpireSignal{T}"/> class on the thread-pool sequencer.</summary>
+    /// <param name="source">The source observable.</param>
+    /// <param name="dueTime">The absolute timeout time.</param>
+    /// <exception cref="ArgumentNullException"><paramref name="source"/> is <see langword="null"/>.</exception>
+    public AbsoluteExpireSignal(IObservable<T> source, DateTimeOffset dueTime)
+        : this(source, dueTime, ThreadPoolSequencer.Instance)
+    {
+    }
+
     /// <summary>Initializes a new instance of the <see cref="AbsoluteExpireSignal{T}"/> class.</summary>
     /// <param name="source">The source observable.</param>
     /// <param name="dueTime">The absolute timeout time.</param>
@@ -40,6 +49,19 @@ public sealed class AbsoluteExpireSignal<T> : IRequireCurrentThread<T>
 
     /// <summary>Gets the sequencer used to schedule the timeout.</summary>
     internal ISequencer Scheduler => _scheduler;
+
+    /// <summary>Creates an <see cref="AbsoluteExpireSignal{T}"/> on <paramref name="scheduler"/>, defaulting to the thread pool when <see langword="null"/>.</summary>
+    /// <param name="source">The source observable.</param>
+    /// <param name="dueTime">The absolute timeout time.</param>
+    /// <param name="scheduler">The sequencer used to schedule the timeout, or <see langword="null"/> for the thread pool.</param>
+    /// <returns>The timeout signal.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="source"/> is <see langword="null"/>.</exception>
+    public static AbsoluteExpireSignal<T> Create(IObservable<T> source, DateTimeOffset dueTime, ISequencer? scheduler)
+    {
+        ArgumentExceptionHelper.ThrowIfNull(source);
+
+        return new(source, dueTime, scheduler ?? ThreadPoolSequencer.Instance);
+    }
 
     /// <inheritdoc/>
     public bool IsRequiredSubscribeOnCurrentThread() =>

@@ -34,11 +34,18 @@ public sealed class ForkJoinWitness<TLeft, TRight, TResult>
     /// <summary>Values and the terminal notification queued while another thread delivers.</summary>
     private PendingNotifications<Update> _pending = new();
 
+    /// <summary>Subscriptions to both arms, released on terminal delivery.</summary>
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("Usage", "CA2213:Disposable fields should be disposed", Justification = "Owned by the caller via Run and released early on terminal delivery.")]
+    private MultipleDisposable? _subscriptions;
+
     /// <summary>Whether the left source completed, as 0 or 1.</summary>
     private int _leftDone;
 
     /// <summary>Whether the right source completed, as 0 or 1.</summary>
     private int _rightDone;
+
+    /// <summary>Number of sides that have completed (0, 1, or 2).</summary>
+    private int _completedSides;
 
     /// <summary>Initializes a new instance of the <see cref="ForkJoinWitness{TLeft, TRight, TResult}"/> class.</summary>
     /// <param name="observer">The downstream observer.</param>
@@ -74,10 +81,16 @@ public sealed class ForkJoinWitness<TLeft, TRight, TResult>
     /// <param name="left">The left source.</param>
     /// <param name="right">The right source.</param>
     /// <returns>The subscriptions.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public MultipleDisposable Run(IObservable<TLeft> left, IObservable<TRight> right) =>
-        new(
-            left.Subscribe(OnLeftNext, OnError, OnLeftCompleted),
-            right.Subscribe(OnRightNext, OnError, OnRightCompleted));
+        BinaryCoordinatorHelper.SubscribeArms(
+            this,
+            out _subscriptions,
+            left,
+            new(static (self, v) => self.OnLeftNext(v), static (self, e) => self.OnError(e), static self => self.OnLeftCompleted()),
+            right,
+            new(static (self, v) => self.OnRightNext(v), static (self, e) => self.OnError(e), static self => self.OnRightCompleted()),
+            static self => self.IsDone);
 
     /// <summary>Records a left value.</summary>
     /// <param name="value">The left value.</param>
@@ -105,15 +118,21 @@ public sealed class ForkJoinWitness<TLeft, TRight, TResult>
     /// <summary>Marks the left source complete.</summary>
     private void OnLeftCompleted()
     {
-        Volatile.Write(ref _leftDone, 1);
-        TryFinish();
+        if (BinaryCoordinatorHelper.TryCompleteBothSides(ref _leftDone, ref _completedSides)
+            && _pending.TryRequestTerminal(null))
+        {
+            DeliveryGate.Signal(ref _delivery, new PendingDrain(this));
+        }
     }
 
     /// <summary>Marks the right source complete.</summary>
     private void OnRightCompleted()
     {
-        Volatile.Write(ref _rightDone, 1);
-        TryFinish();
+        if (BinaryCoordinatorHelper.TryCompleteBothSides(ref _rightDone, ref _completedSides)
+            && _pending.TryRequestTerminal(null))
+        {
+            DeliveryGate.Signal(ref _delivery, new PendingDrain(this));
+        }
     }
 
     /// <summary>Requests the first error as the terminal notification.</summary>
@@ -127,17 +146,6 @@ public sealed class ForkJoinWitness<TLeft, TRight, TResult>
 
         // A request that loses to another terminal only signals a drain with nothing new to deliver.
         _ = _pending.TryRequestTerminal(error);
-        DeliveryGate.Signal(ref _delivery, new PendingDrain(this));
-    }
-
-    /// <summary>Requests completion once both sources have completed.</summary>
-    private void TryFinish()
-    {
-        if (Volatile.Read(ref _leftDone) == 0 || Volatile.Read(ref _rightDone) == 0 || !_pending.TryRequestTerminal(null))
-        {
-            return;
-        }
-
         DeliveryGate.Signal(ref _delivery, new PendingDrain(this));
     }
 
@@ -156,18 +164,22 @@ public sealed class ForkJoinWitness<TLeft, TRight, TResult>
 
                 case PendingDelivery.Terminal when error is null:
                 {
-                    if (HasLeft && HasRight)
-                    {
-                        Observer.OnNext(Selector(LatestLeft!, LatestRight!));
-                    }
-
-                    Observer.OnCompleted();
+                    DeliverJoinedCompletion();
                     return;
                 }
 
                 case PendingDelivery.Terminal:
                 {
-                    Observer.OnError(error);
+                    try
+                    {
+                        Observer.OnError(error);
+                    }
+                    finally
+                    {
+                        // Run stores the slot before subscribing either arm, and terminals only arrive through an arm.
+                        _subscriptions!.Dispose();
+                    }
+
                     return;
                 }
 
@@ -176,6 +188,36 @@ public sealed class ForkJoinWitness<TLeft, TRight, TResult>
                     return;
                 }
             }
+        }
+    }
+
+    /// <summary>Projects the joined values when both sides emitted, completes downstream, and releases subscriptions.</summary>
+    private void DeliverJoinedCompletion()
+    {
+        try
+        {
+            if (HasLeft && HasRight)
+            {
+                TResult projected;
+                try
+                {
+                    projected = Selector(LatestLeft!, LatestRight!);
+                }
+                catch (Exception selectorError) when (!FatalExceptionHelper.IsFatal(selectorError))
+                {
+                    Observer.OnError(selectorError);
+                    return;
+                }
+
+                Observer.OnNext(projected);
+            }
+
+            Observer.OnCompleted();
+        }
+        finally
+        {
+            // Run stores the slot before subscribing either arm, and terminals only arrive through an arm.
+            _subscriptions!.Dispose();
         }
     }
 

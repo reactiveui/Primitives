@@ -2,7 +2,11 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Runtime.CompilerServices;
 using ReactiveUI.Primitives.Advanced;
+using ReactiveUI.Primitives.Core.Internal;
+using ReactiveUI.Primitives.Disposables;
+using ReactiveUI.Primitives.Internal;
 
 namespace ReactiveUI.Primitives.Signals;
 
@@ -22,8 +26,9 @@ public sealed class MapSignal<TSource, TResult>(IObservable<TSource> source, Fun
 
     /// <summary>Preserves the source's current-thread subscription requirement.</summary>
     /// <returns><see langword="true"/> when the source requires current-thread subscription.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public bool IsRequiredSubscribeOnCurrentThread() =>
-        _source is IRequireCurrentThread<TSource> currentThread && currentThread.IsRequiredSubscribeOnCurrentThread();
+        DirectSequenceEmission.RequiresCurrentThread(_source);
 
     /// <summary>Subscribes an observer to the projected source values.</summary>
     /// <param name="observer">The downstream observer.</param>
@@ -32,67 +37,21 @@ public sealed class MapSignal<TSource, TResult>(IObservable<TSource> source, Fun
     {
         ArgumentExceptionHelper.ThrowIfNull(observer);
 
-        return _source.Subscribe(new MapWitness(observer, _selector));
-    }
-
-    /// <summary>Applies the selector to each source value and forwards the projection.</summary>
-    /// <param name="observer">The downstream observer.</param>
-    /// <param name="selector">The projection applied to each source value.</param>
-    private sealed class MapWitness(IObserver<TResult> observer, Func<TSource, TResult> selector) : IObserver<TSource>
-    {
-        /// <summary>The downstream observer.</summary>
-        private readonly IObserver<TResult> _observer = observer;
-
-        /// <summary>The projection applied to each source value.</summary>
-        private readonly Func<TSource, TResult> _selector = selector;
-
-        /// <summary>Non-zero once a terminal notification has been forwarded.</summary>
-        private int _stopped;
-
-        /// <summary>Forwards completion only while the sink is active.</summary>
-        public void OnCompleted()
+        if (DirectSequenceEmission.TrySubscribeProjected(
+            _source,
+            _selector,
+            static (item, sel) => System.Runtime.CompilerServices.Unsafe.As<Func<int, TResult>>(sel)(item),
+            static (item, sel) => sel(item),
+            observer))
         {
-            if (Interlocked.Exchange(ref _stopped, 1) != 0)
-            {
-                return;
-            }
-
-            _observer.OnCompleted();
+            return EmptyDisposable.Instance;
         }
 
-        /// <summary>Stops the sink and forwards its first error.</summary>
-        /// <param name="error">The terminal error.</param>
-        public void OnError(Exception error)
-        {
-            if (Interlocked.Exchange(ref _stopped, 1) != 0)
-            {
-                return;
-            }
-
-            _observer.OnError(error);
-        }
-
-        /// <summary>Projects active values and turns selector failures into terminal errors.</summary>
-        /// <param name="value">The source value.</param>
-        public void OnNext(TSource value)
-        {
-            if (Volatile.Read(ref _stopped) != 0)
-            {
-                return;
-            }
-
-            TResult result;
-            try
-            {
-                result = _selector(value);
-            }
-            catch (Exception error)
-            {
-                OnError(error);
-                return;
-            }
-
-            _observer.OnNext(result);
-        }
+        CoreProjectedObserverWitness<TSource, Func<TSource, TResult>, TResult> sink = new(
+            observer,
+            _selector,
+            static (item, sel) => sel(item));
+        sink.SetSubscription(_source.Subscribe(sink));
+        return sink;
     }
 }

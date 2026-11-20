@@ -34,7 +34,7 @@ public class TimeBasedOperatorTests
             values.Add(value);
             return default;
         });
-        await using SignalAsyncExtensions.ThrottleSignal<int>.ThrottleWitness witness = new(observer, Window, time);
+        await using ThrottleWitness<int> witness = new(observer, Window, time);
         var firstPending = witness.StartDelayAsync(1, CancellationToken.None);
         var secondPending = witness.StartDelayAsync(SecondValue, CancellationToken.None);
         var thirdPending = witness.StartDelayAsync(ThirdValue, CancellationToken.None);
@@ -65,7 +65,7 @@ public class TimeBasedOperatorTests
             values.Add(value);
             return default;
         });
-        await using SignalAsyncExtensions.ThrottleSignal<int>.ThrottleWitness witness = new(observer, Window, time);
+        await using ThrottleWitness<int> witness = new(observer, Window, time);
         await time.RunAsync(witness.StartDelayAsync(1, CancellationToken.None));
         await time.RunAsync(witness.StartDelayAsync(SecondValue, CancellationToken.None));
         await Assert.That(values).IsCollectionEqualTo([1, SecondValue]);
@@ -100,7 +100,7 @@ public class TimeBasedOperatorTests
             completions.Add(result);
             return default;
         });
-        await using SignalAsyncExtensions.ThrottleSignal<int>.ThrottleWitness witness = new(observer, Window, time);
+        await using ThrottleWitness<int> witness = new(observer, Window, time);
         var pending = witness.FireAfterDelayAsync(1, 0, CancellationToken.None);
         InvalidOperationException error = new(SourceErrorMessage);
         if (terminal == "error")
@@ -131,7 +131,7 @@ public class TimeBasedOperatorTests
         ManualTimeProvider time = new();
         using UnhandledExceptionCapture capture = new();
         CallbackWitnessAsync<int> observer = new(static (_, _) => throw new InvalidOperationException(ObserverErrorMessage));
-        await using SignalAsyncExtensions.ThrottleSignal<int>.ThrottleWitness witness = new(observer, Window, time);
+        await using ThrottleWitness<int> witness = new(observer, Window, time);
         await time.RunAsync(witness.FireAfterDelayAsync(1, 0, CancellationToken.None));
         var exception = await capture.WaitForAsync(ObserverErrorMessage);
         await Assert.That(exception).IsTypeOf<InvalidOperationException>();
@@ -150,7 +150,7 @@ public class TimeBasedOperatorTests
             values.Add(value);
             return default;
         });
-        await using SignalAsyncExtensions.ThrottleSignal<int>.ThrottleWitness witness = new(observer, Window, time);
+        await using ThrottleWitness<int> witness = new(observer, Window, time);
         var pending = witness.FireAfterDelayAsync(1, 0, cancellation.Token);
         await cancellation.CancelAsync();
         await pending;
@@ -291,10 +291,10 @@ public class TimeBasedOperatorTests
         await Assert.That(values).IsCollectionEqualTo([1, SecondValue]);
     }
 
-    /// <summary>A resumable source error disables the deadline and reaches the observer.</summary>
+    /// <summary>A resumable source error reaches the observer and leaves the deadline armed.</summary>
     /// <returns>A task representing the asynchronous test.</returns>
     [Test]
-    public async Task WhenTimeoutSourceEmitsErrorResume_ThenForwardsAndCancelsTimer()
+    public async Task WhenTimeoutSourceEmitsErrorResume_ThenForwardsAndKeepsTimer()
     {
         ManualTimeProvider time = new();
         var source = Signal.Create<int>();
@@ -308,7 +308,7 @@ public class TimeBasedOperatorTests
         InvalidOperationException expected = new(SourceErrorMessage);
         await source.OnErrorResumeAsync(expected, CancellationToken.None);
         await Assert.That(actual).IsSameReferenceAs(expected);
-        await Assert.That(timer.DueTime).IsEqualTo(Timeout.InfiniteTimeSpan);
+        await Assert.That(timer.DueTime).IsEqualTo(Window);
     }
 
     /// <summary>Deadline completion failures reach the unhandled exception handler.</summary>
@@ -414,13 +414,13 @@ public class TimeBasedOperatorTests
     /// <returns>A task representing the asynchronous test.</returns>
     [Test]
     public async Task WhenThrottleUsesDefaultProvider_ThenCreatesThrottleSignal() =>
-        await Assert.That(SignalAsync.Return(1).Throttle(Window)).IsTypeOf<SignalAsyncExtensions.ThrottleSignal<int>>();
+        await Assert.That(SignalAsync.Return(1).Throttle(Window)).IsTypeOf<ThrottleSignal<int>>();
 
     /// <summary>A null provider falls back to the system provider.</summary>
     /// <returns>A task representing the asynchronous test.</returns>
     [Test]
     public async Task WhenThrottleProviderNull_ThenCreatesThrottleSignal() =>
-        await Assert.That(SignalAsync.Return(1).Throttle(Window, null)).IsTypeOf<SignalAsyncExtensions.ThrottleSignal<int>>();
+        await Assert.That(SignalAsync.Return(1).Throttle(Window, null)).IsTypeOf<ThrottleSignal<int>>();
 
     /// <summary>A null provider falls back to the system provider for timers, deadlines and delays.</summary>
     /// <returns>A task representing the asynchronous test.</returns>
@@ -431,10 +431,10 @@ public class TimeBasedOperatorTests
 
         await Assert.That(SignalAsync.Timer(Window, (TimeProvider?)null)).IsTypeOf<TimerSignal>();
         await Assert.That(SignalAsync.Timer(Window, Window, null)).IsTypeOf<TimerSignal>();
-        await Assert.That(source.Timeout(Window, (TimeProvider?)null)).IsTypeOf<SignalAsyncExtensions.TimeoutSignal<int>>();
-        await Assert.That(source.Timeout(Window, source, null)).IsTypeOf<SignalAsyncExtensions.TimeoutWithFallbackSignal<int>>();
-        await Assert.That(source.Delay(Window, (TimeProvider?)null)).IsTypeOf<SignalAsyncExtensions.DelaySignal<int>>();
-        await Assert.That(source.Delay(Window)).IsTypeOf<SignalAsyncExtensions.DelaySignal<int>>();
+        await Assert.That(source.Timeout(Window, (TimeProvider?)null)).IsTypeOf<TimeoutSignal<int>>();
+        await Assert.That(source.Timeout(Window, source, null)).IsTypeOf<TimeoutWithFallbackSignal<int>>();
+        await Assert.That(source.Delay(Window, (TimeProvider?)null)).IsTypeOf<DelaySignal<int>>();
+        await Assert.That(source.Delay(Window)).IsTypeOf<DelaySignal<int>>();
     }
 
     /// <summary>A zero delay returns the source unchanged.</summary>
@@ -470,7 +470,7 @@ public class TimeBasedOperatorTests
             values.Add(value);
             return default;
         });
-        await using SignalAsyncExtensions.ProbeSignal<int>.ProbeWitness witness = new(observer, Window, time);
+        await using ProbeWitness<int> witness = new(observer, Window, time);
         var pending = witness.HoldAsync(1, CancellationToken.None);
         await witness.HoldAsync(SecondValue, CancellationToken.None);
         await witness.HoldAsync(ThirdValue, CancellationToken.None);
@@ -496,7 +496,7 @@ public class TimeBasedOperatorTests
             values.Add(value);
             return default;
         });
-        await using SignalAsyncExtensions.ProbeSignal<int>.ProbeWitness witness = new(observer, Window, time);
+        await using ProbeWitness<int> witness = new(observer, Window, time);
         await time.RunAsync(witness.TickAfterPeriodAsync(CancellationToken.None));
         await Assert.That(values).IsEmpty();
         await time.RunAsync(witness.HoldAsync(SecondValue, CancellationToken.None));
@@ -522,7 +522,7 @@ public class TimeBasedOperatorTests
             notifications.Add($"completed {result.IsSuccess}");
             return default;
         });
-        await using SignalAsyncExtensions.ProbeSignal<int>.ProbeWitness witness = new(observer, Window, time);
+        await using ProbeWitness<int> witness = new(observer, Window, time);
         _ = witness.HoldAsync(1, CancellationToken.None);
         await witness.OnCompletedAsync(Result.Success);
         await Assert.That(notifications).IsCollectionEqualTo(["next 1", "completed True"]);
@@ -548,7 +548,7 @@ public class TimeBasedOperatorTests
             completions.Add(result);
             return default;
         });
-        await using SignalAsyncExtensions.ProbeSignal<int>.ProbeWitness witness = new(observer, Window, time);
+        await using ProbeWitness<int> witness = new(observer, Window, time);
         await witness.OnCompletedAsync(Result.Success);
         await Assert.That(values).IsEmpty();
         await Assert.That(completions).Count().IsEqualTo(1);
@@ -566,7 +566,7 @@ public class TimeBasedOperatorTests
             values.Add(value);
             return default;
         });
-        SignalAsyncExtensions.ProbeSignal<int>.ProbeWitness witness = new(observer, Window, time);
+        ProbeWitness<int> witness = new(observer, Window, time);
         var pending = witness.HoldAsync(1, CancellationToken.None);
         await witness.DisposeAsync();
         await time.RunAsync(pending);
@@ -587,7 +587,7 @@ public class TimeBasedOperatorTests
             errors.Add(error);
             return default;
         });
-        await using SignalAsyncExtensions.ProbeSignal<int>.ProbeWitness witness = new(observer, Window, time);
+        await using ProbeWitness<int> witness = new(observer, Window, time);
         InvalidOperationException expected = new(SourceErrorMessage);
         await witness.OnErrorResumeAsync(expected, CancellationToken.None);
         await Assert.That(errors).Count().IsEqualTo(1);
@@ -602,7 +602,7 @@ public class TimeBasedOperatorTests
         ManualTimeProvider time = new();
         using UnhandledExceptionCapture capture = new();
         CallbackWitnessAsync<int> observer = new(static (_, _) => throw new InvalidOperationException(ObserverErrorMessage));
-        await using SignalAsyncExtensions.ProbeSignal<int>.ProbeWitness witness = new(observer, Window, time);
+        await using ProbeWitness<int> witness = new(observer, Window, time);
         await time.RunAsync(witness.HoldAsync(1, CancellationToken.None));
         var exception = await capture.WaitForAsync(ObserverErrorMessage);
         await Assert.That(exception).IsTypeOf<InvalidOperationException>();
@@ -634,9 +634,9 @@ public class TimeBasedOperatorTests
     public async Task WhenProbeWithoutTimeProvider_ThenUsesSystemClock()
     {
         var source = SignalAsync.Return(1);
-        await Assert.That(source.Probe(Window)).IsTypeOf<SignalAsyncExtensions.ProbeSignal<int>>();
-        await Assert.That(source.Sample(Window)).IsTypeOf<SignalAsyncExtensions.ProbeSignal<int>>();
-        await Assert.That(source.Sample(Window, null)).IsTypeOf<SignalAsyncExtensions.ProbeSignal<int>>();
+        await Assert.That(source.Probe(Window)).IsTypeOf<ProbeSignal<int>>();
+        await Assert.That(source.Sample(Window)).IsTypeOf<ProbeSignal<int>>();
+        await Assert.That(source.Sample(Window, null)).IsTypeOf<ProbeSignal<int>>();
     }
 
     /// <summary>Negative sampling periods are rejected.</summary>

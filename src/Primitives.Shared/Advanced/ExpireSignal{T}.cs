@@ -25,6 +25,15 @@ public sealed class ExpireSignal<T> : IRequireCurrentThread<T>
     /// <summary>Whether a value restarts the timeout window.</summary>
     private readonly bool _restartOnValue;
 
+    /// <summary>Initializes a new instance of the <see cref="ExpireSignal{T}"/> class on the thread-pool sequencer.</summary>
+    /// <param name="source">The source observable.</param>
+    /// <param name="dueTime">The timeout period.</param>
+    /// <exception cref="ArgumentNullException"><paramref name="source"/> is <see langword="null"/>.</exception>
+    public ExpireSignal(IObservable<T> source, TimeSpan dueTime)
+        : this(source, dueTime, ThreadPoolSequencer.Instance, restartOnValue: true)
+    {
+    }
+
     /// <summary>Initializes a new instance of the <see cref="ExpireSignal{T}"/> class.</summary>
     /// <param name="source">The source observable.</param>
     /// <param name="dueTime">The timeout period.</param>
@@ -51,6 +60,19 @@ public sealed class ExpireSignal<T> : IRequireCurrentThread<T>
         _restartOnValue = restartOnValue;
     }
 
+    /// <summary>Creates an <see cref="ExpireSignal{T}"/> on <paramref name="scheduler"/>, defaulting to the thread pool when <see langword="null"/>.</summary>
+    /// <param name="source">The source observable.</param>
+    /// <param name="dueTime">The timeout period.</param>
+    /// <param name="scheduler">The sequencer that schedules the timeout, or <see langword="null"/> for the thread pool.</param>
+    /// <returns>The timeout signal.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="source"/> is <see langword="null"/>.</exception>
+    public static ExpireSignal<T> Create(IObservable<T> source, TimeSpan dueTime, ISequencer? scheduler)
+    {
+        ArgumentExceptionHelper.ThrowIfNull(source);
+
+        return new(source, dueTime, scheduler ?? ThreadPoolSequencer.Instance);
+    }
+
     /// <inheritdoc/>
     public bool IsRequiredSubscribeOnCurrentThread() =>
         _sequencer == Sequencer.CurrentThread
@@ -62,19 +84,10 @@ public sealed class ExpireSignal<T> : IRequireCurrentThread<T>
         ArgumentExceptionHelper.ThrowIfNull(observer);
 
         ExpireCoordinator<T> coordinator = new(_source, _dueTime, _sequencer, observer, _restartOnValue);
-        if (!IsRequiredSubscribeOnCurrentThread() || !CurrentThreadSequencer.IsScheduleRequired)
-        {
-            return coordinator.Run();
-        }
-
-        SingleDisposable subscription = new();
-        _ = Sequencer.CurrentThread.Schedule(
-            (subscription, coordinator),
-            static (_, s) =>
-            {
-                s.subscription.Create(s.coordinator.Run());
-                return EmptyDisposable.Instance;
-            });
-        return subscription;
+        return !IsRequiredSubscribeOnCurrentThread() || !CurrentThreadSequencer.IsScheduleRequired
+            ? coordinator.Run()
+            : CurrentThreadSequencer.RunTrampoline(
+                coordinator,
+                static c => c.Run());
     }
 }

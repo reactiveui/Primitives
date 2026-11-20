@@ -213,6 +213,33 @@ public class ConflateObservableTests
         await Assert.That(downstream.Completed).IsFalse();
     }
 
+    /// <summary>Verifies reentrant inline emission drains queued non-terminal values without disposing the sink.</summary>
+    /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
+    [Test]
+    public async Task WhenReentrantEmissionQueuesNextValue_ThenDrainReturnsWithoutDisposing()
+    {
+        VirtualClock scheduler = new();
+        List<int> values = [];
+        ConflateObservable<int>.ConflateSink? sink = null;
+        var reentered = false;
+        var observer = ReactiveUI.Primitives.Advanced.Witness.Create<int>(value =>
+        {
+            values.Add(value);
+            if (!reentered)
+            {
+                reentered = true;
+                scheduler.AdvanceBy(UpdatePeriodTicks * SettleMultiplier);
+                sink!.ProcessNext(Second);
+            }
+        });
+
+        sink = new(observer, TimeSpan.FromTicks(UpdatePeriodTicks), scheduler);
+        scheduler.AdvanceBy(UpdatePeriodTicks * SettleMultiplier);
+        sink.ProcessNext(First);
+
+        await Assert.That(values).IsCollectionEqualTo([First, Second]);
+    }
+
     /// <summary>Records notifications delivered by explicitly invoked sink operations.</summary>
     /// <typeparam name = "T">The element type.</typeparam>
     private sealed class RecordingWitness<T> : IObserver<T>

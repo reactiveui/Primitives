@@ -145,7 +145,7 @@ public sealed class SignalAsyncExtensionsTests
     {
         var source = SignalAsync.Never<int>().Timeout(TimeSpan.FromSeconds(1));
 
-        await Assert.That(source).IsTypeOf<SignalAsyncExtensions.TimeoutSignal<int>>();
+        await Assert.That(source).IsTypeOf<TimeoutSignal<int>>();
     }
 
     /// <summary>Timeout with a fallback selects the system-clock fallback signal.</summary>
@@ -155,7 +155,7 @@ public sealed class SignalAsyncExtensionsTests
     {
         var source = SignalAsync.Never<int>().Timeout(TimeSpan.FromSeconds(1), SignalAsync.Return(1));
 
-        await Assert.That(source).IsTypeOf<SignalAsyncExtensions.TimeoutWithFallbackSignal<int>>();
+        await Assert.That(source).IsTypeOf<TimeoutWithFallbackSignal<int>>();
     }
 
     /// <summary>Stopping enumeration awaits disposal of the upstream subscription.</summary>

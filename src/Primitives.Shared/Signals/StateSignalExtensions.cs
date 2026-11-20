@@ -2,6 +2,8 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Runtime.CompilerServices;
+
 #if REACTIVE_SHIM
 namespace ReactiveUI.Primitives.Reactive.Signals;
 #else
@@ -21,20 +23,10 @@ public static class StateSignalExtensions
         /// <param name="initialValue">The initial projected value.</param>
         /// <param name="selector">The projection function.</param>
         /// <returns>A read-only projected state.</returns>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public ReadOnlyState<TResult> ToReadOnlyState<TResult>(
             TResult initialValue,
-            Func<TSource, TResult> selector)
-        {
-            ArgumentExceptionHelper.ThrowIfNull(source);
-
-            ArgumentExceptionHelper.ThrowIfNull(selector);
-
-            return new(
-                Signal.CreateSafe<TResult>(observer => source.Subscribe(
-                    value => observer.OnNext(selector(value)),
-                    observer.OnError,
-                    observer.OnCompleted)),
-                initialValue);
-        }
+            Func<TSource, TResult> selector) =>
+            CreateSafeSignal<TResult>.CreateReadOnlyState(source, initialValue, selector);
     }
 }

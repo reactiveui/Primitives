@@ -2,6 +2,8 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Runtime.CompilerServices;
+
 #if REACTIVE_SHIM
 namespace ReactiveUI.Primitives.Reactive.Advanced;
 #else
@@ -16,23 +18,9 @@ internal static class SubscriptionScheduling
     /// <param name="state">The state carried to <paramref name="subscribe"/>.</param>
     /// <param name="subscribe">Performs the subscription and returns it.</param>
     /// <returns>The subscription, or a placeholder that receives it once the queued work runs.</returns>
-    internal static IDisposable OnCurrentThread<TState>(TState state, Func<TState, IDisposable> subscribe)
-    {
-        if (!CurrentThreadSequencer.IsScheduleRequired)
-        {
-            return subscribe(state);
-        }
-
-        SingleDisposable subscription = new();
-        _ = Sequencer.CurrentThread.Schedule(
-            (state, subscription, subscribe),
-            static (_, s) =>
-            {
-                s.subscription.Create(s.subscribe(s.state));
-                return EmptyDisposable.Instance;
-            });
-        return subscription;
-    }
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    internal static IDisposable OnCurrentThread<TState>(TState state, Func<TState, IDisposable> subscribe) =>
+        CurrentThreadSequencer.RunTrampoline(state, subscribe);
 
     /// <summary>Runs <paramref name="run"/> inline on the immediate sequencer, otherwise schedules it on <paramref name="sequencer"/>.</summary>
     /// <typeparam name="TState">The type of the state passed to the scheduled work.</typeparam>
@@ -48,32 +36,10 @@ internal static class SubscriptionScheduling
             return EmptyDisposable.Instance;
         }
 
-        if (sequencer != Sequencer.CurrentThread || !CurrentThreadSequencer.IsScheduleRequired)
-        {
-            return sequencer.Schedule(
-                (state, run),
-                static (_, s) =>
-                {
-                    s.run(s.state);
-                    return EmptyDisposable.Instance;
-                });
-        }
-
-        SingleDisposable subscription = new();
-        _ = Sequencer.CurrentThread.Schedule(
-            (sequencer, state, subscription, run),
-            static (_, s) =>
-            {
-                s.subscription.Create(
-                    s.sequencer.Schedule(
-                        (s.state, s.run),
-                        static (_, inner) =>
-                        {
-                            inner.run(inner.state);
-                            return EmptyDisposable.Instance;
-                        }));
-                return EmptyDisposable.Instance;
-            });
-        return subscription;
+        return sequencer != Sequencer.CurrentThread || !CurrentThreadSequencer.IsScheduleRequired
+            ? sequencer.Schedule(state, run)
+            : CurrentThreadSequencer.RunTrampoline(
+                (sequencer, state, run),
+                static s => s.sequencer.Schedule(s.state, s.run));
     }
 }

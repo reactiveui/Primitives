@@ -2,6 +2,7 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Runtime.CompilerServices;
 using System.Runtime.ExceptionServices;
 
 namespace ReactiveUI.Primitives.Async.Advanced;
@@ -15,13 +16,16 @@ public sealed class TakeUntilLifecycle<T> : IAsyncDisposable
     private readonly CancellationTokenSource _cts = new();
 
     /// <summary>Serializes downstream notifications so OnNext / OnError / OnCompleted never overlap.</summary>
-    private readonly AsyncSerialGate _gate = new();
+    private readonly ReactiveUI.Primitives.Async.Internal.AsyncFlowGate _gate = new();
 
     /// <summary>The downstream observer that receives values, errors, and the terminal completion.</summary>
     private readonly IObserverAsync<T> _observer;
 
     /// <summary>Registration that propagates the subscribe-time cancellation token into <see cref="_cts"/>.</summary>
     private CancellationTokenRegistration _externalLinkRegistration;
+
+    /// <summary>Non-zero once a terminal completion has been claimed.</summary>
+    private int _completed;
 
     /// <summary>Initializes a new instance of the <see cref="TakeUntilLifecycle{T}"/> class.</summary>
     /// <param name="observer">The downstream observer.</param>
@@ -34,28 +38,19 @@ public sealed class TakeUntilLifecycle<T> : IAsyncDisposable
     /// <summary>Gets the cached cancellation token that fires on subscription disposal.</summary>
     public CancellationToken DisposeToken { get; }
 
+    /// <summary>Gets a value indicating whether completion has been initiated.</summary>
+    internal bool IsCompleted => Volatile.Read(ref _completed) != 0;
+
     /// <summary>
     /// Links the subscribe-time cancellation token into this subscription's dispose chain, so
     /// <see cref="DisposeToken"/> alone covers both and no per-emission linked source is needed.
     /// </summary>
     /// <param name="external">The subscribe-time token.</param>
-    public void LinkExternalCancellation(CancellationToken external)
-    {
-        if (!external.CanBeCanceled || external == DisposeToken)
-        {
-            return;
-        }
-
-        if (external.IsCancellationRequested)
-        {
-            _cts.Cancel();
-            return;
-        }
-
-        _externalLinkRegistration = external.UnsafeRegister(
-            static state => ((CancellationTokenSource)state!).Cancel(),
-            _cts);
-    }
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public void LinkExternalCancellation(CancellationToken external) =>
+        _externalLinkRegistration = ReactiveUI.Primitives.Async.Internal.AsyncStopTokenHelper.LinkExternal(
+            _cts,
+            external);
 
     /// <summary>Completes the sequence when <paramref name="stopToken"/> fires, so one sink watches both its own stop condition and the token.</summary>
     /// <param name="stopToken">The token whose cancellation completes the sequence.</param>
@@ -74,7 +69,10 @@ public sealed class TakeUntilLifecycle<T> : IAsyncDisposable
     {
         using (await _gate.EnterAsync(DisposeToken).ConfigureAwait(false))
         {
-            await _observer.OnNextAsync(value, DisposeToken).ConfigureAwait(false);
+            if (Volatile.Read(ref _completed) == 0)
+            {
+                await _observer.OnNextAsync(value, DisposeToken).ConfigureAwait(false);
+            }
         }
     }
 
@@ -85,7 +83,10 @@ public sealed class TakeUntilLifecycle<T> : IAsyncDisposable
     {
         using (await _gate.EnterAsync(DisposeToken).ConfigureAwait(false))
         {
-            await _observer.OnErrorResumeAsync(error, DisposeToken).ConfigureAwait(false);
+            if (Volatile.Read(ref _completed) == 0)
+            {
+                await _observer.OnErrorResumeAsync(error, DisposeToken).ConfigureAwait(false);
+            }
         }
     }
 
@@ -94,6 +95,11 @@ public sealed class TakeUntilLifecycle<T> : IAsyncDisposable
     /// <returns>A ValueTask representing the asynchronous forward.</returns>
     public async ValueTask RelayCompletionAsync(Result result)
     {
+        if (Interlocked.Exchange(ref _completed, 1) != 0)
+        {
+            return;
+        }
+
         using (await _gate.EnterAsync(CancellationToken.None).ConfigureAwait(false))
         {
             await _observer.OnCompletedAsync(result).ConfigureAwait(false);
@@ -120,9 +126,23 @@ public sealed class TakeUntilLifecycle<T> : IAsyncDisposable
         _externalLinkRegistration.Dispose();
 #endif
         _cts.Dispose();
-        _gate.Dispose();
         failure?.Throw();
     }
+
+    /// <summary>Completes the sequence and invokes <paramref name="onCompletedAsync"/> when <paramref name="stopToken"/> fires.</summary>
+    /// <param name="onCompletedAsync">Teardown callback invoked after forwarding completion.</param>
+    /// <param name="stopToken">The token whose cancellation completes the sequence.</param>
+    /// <returns>The registration, which the caller disposes alongside its subscription.</returns>
+    internal CancellationTokenRegistration CompleteWhenCancelled(Func<ValueTask> onCompletedAsync, CancellationToken stopToken) =>
+        stopToken.CanBeCanceled
+            ? stopToken.UnsafeRegister(
+                static state =>
+                {
+                    var (owner, teardown) = ((TakeUntilLifecycle<T>, Func<ValueTask>))state!;
+                    FireAndForgetHelper.Run(() => owner.CompleteAndDisposeAfterYieldAsync(teardown));
+                },
+                (this, onCompletedAsync))
+            : default;
 
     /// <summary>Completes the sequence after the cancellation callback returns.</summary>
     /// <returns>The deferred completion.</returns>
@@ -131,5 +151,16 @@ public sealed class TakeUntilLifecycle<T> : IAsyncDisposable
     {
         await Task.Yield();
         await RelayCompletionAsync(Result.Success).ConfigureAwait(false);
+    }
+
+    /// <summary>Completes the sequence and disposes upstream resources after the cancellation callback returns.</summary>
+    /// <param name="onCompletedAsync">Teardown callback invoked after completion.</param>
+    /// <returns>The deferred completion and teardown.</returns>
+    [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
+    private async ValueTask CompleteAndDisposeAfterYieldAsync(Func<ValueTask> onCompletedAsync)
+    {
+        await Task.Yield();
+        await RelayCompletionAsync(Result.Success).ConfigureAwait(false);
+        await onCompletedAsync().ConfigureAwait(false);
     }
 }

@@ -230,4 +230,20 @@ public class TaskPoolSequencerTests
 
         await Assert.That(item.ExecuteCount).IsEqualTo(0);
     }
+
+    /// <summary>Work scheduled at or before the current timestamp dispatches immediately without waiting on the delay sequencer.</summary>
+    /// <returns>A task representing the asynchronous test.</returns>
+    [Test]
+    public async Task WorkItemAtOrBeforeCurrentTimestampDispatchesImmediately()
+    {
+        ManualTaskScheduler tasks = new();
+        ManualSequencer delays = new();
+        TaskPoolSequencer sequencer = new(new(tasks), delays);
+        RecordingWorkItem item = new();
+
+        sequencer.Schedule(item, sequencer.Timestamp);
+        tasks.RunPending();
+
+        await Assert.That(item.ExecuteCount).IsEqualTo(1);
+    }
 }

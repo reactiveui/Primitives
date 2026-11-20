@@ -20,7 +20,13 @@ public sealed class CatchSignal<T> : IRequireCurrentThread<T>
 
     /// <summary>Initializes a new instance of the <see cref="CatchSignal{T}"/> class.</summary>
     /// <param name="sources">The sources to try in order.</param>
-    public CatchSignal(IEnumerable<IObservable<T>> sources) => _sources = sources;
+    /// <exception cref="ArgumentNullException"><paramref name="sources"/> is <see langword="null"/>.</exception>
+    public CatchSignal(IEnumerable<IObservable<T>> sources)
+    {
+        ArgumentExceptionHelper.ThrowIfNull(sources);
+
+        _sources = sources;
+    }
 
     /// <summary>Reports that subscription runs on the calling thread.</summary>
     /// <returns>Always <see langword="true"/>.</returns>

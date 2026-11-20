@@ -19,6 +19,13 @@ public sealed class AutoConnectSignal<T> : IObservable<T>
     /// <summary>Connect-once latch; 0 before connecting, 1 once connected.</summary>
     private int _connected;
 
+    /// <summary>Initializes a new instance of the <see cref="AutoConnectSignal{T}"/> class that connects on the first observer subscription.</summary>
+    /// <param name="source">Connectable signal being auto-connected.</param>
+    public AutoConnectSignal(ConnectableSignal<T> source)
+        : this(source, 1, null)
+    {
+    }
+
     /// <summary>Initializes a new instance of the <see cref="AutoConnectSignal{T}"/> class.</summary>
     /// <param name="source">Connectable signal being auto-connected.</param>
     /// <param name="subscriberCount">Number of observers required before connecting.</param>
@@ -50,6 +57,23 @@ public sealed class AutoConnectSignal<T> : IObservable<T>
 
     /// <summary>Gets the callback invoked with the connection disposable.</summary>
     private Action<IDisposable>? OnConnect { get; }
+
+    /// <summary>Creates an <see cref="AutoConnectSignal{T}"/> with a required connection callback.</summary>
+    /// <param name="source">Connectable signal being auto-connected.</param>
+    /// <param name="subscriberCount">Number of observers required before connecting.</param>
+    /// <param name="onConnect">Action invoked with the connection disposable when the source connects.</param>
+    /// <returns>The auto-connect signal.</returns>
+    public static AutoConnectSignal<T> Create(
+        ConnectableSignal<T> source,
+        int subscriberCount,
+        Action<IDisposable> onConnect)
+    {
+        ArgumentExceptionHelper.ThrowIfNull(source);
+        ArgumentExceptionHelper.ThrowIfNull(onConnect);
+        ArgumentOutOfRangeExceptionHelper.ThrowIfNegative(subscriberCount);
+
+        return new(source, subscriberCount, onConnect);
+    }
 
     /// <summary>Subscribes an observer and connects when the threshold is reached.</summary>
     /// <param name="observer">Observer to subscribe.</param>

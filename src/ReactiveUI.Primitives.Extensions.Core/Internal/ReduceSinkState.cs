@@ -20,6 +20,10 @@ internal sealed class ReduceSinkState<TIn, TOut>
     /// <summary>Serializes downstream deliveries.</summary>
     private SerializedDelivery<TOut> _delivery = new();
 
+    /// <summary>Optional upstream composite subscription disposed once the sink reaches a terminal state.</summary>
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("Usage", "CA2213:Disposable fields should be disposed", Justification = "Owned by the caller and released early on terminal state.")]
+    private IDisposable? _subscriptions;
+
     /// <summary>Initializes a new instance of the <see cref="ReduceSinkState{TIn, TOut}"/> class.</summary>
     /// <param name="downstream">The downstream observer.</param>
     /// <param name="count">The number of sources.</param>
@@ -50,6 +54,26 @@ internal sealed class ReduceSinkState<TIn, TOut>
 
     /// <summary>Gets a value indicating whether every source has produced at least one value.</summary>
     internal bool AllValuesPresent => HasValueCount >= Values.Length;
+
+    /// <summary>Attaches the composite upstream subscription so terminal transitions release all remaining sources.</summary>
+    /// <param name="subscriptions">The composite subscription handle.</param>
+    internal void AttachSubscriptions(IDisposable subscriptions)
+    {
+        bool disposeNow;
+        lock (_gate)
+        {
+            disposeNow = IsDone;
+            if (!disposeNow)
+            {
+                _subscriptions = subscriptions;
+            }
+        }
+
+        if (disposeNow)
+        {
+            subscriptions.Dispose();
+        }
+    }
 
     /// <summary>Records the source value and emits the reduction once every source has a value.</summary>
     /// <param name="index">The 0-based source index that emitted.</param>
@@ -86,6 +110,7 @@ internal sealed class ReduceSinkState<TIn, TOut>
     /// <param name="error">The error to forward.</param>
     internal void HandleError(Exception error)
     {
+        IDisposable? subscriptions;
         lock (_gate)
         {
             if (IsDone)
@@ -94,9 +119,12 @@ internal sealed class ReduceSinkState<TIn, TOut>
             }
 
             IsDone = true;
+            subscriptions = _subscriptions;
+            _subscriptions = null;
             _ = _delivery.PostError(error);
         }
 
+        subscriptions?.Dispose();
         Flush();
     }
 
@@ -104,6 +132,7 @@ internal sealed class ReduceSinkState<TIn, TOut>
     /// <param name="index">The 0-based source index that just completed.</param>
     internal void HandleCompleted(int index)
     {
+        IDisposable? subscriptions;
         lock (_gate)
         {
             if (IsDone || Completed[index])
@@ -120,9 +149,12 @@ internal sealed class ReduceSinkState<TIn, TOut>
             }
 
             IsDone = true;
+            subscriptions = _subscriptions;
+            _subscriptions = null;
             _ = _delivery.PostCompleted();
         }
 
+        subscriptions?.Dispose();
         Flush();
     }
 

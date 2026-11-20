@@ -2,7 +2,6 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
-using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
 
@@ -22,16 +21,13 @@ public static partial class SignalAsyncExtensions
         /// <typeparamref name="TResult"/>.</returns>
         /// <remarks>A failed cast does not throw at the call site: the sequence completes with a failure carrying the
         /// cast exception.</remarks>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         [SuppressMessage(
             "Design",
             "SST2307:Generic method type parameters should be inferable from the parameters",
             Justification = "The caller chooses TResult; no parameter carries it.")]
-        public IObservableAsync<TResult> Cast<TResult>()
-        {
-            ArgumentExceptionHelper.ThrowIfNull(source);
-
-            return new CastSignal<T, TResult>(source);
-        }
+        public IObservableAsync<TResult> Cast<TResult>() =>
+            new CastSignal<T, TResult>(source);
     }
 
     /// <summary>Type-casting operators for an untyped observable source sequence.</summary>
@@ -41,92 +37,12 @@ public static partial class SignalAsyncExtensions
         /// <summary>Casts each value to <typeparamref name="TResult"/>.</summary>
         /// <typeparam name="TResult">The result element type to cast to.</typeparam>
         /// <returns>An observable sequence of values cast to <typeparamref name="TResult"/>.</returns>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         [SuppressMessage(
             "Design",
             "SST2307:Generic method type parameters should be inferable from the parameters",
             Justification = "The caller chooses TResult; no parameter carries it.")]
-        public IObservableAsync<TResult> CastTo<TResult>()
-        {
-            ArgumentExceptionHelper.ThrowIfNull(source);
-
-            return new CastSignal<object?, TResult>(source);
-        }
-    }
-
-    /// <summary>Single-observer-layer <c>Cast</c>; failed casts terminate the sequence with failure.</summary>
-    /// <typeparam name="T">The upstream element type.</typeparam>
-    /// <typeparam name="TResult">The target element type.</typeparam>
-    /// <param name="source">The upstream observable.</param>
-    internal sealed class CastSignal<T, TResult>(IObservableAsync<T> source) : IObservableAsync<TResult>
-    {
-        /// <inheritdoc/>
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        ValueTask<IAsyncDisposable> IObservableAsync<TResult>.SubscribeAsync(
-            IObserverAsync<TResult> observer,
-            CancellationToken cancellationToken) =>
-            WitnessSubscription.SubscribeAsync(
-                source,
-                new CastWitness(observer, cancellationToken),
-                observer,
-                cancellationToken);
-
-        /// <summary>Per-subscription witness that casts each value to <typeparamref name="TResult"/>.</summary>
-        /// <param name="downstream">The downstream witness.</param>
-        /// <param name="subscribeToken">The subscribe-time cancellation token.</param>
-        [DebuggerDisplay("CastWitness: {_witness}")]
-        internal sealed class CastWitness(
-            IObserverAsync<TResult> downstream,
-            CancellationToken subscribeToken) : IWitnessAsync<T>
-        {
-            /// <summary>The notification gate, cancellation link and disposal state.</summary>
-            private WitnessAsyncState _witness = new(subscribeToken);
-
-            /// <inheritdoc/>
-            ref WitnessAsyncState IWitnessState.Witness => ref _witness;
-
-            /// <inheritdoc/>
-            [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            public ValueTask OnNextAsync(T value, CancellationToken cancellationToken) =>
-                WitnessAsync.OnNextAsync(this, value, cancellationToken);
-
-            /// <inheritdoc/>
-            [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            public ValueTask OnErrorResumeAsync(Exception error, CancellationToken cancellationToken) =>
-                WitnessAsync.OnErrorResumeAsync(this, error, cancellationToken);
-
-            /// <inheritdoc/>
-            [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            public ValueTask OnCompletedAsync(Result result) => WitnessAsync.OnCompletedAsync(this, result);
-
-            /// <inheritdoc/>
-            [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            public ValueTask DisposeAsync() => WitnessAsync.DisposeStateAsync(this);
-
-            /// <inheritdoc/>
-            ValueTask IWitnessAsync<T>.OnNextAsyncCore(T value, CancellationToken cancellationToken)
-            {
-                TResult casted;
-                try
-                {
-                    casted = (TResult)(object?)value!;
-                }
-                catch (Exception e)
-                {
-                    return downstream.OnCompletedAsync(Result.Failure(e));
-                }
-
-                return downstream.OnNextAsync(casted, cancellationToken);
-            }
-
-            /// <inheritdoc/>
-            [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            ValueTask IWitnessAsync<T>.OnErrorResumeAsyncCore(Exception error, CancellationToken cancellationToken) =>
-                downstream.OnErrorResumeAsync(error, cancellationToken);
-
-            /// <inheritdoc/>
-            [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            ValueTask IWitnessAsync<T>.OnCompletedAsyncCore(Result result) =>
-                downstream.OnCompletedAsync(result);
-        }
+        public IObservableAsync<TResult> CastTo<TResult>() =>
+            new CastSignal<object?, TResult>(source);
     }
 }
