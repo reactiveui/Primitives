@@ -55,6 +55,51 @@ internal static class UnaryWitnessDelivery
         }
     }
 
+    /// <summary>Claims the terminal transition, emits <paramref name="value"/>, completes <paramref name="observer"/>, and disposes <paramref name="cleanup"/>.</summary>
+    /// <typeparam name="T">The observer element type.</typeparam>
+    /// <param name="stopped">The witness stop flag.</param>
+    /// <param name="observer">The downstream observer.</param>
+    /// <param name="value">The terminal value to emit before completion.</param>
+    /// <param name="cleanup">The disposable witness to release after forwarding completion.</param>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    internal static void Complete<T>(ref int stopped, IObserver<T> observer, T value, IDisposable cleanup)
+    {
+        if (Interlocked.Exchange(ref stopped, 1) == 0)
+        {
+            SinkTerminal.Complete(observer, value, cleanup);
+        }
+    }
+
+    /// <summary>Claims the terminal transition, runs <paramref name="onCompleted"/>, and completes or faults <paramref name="observer"/> before disposing <paramref name="cleanup"/>.</summary>
+    /// <typeparam name="T">The observer element type.</typeparam>
+    /// <param name="stopped">The witness stop flag.</param>
+    /// <param name="onCompleted">The completion side-effect callback.</param>
+    /// <param name="observer">The downstream observer.</param>
+    /// <param name="cleanup">The disposable witness to release after forwarding termination.</param>
+    internal static void CompleteTapped<T>(
+        ref int stopped,
+        Action onCompleted,
+        IObserver<T> observer,
+        IDisposable cleanup)
+    {
+        if (Interlocked.Exchange(ref stopped, 1) != 0)
+        {
+            return;
+        }
+
+        try
+        {
+            onCompleted();
+        }
+        catch (Exception error) when (!IsFatal(error))
+        {
+            SinkTerminal.Fault(observer, error, cleanup);
+            return;
+        }
+
+        SinkTerminal.Complete(observer, cleanup);
+    }
+
     /// <summary>Claims the terminal transition and faults <paramref name="observer"/>, disposing <paramref name="cleanup"/> afterwards.</summary>
     /// <typeparam name="T">The observer element type.</typeparam>
     /// <param name="stopped">The witness stop flag.</param>
@@ -68,6 +113,38 @@ internal static class UnaryWitnessDelivery
         {
             SinkTerminal.Fault(observer, error, cleanup);
         }
+    }
+
+    /// <summary>Claims the terminal transition, runs <paramref name="onError"/>, and faults <paramref name="observer"/> before disposing <paramref name="cleanup"/>.</summary>
+    /// <typeparam name="T">The observer element type.</typeparam>
+    /// <param name="stopped">The witness stop flag.</param>
+    /// <param name="error">The upstream error.</param>
+    /// <param name="onError">The error side-effect callback.</param>
+    /// <param name="observer">The downstream observer.</param>
+    /// <param name="cleanup">The disposable witness to release after forwarding the error.</param>
+    internal static void FaultTapped<T>(
+        ref int stopped,
+        Exception error,
+        Action<Exception> onError,
+        IObserver<T> observer,
+        IDisposable cleanup)
+    {
+        if (Interlocked.Exchange(ref stopped, 1) != 0)
+        {
+            return;
+        }
+
+        try
+        {
+            onError(error);
+        }
+        catch (Exception callbackError) when (!IsFatal(callbackError))
+        {
+            SinkTerminal.Fault(observer, callbackError, cleanup);
+            return;
+        }
+
+        SinkTerminal.Fault(observer, error, cleanup);
     }
 
     /// <summary>Evaluates <paramref name="accept"/> while active, forwarding accepted values or routing non-fatal exceptions to <see cref="Fault{T}"/>.</summary>

@@ -130,6 +130,54 @@ public class DisposableAsyncSlotTests
         await DisposableAsyncSlot.DisposeAsync(ref slot);
     }
 
+    /// <summary>Verifies <see cref="DisposableAsyncSlot.DisposeFromNotificationAsync"/> handles empty, closed, plain, and witness occupants.</summary>
+    /// <returns>A task representing the asynchronous test.</returns>
+    [Test]
+    public async Task WhenDisposedFromNotification_ThenPropagatesWitnessContextAndDisposesPlainOccupant()
+    {
+        IAsyncDisposable? emptySlot = null;
+        await DisposableAsyncSlot.DisposeFromNotificationAsync(ref emptySlot);
+        await Assert.That(DisposableAsyncSlot.IsDisposed(emptySlot)).IsTrue();
+        await DisposableAsyncSlot.DisposeFromNotificationAsync(ref emptySlot);
+
+        RecordingAsyncDisposable plain = new();
+        IAsyncDisposable? plainSlot = plain;
+        await DisposableAsyncSlot.DisposeFromNotificationAsync(ref plainSlot);
+        await Assert.That(plain.DisposeCount).IsEqualTo(1);
+        await Assert.That(DisposableAsyncSlot.IsDisposed(plainSlot)).IsTrue();
+
+        NotificationSlotWitness witness = new();
+        IAsyncDisposable? witnessSlot = witness;
+        await DisposableAsyncSlot.DisposeCoreAsync(ref witnessSlot, fromNotification: true);
+        await Assert.That(witness.DisposedFromNotification).IsTrue();
+        await Assert.That(witness.HasDisposed).IsTrue();
+
+        RecordingAsyncDisposable external = new();
+        IAsyncDisposable? externalSlot = external;
+        await DisposableAsyncSlot.DisposeCoreAsync(ref externalSlot, fromNotification: false);
+        await Assert.That(external.DisposeCount).IsEqualTo(1);
+    }
+
+    /// <summary>Minimal witness that records whether disposal arrived through notification context.</summary>
+    private sealed class NotificationSlotWitness : IWitnessState
+    {
+        /// <summary>Embedded witness state.</summary>
+        private WitnessAsyncState _witness;
+
+        /// <summary>Gets a value indicating whether notification-context disposal was flagged before teardown.</summary>
+        public bool DisposedFromNotification { get; private set; }
+
+        /// <inheritdoc/>
+        ref WitnessAsyncState IWitnessState.Witness => ref _witness;
+
+        /// <inheritdoc/>
+        public ValueTask DisposeAsync()
+        {
+            DisposedFromNotification = _witness.IsDisposingFromNotification;
+            return WitnessAsync.DisposeStateAsync(this);
+        }
+    }
+
     /// <summary>Recording async disposable that counts disposals.</summary>
     private sealed class RecordingAsyncDisposable : IAsyncDisposable
     {

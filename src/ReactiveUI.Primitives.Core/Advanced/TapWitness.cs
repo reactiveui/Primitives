@@ -3,6 +3,7 @@
 // See the LICENSE file in the project root for full license information.
 
 using System.Runtime.CompilerServices;
+using ReactiveUI.Primitives.Core.Internal;
 
 namespace ReactiveUI.Primitives.Advanced;
 
@@ -31,43 +32,31 @@ public sealed class TapWitness<T>(
     /// <summary>The completion side-effect.</summary>
     private readonly Action _onCompleted = onCompleted;
 
+    /// <summary>Non-zero once stopped.</summary>
+    private int _stopped;
+
     /// <summary>The upstream subscription.</summary>
     private IDisposable? _subscription;
 
     /// <inheritdoc/>
-    public void OnNext(T value)
-    {
-        _onNext(value);
-        _observer.OnNext(value);
-    }
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public void OnNext(T value) =>
+        UnaryWitnessDelivery.NextTapped<T, Action<T>>(
+            ref _stopped,
+            value,
+            new(_onNext, static (callback, item) => callback(item)),
+            _observer,
+            this);
 
     /// <inheritdoc/>
-    public void OnError(Exception error)
-    {
-        try
-        {
-            _onError(error);
-            _observer.OnError(error);
-        }
-        finally
-        {
-            Dispose();
-        }
-    }
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public void OnError(Exception error) =>
+        UnaryWitnessDelivery.FaultTapped(ref _stopped, error, _onError, _observer, this);
 
     /// <inheritdoc/>
-    public void OnCompleted()
-    {
-        try
-        {
-            _onCompleted();
-            _observer.OnCompleted();
-        }
-        finally
-        {
-            Dispose();
-        }
-    }
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public void OnCompleted() =>
+        UnaryWitnessDelivery.CompleteTapped(ref _stopped, _onCompleted, _observer, this);
 
     /// <summary>Assigns the upstream subscription, disposing the incoming one when this sink holds a subscription or has been disposed.</summary>
     /// <param name="subscription">The upstream subscription.</param>
@@ -76,5 +65,5 @@ public sealed class TapWitness<T>(
 
     /// <inheritdoc/>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public void Dispose() => SinkSubscription.Dispose(ref _subscription);
+    public void Dispose() => UnaryWitnessDelivery.Dispose(ref _stopped, ref _subscription);
 }

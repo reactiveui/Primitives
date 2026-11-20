@@ -84,4 +84,23 @@ public partial class DisposableTests
         await sad.SetDisposableAsync(original);
         await Assert.That(sad.GetDisposable()).IsSameReferenceAs(original);
     }
+
+    /// <summary>Tests SingleAssignment DisposeFromNotificationAsync disposes the assigned resource.</summary>
+    /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
+    [Test]
+    public async Task WhenSingleAssignmentDisposedFromNotification_ThenDisposesAssigned()
+    {
+        SingleAssignmentDisposableAsync sad = new();
+        StrongBox<bool> disposed = new();
+        await sad.SetDisposableAsync(DisposableAsync.Create(disposed, static state =>
+        {
+            state.Value = true;
+            return default;
+        }));
+
+        await sad.DisposeFromNotificationAsync();
+
+        await Assert.That(sad.IsDisposed).IsTrue();
+        await Assert.That(disposed.Value).IsTrue();
+    }
 }

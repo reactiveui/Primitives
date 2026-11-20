@@ -2,7 +2,11 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
-using System.Runtime.CompilerServices;
+#if REACTIVE_SHIM
+using ReactiveUI.Primitives.Reactive.Internal;
+#else
+using ReactiveUI.Primitives.Internal;
+#endif
 
 #if REACTIVE_SHIM
 namespace ReactiveUI.Primitives.Reactive.Advanced;
@@ -95,60 +99,16 @@ public sealed class TapSignal<T> : IObservable<T>
     {
         ArgumentExceptionHelper.ThrowIfNull(observer);
 
-        if (typeof(T) == typeof(int) && Source is RangeSignal range)
+        StateCallbackPair<Action<T>, Action<Action<T>, T>> tap = new(
+            OnNextAction,
+            static (callback, item) => callback(item));
+        if (DirectSequenceEmission.TrySubscribeTapped(Source, tap, OnCompletedAction, observer))
         {
-            EmitRange(range, OnNextAction, OnCompletedAction, observer);
-            return EmptyDisposable.Instance;
-        }
-
-        if (Source is FromEnumerableSignal<T> enumerable && enumerable.TryGetReadOnlyValues(out var values))
-        {
-            EmitReadOnlyList(values, OnNextAction, OnCompletedAction, observer);
             return EmptyDisposable.Instance;
         }
 
         TapWitness<T> sink = new(observer, OnNextAction, OnErrorAction, OnCompletedAction);
         sink.SetSubscription(Source.Subscribe(sink));
         return sink;
-    }
-
-    /// <summary>Runs side effects and forwards a synchronous integer range straight into <paramref name="observer"/>.</summary>
-    /// <param name="range">The range source.</param>
-    /// <param name="onNext">The value side effect.</param>
-    /// <param name="onCompleted">The completion side effect.</param>
-    /// <param name="observer">The downstream observer.</param>
-    private static void EmitRange(RangeSignal range, Action<T> onNext, Action onCompleted, IObserver<T> observer)
-    {
-        var intOnNext = Unsafe.As<Action<int>>(onNext);
-        var intObserver = Unsafe.As<IObserver<int>>(observer);
-        var start = range.Start;
-        var count = range.Count;
-        for (var i = 0; i < count; i++)
-        {
-            var value = start + i;
-            intOnNext(value);
-            intObserver.OnNext(value);
-        }
-
-        onCompleted();
-        observer.OnCompleted();
-    }
-
-    /// <summary>Runs side effects and forwards an indexable synchronous list straight into <paramref name="observer"/>.</summary>
-    /// <param name="values">The indexable values.</param>
-    /// <param name="onNext">The value side effect.</param>
-    /// <param name="onCompleted">The completion side effect.</param>
-    /// <param name="observer">The downstream observer.</param>
-    private static void EmitReadOnlyList(IReadOnlyList<T> values, Action<T> onNext, Action onCompleted, IObserver<T> observer)
-    {
-        for (var i = 0; i < values.Count; i++)
-        {
-            var value = values[i];
-            onNext(value);
-            observer.OnNext(value);
-        }
-
-        onCompleted();
-        observer.OnCompleted();
     }
 }

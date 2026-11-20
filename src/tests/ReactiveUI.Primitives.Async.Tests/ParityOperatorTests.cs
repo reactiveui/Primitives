@@ -576,7 +576,7 @@ public partial class ParityOperatorTests
         await Assert.That(result).IsCollectionEqualTo([Seed, 1, SumAfterTwo, SumAfterThree]);
     }
 
-    /// <summary>Tests that DebounceUntil immediately emits values that satisfy the condition.</summary>
+    /// <summary>Tests that DebounceUntil immediately emits values that satisfy the condition without advancing time.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenDebounceUntil_WithConditionTrue_ThenEmitsImmediately()
@@ -584,20 +584,22 @@ public partial class ParityOperatorTests
         const int DebounceSeconds = 10;
         const int Threshold = 5;
         const int EmittedValue = 10;
+        ManualTimeProvider time = new();
         var signal = Signal.Create<int>();
+        List<int> immediateValues = [];
 
-        var resultTask = signal.Values
-            .DebounceUntil(TimeSpan.FromSeconds(DebounceSeconds), static v => v > Threshold)
-            .Take(1)
-            .FirstAsync()
-            .AsTask();
+        await using (await signal.Values
+            .DebounceUntil(TimeSpan.FromSeconds(DebounceSeconds), static v => v > Threshold, time)
+            .SubscribeAsync((v, _) =>
+            {
+                immediateValues.Add(v);
+                return default;
+            }))
+        {
+            await signal.OnNextAsync(EmittedValue, CancellationToken.None);
+        }
 
-        // Value 10 satisfies condition, should emit immediately (no delay)
-        await signal.OnNextAsync(EmittedValue, CancellationToken.None);
-
-        var result = await resultTask;
-
-        await Assert.That(result).IsEqualTo(EmittedValue);
+        await Assert.That(immediateValues).IsCollectionEqualTo([EmittedValue]);
     }
 
     /// <summary>Tests that DebounceUntil delays values that do not satisfy the condition.</summary>

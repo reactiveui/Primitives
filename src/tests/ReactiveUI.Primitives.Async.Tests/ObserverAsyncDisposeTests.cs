@@ -198,6 +198,142 @@ public sealed class ObserverAsyncDisposeTests
         await observer.DisposeAsync();
     }
 
+    /// <summary>Verifies that self-disposing a downstream witness after hopping threads propagates notification disposal to an upstream witness without deadlocking.</summary>
+    /// <returns>A task representing the asynchronous test.</returns>
+    [Test]
+    public async Task WhenChainedWitnessSelfDisposesOnForeignThread_ThenUpstreamDisposesWithoutDeadlock()
+    {
+        StrongBox<bool> rootDisposed = new();
+        ThreadHoppingSelfDisposingObserver downstream = new();
+        ForwardingTestWitness upstream = new(downstream);
+
+        downstream.LinkUpstreamCancellation(upstream.InternalDisposedToken);
+        await upstream.AssignSourceSubscriptionAsync(DisposableAsync.Create(rootDisposed, static state =>
+        {
+            state.Value = true;
+            return default;
+        }));
+        await downstream.AssignSourceSubscriptionAsync(upstream);
+
+        await upstream.OnNextAsync(EmittedValue, CancellationToken.None);
+
+        await Assert.That(downstream.HasDisposed).IsTrue();
+        await Assert.That(upstream.HasDisposed).IsTrue();
+        await Assert.That(rootDisposed.Value).IsTrue();
+    }
+
+    /// <summary>Verifies that completing a downstream witness across a thread hop tears down the upstream witness without deadlocking.</summary>
+    /// <returns>A task representing the asynchronous test.</returns>
+    [Test]
+    public async Task WhenChainedWitnessCompletesOnForeignThread_ThenUpstreamDisposesWithoutDeadlock()
+    {
+        StrongBox<bool> rootDisposed = new();
+        ThreadHoppingCompletionObserver downstream = new();
+        CompletingOnNextTestWitness upstream = new(downstream);
+
+        downstream.LinkUpstreamCancellation(upstream.InternalDisposedToken);
+        await upstream.AssignSourceSubscriptionAsync(DisposableAsync.Create(rootDisposed, static state =>
+        {
+            state.Value = true;
+            return default;
+        }));
+        await downstream.AssignSourceSubscriptionAsync(upstream);
+
+        await upstream.OnNextAsync(EmittedValue, CancellationToken.None);
+
+        await Assert.That(downstream.HasDisposed).IsTrue();
+        await Assert.That(upstream.HasDisposed).IsTrue();
+        await Assert.That(rootDisposed.Value).IsTrue();
+    }
+
+    /// <summary>Verifies stop coordinators propagate notification disposal to upstream witness subscriptions after thread switches.</summary>
+    /// <returns>A task representing the asynchronous test.</returns>
+    [Test]
+    public async Task WhenStopCoordinatorsTriggerAfterThreadSwitch_ThenChainedUpstreamWitnessesDisposeCleanly()
+    {
+        var syncSource = Signals.Signal.Create<int>();
+        var syncResultTask = syncSource.Values
+            .Select(static x => x)
+            .TakeUntil(static x => x == EmittedValue)
+            .Select(static (x, _) => new ValueTask<int>(RunOnForeignThreadAsync(x)))
+            .FirstAsync()
+            .AsTask();
+        await syncSource.OnNextAsync(EmittedValue, CancellationToken.None);
+        var syncValue = await syncResultTask;
+        await Assert.That(syncValue).IsEqualTo(EmittedValue);
+
+        var asyncSource = Signals.Signal.Create<int>();
+        var asyncResultTask = asyncSource.Values
+            .Select(static x => x)
+            .TakeUntil(MatchesOnForeignThreadAsync)
+            .FirstAsync()
+            .AsTask();
+        await asyncSource.OnNextAsync(EmittedValue, CancellationToken.None);
+        var asyncValue = await asyncResultTask;
+        await Assert.That(asyncValue).IsEqualTo(EmittedValue);
+
+        var mainSource = Signals.Signal.Create<int>();
+        var stopSource = Signals.Signal.Create<int>();
+        List<int> collected = [];
+        await using var sub = await mainSource.Values
+            .TakeUntil(stopSource.Values.Select(static (x, _) => new ValueTask<int>(RunOnForeignThreadAsync(x))))
+            .SubscribeAsync((x, _) =>
+            {
+                collected.Add(x);
+                return default;
+            });
+        await mainSource.OnNextAsync(EmittedValue, CancellationToken.None);
+        await stopSource.OnNextAsync(1, CancellationToken.None);
+        await Assert.That(collected).IsCollectionEqualTo([EmittedValue]);
+
+        var failMainSource = Signals.Signal.Create<int>();
+        var failStopSource = Signals.Signal.Create<int>();
+        TaskCompletionSource completed = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        await using var failSub = await failMainSource.Values
+            .TakeUntil(failStopSource.Values.Select(static x => x))
+            .SubscribeAsync(
+                static (_, _) => default,
+                static (_, _) => default,
+                _ => new ValueTask(RunOnForeignThreadAndSignalAsync(completed)));
+        await failStopSource.OnCompletedAsync(Result.Failure(new InvalidOperationException("stop-fault")));
+        await completed.Task;
+
+        const int DebounceSeconds = 10;
+        var debounceSignal = Signals.Signal.Create<int>();
+        var debounceFirst = debounceSignal.Values
+            .DebounceUntil(TimeSpan.FromSeconds(DebounceSeconds), static v => v == EmittedValue)
+            .Take(1)
+            .FirstAsync();
+        await debounceSignal.OnNextAsync(EmittedValue, CancellationToken.None);
+        var debounceValue = await debounceFirst;
+        await Assert.That(debounceValue).IsEqualTo(EmittedValue);
+    }
+
+    /// <summary>Evaluates stop match on a thread-pool worker.</summary>
+    /// <param name="value">The candidate value.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>Whether <paramref name="value"/> matches <see cref="EmittedValue"/>.</returns>
+    private static async ValueTask<bool> MatchesOnForeignThreadAsync(int value, CancellationToken cancellationToken)
+    {
+        _ = cancellationToken;
+        var hopped = await RunOnForeignThreadAsync(value).ConfigureAwait(false);
+        return hopped == EmittedValue;
+    }
+
+    /// <summary>Executes a return continuation on a thread-pool worker distinct from synchronous inline execution.</summary>
+    /// <param name="value">The value to return.</param>
+    /// <returns>A task yielding <paramref name="value"/>.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static Task<int> RunOnForeignThreadAsync(int value) =>
+        Task.Run(() => value);
+
+    /// <summary>Completes <paramref name="completion"/> on a thread-pool worker.</summary>
+    /// <param name="completion">The completion source to signal.</param>
+    /// <returns>A task representing the worker operation.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static Task RunOnForeignThreadAndSignalAsync(TaskCompletionSource completion) =>
+        Task.Run(() => { _ = completion.TrySetResult(); });
+
     /// <summary>Observer that records every value it is handed, constructed with an external dispose link.</summary>
     /// <param name="externalLink">The token whose cancellation disposes this observer.</param>
     [DebuggerDisplay("RecordingObserver: {_witness}")]
@@ -291,5 +427,181 @@ public sealed class ObserverAsyncDisposeTests
         /// <inheritdoc/>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         ValueTask IWitnessAsync<int>.OnCompletedAsyncCore(Result result) => default;
+    }
+
+    /// <summary>Upstream witness that forwards values directly to a downstream observer.</summary>
+    /// <param name="downstream">The downstream observer.</param>
+    [DebuggerDisplay("ForwardingTestWitness: {_witness}")]
+    private sealed class ForwardingTestWitness(IObserverAsync<int> downstream) : IWitnessAsync<int>
+    {
+        /// <summary>Embedded witness state.</summary>
+        private WitnessAsyncState _witness;
+
+        /// <inheritdoc/>
+        ref WitnessAsyncState IWitnessState.Witness => ref _witness;
+
+        /// <inheritdoc/>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public ValueTask OnNextAsync(int value, CancellationToken cancellationToken) =>
+            WitnessAsync.OnNextAsync(this, value, cancellationToken);
+
+        /// <inheritdoc/>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public ValueTask OnErrorResumeAsync(Exception error, CancellationToken cancellationToken) =>
+            WitnessAsync.OnErrorResumeAsync(this, error, cancellationToken);
+
+        /// <inheritdoc/>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public ValueTask OnCompletedAsync(Result result) => WitnessAsync.OnCompletedAsync(this, result);
+
+        /// <inheritdoc/>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public ValueTask DisposeAsync() => WitnessAsync.DisposeStateAsync(this);
+
+        /// <inheritdoc/>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        ValueTask IWitnessAsync<int>.OnNextAsyncCore(int value, CancellationToken cancellationToken) =>
+            downstream.OnNextAsync(value, cancellationToken);
+
+        /// <inheritdoc/>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        ValueTask IWitnessAsync<int>.OnErrorResumeAsyncCore(Exception error, CancellationToken cancellationToken) =>
+            default;
+
+        /// <inheritdoc/>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        ValueTask IWitnessAsync<int>.OnCompletedAsyncCore(Result result) => default;
+    }
+
+    /// <summary>Upstream witness that signals downstream completion from inside its value notification.</summary>
+    /// <param name="downstream">The downstream observer.</param>
+    [DebuggerDisplay("CompletingOnNextTestWitness: {_witness}")]
+    private sealed class CompletingOnNextTestWitness(IObserverAsync<int> downstream) : IWitnessAsync<int>
+    {
+        /// <summary>Embedded witness state.</summary>
+        private WitnessAsyncState _witness;
+
+        /// <inheritdoc/>
+        ref WitnessAsyncState IWitnessState.Witness => ref _witness;
+
+        /// <inheritdoc/>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public ValueTask OnNextAsync(int value, CancellationToken cancellationToken) =>
+            WitnessAsync.OnNextAsync(this, value, cancellationToken);
+
+        /// <inheritdoc/>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public ValueTask OnErrorResumeAsync(Exception error, CancellationToken cancellationToken) =>
+            WitnessAsync.OnErrorResumeAsync(this, error, cancellationToken);
+
+        /// <inheritdoc/>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public ValueTask OnCompletedAsync(Result result) => WitnessAsync.OnCompletedAsync(this, result);
+
+        /// <inheritdoc/>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public ValueTask DisposeAsync() => WitnessAsync.DisposeStateAsync(this);
+
+        /// <inheritdoc/>
+        async ValueTask IWitnessAsync<int>.OnNextAsyncCore(int value, CancellationToken cancellationToken)
+        {
+            await downstream.OnNextAsync(value, cancellationToken).ConfigureAwait(false);
+            await downstream.OnCompletedAsync(Result.Success).ConfigureAwait(false);
+        }
+
+        /// <inheritdoc/>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        ValueTask IWitnessAsync<int>.OnErrorResumeAsyncCore(Exception error, CancellationToken cancellationToken) =>
+            default;
+
+        /// <inheritdoc/>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        ValueTask IWitnessAsync<int>.OnCompletedAsyncCore(Result result) => default;
+    }
+
+    /// <summary>Downstream witness that hops onto a thread-pool worker before disposing itself from notification context.</summary>
+    [DebuggerDisplay("ThreadHoppingSelfDisposingObserver: {_witness}")]
+    private sealed class ThreadHoppingSelfDisposingObserver : IWitnessAsync<int>
+    {
+        /// <summary>Embedded witness state.</summary>
+        private WitnessAsyncState _witness;
+
+        /// <inheritdoc/>
+        ref WitnessAsyncState IWitnessState.Witness => ref _witness;
+
+        /// <inheritdoc/>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public ValueTask OnNextAsync(int value, CancellationToken cancellationToken) =>
+            WitnessAsync.OnNextAsync(this, value, cancellationToken);
+
+        /// <inheritdoc/>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public ValueTask OnErrorResumeAsync(Exception error, CancellationToken cancellationToken) =>
+            WitnessAsync.OnErrorResumeAsync(this, error, cancellationToken);
+
+        /// <inheritdoc/>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public ValueTask OnCompletedAsync(Result result) => WitnessAsync.OnCompletedAsync(this, result);
+
+        /// <inheritdoc/>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public ValueTask DisposeAsync() => WitnessAsync.DisposeStateAsync(this);
+
+        /// <inheritdoc/>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        ValueTask IWitnessAsync<int>.OnNextAsyncCore(int value, CancellationToken cancellationToken) =>
+            new(Task.Run(async () => await WitnessAsync.DisposeFromNotificationAsync(this).ConfigureAwait(false), CancellationToken.None));
+
+        /// <inheritdoc/>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        ValueTask IWitnessAsync<int>.OnErrorResumeAsyncCore(Exception error, CancellationToken cancellationToken) =>
+            default;
+
+        /// <inheritdoc/>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        ValueTask IWitnessAsync<int>.OnCompletedAsyncCore(Result result) => default;
+    }
+
+    /// <summary>Downstream witness whose completion hook hops onto a thread-pool worker before automatic teardown runs.</summary>
+    [DebuggerDisplay("ThreadHoppingCompletionObserver: {_witness}")]
+    private sealed class ThreadHoppingCompletionObserver : IWitnessAsync<int>
+    {
+        /// <summary>Embedded witness state.</summary>
+        private WitnessAsyncState _witness;
+
+        /// <inheritdoc/>
+        ref WitnessAsyncState IWitnessState.Witness => ref _witness;
+
+        /// <inheritdoc/>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public ValueTask OnNextAsync(int value, CancellationToken cancellationToken) =>
+            WitnessAsync.OnNextAsync(this, value, cancellationToken);
+
+        /// <inheritdoc/>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public ValueTask OnErrorResumeAsync(Exception error, CancellationToken cancellationToken) =>
+            WitnessAsync.OnErrorResumeAsync(this, error, cancellationToken);
+
+        /// <inheritdoc/>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public ValueTask OnCompletedAsync(Result result) => WitnessAsync.OnCompletedAsync(this, result);
+
+        /// <inheritdoc/>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public ValueTask DisposeAsync() => WitnessAsync.DisposeStateAsync(this);
+
+        /// <inheritdoc/>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        ValueTask IWitnessAsync<int>.OnNextAsyncCore(int value, CancellationToken cancellationToken) => default;
+
+        /// <inheritdoc/>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        ValueTask IWitnessAsync<int>.OnErrorResumeAsyncCore(Exception error, CancellationToken cancellationToken) =>
+            default;
+
+        /// <inheritdoc/>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        ValueTask IWitnessAsync<int>.OnCompletedAsyncCore(Result result) =>
+            new(Task.Run(static () => { }));
     }
 }

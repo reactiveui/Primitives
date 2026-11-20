@@ -104,7 +104,18 @@ public sealed class UniqueSignal<T> : IObservable<T>
         for (var i = 0; i < values.Count; i++)
         {
             var value = values[i];
-            if (hasLast && comparer.Equals(last!, value))
+            bool duplicate;
+            try
+            {
+                duplicate = hasLast && comparer.Equals(last!, value);
+            }
+            catch (Exception error) when (!FatalExceptionHelper.IsFatal(error))
+            {
+                observer.OnError(error);
+                return;
+            }
+
+            if (duplicate)
             {
                 continue;
             }

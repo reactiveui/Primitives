@@ -303,6 +303,109 @@ public sealed class DirectSequenceEmissionTests
         await Assert.That(strErrObserver.Errors.Count).IsEqualTo(1);
     }
 
+    /// <summary>Verifies tapped completion callbacks across ranges, lists, live fallbacks, and callback faults.</summary>
+    /// <returns>A task representing the asynchronous test.</returns>
+    [Test]
+    public async Task TrySubscribeTappedWithCompletion_HandlesRangeListFallbackAndFaults()
+    {
+        List<int> tappedRangeItems = [];
+        var rangeCompletedRuns = 0;
+        RecordingWitness<int> rangeTapObserver = new();
+        StateCallbackPair<List<int>, Action<List<int>, int>> intTap = new(
+            tappedRangeItems,
+            static (sink, item) => sink.Add(item));
+        var rangeTappedOk = DirectSequenceEmission.TrySubscribeTapped(
+            Signal.Sequence(1, Two),
+            intTap,
+            () => rangeCompletedRuns++,
+            rangeTapObserver);
+        await Assert.That(rangeTappedOk).IsTrue();
+        await Assert.That(tappedRangeItems.SequenceEqual([1, Two])).IsTrue();
+        await Assert.That(rangeCompletedRuns).IsEqualTo(1);
+        await Assert.That(rangeTapObserver.Completed).IsEqualTo(1);
+
+        List<string> tappedListItems = [];
+        var listCompletedRuns = 0;
+        RecordingWitness<string> listTapObserver = new();
+        StateCallbackPair<List<string>, Action<List<string>, string>> strTap = new(
+            tappedListItems,
+            static (sink, item) => sink.Add(item));
+        var listTappedOk = DirectSequenceEmission.TrySubscribeTapped(
+            Signal.FromEnumerable(["x", "y"]),
+            strTap,
+            () => listCompletedRuns++,
+            listTapObserver);
+        await Assert.That(listTappedOk).IsTrue();
+        await Assert.That(tappedListItems.SequenceEqual(["x", "y"])).IsTrue();
+        await Assert.That(listCompletedRuns).IsEqualTo(1);
+        await Assert.That(listTapObserver.Completed).IsEqualTo(1);
+
+        using Signal<int> live = new();
+        await Assert.That(DirectSequenceEmission.TrySubscribeTapped(live, intTap, static () => { }, rangeTapObserver)).IsFalse();
+
+        InvalidOperationException completeBoom = new("tap-complete");
+        RecordingWitness<int> rangeCompleteErr = new();
+        _ = DirectSequenceEmission.TrySubscribeTapped(
+            Signal.Sequence(1, Two),
+            intTap,
+            () => throw completeBoom,
+            rangeCompleteErr);
+        await Assert.That(rangeCompleteErr.Errors.SequenceEqual([completeBoom])).IsTrue();
+
+        RecordingWitness<string> listCompleteErr = new();
+        _ = DirectSequenceEmission.TrySubscribeTapped(
+            Signal.FromEnumerable(["x"]),
+            strTap,
+            () => throw completeBoom,
+            listCompleteErr);
+        await Assert.That(listCompleteErr.Errors.SequenceEqual([completeBoom])).IsTrue();
+
+        await Assert.That(() => DirectSequenceEmission.TrySubscribeTapped(
+            Signal.Sequence(1, 1),
+            intTap,
+            static () => throw new BadImageFormatException(),
+            rangeCompleteErr)).Throws<BadImageFormatException>();
+    }
+
+    /// <summary>Verifies accumulated fast paths route non-fatal callback exceptions to OnError and rethrow fatal ones.</summary>
+    /// <returns>A task representing the asynchronous test.</returns>
+    [Test]
+    public async Task TrySubscribeAccumulated_CallbackFaultsRouteToOnErrorAndRethrowFatal()
+    {
+        using Signal<int> live = new();
+        RecordingWitness<int> rangeFoldErr = new();
+        await Assert.That(DirectSequenceEmission.TrySubscribeAccumulated(live, 0, static (a, b) => a + b, emitEachStep: true, rangeFoldErr)).IsFalse();
+
+        InvalidOperationException accBoom = new("acc-boom");
+        _ = DirectSequenceEmission.TrySubscribeAccumulated(
+            Signal.Sequence(1, Three),
+            0,
+            (_, item) => item == Two ? throw accBoom : item,
+            emitEachStep: true,
+            rangeFoldErr);
+        await Assert.That(rangeFoldErr.Values.SequenceEqual([1])).IsTrue();
+        await Assert.That(rangeFoldErr.Errors.SequenceEqual([accBoom])).IsTrue();
+        await Assert.That(rangeFoldErr.Completed).IsEqualTo(0);
+
+        RecordingWitness<int> listReduceErr = new();
+        _ = DirectSequenceEmission.TrySubscribeAccumulated(
+            Signal.FromEnumerable([1, Two]),
+            0,
+            (_, item) => item == Two ? throw accBoom : item,
+            emitEachStep: false,
+            listReduceErr);
+        await Assert.That(listReduceErr.Values).IsEmpty();
+        await Assert.That(listReduceErr.Errors.SequenceEqual([accBoom])).IsTrue();
+        await Assert.That(listReduceErr.Completed).IsEqualTo(0);
+
+        await Assert.That(() => DirectSequenceEmission.TrySubscribeAccumulated(
+            Signal.Sequence(1, 1),
+            0,
+            static (_, _) => throw new BadImageFormatException(),
+            emitEachStep: true,
+            rangeFoldErr)).Throws<BadImageFormatException>();
+    }
+
     /// <summary>Stub observable implementing <see cref="IRequireCurrentThread{T}"/>.</summary>
     /// <param name="required">Whether current-thread subscription is required.</param>
     private sealed class CurrentThreadStub(bool required) : IRequireCurrentThread<int>

@@ -47,7 +47,7 @@ public sealed class AsyncPredicateStopCoordinator<T>(
     public async ValueTask DisposeAsync()
     {
         await AsyncStopTokenHelper.DisposeStopRegistrationAsync(_stopRegistration).ConfigureAwait(false);
-        await DisposableAsyncSlot.DisposeAsync(ref _subscription).ConfigureAwait(false);
+        await DisposableAsyncSlot.DisposeCoreAsync(ref _subscription, _witness.IsDisposingFromNotification).ConfigureAwait(false);
         await WitnessAsync.DisposeStateAsync(this).ConfigureAwait(false);
     }
 
@@ -80,7 +80,7 @@ public sealed class AsyncPredicateStopCoordinator<T>(
         }
 
         await observer.OnCompletedAsync(Result.Success).ConfigureAwait(false);
-        await DisposableAsyncSlot.DisposeAsync(ref _subscription).ConfigureAwait(false);
+        await DisposableAsyncSlot.DisposeFromNotificationAsync(ref _subscription).ConfigureAwait(false);
         await WitnessAsync.DisposeFromNotificationAsync(this).ConfigureAwait(false);
     }
 

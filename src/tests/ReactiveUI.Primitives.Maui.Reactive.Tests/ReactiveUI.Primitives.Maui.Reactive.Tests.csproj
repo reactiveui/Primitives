@@ -10,16 +10,6 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="System.Reactive"/>
-  </ItemGroup>
-
-  <ItemGroup Condition="$([MSBuild]::IsTargetFrameworkCompatible('$(TargetFramework)', 'net11.0'))">
-    <PackageReference Include="Microsoft.Extensions.Configuration"/>
-    <PackageReference Include="Microsoft.Extensions.DependencyInjection"/>
-    <PackageReference Include="Microsoft.Extensions.Logging"/>
-  </ItemGroup>
-
-  <ItemGroup>
     <ProjectReference Include="..\..\ReactiveUI.Primitives.Maui.Reactive\ReactiveUI.Primitives.Maui.Reactive.csproj"/>
   </ItemGroup>
 

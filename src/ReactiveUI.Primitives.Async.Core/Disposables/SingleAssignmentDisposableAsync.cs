@@ -61,4 +61,10 @@ public sealed class SingleAssignmentDisposableAsync : IAsyncDisposable
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal static InvalidOperationException CreateAlreadyAssignedException() =>
         DisposableAsyncSlot.CreateAlreadyAssignedException();
+
+    /// <summary>Disposes the assigned resource from within an active notification and closes the slot.</summary>
+    /// <returns>A <see cref="ValueTask"/> that completes once the assigned resource has been disposed.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    internal ValueTask DisposeFromNotificationAsync() =>
+        DisposableAsyncSlot.DisposeFromNotificationAsync(ref _current);
 }

@@ -288,11 +288,13 @@ public record struct WitnessAsyncState
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal void DisposeCancellationSource() => Volatile.Read(ref _disposeCts)?.Dispose();
 
-    /// <summary>Disposes the upstream source subscription once.</summary>
+    /// <summary>Disposes the upstream source subscription once, propagating notification-context disposal to an upstream witness.</summary>
     /// <returns>A task that completes once the subscription is disposed.</returns>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal ValueTask DisposeSourceSubscriptionAsync() =>
-        SingleAssignmentDisposableAsync.DisposeAsync(ref _sourceSubscription);
+        Volatile.Read(ref _disposeFromNotification) != 0
+            ? DisposableAsyncSlot.DisposeFromNotificationAsync(ref _sourceSubscription)
+            : SingleAssignmentDisposableAsync.DisposeAsync(ref _sourceSubscription);
 
     /// <summary>Links a distinct caller token with the witness's disposal token.</summary>
     /// <param name="cancellationToken">The caller-supplied cancellation token.</param>
