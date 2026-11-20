@@ -3,10 +3,13 @@
 // See the LICENSE file in the project root for full license information.
 
 using System.Runtime.CompilerServices;
-
 #if REACTIVE_SHIM
+using ReactiveUI.Primitives.Reactive.Internal;
+
 namespace ReactiveUI.Primitives.Reactive.Signals;
 #else
+using ReactiveUI.Primitives.Internal;
+
 namespace ReactiveUI.Primitives.Signals;
 #endif
 
@@ -86,7 +89,7 @@ public static partial class Signal
                 return;
             }
 
-            Cancel(source);
+            _ = CancellationRaceHelper.TryCancel(source);
         });
 
     /// <summary>Delivers task completion only if the subscription has not claimed disposal.</summary>
@@ -220,20 +223,6 @@ public static partial class Signal
         return true;
     }
 
-    /// <summary>Cancels the source, tolerating a source another completion path disposed.</summary>
-    /// <param name="source">The cancellation source to cancel.</param>
-    private static void Cancel(CancellationTokenSource source)
-    {
-        try
-        {
-            source.Cancel();
-        }
-        catch (ObjectDisposedException)
-        {
-            // Cancellation remains harmless after task completion.
-        }
-    }
-
     /// <summary>Claims completion before notifying the observer, excluding disposed subscriptions.</summary>
     internal sealed class TaskStopGate
     {
@@ -332,7 +321,7 @@ public static partial class Signal
                 return;
             }
 
-            Cancel(SourceCore);
+            _ = CancellationRaceHelper.TryCancel(SourceCore);
             SourceCore.Dispose();
         }
 

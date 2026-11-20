@@ -2,6 +2,9 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Runtime.CompilerServices;
+using ReactiveUI.Primitives.Internal;
+
 namespace ReactiveUI.Primitives.Async.Signals;
 
 /// <summary>Subscription handle that removes an observer from a replay signal when disposed.</summary>
@@ -16,34 +19,17 @@ internal sealed class ReplayLatestSignalAsyncStateObserverLease<T>(
     private int _disposed;
 
     /// <inheritdoc/>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public ValueTask DisposeAsync() =>
-        Interlocked.Exchange(ref _disposed, 1) != 0
+        Interlocked.Exchange(ref _disposed, 1) != 0 || state.IsDisposed
             ? default
-            : RemoveObserverAsync();
+            : ConcurrencyRaceHelpers.RunUnderGateIgnoringTeardownAsync(
+                state.Gate,
+                this,
+                static self => self.RemoveCore(),
+                state.DisposedCancellationToken);
 
-    /// <summary>Removes the observer from the replay signal under the serialization gate.</summary>
-    /// <returns>A task that represents the asynchronous removal operation.</returns>
-    private async ValueTask RemoveObserverAsync()
-    {
-        if (state.IsDisposed)
-        {
-            return;
-        }
-
-        try
-        {
-            using (await state.Gate.EnterAsync(state.DisposedCancellationToken).ConfigureAwait(false))
-            {
-                state.Observers = state.Observers.Remove(observer);
-            }
-        }
-        catch (OperationCanceledException)
-        {
-            // Unsubscription is harmless after signal disposal.
-        }
-        catch (ObjectDisposedException)
-        {
-            // Unsubscription is harmless after signal disposal.
-        }
-    }
+    /// <summary>Removes the observer while holding the state gate.</summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private void RemoveCore() => state.Observers = state.Observers.Remove(observer);
 }

@@ -6,10 +6,12 @@ using System.Runtime.CompilerServices;
 
 #if REACTIVE_SHIM
 using ReactiveUI.Primitives.Reactive.Advanced;
+using ReactiveUI.Primitives.Reactive.Internal;
 
 namespace ReactiveUI.Primitives.Reactive.Signals;
 #else
 using ReactiveUI.Primitives.Advanced;
+using ReactiveUI.Primitives.Internal;
 
 namespace ReactiveUI.Primitives.Signals;
 #endif
@@ -95,15 +97,7 @@ internal sealed class TaskSignal<T> : ITaskSignal<T>
             return;
         }
 
-        try
-        {
-            CancellationTokenSource.Cancel();
-        }
-        catch (ObjectDisposedException)
-        {
-            // Cancellation remains harmless after task completion.
-        }
-
+        _ = CancellationRaceHelper.TryCancel(CancellationTokenSource);
         _cleanUp.Dispose();
         CancellationTokenSource.Dispose();
     }
