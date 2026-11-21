@@ -110,7 +110,7 @@ public sealed class ShiftCoordinator<T>(IObservable<T> source, TimeSpan dueTime,
     internal ShiftCoordinator<T> Run()
     {
         _subscriptions.Add(_timer);
-        _subscriptions.Add(_source.Subscribe(OnNext, OnError, OnCompleted));
+        _subscriptions.Add(_source.Subscribe(new EmptyWitness<T>(OnNext, OnError, OnCompleted)));
         return this;
     }
 

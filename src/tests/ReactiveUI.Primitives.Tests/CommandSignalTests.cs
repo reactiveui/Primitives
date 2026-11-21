@@ -2,6 +2,7 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using ReactiveUI.Primitives.Advanced;
 using ReactiveUI.Primitives.Disposables;
 using ReactiveUI.Primitives.Signals;
 
@@ -196,7 +197,7 @@ public sealed partial class CommandSignalTests
         List<int> second = [];
         List<int> third = [];
 
-        var firstSubscription = command.Results.Subscribe(first.Add);
+        var firstSubscription = command.Results.Subscribe(Witness.Create<int>(first.Add));
         var secondSubscription = command.Results.Subscribe(second.Add);
         var thirdSubscription = command.Results.Subscribe(third.Add);
 

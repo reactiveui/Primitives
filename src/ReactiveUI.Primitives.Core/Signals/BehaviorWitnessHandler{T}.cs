@@ -20,12 +20,13 @@ internal sealed class BehaviorWitnessHandler<T>(IWitnessRemovable<T> owner, IObs
     public void Dispose()
     {
         var ownerState = Interlocked.Exchange(ref _owner, null);
-        var observerState = Interlocked.Exchange(ref _observer, null);
-        if (ownerState is null || observerState is null)
+        if (ownerState is null)
         {
             return;
         }
 
+        var observerState = _observer!;
+        _observer = null;
         ownerState.RemoveObserver(observerState);
     }
 }

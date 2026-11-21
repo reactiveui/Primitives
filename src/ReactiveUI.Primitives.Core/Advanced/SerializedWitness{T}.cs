@@ -90,6 +90,10 @@ public sealed class SerializedWitness<T> : IObserver<T>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void DeliverClaimed(T[] values) => _delivery.DeliverClaimed(_observer, values, new PendingDrain(this));
 
+    /// <summary>Stops delivery and drops any queued notifications.</summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public void Stop() => _delivery.Stop();
+
     /// <summary>Drains this witness's queued notifications for the delivery gate.</summary>
     /// <param name="Owner">The witness.</param>
     private readonly record struct PendingDrain(SerializedWitness<T> Owner) : IDrainTarget

@@ -53,7 +53,7 @@ public static partial class Signal
         /// <returns>The subscription that tears down source and scheduled flush work.</returns>
         internal CollectCoordinator<TSource> Subscribe(IObservable<TSource> source)
         {
-            _disposables.Add(source.Subscribe(OnNext, OnError, OnCompleted));
+            _disposables.Add(source.Subscribe(new EmptyWitness<TSource>(OnNext, OnError, OnCompleted)));
             return this;
         }
 
@@ -93,7 +93,7 @@ public static partial class Signal
         private void Flush()
         {
             var batch = TakeScheduledBatch();
-            if (batch is not { Length: > 0 })
+            if (batch is null)
             {
                 return;
             }

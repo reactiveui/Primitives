@@ -203,9 +203,11 @@ internal record struct BehaviorSignalState<T>
     /// <param name="observer">The subscriber's witness, as handed to its subscription handle.</param>
     internal void RemoveObserver(IObserver<T> observer)
     {
+        var witness = (SerializedWitness<T>)observer;
+        witness.Stop();
         lock (_gate)
         {
-            _broadcaster.Remove((SerializedWitness<T>)observer);
+            _broadcaster.Remove(witness);
         }
     }
 

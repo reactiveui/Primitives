@@ -4,6 +4,7 @@
 
 using System.Runtime.CompilerServices;
 using System.Runtime.ExceptionServices;
+using ReactiveUI.Primitives.Core.Internal;
 using ReactiveUI.Primitives.Disposables;
 using ReactiveUI.Primitives.Internal;
 using ReactiveUI.Primitives.Signals;
@@ -187,7 +188,32 @@ public static class Witness
 
         return source is IInlineSignal<T> inline
             ? inline.Subscribe(onNext, onError, onCompleted)
-            : source.Subscribe(new EmptyWitness<T>(onNext, onError, onCompleted));
+            : SubscribeCallbacks(source, onNext, onError, onCompleted);
+    }
+
+    /// <summary>Subscribes callbacks through a disposable witness that halts delivery after termination or disposal.</summary>
+    /// <typeparam name="T">The element type.</typeparam>
+    /// <param name="source">The source observable.</param>
+    /// <param name="onNext">The callback invoked for each value.</param>
+    /// <param name="onError">The callback invoked with the terminal error.</param>
+    /// <param name="onCompleted">The callback invoked on completion.</param>
+    /// <returns>A handle that unsubscribes from <paramref name="source"/> when disposed.</returns>
+    private static IDisposable SubscribeCallbacks<T>(
+        IObservable<T> source,
+        Action<T> onNext,
+        Action<Exception> onError,
+        Action onCompleted)
+    {
+        SubscriptionWitness<T> witness = new(onNext, onError, onCompleted);
+        var subscription = source.Subscribe(witness);
+        if (witness.IsStopped)
+        {
+            subscription.Dispose();
+            return EmptyDisposable.Instance;
+        }
+
+        witness.Attach(subscription);
+        return witness;
     }
 
     /// <summary>Observer wrapper that prevents notifications after termination.</summary>
@@ -412,5 +438,43 @@ public static class Witness
                 throw;
             }
         }
+    }
+
+    /// <summary>Disposable delegate-backed observer used by <c>Subscribe</c> extensions.</summary>
+    /// <typeparam name="T">The observed value type.</typeparam>
+    /// <param name="onNext">Callback invoked for each value.</param>
+    /// <param name="onError">Callback invoked for an error.</param>
+    /// <param name="onCompleted">Callback invoked for completion.</param>
+    private sealed class SubscriptionWitness<T>(
+        Action<T> onNext,
+        Action<Exception> onError,
+        Action onCompleted) : IObserver<T>, IDisposable
+    {
+        /// <summary>Upstream subscription and stop-state slot.</summary>
+        private UnaryWitnessSlot _slot;
+
+        /// <summary>Gets a value indicating whether this witness has terminated or been disposed.</summary>
+        public bool IsStopped => _slot.IsStopped;
+
+        /// <summary>Assigns the upstream subscription.</summary>
+        /// <param name="subscription">The upstream subscription.</param>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void Attach(IDisposable subscription) => _slot.Attach(subscription);
+
+        /// <inheritdoc/>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void OnNext(T value) => _slot.NextCallback(value, onNext);
+
+        /// <inheritdoc/>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void OnError(Exception error) => _slot.FaultCallback(error, onError);
+
+        /// <inheritdoc/>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void OnCompleted() => _slot.CompleteCallback(onCompleted);
+
+        /// <inheritdoc/>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void Dispose() => _slot.Dispose();
     }
 }

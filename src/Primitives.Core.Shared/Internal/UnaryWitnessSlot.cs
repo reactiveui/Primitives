@@ -26,6 +26,15 @@ internal record struct UnaryWitnessSlot
     /// <summary>Non-zero once stopped.</summary>
     private int _stopped;
 
+#if PRIMITIVES_CORE
+    /// <summary>Gets a value indicating whether the witness has terminated or been disposed.</summary>
+    internal bool IsStopped
+    {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => Volatile.Read(ref _stopped) != 0;
+    }
+#endif
+
     /// <summary>Assigns the upstream subscription, disposing it immediately if already stopped.</summary>
     /// <param name="subscription">The upstream subscription.</param>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -34,6 +43,29 @@ internal record struct UnaryWitnessSlot
     /// <summary>Marks this slot stopped and disposes the upstream subscription.</summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal void Dispose() => UnaryWitnessDelivery.Dispose(ref _stopped, ref _subscription);
+
+#if PRIMITIVES_CORE
+    /// <summary>Forwards <paramref name="value"/> to <paramref name="onNext"/> while active.</summary>
+    /// <typeparam name="T">The element type.</typeparam>
+    /// <param name="value">The incoming element.</param>
+    /// <param name="onNext">The value callback.</param>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    internal void NextCallback<T>(T value, Action<T> onNext) =>
+        UnaryWitnessDelivery.NextCallback(ref _stopped, value, onNext);
+
+    /// <summary>Delivers <paramref name="error"/> to <paramref name="onError"/> at most once and disposes the upstream subscription.</summary>
+    /// <param name="error">The terminal error.</param>
+    /// <param name="onError">The error callback.</param>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    internal void FaultCallback(Exception error, Action<Exception> onError) =>
+        UnaryWitnessDelivery.TerminateCallback(ref _stopped, ref _subscription, (onError, error), static s => s.onError(s.error));
+
+    /// <summary>Invokes <paramref name="onCompleted"/> at most once and disposes the upstream subscription.</summary>
+    /// <param name="onCompleted">The completion callback.</param>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    internal void CompleteCallback(Action onCompleted) =>
+        UnaryWitnessDelivery.TerminateCallback(ref _stopped, ref _subscription, onCompleted, static action => action());
+#endif
 
     /// <summary>Completes <paramref name="observer"/> at most once and disposes <paramref name="cleanup"/>.</summary>
     /// <typeparam name="T">The observer element type.</typeparam>

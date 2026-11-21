@@ -3,6 +3,7 @@
 // See the LICENSE file in the project root for full license information.
 
 using System.Reactive.Subjects;
+using ReactiveUI.Primitives.Advanced;
 
 namespace ReactiveUI.Primitives.Extensions.Tests.Operators;
 
@@ -18,7 +19,7 @@ public class DoOnDisposeObservableTests
         var executed = 0;
         Subject<int> source = new();
 
-        var sub = source.DoOnDispose(() => executed++).Subscribe();
+        var sub = source.DoOnDispose(() => executed++).Subscribe(Witness.Create<int>(static _ => { }));
         await Assert.That(source.HasObservers).IsTrue();
 
         sub.Dispose();

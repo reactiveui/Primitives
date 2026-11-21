@@ -67,7 +67,7 @@ public sealed class TaskChainCoordinator<T> : IDisposable
     /// <returns>The coordinator that owns the subscription cleanup.</returns>
     public TaskChainCoordinator<T> Run(IObservable<Task<T>> sources)
     {
-        _pocket.Add(sources.Subscribe(OnTask, OnError, OnOuterCompleted));
+        _pocket.Add(sources.Subscribe(new EmptyWitness<Task<T>>(OnTask, OnError, OnOuterCompleted)));
         return this;
     }
 
@@ -110,7 +110,7 @@ public sealed class TaskChainCoordinator<T> : IDisposable
             return;
         }
 
-        _pocket.Add(next.Subscribe(OnInnerNext, OnError, OnInnerCompleted));
+        _pocket.Add(next.Subscribe(new EmptyWitness<T>(OnInnerNext, OnError, OnInnerCompleted)));
     }
 
     /// <summary>Queues a task as a task-backed signal and pumps the drain.</summary>

@@ -30,4 +30,24 @@ public class ObserverHandlerTests
         await Assert.That(remaining.Values.Single()).IsEqualTo(1);
         await Assert.That(remaining.Completed).IsEqualTo(1);
     }
+
+    /// <summary>Disposing an <see cref="ObserverHandler{T}"/> directly detaches its observer once and ignores repeated calls.</summary>
+    /// <returns>A task representing the asynchronous test.</returns>
+    [Test]
+    public async Task DirectObserverHandler_Dispose_IsIdempotent()
+    {
+        using AsyncSignal<int> signal = new();
+        RecordingWitness<int> remaining = new();
+        RecordingWitness<int> extra = new();
+        using var subscription = signal.Subscribe(remaining);
+        ObserverHandler<int> handler = new(signal, extra);
+
+        handler.Dispose();
+        handler.Dispose();
+        signal.OnNext(1);
+        signal.OnCompleted();
+
+        await Assert.That(remaining.Values.Single()).IsEqualTo(1);
+        await Assert.That(remaining.Completed).IsEqualTo(1);
+    }
 }

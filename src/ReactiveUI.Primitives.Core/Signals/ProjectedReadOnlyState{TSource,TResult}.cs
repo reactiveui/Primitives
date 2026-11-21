@@ -4,6 +4,7 @@
 
 using ReactiveUI.Primitives.Advanced;
 using ReactiveUI.Primitives.Disposables;
+using ReactiveUI.Primitives.Internal;
 
 namespace ReactiveUI.Primitives.Signals;
 
@@ -165,16 +166,16 @@ public sealed class ProjectedReadOnlyState<TSource, TResult> : IObservable<TResu
 
         Exception? error;
         TResult? value;
-        bool stopped;
+        DetachableObserver<ProjectedReadOnlyState<TSource, TResult>, TResult>? subscription = null;
         lock (_gate)
         {
             ThrowIfDisposed();
             error = _lastError;
             value = _lastValue;
-            stopped = _isStopped;
-            if (!stopped)
+            if (!_isStopped)
             {
-                _broadcaster.Add(observer);
+                subscription = new(this, observer, static (parent, target) => parent.Remove(target));
+                _broadcaster.Add(subscription);
             }
         }
 
@@ -185,13 +186,13 @@ public sealed class ProjectedReadOnlyState<TSource, TResult> : IObservable<TResu
         }
 
         observer.OnNext(value!);
-        if (stopped)
+        if (subscription is null)
         {
             observer.OnCompleted();
             return EmptyDisposable.Instance;
         }
 
-        return new Subscription(this, observer);
+        return subscription;
     }
 
     /// <inheritdoc/>
@@ -245,31 +246,5 @@ public sealed class ProjectedReadOnlyState<TSource, TResult> : IObservable<TResu
         }
 
         throw new ObjectDisposedException(nameof(ProjectedReadOnlyState<,>));
-    }
-
-    /// <summary>Projection subscription.</summary>
-    /// <param name="parent">Parent projection.</param>
-    /// <param name="observer">Observer to remove.</param>
-    private sealed class Subscription(ProjectedReadOnlyState<TSource, TResult> parent, IObserver<TResult> observer) : IDisposable
-    {
-        /// <summary>Parent projection.</summary>
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Usage", "CA2213:Disposable fields should be disposed", Justification = "Back-reference to the parent projection; unsubscribed, not owned.")]
-        private ProjectedReadOnlyState<TSource, TResult>? _parent = parent;
-
-        /// <summary>Observer to remove.</summary>
-        private IObserver<TResult>? _observer = observer;
-
-        /// <inheritdoc/>
-        public void Dispose()
-        {
-            var parentState = Interlocked.Exchange(ref _parent, null);
-            var observerState = Interlocked.Exchange(ref _observer, null);
-            if (parentState is null || observerState is null)
-            {
-                return;
-            }
-
-            parentState.Remove(observerState);
-        }
     }
 }

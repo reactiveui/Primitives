@@ -98,7 +98,7 @@ public sealed class CalmCoordinator<T> : IDisposable
     {
         _observer = observer;
         _subscriptions.Add(_timer);
-        _subscriptions.Add(_source.Subscribe(OnNext, OnError, OnCompleted));
+        _subscriptions.Add(_source.Subscribe(new EmptyWitness<T>(OnNext, OnError, OnCompleted)));
         return this;
     }
 

@@ -2,6 +2,7 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using ReactiveUI.Primitives.Advanced;
 using ReactiveUI.Primitives.Concurrency;
 
 namespace ReactiveUI.Primitives.Extensions.Tests.Operators;
@@ -52,7 +53,7 @@ public class SyncTimerObservableTests
         var ticks = 0;
 
         var timer = ReactiveExtensions.SyncTimer(TimerPeriod, scheduler);
-        var sub = timer.Subscribe(_ => ticks++);
+        var sub = timer.Subscribe(Witness.Create<DateTime>(_ => ticks++));
 
         sub.Dispose();
         sub.Dispose();

@@ -93,9 +93,10 @@ public class BehaviorSignalTests
         BehaviorSignal<int> s = new(InitialValue);
         await Assert.That(s.HasObservers).IsFalse();
         await Assert.That(s.IsDisposed).IsFalse();
-        var d = s.Subscribe(static _ => { });
+        var d = s.Subscribe(new RecordingWitness<int>());
         await Assert.That(s.HasObservers).IsTrue();
         await Assert.That(s.IsDisposed).IsFalse();
+        d.Dispose();
         d.Dispose();
         await Assert.That(s.HasObservers).IsFalse();
         await Assert.That(s.IsDisposed).IsFalse();

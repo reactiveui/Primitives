@@ -4,6 +4,7 @@
 
 using System.Reactive.Linq;
 using System.Reactive.Subjects;
+using ReactiveUI.Primitives.Advanced;
 using ReactiveUI.Primitives.Disposables;
 
 namespace ReactiveUI.Primitives.Extensions.Tests.Operators;
@@ -120,7 +121,7 @@ public class FirstMatchFromCandidatesAsyncPathTests
         var completed = false;
         var sub = ((IReadOnlyList<string>)keys)
             .FirstMatchFromCandidates(_ => firstSubject, static raw => raw, static _ => true, Fallback)
-            .Subscribe(results.Add, () => completed = true);
+            .Subscribe(Witness.Create<string>(results.Add, static _ => { }, () => completed = true));
         sub.Dispose();
 
         sub.Dispose();
@@ -198,7 +199,7 @@ public class FirstMatchFromCandidatesAsyncPathTests
         TaskCompletionSource completed = new(TaskCreationOptions.RunContinuationsAsynchronously);
         using var sub = ((IReadOnlyList<string>)keys)
             .FirstMatchFromCandidates(_ => subject, static raw => raw, static value => value == HitKey, Fallback)
-            .Subscribe(results.Add, () => completed.TrySetResult());
+            .Subscribe(Witness.Create<string>(results.Add, static _ => { }, () => completed.TrySetResult()));
         subject.OnNext(HitKey);
         await completed.Task;
         subject.OnNext("ignored-late");

@@ -155,7 +155,7 @@ public sealed class OnErrorResumeNextSignal<T> : IRequireCurrentThread<T>
                 return;
             }
 
-            _subscription.Disposable = source!.Subscribe(_observer.OnNext, _ => ScheduleNext(), ScheduleNext);
+            _subscription.Disposable = source!.Subscribe(new EmptyWitness<T>(_observer.OnNext, _ => ScheduleNext(), ScheduleNext));
         }
 
         /// <summary>Reads the next source from the active enumerator.</summary>

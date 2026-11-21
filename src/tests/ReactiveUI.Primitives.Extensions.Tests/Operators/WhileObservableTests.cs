@@ -2,6 +2,7 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using ReactiveUI.Primitives.Advanced;
 using ReactiveUI.Primitives.Concurrency;
 
 namespace ReactiveUI.Primitives.Extensions.Tests.Operators;
@@ -92,12 +93,13 @@ public class WhileObservableTests
         ManualSequencer sequencer = new();
 
         var sub = ReactiveExtensions.While(static () => true, () => ran++, sequencer)
-            .Subscribe(static _ => { });
+            .Subscribe(Witness.Create<RxVoid>(static _ => { }));
 
         // One iteration, which arms the next one.
         sequencer.RunNext();
         await Assert.That(ran).IsEqualTo(1);
 
+        sub.Dispose();
         sub.Dispose();
         sequencer.RunAll();
         await Assert.That(ran).IsEqualTo(1);

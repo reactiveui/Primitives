@@ -4,6 +4,7 @@
 
 using System.Runtime.CompilerServices;
 using ReactiveUI.Primitives.Disposables;
+using ReactiveUI.Primitives.Internal;
 using ReactiveUI.Primitives.Signals;
 
 namespace ReactiveUI.Primitives.Advanced;
@@ -78,20 +79,20 @@ public sealed class SliceWindow<T> : IObservable<T>
         ArgumentExceptionHelper.ThrowIfNull(observer);
 
         Exception? error;
-        bool terminated;
+        DetachableObserver<SliceWindow<T>, T>? subscription = null;
         lock (_gate)
         {
-            terminated = _terminated;
             error = _error;
-            if (!terminated)
+            if (!_terminated)
             {
-                _observers.Add(observer);
+                subscription = new(this, observer, static (window, target) => window.Remove(target), _owner.Acquire());
+                _observers.Add(subscription);
             }
         }
 
-        if (!terminated)
+        if (subscription is not null)
         {
-            return new Subscription(this, observer, _owner.Acquire());
+            return subscription;
         }
 
         if (error is null)
@@ -128,27 +129,4 @@ public sealed class SliceWindow<T> : IObservable<T>
     /// <param name="observer">The subscriber to remove.</param>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private void Remove(IObserver<T> observer) => _observers.Remove(observer);
-
-    /// <summary>One subscription to the window and its lease on the source.</summary>
-    /// <param name="window">The window that owns the subscriber.</param>
-    /// <param name="observer">The subscriber.</param>
-    /// <param name="lease">The lease that keeps the source alive.</param>
-    private sealed class Subscription(SliceWindow<T> window, IObserver<T> observer, IDisposable lease) : IDisposable
-    {
-        /// <summary>The window that owns the subscriber, cleared by the first disposal.</summary>
-        private SliceWindow<T>? _window = window;
-
-        /// <inheritdoc/>
-        public void Dispose()
-        {
-            var owner = Interlocked.Exchange(ref _window, null);
-            if (owner is null)
-            {
-                return;
-            }
-
-            owner.Remove(observer);
-            lease.Dispose();
-        }
-    }
 }

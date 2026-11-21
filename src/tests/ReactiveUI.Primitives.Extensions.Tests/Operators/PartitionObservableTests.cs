@@ -3,6 +3,7 @@
 // See the LICENSE file in the project root for full license information.
 
 using System.Reactive.Subjects;
+using ReactiveUI.Primitives.Advanced;
 
 namespace ReactiveUI.Primitives.Extensions.Tests.Operators;
 
@@ -162,7 +163,7 @@ public partial class PartitionObservableTests
     {
         Subject<int> subject = new();
         var (evens, _) = subject.Partition(static x => x % Two == 0);
-        var first = evens.Subscribe(static _ => { });
+        var first = evens.Subscribe(Witness.Create<int>(static _ => { }));
         first.Dispose();
 
         // Repeated disposal must leave the replacement subscription active.

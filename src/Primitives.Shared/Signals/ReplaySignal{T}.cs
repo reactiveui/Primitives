@@ -483,6 +483,7 @@ public sealed class ReplaySignal<T> : ISignal<T>
 
             var target = _witness!;
             _witness = null;
+            target.Stop();
             lock (owner._observerLock)
             {
                 owner._broadcaster.Remove(target);

@@ -3,6 +3,7 @@
 // See the LICENSE file in the project root for full license information.
 
 using System.Runtime.CompilerServices;
+using ReactiveUI.Primitives.Advanced;
 
 namespace ReactiveUI.Primitives.Extensions.Internal;
 
@@ -14,7 +15,7 @@ internal static class ObservableSubscribeExtensions
     /// <param name="source">The source observable.</param>
     extension<T>(IObservable<T> source)
     {
-        /// <summary>Subscribes the three delegate callbacks to the source through the core sink.</summary>
+        /// <summary>Subscribes the three delegate callbacks to the source through a lightweight witness.</summary>
         /// <param name="onNext">Per-value callback.</param>
         /// <param name="onError">Error callback.</param>
         /// <param name="onCompleted">Completion callback.</param>
@@ -24,6 +25,6 @@ internal static class ObservableSubscribeExtensions
             Action<T> onNext,
             Action<Exception> onError,
             Action onCompleted) =>
-            source.Subscribe(onNext, onError, onCompleted);
+            source.Subscribe(new EmptyWitness<T>(onNext, onError, onCompleted));
     }
 }

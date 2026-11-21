@@ -845,6 +845,8 @@ namespace ReactiveUI.Primitives.Advanced
         [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
         public bool PostError(System.Exception error) { }
         [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public void Stop() { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
         public bool TryClaim() { }
     }
     [System.Diagnostics.DebuggerDisplay("SharedSubscription: Leases = {_leases}, Primary Disposed = {_primaryDisposed}, Released = {_released}")]
