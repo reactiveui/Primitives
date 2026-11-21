@@ -19,6 +19,9 @@ public partial class RxNamesTests
     /// <summary>The number of completing subscriptions made by the SubscribeSafeErrors dispatch test.</summary>
     private const int CompletingSubscriptionCount = 3;
 
+    /// <summary>The number of nullable warnings expected for the mismatched static SubscribeSafe consumer.</summary>
+    private const int NullableMismatchDiagnosticCount = 4;
+
     /// <summary>The string value used by nullable object subscription tests.</summary>
     private const string SubscribeSafeValue = "value";
 
@@ -34,7 +37,7 @@ public partial class RxNamesTests
         }
         """;
 
-    /// <summary>A consumer that selects the Primitives observer overload by its explicit name.</summary>
+    /// <summary>A consumer that uses the explicit Primitives observer overload.</summary>
     private const string SubscribeSafePrimitivesConsumer = """
         using System;
         using ReactiveUI.Primitives;
@@ -43,6 +46,68 @@ public partial class RxNamesTests
         {
             public static IDisposable Subscribe(IObservable<int> source, IObserver<int> observer) =>
                 source.SubscribeSafePrimitives(observer);
+        }
+        """;
+
+    /// <summary>A nullable-enabled consumer exercising valid static <c>SubscribeSafe</c> and <c>SubscribeSafeWitness</c> calls.</summary>
+    private const string NullableValidSubscribeSafeConsumer = """
+        #nullable enable
+        using System;
+        using ReactiveUI.Primitives.Advanced;
+        using PrimitivesLinqExtensions = ReactiveUI.Primitives.LinqExtensions;
+
+        public static class Consumer
+        {
+            public static void SubscribeAll(
+                IObservable<string> nonNullRef,
+                IObservable<string?> nullRef,
+                IObservable<int> nonNullVal,
+                IObservable<int?> nullVal,
+                IObserver<string> nonNullRefObserver,
+                IObserver<string?> nullRefObserver)
+            {
+                static void OnNonNullRef(string value) => _ = value.Length;
+                static void OnNullRef(string? value) { }
+                static void OnNonNullVal(int value) { }
+                static void OnNullVal(int? value) { }
+                static void OnError(Exception error) { }
+                static void OnCompleted() { }
+
+                _ = PrimitivesLinqExtensions.SubscribeSafe(nonNullRef, x => _ = x.Length);
+                _ = PrimitivesLinqExtensions.SubscribeSafe(nonNullRef, OnNonNullRef, OnError);
+                _ = PrimitivesLinqExtensions.SubscribeSafe(nonNullRef, OnNonNullRef, OnError, OnCompleted);
+                _ = PrimitivesLinqExtensions.SubscribeSafe(nonNullRef, nonNullRefObserver);
+                _ = PrimitivesLinqExtensions.SubscribeSafe(nullRef, OnNullRef);
+                _ = PrimitivesLinqExtensions.SubscribeSafe(nullRef, OnNullRef, OnError);
+                _ = PrimitivesLinqExtensions.SubscribeSafe(nullRef, OnNullRef, OnError, OnCompleted);
+                _ = PrimitivesLinqExtensions.SubscribeSafe(nullRef, nullRefObserver);
+                _ = PrimitivesLinqExtensions.SubscribeSafe(nonNullVal, OnNonNullVal, OnError);
+                _ = PrimitivesLinqExtensions.SubscribeSafe(nullVal, OnNullVal, OnError);
+                _ = SubscribeSafeWitness.Subscribe(nonNullRef, x => _ = x.Length, OnError);
+                _ = SubscribeSafeWitness.Subscribe(nullRef, OnNullRef, OnError);
+            }
+        }
+        """;
+
+    /// <summary>A nullable-enabled consumer passing non-nullable handlers for a nullable reference source.</summary>
+    private const string NullableMismatchSubscribeSafeConsumer = """
+        #nullable enable
+        using System;
+        using ReactiveUI.Primitives.Advanced;
+        using PrimitivesLinqExtensions = ReactiveUI.Primitives.LinqExtensions;
+
+        public static class Consumer
+        {
+            public static void SubscribeMismatched(IObservable<string?> nullRef, IObserver<string> nonNullObserver)
+            {
+                static void OnNonNullRef(string value) => _ = value.Length;
+                static void OnError(Exception error) { }
+
+                _ = PrimitivesLinqExtensions.SubscribeSafe(nullRef, value => _ = value.Length, OnError);
+                _ = PrimitivesLinqExtensions.SubscribeSafe(nullRef, OnNonNullRef, OnError);
+                _ = PrimitivesLinqExtensions.SubscribeSafe(nullRef, nonNullObserver);
+                _ = SubscribeSafeWitness.Subscribe(nullRef, value => _ = value.Length);
+            }
         }
         """;
 
@@ -285,7 +350,7 @@ public partial class RxNamesTests
     {
         var referenceSource = Signal.FromEnumerable<object?>([null, SubscribeSafeValue]);
         List<object?> referenceValues = [];
-        var referenceObserver = Witness.Create<object>(
+        var referenceObserver = Witness.Create<object?>(
             referenceValues.Add,
             static _ => { });
 
@@ -565,5 +630,38 @@ public partial class RxNamesTests
         var symbol = ConsumerCompilation.ResolveInvocation(compilation, syntaxTree, "SubscribeSafePrimitives");
 
         await Assert.That(symbol?.ContainingType.Name).IsEqualTo(nameof(LinqExtensions));
+    }
+
+    /// <summary>Verifies static <c>SubscribeSafe</c> and <c>SubscribeSafeWitness</c> calls compile without warnings when nullability matches.</summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    [Test]
+    [RequiresAssemblyFiles("Builds metadata references from loaded assembly locations.")]
+    public async Task SubscribeSafeStaticAliasCompilesCleanlyUnderNullableEnable()
+    {
+        var (compilation, _, _) = ConsumerCompilation.Compile(NullableValidSubscribeSafeConsumer);
+        var diagnostics = compilation.GetDiagnostics()
+            .Where(static diagnostic => diagnostic.Severity >= DiagnosticSeverity.Warning)
+            .Select(static diagnostic => diagnostic.ToString())
+            .ToArray();
+
+        await Assert.That(diagnostics).IsEmpty();
+    }
+
+    /// <summary>Verifies static <c>SubscribeSafe</c> and <c>SubscribeSafeWitness</c> calls preserve nullable warnings when handlers reject <see langword="null"/>.</summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    [Test]
+    [RequiresAssemblyFiles("Builds metadata references from loaded assembly locations.")]
+    public async Task SubscribeSafeStaticAliasReportsNullableWarningsWhenHandlerRejectsNull()
+    {
+        var (compilation, _, _) = ConsumerCompilation.Compile(NullableMismatchSubscribeSafeConsumer);
+        var diagnosticIds = compilation.GetDiagnostics()
+            .Where(static diagnostic => diagnostic.Severity >= DiagnosticSeverity.Warning)
+            .Select(static diagnostic => diagnostic.Id)
+            .ToArray();
+
+        await Assert.That(diagnosticIds.Length).IsEqualTo(NullableMismatchDiagnosticCount);
+        await Assert.That(diagnosticIds).Contains("CS8602");
+        await Assert.That(diagnosticIds).Contains("CS8622");
+        await Assert.That(diagnosticIds).Contains("CS8620");
     }
 }

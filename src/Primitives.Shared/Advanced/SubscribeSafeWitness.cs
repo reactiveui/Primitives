@@ -14,21 +14,20 @@ namespace ReactiveUI.Primitives.Advanced;
 /// <summary>Static factory methods for <see cref="SubscribeSafeWitness{T}"/> across nullable and value-type call shapes.</summary>
 public static class SubscribeSafeWitness
 {
-    /// <summary>Subscribes a nullable reference observer with downstream exception protection.</summary>
-    /// <typeparam name="T">The non-nullable reference value type.</typeparam>
+    /// <summary>Subscribes an observer with downstream exception protection.</summary>
+    /// <typeparam name="T">The value type.</typeparam>
     /// <param name="source">The source sequence.</param>
     /// <param name="observer">The observer to subscribe.</param>
     /// <param name="allowNullable">Reserved for nullable overload resolution.</param>
     /// <returns>The witness subscription.</returns>
     [OverloadResolutionPriority(1)]
-    public static SubscribeSafeWitness<T?> Subscribe<T>(
-        IObservable<T?> source,
+    public static SubscribeSafeWitness<T> Subscribe<T>(
+        IObservable<T> source,
         IObserver<T> observer,
         params bool[] allowNullable)
-        where T : class
     {
         _ = allowNullable;
-        return SubscribeSafeWitness<T?>.Subscribe(source, (IObserver<T?>)observer);
+        return SubscribeSafeWitness<T>.Subscribe(source, observer);
     }
 
     /// <summary>Subscribes a nullable value observer with downstream exception protection.</summary>
@@ -37,7 +36,7 @@ public static class SubscribeSafeWitness
     /// <param name="observer">The observer to subscribe.</param>
     /// <param name="allowNullable">Reserved for nullable overload resolution.</param>
     /// <returns>The witness subscription.</returns>
-    [OverloadResolutionPriority(1)]
+    [OverloadResolutionPriority(2)]
     public static SubscribeSafeWitness<T?> Subscribe<T>(
         IObservable<T?> source,
         IObserver<T?> observer,
@@ -48,24 +47,22 @@ public static class SubscribeSafeWitness
         return SubscribeSafeWitness<T?>.Subscribe(source, observer);
     }
 
-    /// <summary>Subscribes nullable reference callbacks with downstream exception protection.</summary>
-    /// <typeparam name="T">The non-nullable reference value type.</typeparam>
+    /// <summary>Subscribes callbacks with downstream exception protection.</summary>
+    /// <typeparam name="T">The value type.</typeparam>
     /// <param name="source">The source sequence.</param>
     /// <param name="onNext">The action to invoke for each value.</param>
     /// <param name="onError">The action to invoke for an error.</param>
     /// <param name="allowNullable">Reserved for nullable overload resolution.</param>
     /// <returns>The witness subscription.</returns>
     [OverloadResolutionPriority(1)]
-    public static SubscribeSafeWitness<T?> Subscribe<T>(
-        IObservable<T?> source,
+    public static SubscribeSafeWitness<T> Subscribe<T>(
+        IObservable<T> source,
         Action<T> onNext,
         Action<Exception> onError,
         params bool[] allowNullable)
-        where T : class
     {
         _ = allowNullable;
-        ArgumentExceptionHelper.ThrowIfNull(onNext);
-        return SubscribeSafeWitness<T?>.Subscribe(source, Witness.Create<T?>(value => onNext(value!), onError));
+        return SubscribeSafeWitness<T>.Subscribe(source, onNext, onError);
     }
 
     /// <summary>Subscribes nullable value callbacks with downstream exception protection.</summary>
@@ -75,7 +72,7 @@ public static class SubscribeSafeWitness
     /// <param name="onError">The action to invoke for an error.</param>
     /// <param name="allowNullable">Reserved for nullable overload resolution.</param>
     /// <returns>The witness subscription.</returns>
-    [OverloadResolutionPriority(1)]
+    [OverloadResolutionPriority(2)]
     public static SubscribeSafeWitness<T?> Subscribe<T>(
         IObservable<T?> source,
         Action<T?> onNext,
@@ -87,8 +84,8 @@ public static class SubscribeSafeWitness
         return SubscribeSafeWitness<T?>.Subscribe(source, Witness.Create(onNext, onError));
     }
 
-    /// <summary>Subscribes nullable reference callbacks with downstream exception protection.</summary>
-    /// <typeparam name="T">The non-nullable reference value type.</typeparam>
+    /// <summary>Subscribes callbacks with downstream exception protection.</summary>
+    /// <typeparam name="T">The value type.</typeparam>
     /// <param name="source">The source sequence.</param>
     /// <param name="onNext">The action to invoke for each value.</param>
     /// <param name="onError">The action to invoke for an error.</param>
@@ -96,19 +93,15 @@ public static class SubscribeSafeWitness
     /// <param name="allowNullable">Reserved for nullable overload resolution.</param>
     /// <returns>The witness subscription.</returns>
     [OverloadResolutionPriority(1)]
-    public static SubscribeSafeWitness<T?> Subscribe<T>(
-        IObservable<T?> source,
+    public static SubscribeSafeWitness<T> Subscribe<T>(
+        IObservable<T> source,
         Action<T> onNext,
         Action<Exception> onError,
         Action onCompleted,
         params bool[] allowNullable)
-        where T : class
     {
         _ = allowNullable;
-        ArgumentExceptionHelper.ThrowIfNull(onNext);
-        return SubscribeSafeWitness<T?>.Subscribe(
-            source,
-            Witness.Create<T?>(value => onNext(value!), onError, onCompleted));
+        return SubscribeSafeWitness<T>.Subscribe(source, onNext, onError, onCompleted);
     }
 
     /// <summary>Subscribes nullable value callbacks with downstream exception protection.</summary>
@@ -119,7 +112,7 @@ public static class SubscribeSafeWitness
     /// <param name="onCompleted">The action to invoke when the sequence completes.</param>
     /// <param name="allowNullable">Reserved for nullable overload resolution.</param>
     /// <returns>The witness subscription.</returns>
-    [OverloadResolutionPriority(1)]
+    [OverloadResolutionPriority(2)]
     public static SubscribeSafeWitness<T?> Subscribe<T>(
         IObservable<T?> source,
         Action<T?> onNext,
@@ -132,22 +125,20 @@ public static class SubscribeSafeWitness
         return SubscribeSafeWitness<T?>.Subscribe(source, Witness.Create(onNext, onError, onCompleted));
     }
 
-    /// <summary>Subscribes a nullable reference value callback with downstream exception protection.</summary>
-    /// <typeparam name="T">The non-nullable reference value type.</typeparam>
+    /// <summary>Subscribes a value callback with downstream exception protection.</summary>
+    /// <typeparam name="T">The value type.</typeparam>
     /// <param name="source">The source sequence.</param>
     /// <param name="onNext">The action to invoke for each value.</param>
     /// <param name="allowNullable">Reserved for nullable overload resolution.</param>
     /// <returns>The witness subscription.</returns>
     [OverloadResolutionPriority(1)]
-    public static SubscribeSafeWitness<T?> Subscribe<T>(
-        IObservable<T?> source,
+    public static SubscribeSafeWitness<T> Subscribe<T>(
+        IObservable<T> source,
         Action<T> onNext,
         params bool[] allowNullable)
-        where T : class
     {
         _ = allowNullable;
-        ArgumentExceptionHelper.ThrowIfNull(onNext);
-        return SubscribeSafeWitness<T?>.Subscribe(source, Witness.Create<T?>(value => onNext(value!)));
+        return SubscribeSafeWitness<T>.Subscribe(source, onNext);
     }
 
     /// <summary>Subscribes a nullable value callback with downstream exception protection.</summary>
@@ -156,7 +147,7 @@ public static class SubscribeSafeWitness
     /// <param name="onNext">The action to invoke for each value.</param>
     /// <param name="allowNullable">Reserved for nullable overload resolution.</param>
     /// <returns>The witness subscription.</returns>
-    [OverloadResolutionPriority(1)]
+    [OverloadResolutionPriority(2)]
     public static SubscribeSafeWitness<T?> Subscribe<T>(
         IObservable<T?> source,
         Action<T?> onNext,
@@ -173,7 +164,7 @@ public static class SubscribeSafeWitness
     /// <param name="onNext">The action to invoke for each value.</param>
     /// <param name="allowValueType">Reserved for value-type overload resolution.</param>
     /// <returns>The witness subscription.</returns>
-    [OverloadResolutionPriority(1)]
+    [OverloadResolutionPriority(2)]
     public static SubscribeSafeWitness<T> Subscribe<T>(
         IObservable<T> source,
         Action<T> onNext,
@@ -190,7 +181,7 @@ public static class SubscribeSafeWitness
     /// <param name="observer">The observer to subscribe.</param>
     /// <param name="allowValueType">Reserved for value-type overload resolution.</param>
     /// <returns>The witness subscription.</returns>
-    [OverloadResolutionPriority(1)]
+    [OverloadResolutionPriority(2)]
     public static SubscribeSafeWitness<T> Subscribe<T>(
         IObservable<T> source,
         IObserver<T> observer,
@@ -208,7 +199,7 @@ public static class SubscribeSafeWitness
     /// <param name="onError">The action to invoke for an error.</param>
     /// <param name="allowValueType">Reserved for value-type overload resolution.</param>
     /// <returns>The witness subscription.</returns>
-    [OverloadResolutionPriority(1)]
+    [OverloadResolutionPriority(2)]
     public static SubscribeSafeWitness<T> Subscribe<T>(
         IObservable<T> source,
         Action<T> onNext,
@@ -228,7 +219,7 @@ public static class SubscribeSafeWitness
     /// <param name="onCompleted">The action to invoke when the sequence completes.</param>
     /// <param name="allowValueType">Reserved for value-type overload resolution.</param>
     /// <returns>The witness subscription.</returns>
-    [OverloadResolutionPriority(1)]
+    [OverloadResolutionPriority(2)]
     public static SubscribeSafeWitness<T> Subscribe<T>(
         IObservable<T> source,
         Action<T> onNext,

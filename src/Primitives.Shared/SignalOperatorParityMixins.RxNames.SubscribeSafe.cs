@@ -14,8 +14,8 @@ namespace ReactiveUI.Primitives;
 /// <summary>The System.Reactive-named SubscribeSafe overloads, which isolate observer faults from the source.</summary>
 public static partial class LinqExtensions
 {
-    /// <summary>Subscribes a nullable reference observer with downstream exception protection from static-call syntax.</summary>
-    /// <typeparam name="T">The non-nullable reference value type.</typeparam>
+    /// <summary>Subscribes an observer with downstream exception protection from static-call syntax.</summary>
+    /// <typeparam name="T">The value type.</typeparam>
     /// <param name="source">The source sequence.</param>
     /// <param name="observer">The observer to subscribe.</param>
     /// <param name="allowNullable">Reserved for nullable overload resolution.</param>
@@ -24,10 +24,9 @@ public static partial class LinqExtensions
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     [OverloadResolutionPriority(1)]
     public static IDisposable SubscribeSafe<T>(
-        IObservable<T?> source,
+        IObservable<T> source,
         IObserver<T> observer,
-        params bool[] allowNullable)
-        where T : class =>
+        params bool[] allowNullable) =>
         SubscribeSafeWitness.Subscribe(source, observer, allowNullable);
 
     /// <summary>Subscribes a nullable value observer with downstream exception protection from static-call syntax.</summary>
@@ -38,7 +37,7 @@ public static partial class LinqExtensions
     /// <returns>A disposable that cancels the subscription.</returns>
     /// <exception cref="ArgumentNullException"><paramref name="source"/> or <paramref name="observer"/> is <see langword="null"/>.</exception>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [OverloadResolutionPriority(1)]
+    [OverloadResolutionPriority(2)]
     public static IDisposable SubscribeSafe<T>(
         IObservable<T?> source,
         IObserver<T?> observer,
@@ -46,8 +45,8 @@ public static partial class LinqExtensions
         where T : struct =>
         SubscribeSafeWitness.Subscribe(source, observer, allowNullable);
 
-    /// <summary>Subscribes nullable reference callbacks with downstream exception protection from static-call syntax.</summary>
-    /// <typeparam name="T">The non-nullable reference value type.</typeparam>
+    /// <summary>Subscribes callbacks with downstream exception protection from static-call syntax.</summary>
+    /// <typeparam name="T">The value type.</typeparam>
     /// <param name="source">The source sequence.</param>
     /// <param name="onNext">The action to invoke for each value.</param>
     /// <param name="onError">The action to invoke for an error.</param>
@@ -57,11 +56,10 @@ public static partial class LinqExtensions
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     [OverloadResolutionPriority(1)]
     public static IDisposable SubscribeSafe<T>(
-        IObservable<T?> source,
+        IObservable<T> source,
         Action<T> onNext,
         Action<Exception> onError,
-        params bool[] allowNullable)
-        where T : class =>
+        params bool[] allowNullable) =>
         SubscribeSafeWitness.Subscribe(source, onNext, onError, allowNullable);
 
     /// <summary>Subscribes nullable value callbacks with downstream exception protection from static-call syntax.</summary>
@@ -73,7 +71,7 @@ public static partial class LinqExtensions
     /// <returns>A disposable that cancels the subscription.</returns>
     /// <exception cref="ArgumentNullException">A required argument is <see langword="null"/>.</exception>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [OverloadResolutionPriority(1)]
+    [OverloadResolutionPriority(2)]
     public static IDisposable SubscribeSafe<T>(
         IObservable<T?> source,
         Action<T?> onNext,
@@ -82,8 +80,8 @@ public static partial class LinqExtensions
         where T : struct =>
         SubscribeSafeWitness.Subscribe(source, onNext, onError, allowNullable);
 
-    /// <summary>Subscribes nullable reference callbacks with downstream exception protection from static-call syntax.</summary>
-    /// <typeparam name="T">The non-nullable reference value type.</typeparam>
+    /// <summary>Subscribes callbacks with downstream exception protection from static-call syntax.</summary>
+    /// <typeparam name="T">The value type.</typeparam>
     /// <param name="source">The source sequence.</param>
     /// <param name="onNext">The action to invoke for each value.</param>
     /// <param name="onError">The action to invoke for an error.</param>
@@ -94,12 +92,11 @@ public static partial class LinqExtensions
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     [OverloadResolutionPriority(1)]
     public static IDisposable SubscribeSafe<T>(
-        IObservable<T?> source,
+        IObservable<T> source,
         Action<T> onNext,
         Action<Exception> onError,
         Action onCompleted,
-        params bool[] allowNullable)
-        where T : class =>
+        params bool[] allowNullable) =>
         SubscribeSafeWitness.Subscribe(source, onNext, onError, onCompleted, allowNullable);
 
     /// <summary>Subscribes nullable value callbacks with downstream exception protection from static-call syntax.</summary>
@@ -112,7 +109,7 @@ public static partial class LinqExtensions
     /// <returns>A disposable that cancels the subscription.</returns>
     /// <exception cref="ArgumentNullException">A required argument is <see langword="null"/>.</exception>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [OverloadResolutionPriority(1)]
+    [OverloadResolutionPriority(2)]
     public static IDisposable SubscribeSafe<T>(
         IObservable<T?> source,
         Action<T?> onNext,
@@ -122,8 +119,8 @@ public static partial class LinqExtensions
         where T : struct =>
         SubscribeSafeWitness.Subscribe(source, onNext, onError, onCompleted, allowNullable);
 
-    /// <summary>Subscribes a nullable reference value callback with downstream exception protection from static-call syntax.</summary>
-    /// <typeparam name="T">The non-nullable reference value type.</typeparam>
+    /// <summary>Subscribes a value callback with downstream exception protection from static-call syntax.</summary>
+    /// <typeparam name="T">The value type.</typeparam>
     /// <param name="source">The source sequence.</param>
     /// <param name="onNext">The action to invoke for each value.</param>
     /// <param name="allowNullable">Reserved for nullable overload resolution.</param>
@@ -133,10 +130,9 @@ public static partial class LinqExtensions
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     [OverloadResolutionPriority(1)]
     public static IDisposable SubscribeSafe<T>(
-        IObservable<T?> source,
+        IObservable<T> source,
         Action<T> onNext,
-        params bool[] allowNullable)
-        where T : class =>
+        params bool[] allowNullable) =>
         SubscribeSafeWitness.Subscribe(source, onNext, allowNullable);
 
     /// <summary>Subscribes a nullable value callback with downstream exception protection from static-call syntax.</summary>
@@ -148,7 +144,7 @@ public static partial class LinqExtensions
     /// <exception cref="ArgumentNullException">A required argument is <see langword="null"/>.</exception>
     /// <remarks>With no error handler, a source error is rethrown to the caller of the source's <c>OnError</c>.</remarks>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [OverloadResolutionPriority(1)]
+    [OverloadResolutionPriority(2)]
     public static IDisposable SubscribeSafe<T>(
         IObservable<T?> source,
         Action<T?> onNext,
@@ -165,7 +161,7 @@ public static partial class LinqExtensions
     /// <exception cref="ArgumentNullException">A required argument is <see langword="null"/>.</exception>
     /// <remarks>With no error handler, a source error is rethrown to the caller of the source's <c>OnError</c>.</remarks>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [OverloadResolutionPriority(1)]
+    [OverloadResolutionPriority(2)]
     public static IDisposable SubscribeSafe<T>(
         IObservable<T> source,
         Action<T> onNext,
@@ -181,7 +177,7 @@ public static partial class LinqExtensions
     /// <returns>A disposable that cancels the subscription.</returns>
     /// <exception cref="ArgumentNullException"><paramref name="source"/> or <paramref name="observer"/> is <see langword="null"/>.</exception>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [OverloadResolutionPriority(1)]
+    [OverloadResolutionPriority(2)]
     public static IDisposable SubscribeSafe<T>(
         IObservable<T> source,
         IObserver<T> observer,
@@ -198,7 +194,7 @@ public static partial class LinqExtensions
     /// <returns>A disposable that cancels the subscription.</returns>
     /// <exception cref="ArgumentNullException">A required argument is <see langword="null"/>.</exception>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [OverloadResolutionPriority(1)]
+    [OverloadResolutionPriority(2)]
     public static IDisposable SubscribeSafe<T>(
         IObservable<T> source,
         Action<T> onNext,
@@ -217,7 +213,7 @@ public static partial class LinqExtensions
     /// <returns>A disposable that cancels the subscription.</returns>
     /// <exception cref="ArgumentNullException">A required argument is <see langword="null"/>.</exception>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [OverloadResolutionPriority(1)]
+    [OverloadResolutionPriority(2)]
     public static IDisposable SubscribeSafe<T>(
         IObservable<T> source,
         Action<T> onNext,
