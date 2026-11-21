@@ -254,7 +254,7 @@ public partial class LinqExtensionsTests
     {
         var referenceSource = Signal.FromEnumerable<object?>([null, SubscribeSafeValue]);
         List<object?> referenceValues = [];
-        var referenceObserver = Witness.Create<object>(
+        var referenceObserver = Witness.Create<object?>(
             referenceValues.Add,
             static _ => { });
 
