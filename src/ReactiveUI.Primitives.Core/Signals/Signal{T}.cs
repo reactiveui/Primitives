@@ -327,13 +327,13 @@ public class Signal<T> : ISignal<T>
         return false;
     }
 
-    /// <summary>Detaches each subscription in the captured observer snapshot.</summary>
+    /// <summary>Detaches each subscription in the captured observer snapshot from the disposed signal.</summary>
     /// <param name="observers">The observer shape captured before disposal.</param>
     private static void DisposeSubscriptions(object? observers)
     {
         if (observers is SignalSubscription single)
         {
-            single.Dispose();
+            single.DetachFromDisposedSubject();
             return;
         }
 
@@ -344,7 +344,7 @@ public class Signal<T> : ISignal<T>
 
         for (var i = 0; i < subscriptions.Length; i++)
         {
-            subscriptions[i]?.Dispose();
+            subscriptions[i]?.DetachFromDisposedSubject();
         }
     }
 
@@ -506,13 +506,13 @@ public class Signal<T> : ISignal<T>
     }
 
     /// <summary>One subscription's handle, holding either an observer or a value-only callback.</summary>
-    private sealed class SignalSubscription : IDisposable
+    internal sealed class SignalSubscription : IDisposable
     {
-        /// <summary>The observer target, or <see langword="null"/> when this subscription stores an action callback.</summary>
-        private readonly IObserver<T>? _observer;
+        /// <summary>The observer target, or <see langword="null"/> when disposed or storing an action callback.</summary>
+        private IObserver<T>? _observer;
 
-        /// <summary>The action target, or <see langword="null"/> when this subscription stores an observer.</summary>
-        private readonly Action<T>? _action;
+        /// <summary>The action target, or <see langword="null"/> when disposed or storing an observer.</summary>
+        private Action<T>? _action;
 
         /// <summary>The owning signal, cleared by the first disposal.</summary>
         private Signal<T>? _subject;
@@ -520,7 +520,7 @@ public class Signal<T> : ISignal<T>
         /// <summary>Initializes a new instance of the <see cref="SignalSubscription"/> class.</summary>
         /// <param name="subject">The owning signal.</param>
         /// <param name="observer">The subscribed observer.</param>
-        public SignalSubscription(Signal<T> subject, IObserver<T> observer)
+        internal SignalSubscription(Signal<T> subject, IObserver<T> observer)
         {
             _subject = subject;
             _observer = observer;
@@ -529,43 +529,49 @@ public class Signal<T> : ISignal<T>
         /// <summary>Initializes a new instance of the <see cref="SignalSubscription"/> class.</summary>
         /// <param name="subject">The owning signal.</param>
         /// <param name="onNext">The callback invoked for each value.</param>
-        public SignalSubscription(Signal<T> subject, Action<T> onNext)
+        internal SignalSubscription(Signal<T> subject, Action<T> onNext)
         {
             _subject = subject;
             _action = onNext;
         }
 
-        /// <summary>Gets a value indicating whether this subscription stores an action callback.</summary>
-        public bool IsAction => _action is not null;
+        /// <summary>Gets a value indicating whether this subscription holds an active action callback.</summary>
+        internal bool IsAction => Volatile.Read(ref _action) is not null;
 
-        /// <summary>Sends a value to the observer or the callback, whichever this subscription holds.</summary>
-        /// <param name="value">The value to send.</param>
-        public void OnNext(T value)
+        /// <summary>Detaches this subscription once and prevents further delivery to its observer or callback.</summary>
+        public void Dispose()
         {
-            var observer = _observer;
+            Volatile.Write(ref _observer, null);
+            Volatile.Write(ref _action, null);
+            var subject = Interlocked.Exchange(ref _subject, null);
+            subject?.Remove(this);
+        }
+
+        /// <summary>Sends a value to the observer or the callback while this subscription remains active.</summary>
+        /// <param name="value">The value to send.</param>
+        internal void OnNext(T value)
+        {
+            var observer = Volatile.Read(ref _observer);
             if (observer is not null)
             {
                 observer.OnNext(value);
                 return;
             }
 
-            _action!(value);
+            Volatile.Read(ref _action)?.Invoke(value);
         }
 
-        /// <summary>Sends an error to the observer; a value-only callback receives nothing.</summary>
+        /// <summary>Sends an error to the observer while active; a value-only or disposed subscription receives nothing.</summary>
         /// <param name="exception">The error to send.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void OnError(Exception exception) => _observer?.OnError(exception);
+        internal void OnError(Exception exception) => Volatile.Read(ref _observer)?.OnError(exception);
 
-        /// <summary>Sends completion to the observer; a value-only callback receives nothing.</summary>
+        /// <summary>Sends completion to the observer while active; a value-only or disposed subscription receives nothing.</summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void OnCompleted() => _observer?.OnCompleted();
+        internal void OnCompleted() => Volatile.Read(ref _observer)?.OnCompleted();
 
-        /// <summary>Detaches this subscription once.</summary>
-        public void Dispose()
-        {
-            var subject = Interlocked.Exchange(ref _subject, null);
-            subject?.Remove(this);
-        }
+        /// <summary>Clears the back-reference when the owning signal is disposed without suppressing an in-flight value dispatch.</summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        internal void DetachFromDisposedSubject() => Volatile.Write(ref _subject, null);
     }
 }

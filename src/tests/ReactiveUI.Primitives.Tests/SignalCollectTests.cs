@@ -2,6 +2,7 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using ReactiveUI.Primitives.Advanced;
 using ReactiveUI.Primitives.Concurrency;
 using ReactiveUI.Primitives.Signals;
 
@@ -43,6 +44,7 @@ public sealed class SignalCollectTests
     public async Task BufferFlushesTheOpenWindowOnCompletion()
     {
         const int First = 1;
+        const int ExpectedBatches = 2;
         ManualSequencer sequencer = new();
         IObserver<int>? source = null;
         List<IList<int>> batches = [];
@@ -51,10 +53,14 @@ public sealed class SignalCollectTests
             .Subscribe(batches.Add);
 
         source!.OnNext(First);
+        sequencer.RunPending();
+        sequencer.RunStaleTick();
+        source.OnNext(First);
         source.OnCompleted();
 
-        await Assert.That(batches.Count).IsEqualTo(1);
+        await Assert.That(batches.Count).IsEqualTo(ExpectedBatches);
         await Assert.That(batches[0].SequenceEqual([First])).IsTrue();
+        await Assert.That(batches[1].SequenceEqual([First])).IsTrue();
     }
 
     /// <summary>Completion with an empty time window completes without emitting a batch.</summary>
@@ -173,7 +179,7 @@ public sealed class SignalCollectTests
 
         using var subscription = new ScriptedObservable<int>(observer => upstream = observer)
             .Buffer(TimeSpan.FromTicks(Second), clock)
-            .Subscribe(batch => batches.Add([.. batch]), observed.Add, static () => { });
+            .Subscribe(Witness.Create<IList<int>>(batch => batches.Add([.. batch]), observed.Add, static () => { }));
 
         upstream!.OnNext(First);
         upstream.OnError(expected);

@@ -2,6 +2,7 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using ReactiveUI.Primitives.Advanced;
 using ReactiveUI.Primitives.Extensions.Operators;
 
 namespace ReactiveUI.Primitives.Extensions.Tests;
@@ -78,7 +79,8 @@ public partial class CurrentValueSubjectTests
     {
         using CurrentValueSubject<int> subject = new(InitialValue);
         List<int> results = [];
-        var sub = subject.Subscribe(results.Add);
+        var sub = subject.Subscribe(Witness.Create<int>(results.Add));
+        sub.Dispose();
         sub.Dispose();
         subject.OnNext(SecondValue);
         await Assert.That(results).IsCollectionEqualTo([InitialValue]);

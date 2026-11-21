@@ -27,11 +27,11 @@ public sealed partial class SwitchWitnessTests
         List<int> values = [];
         SwitchWitness<int>? coordinator = null;
         var heldGate = false;
-        using var subscription = outer.SwitchTo().Subscribe(value =>
+        using var subscription = outer.SwitchTo().Subscribe(Witness.Create<int>(value =>
         {
             heldGate |= IsHeld(coordinator!.Gate);
             values.Add(value);
-        });
+        }));
         coordinator = (SwitchWitness<int>)subscription;
 
         outer.OnNext(first);

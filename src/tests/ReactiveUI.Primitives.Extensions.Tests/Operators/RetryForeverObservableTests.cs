@@ -4,6 +4,7 @@
 
 using System.Reactive.Linq;
 using System.Reactive.Subjects;
+using ReactiveUI.Primitives.Advanced;
 using ReactiveUI.Primitives.Disposables;
 using ReactiveUI.Primitives.Extensions.Operators;
 
@@ -65,8 +66,9 @@ public class RetryForeverObservableTests
             captured = observer;
             return EmptyDisposable.Instance;
         });
-        var sub = source.OnErrorRetry().Subscribe(static _ => { });
+        var sub = source.OnErrorRetry().Subscribe(Witness.Create<int>(static _ => { }));
         await Assert.That(subscribeCount).IsEqualTo(1);
+        sub.Dispose();
         sub.Dispose();
         captured!.OnError(new InvalidOperationException("after-dispose"));
         await Assert.That(subscribeCount).IsEqualTo(1);

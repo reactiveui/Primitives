@@ -2,8 +2,8 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
-using System.Runtime.CompilerServices;
 using ReactiveUI.Primitives.Disposables;
+using ReactiveUI.Primitives.Internal;
 
 namespace ReactiveUI.Primitives.Signals;
 
@@ -137,20 +137,20 @@ public sealed class DelayableNotificationSignal<T> : ISignal<T>
         ArgumentExceptionHelper.ThrowIfNull(observer);
 
         Exception? error;
-        bool stopped;
+        DetachableObserver<DelayableNotificationSignal<T>, T>? subscription = null;
         lock (_gate)
         {
             error = _error;
-            stopped = _stopped;
-            if (!stopped)
+            if (!_stopped)
             {
-                _broadcaster.Add(observer);
+                subscription = new(this, observer, static (parent, target) => parent.Unsubscribe(target));
+                _broadcaster.Add(subscription);
             }
         }
 
-        if (!stopped)
+        if (subscription is not null)
         {
-            return new Subscription(this, observer);
+            return subscription;
         }
 
         if (error is not null)
@@ -182,15 +182,5 @@ public sealed class DelayableNotificationSignal<T> : ISignal<T>
         {
             _broadcaster.Remove(observer);
         }
-    }
-
-    /// <summary>Removes its observer from the signal when disposed.</summary>
-    /// <param name="parent">The owning signal.</param>
-    /// <param name="observer">The subscribed observer.</param>
-    private sealed class Subscription(DelayableNotificationSignal<T> parent, IObserver<T> observer) : IDisposable
-    {
-        /// <inheritdoc/>
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Dispose() => parent.Unsubscribe(observer);
     }
 }

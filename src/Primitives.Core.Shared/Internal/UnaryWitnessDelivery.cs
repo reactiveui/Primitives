@@ -41,6 +41,49 @@ internal static class UnaryWitnessDelivery
         SinkSubscription.Dispose(ref subscription);
     }
 
+#if PRIMITIVES_CORE
+    /// <summary>Forwards <paramref name="value"/> to <paramref name="onNext"/> while the witness has not stopped.</summary>
+    /// <typeparam name="T">The observed element type.</typeparam>
+    /// <param name="stopped">The witness stop flag.</param>
+    /// <param name="value">The value to forward.</param>
+    /// <param name="onNext">The value callback.</param>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    internal static void NextCallback<T>(ref int stopped, T value, Action<T> onNext)
+    {
+        if (Volatile.Read(ref stopped) == 0)
+        {
+            onNext(value);
+        }
+    }
+
+    /// <summary>Claims termination once, invokes <paramref name="callback"/>, and disposes <paramref name="subscription"/>.</summary>
+    /// <typeparam name="TState">The callback state type.</typeparam>
+    /// <param name="stopped">The witness stop flag.</param>
+    /// <param name="subscription">The upstream subscription slot.</param>
+    /// <param name="state">The state forwarded to <paramref name="callback"/>.</param>
+    /// <param name="callback">The terminal callback.</param>
+    internal static void TerminateCallback<TState>(
+        ref int stopped,
+        ref IDisposable? subscription,
+        TState state,
+        Action<TState> callback)
+    {
+        if (Interlocked.Exchange(ref stopped, 1) != 0)
+        {
+            return;
+        }
+
+        try
+        {
+            callback(state);
+        }
+        finally
+        {
+            SinkSubscription.Dispose(ref subscription);
+        }
+    }
+#endif
+
     /// <summary>Claims the terminal transition and completes <paramref name="observer"/>, disposing <paramref name="cleanup"/> afterwards.</summary>
     /// <typeparam name="T">The observer element type.</typeparam>
     /// <param name="stopped">The witness stop flag.</param>

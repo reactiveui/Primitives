@@ -5,6 +5,7 @@
 using System.Runtime.CompilerServices;
 using ReactiveUI.Primitives.Advanced;
 using ReactiveUI.Primitives.Disposables;
+using ReactiveUI.Primitives.Internal;
 
 namespace ReactiveUI.Primitives.Signals;
 
@@ -170,17 +171,21 @@ public sealed class AsyncSignal<T> : IAwaitSignal<T>
             ThrowIfDisposed();
             if (!_isCompleted)
             {
+                DetachableObserver<AsyncSignal<T>, T> subscription = new(
+                    this,
+                    observer,
+                    static (subject, target) => subject.RemoveObserver(target));
                 if (_outObserver is ListWitness<T> listObserver)
                 {
-                    _outObserver = listObserver.Add(observer);
+                    _outObserver = listObserver.Add(subscription);
                 }
                 else
                 {
                     // Removal collapses the fan-out to the empty witness, never to a lone observer.
-                    _outObserver = new ListWitness<T>(new([observer]));
+                    _outObserver = new ListWitness<T>(new([subscription]));
                 }
 
-                return new ObserverHandler<T>(this, observer);
+                return subscription;
             }
 
             completionError = _lastError;
