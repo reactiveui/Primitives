@@ -3,7 +3,6 @@
 // See the LICENSE file in the project root for full license information.
 
 using System.Reactive.Concurrency;
-using System.Reactive.Disposables;
 using System.Runtime.CompilerServices;
 using Microsoft.UI.Dispatching;
 using ReactiveUI.Primitives.Concurrency;
@@ -197,18 +196,14 @@ public sealed class DispatcherQueueSequencer : LocalScheduler, IThreadAffineSequ
     /// <param name="dueTime">The requested delay.</param>
     /// <returns>The timer cancellation handle.</returns>
     [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
-    private IDisposable StartDispatcherTimer(Action work, TimeSpan dueTime)
+    private DelayedWorkTimer StartDispatcherTimer(Action work, TimeSpan dueTime)
     {
         var timer = DispatcherQueue.CreateTimer();
         timer.Interval = dueTime;
         timer.IsRepeating = false;
-        timer.Tick += (_, _) =>
-        {
-            timer.Stop();
-            work();
-        };
+        DelayedWorkTimer delayed = new(timer, work);
         timer.Start();
-        return Disposable.Create(timer, static t => t.Stop());
+        return delayed;
     }
 
     /// <summary>Attempts a native dispatcher queue post.</summary>
@@ -229,5 +224,61 @@ public sealed class DispatcherQueueSequencer : LocalScheduler, IThreadAffineSequ
         /// <inheritdoc/>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public IDisposable ScheduleOnDispatcher(Action work, TimeSpan dueTime) => Owner.ScheduleOnDispatcher(work, dueTime);
+    }
+
+    /// <summary>Runs delayed work once when its dispatcher queue timer fires, and detaches from the timer on fire or dispose.</summary>
+    [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
+    private sealed class DelayedWorkTimer : IDisposable
+    {
+        /// <summary>The work to run.</summary>
+        private readonly Action _work;
+
+        /// <summary>The attached timer, or <see langword="null"/> once fired or disposed.</summary>
+        private DispatcherQueueTimer? _timer;
+
+        /// <summary>Initializes a new instance of the <see cref="DelayedWorkTimer"/> class and attaches it to <paramref name="timer"/>.</summary>
+        /// <param name="timer">The timer that triggers the work.</param>
+        /// <param name="work">The work to run.</param>
+        internal DelayedWorkTimer(DispatcherQueueTimer timer, Action work)
+        {
+            _work = work;
+            _timer = timer;
+            timer.Tick += OnTick;
+        }
+
+        /// <inheritdoc/>
+        public void Dispose()
+        {
+            if (Interlocked.Exchange(ref _timer, null) is { } timer)
+            {
+                Detach(timer);
+            }
+        }
+
+        /// <summary>Detaches from the timer and runs the work, unless it was already disposed.</summary>
+        /// <param name="sender">The timer that fired.</param>
+        /// <param name="args">Unused event data.</param>
+        private void OnTick(DispatcherQueueTimer sender, object args)
+        {
+            if (Interlocked.Exchange(ref _timer, null) is null)
+            {
+                return;
+            }
+
+            Detach(sender);
+            _work();
+        }
+
+        /// <summary>Stops the timer and removes the tick handler.</summary>
+        /// <param name="timer">The timer to detach from.</param>
+        /// <remarks>
+        /// The native timer holds the handler and the handler is reachable from the timer, so the GC cannot collect
+        /// either while the handler stays attached. Stop alone does not detach it.
+        /// </remarks>
+        private void Detach(DispatcherQueueTimer timer)
+        {
+            timer.Tick -= OnTick;
+            timer.Stop();
+        }
     }
 }

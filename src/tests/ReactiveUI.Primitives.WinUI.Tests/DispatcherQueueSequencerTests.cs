@@ -17,6 +17,12 @@ public sealed class DispatcherQueueSequencerTests
     /// <summary>The second value in a scheduled batch.</summary>
     private const int SecondValue = 2;
 
+    /// <summary>The number of milliseconds in a second, used to schedule work one millisecond ahead.</summary>
+    private const long MillisecondsPerSecond = 1000;
+
+    /// <summary>The longest wait for real dispatcher queue timers to fire.</summary>
+    private static readonly TimeSpan TimerWaitLimit = TimeSpan.FromSeconds(30);
+
     /// <summary>Expected values after both queued items run.</summary>
     private static readonly int[] BatchValues = [1, SecondValue];
 
@@ -289,6 +295,69 @@ public sealed class DispatcherQueueSequencerTests
             await mainController.ShutdownQueueAsync();
             await otherController.ShutdownQueueAsync();
         }
+    }
+
+    /// <summary>Delayed work on a real dispatcher queue timer can be collected once its timer has fired.</summary>
+    /// <returns>A task representing the asynchronous test.</returns>
+    [Test]
+    [System.Diagnostics.CodeAnalysis.SuppressMessage(
+        "Performance",
+        "PSH1021:Remove this GC.Collect call",
+        Justification = "The test checks that fired timers release their work, which only a forced collection can show.")]
+    public async Task DelayedScheduleReleasesWorkAfterTheTimerFires()
+    {
+        const int Count = 200;
+        var controller = DispatcherQueueController.CreateOnDedicatedThread();
+        try
+        {
+            DispatcherQueueSequencer sequencer = new(controller.DispatcherQueue);
+            TaskCompletionSource allRan = new(TaskCreationOptions.RunContinuationsAsynchronously);
+            var payloads = ScheduleTrackedPayloads(sequencer, Count, allRan);
+
+            await allRan.Task.WaitAsync(TimerWaitLimit);
+
+            // Every tick handler has returned once a later queue item runs.
+            _ = await RunOnQueue(controller.DispatcherQueue, static () => true);
+            GC.Collect();
+            GC.WaitForPendingFinalizers();
+            GC.Collect();
+
+            await Assert.That(payloads.Count(static payload => payload.IsAlive)).IsEqualTo(0);
+        }
+        finally
+        {
+            await controller.ShutdownQueueAsync();
+        }
+    }
+
+    /// <summary>Schedules delayed work items that each hold a payload, and tracks the payloads weakly.</summary>
+    /// <param name="sequencer">The sequencer to schedule on.</param>
+    /// <param name="count">The number of work items.</param>
+    /// <param name="allRan">Completed when every work item has run.</param>
+    /// <returns>Weak references to the payloads.</returns>
+    [MethodImpl(MethodImplOptions.NoInlining)]
+    private static WeakReference[] ScheduleTrackedPayloads(DispatcherQueueSequencer sequencer, int count, TaskCompletionSource allRan)
+    {
+        var remaining = count;
+        var payloads = new WeakReference[count];
+        var dueTimestamp = sequencer.Timestamp + (System.Diagnostics.Stopwatch.Frequency / MillisecondsPerSecond);
+        for (var i = 0; i < count; i++)
+        {
+            var payload = new byte[1024];
+            payloads[i] = new(payload);
+            sequencer.Schedule(
+                new RecordingWorkItem(() =>
+                {
+                    GC.KeepAlive(payload);
+                    if (Interlocked.Decrement(ref remaining) == 0)
+                    {
+                        allRan.SetResult();
+                    }
+                }),
+                dueTimestamp);
+        }
+
+        return payloads;
     }
 
     /// <summary>Reads <see cref="DispatcherQueueSequencer.Current"/> twice on the calling thread.</summary>
