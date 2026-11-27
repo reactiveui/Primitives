@@ -194,15 +194,29 @@ public sealed class DispatcherQueueSequencer : ISequencer, IThreadAffineSequence
         var timer = DispatcherQueue.CreateTimer();
         timer.Interval = DispatchSequencerState.DelayUntil(dueTimestamp);
         timer.IsRepeating = false;
-        timer.Tick += (_, _) =>
-        {
-            timer.Stop();
-            DispatchSequencerState.RunIfActive(item);
-        };
+        timer.Tick += new DelayedWorkTimer(item).OnTick;
         timer.Start();
     }
 
     /// <summary>Runs one queued batch on the coalescing engine.</summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private void RunDrain() => _state.RunDrain();
+
+    /// <summary>Runs one delayed work item when its dispatcher queue timer fires, then detaches from the timer.</summary>
+    /// <param name="item">The work item to run.</param>
+    [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
+    private sealed class DelayedWorkTimer(IWorkItem item)
+    {
+        /// <summary>Detaches from the timer and runs the work item.</summary>
+        /// <param name="sender">The timer that fired.</param>
+        /// <param name="args">Unused event data.</param>
+        internal void OnTick(DispatcherQueueTimer sender, object args)
+        {
+            // The native timer holds this handler and the handler is reachable from the timer, so the GC cannot
+            // collect either while the handler stays attached. Stop alone does not detach it.
+            sender.Tick -= OnTick;
+            sender.Stop();
+            DispatchSequencerState.RunIfActive(item);
+        }
+    }
 }

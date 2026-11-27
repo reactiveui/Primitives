@@ -4,6 +4,7 @@
 
 using System.Reactive.Concurrency;
 using System.Reactive.Disposables;
+using System.Runtime.CompilerServices;
 using Microsoft.UI.Dispatching;
 using ReactiveUI.Primitives.Reactive.Concurrency;
 using TUnit.Assertions.Enums;
@@ -15,6 +16,15 @@ public sealed class DispatcherQueueSequencerTests
 {
     /// <summary>The second value in a scheduled batch.</summary>
     private const int SecondValue = 2;
+
+    /// <summary>The delay for timers that are left to fire.</summary>
+    private static readonly TimeSpan ShortDelay = TimeSpan.FromMilliseconds(1);
+
+    /// <summary>The delay for timers that are cancelled before they fire.</summary>
+    private static readonly TimeSpan LongDelay = TimeSpan.FromHours(1);
+
+    /// <summary>The longest wait for real dispatcher queue timers to fire.</summary>
+    private static readonly TimeSpan TimerWaitLimit = TimeSpan.FromSeconds(30);
 
     /// <summary>Expected values after both queued items run.</summary>
     private static readonly int[] BatchValues = [1, SecondValue];
@@ -148,6 +158,41 @@ public sealed class DispatcherQueueSequencerTests
         }
 
         handle.Dispose();
+    }
+
+    /// <summary>Delayed work on a real dispatcher queue timer can be collected once its timer fires or is cancelled.</summary>
+    /// <returns>A task representing the asynchronous test.</returns>
+    [Test]
+    [System.Diagnostics.CodeAnalysis.SuppressMessage(
+        "Performance",
+        "PSH1021:Remove this GC.Collect call",
+        Justification = "The test checks that fired and cancelled timers release their work, which only a forced collection can show.")]
+    public async Task DelayedScheduleReleasesWorkAfterTheTimerFiresOrIsCancelled()
+    {
+        const int Count = 200;
+        var controller = DispatcherQueueController.CreateOnDedicatedThread();
+        try
+        {
+            DispatcherQueueSequencer scheduler = new(controller.DispatcherQueue);
+            TaskCompletionSource allRan = new(TaskCreationOptions.RunContinuationsAsynchronously);
+            var fired = ScheduleTrackedPayloads(scheduler, Count, ShortDelay, allRan);
+            var cancelled = ScheduleTrackedPayloads(scheduler, Count, LongDelay, allRan: null);
+
+            await allRan.Task.WaitAsync(TimerWaitLimit);
+
+            // Every tick handler has returned once a later queue item runs.
+            _ = await RunOnQueue(controller.DispatcherQueue, static () => true);
+            GC.Collect();
+            GC.WaitForPendingFinalizers();
+            GC.Collect();
+
+            await Assert.That(fired.Count(static payload => payload.IsAlive)).IsEqualTo(0);
+            await Assert.That(cancelled.Count(static payload => payload.IsAlive)).IsEqualTo(0);
+        }
+        finally
+        {
+            await controller.ShutdownQueueAsync();
+        }
     }
 
     /// <summary>A thread without a dispatcher queue gets an error rather than a sequencer that could never run work.</summary>
@@ -308,6 +353,42 @@ public sealed class DispatcherQueueSequencerTests
         }
 
         return completion.Task;
+    }
+
+    /// <summary>Schedules delayed actions that each hold a payload, and tracks the payloads weakly.</summary>
+    /// <param name="scheduler">The scheduler to schedule on.</param>
+    /// <param name="count">The number of actions.</param>
+    /// <param name="dueTime">The delay before each action runs.</param>
+    /// <param name="allRan">Completed when every action has run; when <see langword="null"/>, each action is cancelled at once.</param>
+    /// <returns>Weak references to the payloads.</returns>
+    [MethodImpl(MethodImplOptions.NoInlining)]
+    private static WeakReference[] ScheduleTrackedPayloads(
+        DispatcherQueueSequencer scheduler,
+        int count,
+        TimeSpan dueTime,
+        TaskCompletionSource? allRan)
+    {
+        var remaining = count;
+        var payloads = new WeakReference[count];
+        for (var i = 0; i < count; i++)
+        {
+            var payload = new byte[1024];
+            payloads[i] = new(payload);
+            var handle = scheduler.Schedule(dueTime, () =>
+            {
+                GC.KeepAlive(payload);
+                if (Interlocked.Decrement(ref remaining) == 0)
+                {
+                    allRan?.SetResult();
+                }
+            });
+            if (allRan is null)
+            {
+                handle.Dispose();
+            }
+        }
+
+        return payloads;
     }
 
     /// <summary>Runs a function on a fresh thread that has no dispatcher queue and returns its result or exception.</summary>
