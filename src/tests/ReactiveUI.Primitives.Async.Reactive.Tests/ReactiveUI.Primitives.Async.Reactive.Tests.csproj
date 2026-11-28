@@ -7,6 +7,8 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <ProjectReference Include="../../examples/StockLevels.Reactive/StockLevels.Reactive.csproj" />
+    <Compile Include="../ReactiveUI.Primitives.Async.Tests/StockExampleTests.cs" Link="StockExampleTests.cs" />
     <PackageReference Include="System.Reactive"/>
     <PackageReference Include="Microsoft.Reactive.Testing"/>
   </ItemGroup>

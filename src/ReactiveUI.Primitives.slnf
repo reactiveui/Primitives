@@ -2,6 +2,8 @@
   "solution": {
     "path": "ReactiveUI.Primitives.slnx",
     "projects": [
+      "examples\\StockLevels\\StockLevels.csproj",
+      "examples\\StockLevels.Reactive\\StockLevels.Reactive.csproj",
       "benchmarks\\ReactiveUI.Primitives.Benchmarks\\ReactiveUI.Primitives.Benchmarks.csproj",
       "benchmarks\\ReactiveUI.Primitives.ObservableEvents.Benchmarks\\ReactiveUI.Primitives.ObservableEvents.Benchmarks.csproj",
       "benchmarks\\ReactiveUI.Primitives.Avalonia.Benchmarks\\ReactiveUI.Primitives.Avalonia.Benchmarks.csproj",

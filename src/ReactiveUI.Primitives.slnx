@@ -1,4 +1,8 @@
 <Solution>
+    <Folder Name="/examples/">
+        <Project Path="examples/StockLevels/StockLevels.csproj" />
+        <Project Path="examples/StockLevels.Reactive/StockLevels.Reactive.csproj" />
+    </Folder>
     <Folder Name="/benchmarks/">
         <Project Path="benchmarks/ReactiveUI.Primitives.Benchmarks/ReactiveUI.Primitives.Benchmarks.csproj" />
         <Project Path="benchmarks/ReactiveUI.Primitives.ObservableEvents.Benchmarks/ReactiveUI.Primitives.ObservableEvents.Benchmarks.csproj" />
