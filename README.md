@@ -107,6 +107,8 @@ the whole cleanup.
 
 ## Your first signal
 
+Run the [stock level example](src/examples/README.md) to see a live display catch up with the latest value and an async stream total a delivery manifest.
+
 **1. Install the package.**
 
 ```bash

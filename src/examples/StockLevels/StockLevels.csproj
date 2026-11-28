@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFrameworks>net10.0;net11.0</TargetFrameworks>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="../../ReactiveUI.Primitives.Async/ReactiveUI.Primitives.Async.csproj" />
+    <Using Include="ReactiveUI.Primitives" />
+    <Using Include="ReactiveUI.Primitives.Signals" />
+    <Using Include="ReactiveUI.Primitives.Concurrency.VirtualClock" Alias="StockClock" />
+    <ProjectReference Include="../../ReactiveUI.Primitives.ObservableEvents/ReactiveUI.Primitives.ObservableEvents.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
+    <ProjectReference Include="../../ReactiveUI.Primitives.R3Bridge.Generator/ReactiveUI.Primitives.R3Bridge.Generator.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
+    <PackageReference Include="R3" />
+    <InternalsVisibleTo Include="ReactiveUI.Primitives.Async.Tests" />
+  </ItemGroup>
+</Project>

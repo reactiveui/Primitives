@@ -7,6 +7,7 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <ProjectReference Include="../../examples/StockLevels/StockLevels.csproj" />
     <PackageReference Include="Microsoft.CodeAnalysis.CSharp" PrivateAssets="all"/>
     <PackageReference Include="System.Reactive"/>
     <PackageReference Include="Microsoft.Reactive.Testing"/>
